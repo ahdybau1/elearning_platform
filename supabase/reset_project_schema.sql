@@ -1617,6 +1617,55 @@ SELECT cron.schedule(
 );
 
 
+-- CDC Partie 1 §7.4, Partie 2 §25, exemple chiffré §40 : nouvelle connexion → déconnexion immédiate et
+-- automatique de l'ancienne session, quel que soit le client qui insère la nouvelle ligne `sessions`.
+CREATE OR REPLACE FUNCTION enforce_single_session() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.is_active THEN
+        UPDATE sessions
+        SET is_active = false
+        WHERE account_id = NEW.account_id
+          AND id <> NEW.id
+          AND is_active = true;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+DROP TRIGGER IF EXISTS trg_enforce_single_session ON sessions;
+CREATE TRIGGER trg_enforce_single_session
+    AFTER INSERT ON sessions
+    FOR EACH ROW EXECUTE FUNCTION enforce_single_session();
+
+-- Section 25 : détection réelle des comptes changeant d'appareil de façon suspecte (>= N bascules/jour).
+CREATE OR REPLACE FUNCTION get_suspicious_session_accounts(p_min_switches INT DEFAULT 3)
+RETURNS TABLE (
+    account_id UUID,
+    first_name TEXT,
+    last_name TEXT,
+    email TEXT,
+    switch_count BIGINT
+) AS $$
+BEGIN
+    IF NOT is_admin_user() THEN
+        RAISE EXCEPTION 'Accès refusé : réservé aux administrateurs';
+    END IF;
+
+    RETURN QUERY
+    SELECT s.account_id, a.first_name, a.last_name, a.email, COUNT(*) AS switch_count
+    FROM sessions s
+    JOIN accounts a ON a.id = s.account_id
+    WHERE s.created_at >= CURRENT_DATE
+    GROUP BY s.account_id, a.first_name, a.last_name, a.email
+    HAVING COUNT(*) >= p_min_switches
+    ORDER BY switch_count DESC;
+END;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public;
+
+REVOKE ALL ON FUNCTION get_suspicious_session_accounts(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION get_suspicious_session_accounts(INT) TO authenticated;
+
+
 -- ============================================================================
 -- TRIGGER D'AUDIT LOG AUTOMATIQUE POUR ACTION ADMIN
 -- SECURITY DEFINER : déclenché par des DML faites par des admins authentifiés (pas service_role),
@@ -1646,6 +1695,12 @@ CREATE TRIGGER audit_academic_nodes AFTER INSERT OR UPDATE OR DELETE ON academic
 CREATE TRIGGER audit_subscription_tiers AFTER INSERT OR UPDATE OR DELETE ON subscription_tiers FOR EACH ROW EXECUTE FUNCTION log_admin_action();
 CREATE TRIGGER audit_access_matrix AFTER INSERT OR UPDATE OR DELETE ON access_matrix FOR EACH ROW EXECUTE FUNCTION log_admin_action();
 CREATE TRIGGER audit_admin_users AFTER INSERT OR UPDATE OR DELETE ON admin_users FOR EACH ROW EXECUTE FUNCTION log_admin_action();
+
+-- UPDATE/DELETE seulement (pas INSERT, très majoritairement une auto-inscription élève, pas un geste
+-- admin — cf. 35_extend_audit_log_accounts.sql pour la justification complète).
+CREATE TRIGGER audit_accounts AFTER UPDATE OR DELETE ON accounts FOR EACH ROW EXECUTE FUNCTION log_admin_action();
+CREATE TRIGGER audit_parent_accounts AFTER UPDATE OR DELETE ON parent_accounts FOR EACH ROW EXECUTE FUNCTION log_admin_action();
+CREATE TRIGGER audit_profiles AFTER UPDATE OR DELETE ON profiles FOR EACH ROW EXECUTE FUNCTION log_admin_action();
 
 
 -- ============================================================================

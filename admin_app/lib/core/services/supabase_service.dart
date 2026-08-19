@@ -1175,27 +1175,31 @@ class SupabaseService {
 
   // ─── Admin Users CRUD ─────────────────────────────────────────
 
-  Future<AdminUser?> createAdminUser({
+  /// Avant : simple INSERT dans `admin_users` sans jamais créer de compte Supabase Auth —
+  /// l'administrateur créé n'avait aucun moyen de se connecter. Passe désormais par une Edge Function
+  /// (comme pour élèves/parents/enseignants) qui crée l'utilisateur Auth ET la ligne `admin_users` de
+  /// façon atomique.
+  Future<void> createAdminUser({
     required String email,
+    required String password,
     required String firstName,
     required String lastName,
     required String role,
-    Map<String, dynamic>? scopeJson,
   }) async {
-    final rows = await client
-        .from('admin_users')
-        .insert({
-          'email': email,
-          'first_name': firstName,
-          'last_name': lastName,
-          'role': role,
-          'scope_json': scopeJson ?? {},
-          'is_active': true,
-        })
-        .select()
-        .then((r) => r as List);
-    if (rows.isEmpty) return null;
-    return AdminUser.fromJson(Map<String, dynamic>.from(rows.first));
+    final res = await client.functions.invoke(
+      'admin-create-admin-account',
+      body: {
+        'email': email,
+        'password': password,
+        'first_name': firstName,
+        'last_name': lastName,
+        'role': role,
+      },
+    );
+    if (res.status != 200) {
+      final error = (res.data is Map) ? res.data['error'] : res.data;
+      throw Exception(error ?? 'Échec de création du compte administrateur');
+    }
   }
 
   Future<void> updateAdminUser(
@@ -3006,11 +3010,21 @@ class SupabaseService {
   Future<List<UserSession>> fetchActiveSessions() async {
     final rows = await client
         .from('sessions')
-        .select()
+        .select('*, accounts(first_name, last_name, email)')
+        .eq('is_active', true)
         .order('last_active_at', ascending: false)
         .then((rows) => rows as List);
     return (rows)
         .map((r) => UserSession.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  Future<List<SuspiciousSessionAccount>> fetchSuspiciousSessionAccounts({int minSwitches = 3}) async {
+    final rows = await client
+        .rpc('get_suspicious_session_accounts', params: {'p_min_switches': minSwitches})
+        .then((r) => r as List);
+    return rows
+        .map((r) => SuspiciousSessionAccount.fromJson(Map<String, dynamic>.from(r)))
         .toList();
   }
 

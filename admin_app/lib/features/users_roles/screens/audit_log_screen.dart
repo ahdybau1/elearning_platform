@@ -9,11 +9,22 @@ import '../../../core/providers/data_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_dialog_title.dart';
 
-class AuditLogScreen extends ConsumerWidget {
+const String _allFilter = '__all__';
+
+class AuditLogScreen extends ConsumerStatefulWidget {
   const AuditLogScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AuditLogScreen> createState() => _AuditLogScreenState();
+}
+
+class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
+  String _adminFilter = _allFilter;
+  String _actionFilter = _allFilter;
+  String _entityFilter = _allFilter;
+
+  @override
+  Widget build(BuildContext context) {
     final logsAsync = ref.watch(auditLogsProvider);
     final adminsAsync = ref.watch(adminUsersProvider);
     final adminNames = <String, String>{
@@ -27,29 +38,32 @@ class AuditLogScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Journal d\'Audit & Traçabilité Système',
-                    style: GoogleFonts.outfit(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Journal d\'Audit & Traçabilité Système',
+                      style: GoogleFonts.outfit(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Historique inaltérable de toutes les modifications, publications, réconciliations et suppressions',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: AppTheme.textMuted,
+                    const SizedBox(height: 4),
+                    Text(
+                      'Historique inaltérable de toutes les modifications, publications, réconciliations et suppressions',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: AppTheme.textMuted,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 14),
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.white,
@@ -57,21 +71,41 @@ class AuditLogScreen extends ConsumerWidget {
                 ),
                 onPressed: logsAsync.valueOrNull == null
                     ? null
-                    : () => _exportCsv(context, logsAsync.valueOrNull!, adminNames),
+                    : () => _exportCsv(
+                          context,
+                          _applyFilters(logsAsync.valueOrNull!),
+                          adminNames,
+                        ),
                 icon: const Icon(Icons.download_rounded, size: 18),
-                label: const Text('Exporter l\'Audit Log (CSV)'),
+                label: const Text('Exporter la Vue (CSV)'),
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
+
+          logsAsync.when(
+            data: (logs) => _buildFilterRow(logs, adminNames),
+            loading: () => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
+          ),
+          const SizedBox(height: 16),
 
           Expanded(
             child: logsAsync.when(
-              data: (logs) {
-                if (logs.isEmpty) {
+              data: (allLogs) {
+                final logs = _applyFilters(allLogs);
+                if (allLogs.isEmpty) {
                   return Center(
                     child: Text(
                       'Aucune action journalisée pour le moment.',
+                      style: GoogleFonts.inter(color: AppTheme.textMuted),
+                    ),
+                  );
+                }
+                if (logs.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'Aucune entrée ne correspond aux filtres sélectionnés.',
                       style: GoogleFonts.inter(color: AppTheme.textMuted),
                     ),
                   );
@@ -140,6 +174,101 @@ class AuditLogScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  List<AuditLog> _applyFilters(List<AuditLog> logs) {
+    return logs.where((log) {
+      if (_adminFilter != _allFilter) {
+        if (_adminFilter == 'system') {
+          if (log.adminUserId != null) return false;
+        } else if (log.adminUserId != _adminFilter) {
+          return false;
+        }
+      }
+      if (_actionFilter != _allFilter && log.actionType != _actionFilter) return false;
+      if (_entityFilter != _allFilter && log.entityType != _entityFilter) return false;
+      return true;
+    }).toList();
+  }
+
+  Widget _buildFilterRow(List<AuditLog> logs, Map<String, String> adminNames) {
+    final adminIds = logs.map((l) => l.adminUserId).whereType<String>().toSet().toList()..sort();
+    final actions = logs.map((l) => l.actionType).toSet().toList()..sort();
+    final entities = logs.map((l) => l.entityType).toSet().toList()..sort();
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Icon(Icons.filter_list_rounded, size: 18, color: AppTheme.textMuted),
+        _buildFilterDropdown(
+          label: 'Administrateur',
+          value: _adminFilter,
+          items: [
+            const DropdownMenuItem(value: _allFilter, child: Text('Tous les administrateurs')),
+            const DropdownMenuItem(value: 'system', child: Text('Système (auto)')),
+            ...adminIds.map((id) => DropdownMenuItem(value: id, child: Text(adminNames[id] ?? 'Admin inconnu'))),
+          ],
+          onChanged: (v) => setState(() => _adminFilter = v ?? _allFilter),
+        ),
+        _buildFilterDropdown(
+          label: 'Action',
+          value: _actionFilter,
+          items: [
+            const DropdownMenuItem(value: _allFilter, child: Text('Toutes les actions')),
+            ...actions.map((a) => DropdownMenuItem(value: a, child: Text(a))),
+          ],
+          onChanged: (v) => setState(() => _actionFilter = v ?? _allFilter),
+        ),
+        _buildFilterDropdown(
+          label: 'Entité',
+          value: _entityFilter,
+          items: [
+            const DropdownMenuItem(value: _allFilter, child: Text('Toutes les entités')),
+            ...entities.map((e) => DropdownMenuItem(value: e, child: Text(e))),
+          ],
+          onChanged: (v) => setState(() => _entityFilter = v ?? _allFilter),
+        ),
+        if (_adminFilter != _allFilter || _actionFilter != _allFilter || _entityFilter != _allFilter)
+          TextButton.icon(
+            onPressed: () => setState(() {
+              _adminFilter = _allFilter;
+              _actionFilter = _allFilter;
+              _entityFilter = _allFilter;
+            }),
+            icon: const Icon(Icons.close_rounded, size: 16),
+            label: const Text('Réinitialiser'),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.textMuted),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildFilterDropdown({
+    required String label,
+    required String value,
+    required List<DropdownMenuItem<String>> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return SizedBox(
+      width: 220,
+      child: DropdownButtonFormField<String>(
+        // ignore: deprecated_member_use
+        value: value,
+        isExpanded: true,
+        dropdownColor: AppTheme.primaryDark,
+        style: GoogleFonts.inter(fontSize: 12, color: Colors.white),
+        decoration: InputDecoration(
+          isDense: true,
+          labelText: label,
+          labelStyle: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        ),
+        items: items,
+        onChanged: onChanged,
       ),
     );
   }

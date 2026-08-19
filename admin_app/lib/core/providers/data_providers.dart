@@ -359,6 +359,11 @@ final activeSessionsProvider = FutureProvider<List<UserSession>>((ref) async {
   return service.fetchActiveSessions();
 });
 
+final suspiciousSessionAccountsProvider = FutureProvider<List<SuspiciousSessionAccount>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchSuspiciousSessionAccounts();
+});
+
 final nodesByTypeProvider =
     FutureProvider.family<List<AcademicNode>, String>((ref, nodeType) async {
   final service = ref.watch(supabaseServiceProvider);

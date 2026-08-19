@@ -216,6 +216,9 @@ class PromotionRecord {
 class UserSession {
   final String id;
   final String accountId;
+  final String? accountFirstName;
+  final String? accountLastName;
+  final String? accountEmail;
   final String deviceFingerprint;
   final String platform;
   final bool isActive;
@@ -225,6 +228,9 @@ class UserSession {
   UserSession({
     required this.id,
     required this.accountId,
+    this.accountFirstName,
+    this.accountLastName,
+    this.accountEmail,
     required this.deviceFingerprint,
     required this.platform,
     this.isActive = true,
@@ -233,10 +239,21 @@ class UserSession {
   })  : lastActiveAt = lastActiveAt ?? DateTime.now(),
         createdAt = createdAt ?? DateTime.now();
 
+  String get accountDisplayName {
+    if (accountFirstName != null && accountLastName != null) {
+      return '$accountFirstName $accountLastName';
+    }
+    return accountId;
+  }
+
   factory UserSession.fromJson(Map<String, dynamic> json) {
+    final account = json['accounts'] as Map<String, dynamic>?;
     return UserSession(
       id: json['id'] as String,
       accountId: json['account_id'] as String,
+      accountFirstName: account?['first_name'] as String?,
+      accountLastName: account?['last_name'] as String?,
+      accountEmail: account?['email'] as String?,
       deviceFingerprint: json['device_fingerprint'] as String,
       platform: json['platform'] as String,
       isActive: json['is_active'] as bool? ?? true,
@@ -246,6 +263,34 @@ class UserSession {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
+    );
+  }
+}
+
+/// Section 25 du CDC : compte détecté avec des bascules de session fréquentes aujourd'hui — signal
+/// possible de partage de compte à investiguer (pas une sanction automatique).
+class SuspiciousSessionAccount {
+  final String accountId;
+  final String firstName;
+  final String lastName;
+  final String email;
+  final int switchCount;
+
+  SuspiciousSessionAccount({
+    required this.accountId,
+    required this.firstName,
+    required this.lastName,
+    required this.email,
+    required this.switchCount,
+  });
+
+  factory SuspiciousSessionAccount.fromJson(Map<String, dynamic> json) {
+    return SuspiciousSessionAccount(
+      accountId: json['account_id'] as String,
+      firstName: json['first_name'] as String? ?? '',
+      lastName: json['last_name'] as String? ?? '',
+      email: json['email'] as String? ?? '',
+      switchCount: (json['switch_count'] as num).toInt(),
     );
   }
 }

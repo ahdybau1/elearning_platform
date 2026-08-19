@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models/admin_models.dart';
 import '../../../core/providers/data_providers.dart';
+import '../../../core/widgets/app_dialog_title.dart';
 
 class ActiveSessionsScreen extends ConsumerStatefulWidget {
   const ActiveSessionsScreen({super.key});
@@ -18,6 +19,7 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
   @override
   Widget build(BuildContext context) {
     final sessionsAsync = ref.watch(activeSessionsProvider);
+    final suspiciousAsync = ref.watch(suspiciousSessionAccountsProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.primaryDark,
@@ -28,47 +30,49 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
           children: [
             // Header
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accentEmerald.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.devices_rounded,
-                        color: AppTheme.accentEmerald,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Sessions Uniques & Anti-Partage (Section 25)',
-                          style: GoogleFonts.inter(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        Text(
-                          'Gestion de la session concurrente unique par compte élève et traçabilité des appareils',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: AppTheme.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentEmerald.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.devices_rounded,
+                    color: AppTheme.accentEmerald,
+                    size: 24,
+                  ),
                 ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Sessions Uniques & Anti-Partage',
+                        style: GoogleFonts.inter(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        'Gestion de la session concurrente unique par compte élève et traçabilité des appareils',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 14),
                 ElevatedButton.icon(
-                  onPressed: () => ref.invalidate(activeSessionsProvider),
+                  onPressed: () {
+                    ref.invalidate(activeSessionsProvider);
+                    ref.invalidate(suspiciousSessionAccountsProvider);
+                  },
                   icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: const Text('Actualiser les Sessions'),
                   style: ElevatedButton.styleFrom(
@@ -112,15 +116,73 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: _buildStatCard(
-                    'Détection Partage Suspect',
-                    'Seuil: 3 bascules / jour',
-                    Icons.warning_amber_rounded,
-                    Colors.amber,
-                    'Alerte envoyée aux administrateurs',
+                  child: suspiciousAsync.when(
+                    data: (flagged) => _buildStatCard(
+                      'Partage Suspect Aujourd\'hui',
+                      flagged.isEmpty ? 'Aucun compte' : '${flagged.length} compte(s)',
+                      Icons.warning_amber_rounded,
+                      flagged.isEmpty ? AppTheme.accentEmerald : Colors.amber,
+                      flagged.isEmpty
+                          ? 'Aucune bascule d\'appareil suspecte (seuil : 3 / jour)'
+                          : '≥ 3 bascules d\'appareil — à vérifier ci-dessous',
+                    ),
+                    loading: () => _buildStatCard('Partage Suspect Aujourd\'hui', '...', Icons.warning_amber_rounded,
+                        Colors.amber, 'Calcul en cours...'),
+                    error: (err, _) => _buildStatCard('Partage Suspect Aujourd\'hui', 'Erreur',
+                        Icons.warning_amber_rounded, AppTheme.accentRose, '$err'),
                   ),
                 ),
               ],
+            ),
+
+            suspiciousAsync.maybeWhen(
+              data: (flagged) => flagged.isEmpty
+                  ? const SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.amber.withValues(alpha: 0.35)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.warning_amber_rounded, size: 16, color: Colors.amber),
+                                const SizedBox(width: 8),
+                                Text('Comptes à investiguer (bascules d\'appareil aujourd\'hui)',
+                                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.amber)),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: flagged.map((f) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.cardBackground,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppTheme.borderColor),
+                                  ),
+                                  child: Text(
+                                    '${f.firstName} ${f.lastName} (${f.email}) — ${f.switchCount} bascules',
+                                    style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+              orElse: () => const SizedBox.shrink(),
             ),
             const SizedBox(height: 24),
 
@@ -132,34 +194,25 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
                   child: Text('Erreur: $err', style: const TextStyle(color: Colors.red)),
                 ),
                 data: (sessions) {
-                  final displaySessions = sessions.isNotEmpty
-                      ? sessions
-                      : [
-                          UserSession(
-                            id: '1',
-                            accountId: 'acc_01_student_yaounde',
-                            deviceFingerprint: 'SM-G998B_Android_14_FP_88a91c',
-                            platform: 'Android App',
-                            isActive: true,
-                            lastActiveAt: DateTime.now().subtract(const Duration(minutes: 3)),
+                  if (sessions.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.devices_other_rounded, size: 48, color: AppTheme.textSecondary),
+                          const SizedBox(height: 12),
+                          Text('Aucune session active pour le moment',
+                              style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Les connexions élèves apparaîtront ici dès que l\'application élève écrira dans la\ntable des sessions.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary),
                           ),
-                          UserSession(
-                            id: '2',
-                            accountId: 'acc_02_student_douala',
-                            deviceFingerprint: 'iPhone14_iOS_17_4_FP_c4b22e',
-                            platform: 'iOS App',
-                            isActive: true,
-                            lastActiveAt: DateTime.now().subtract(const Duration(minutes: 12)),
-                          ),
-                          UserSession(
-                            id: '3',
-                            accountId: 'acc_03_student_bafoussam',
-                            deviceFingerprint: 'Chrome_Win64_FP_99d10a',
-                            platform: 'Web Desktop',
-                            isActive: true,
-                            lastActiveAt: DateTime.now().subtract(const Duration(minutes: 25)),
-                          ),
-                        ];
+                        ],
+                      ),
+                    );
+                  }
 
                   return Container(
                     decoration: BoxDecoration(
@@ -168,16 +221,16 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
                       border: Border.all(color: AppTheme.borderColor),
                     ),
                     child: ListView.separated(
-                      itemCount: displaySessions.length,
-                      separatorBuilder: (_, __) => const Divider(color: AppTheme.borderColor, height: 1),
+                      itemCount: sessions.length,
+                      separatorBuilder: (_, _) => const Divider(color: AppTheme.borderColor, height: 1),
                       itemBuilder: (context, index) {
-                        final s = displaySessions[index];
+                        final s = sessions[index];
                         return ListTile(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                           leading: Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: AppTheme.accentCyan.withOpacity(0.15),
+                              color: AppTheme.accentCyan.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
@@ -188,11 +241,14 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
                           ),
                           title: Row(
                             children: [
-                              Text(
-                                s.accountId,
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                              Flexible(
+                                child: Text(
+                                  s.accountDisplayName,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -214,6 +270,9 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const SizedBox(height: 4),
+                              if (s.accountEmail != null)
+                                Text(s.accountEmail!,
+                                    style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary)),
                               Text(
                                 'Empreinte: ${s.deviceFingerprint}',
                                 style: GoogleFonts.firaCode(fontSize: 11, color: AppTheme.textSecondary),
@@ -227,20 +286,11 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
                           ),
                           trailing: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.redAccent.withOpacity(0.15),
+                              backgroundColor: Colors.redAccent.withValues(alpha: 0.15),
                               foregroundColor: Colors.redAccent,
                               side: const BorderSide(color: Colors.redAccent),
                             ),
-                            onPressed: () async {
-                              final service = ref.read(supabaseServiceProvider);
-                              await service.revokeSession(s.id);
-                              ref.invalidate(activeSessionsProvider);
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Session révoquée avec succès.')),
-                                );
-                              }
-                            },
+                            onPressed: () => _showRevokeConfirmation(context, s),
                             icon: const Icon(Icons.logout_rounded, size: 14),
                             label: const Text('Déconnecter à distance'),
                           ),
@@ -253,6 +303,50 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showRevokeConfirmation(BuildContext context, UserSession session) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.cardBackground,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: AppDialogTitle(
+          icon: Icons.logout_rounded,
+          iconColor: Colors.redAccent,
+          text: 'Déconnecter cet appareil ?',
+          onClose: () => Navigator.pop(ctx),
+        ),
+        content: Text(
+          '${session.accountDisplayName} sera immédiatement déconnecté de ${session.platform}. '
+          'L\'élève devra se reconnecter pour reprendre l\'accès.',
+          style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.4),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final service = ref.read(supabaseServiceProvider);
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                await service.revokeSession(session.id);
+                ref.invalidate(activeSessionsProvider);
+                messenger.showSnackBar(
+                  const SnackBar(backgroundColor: AppTheme.accentEmerald, content: Text('Session révoquée avec succès.')),
+                );
+              } catch (e) {
+                messenger.showSnackBar(
+                  SnackBar(backgroundColor: AppTheme.accentRose, content: Text('Erreur : $e')),
+                );
+              }
+            },
+            child: const Text('Déconnecter'),
+          ),
+        ],
       ),
     );
   }
@@ -283,7 +377,7 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: color, size: 24),
