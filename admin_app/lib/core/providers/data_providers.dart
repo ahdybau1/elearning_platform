@@ -215,6 +215,20 @@ final adminPermissionsProvider =
   return service.fetchPermissions(adminId);
 });
 
+final establishmentsProvider = FutureProvider<List<Establishment>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  final countryIds = ref.watch(selectedCountryIdsProvider);
+  final all = await service.fetchEstablishments();
+  if (countryIds == null || countryIds.isEmpty) return all;
+  return all.where((e) => countryIds.contains(e.countryId)).toList();
+});
+
+final teacherEstablishmentsProvider =
+    FutureProvider.family<List<TeacherEstablishmentLink>, String>((ref, teacherId) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchTeacherEstablishments(teacherId);
+});
+
 // ─── Community ────────────────────────────────────────────────
 
 final forumThreadsStreamProvider = StreamProvider<List<ForumThread>>((ref) {

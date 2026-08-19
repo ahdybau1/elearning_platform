@@ -1860,7 +1860,7 @@ CREATE POLICY establishment_papers_admin_update ON establishment_papers FOR UPDA
 CREATE POLICY establishment_papers_admin_delete ON establishment_papers FOR DELETE USING (is_admin_user());
 
 -- ---- Administration : accès à son propre profil admin, tout le reste réservé au super_admin.
-CREATE POLICY admin_users_select ON admin_users FOR SELECT USING (auth_user_id = auth.uid() OR has_admin_role('super_admin'));
+CREATE POLICY admin_users_select ON admin_users FOR SELECT USING (auth_user_id = auth.uid() OR is_admin_user());
 CREATE POLICY admin_users_super_admin_insert ON admin_users FOR INSERT WITH CHECK (has_admin_role('super_admin'));
 CREATE POLICY admin_users_super_admin_update ON admin_users FOR UPDATE USING (has_admin_role('super_admin'));
 CREATE POLICY admin_users_super_admin_delete ON admin_users FOR DELETE USING (has_admin_role('super_admin'));

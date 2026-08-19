@@ -1200,6 +1200,8 @@ class SupabaseService {
 
   Future<void> updateAdminUser(
     String id, {
+    String? firstName,
+    String? lastName,
     String? role,
     Map<String, dynamic>? scopeJson,
     bool? isActive,
@@ -1207,10 +1209,107 @@ class SupabaseService {
     final data = <String, dynamic>{
       'updated_at': DateTime.now().toIso8601String(),
     };
+    if (firstName != null) data['first_name'] = firstName;
+    if (lastName != null) data['last_name'] = lastName;
     if (role != null) data['role'] = role;
     if (scopeJson != null) data['scope_json'] = scopeJson;
     if (isActive != null) data['is_active'] = isActive;
     await client.from('admin_users').update(data).eq('id', id);
+  }
+
+  Future<void> deleteAdminUser(String id) async {
+    if (!_isValidUuid(id)) return;
+    await client.from('admin_users').delete().eq('id', id);
+  }
+
+  // ─── Section 5.4 / 22 : Comptes Enseignants & Rattachements Multi-Établissements ─────
+
+  /// Contrairement aux autres rôles admin (créés par simple insertion, sans compte Auth utilisable),
+  /// un enseignant doit pouvoir réellement se connecter — passe donc par une Edge Function
+  /// `admin-create-teacher-account` qui crée l'utilisateur Supabase Auth ET la ligne `admin_users`
+  /// (role='enseignant') de façon atomique, comme pour les élèves et les parents.
+  Future<void> createTeacherAccount({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    bool isActive = true,
+  }) async {
+    final res = await client.functions.invoke(
+      'admin-create-teacher-account',
+      body: {
+        'email': email,
+        'password': password,
+        'first_name': firstName,
+        'last_name': lastName,
+        'is_active': isActive,
+      },
+    );
+    if (res.status != 200) {
+      final error = (res.data is Map) ? res.data['error'] : res.data;
+      throw Exception(error ?? 'Échec de création du compte enseignant');
+    }
+  }
+
+  Future<List<Establishment>> fetchEstablishments({String? countryId}) async {
+    var query = client.from('establishments').select();
+    if (_isValidUuid(countryId)) {
+      query = query.eq('country_id', countryId!);
+    }
+    final rows = await query.order('name').then((r) => r as List);
+    return rows.map((r) => Establishment.fromJson(Map<String, dynamic>.from(r))).toList();
+  }
+
+  Future<void> createEstablishment({
+    required String countryId,
+    required String name,
+    required String city,
+  }) async {
+    await client.from('establishments').insert({
+      'country_id': countryId,
+      'name': name,
+      'city': city,
+    });
+  }
+
+  Future<List<TeacherEstablishmentLink>> fetchTeacherEstablishments(String teacherId) async {
+    if (!_isValidUuid(teacherId)) return [];
+    final rows = await client
+        .from('teacher_establishments')
+        .select('id, establishment_id, subjects_scope, classes_scope, establishments(name, city)')
+        .eq('teacher_id', teacherId)
+        .then((r) => r as List);
+    return rows
+        .map((r) => TeacherEstablishmentLink.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  Future<void> attachTeacherToEstablishment({
+    required String teacherId,
+    required String establishmentId,
+    List<String> subjectsScope = const [],
+    List<String> classesScope = const [],
+  }) async {
+    await client.from('teacher_establishments').upsert(
+      {
+        'teacher_id': teacherId,
+        'establishment_id': establishmentId,
+        'subjects_scope': subjectsScope,
+        'classes_scope': classesScope,
+      },
+      onConflict: 'teacher_id,establishment_id',
+    );
+  }
+
+  Future<void> detachTeacherFromEstablishment({
+    required String teacherId,
+    required String establishmentId,
+  }) async {
+    await client
+        .from('teacher_establishments')
+        .delete()
+        .eq('teacher_id', teacherId)
+        .eq('establishment_id', establishmentId);
   }
 
   Future<void> grantPermission(

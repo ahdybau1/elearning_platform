@@ -259,3 +259,35 @@ class Establishment {
     );
   }
 }
+
+/// Rattachement d'un enseignant à un établissement (Section 22 du CDC : périmètre matières/classes
+/// défini indépendamment par établissement).
+class TeacherEstablishmentLink {
+  final String id;
+  final String establishmentId;
+  final String establishmentName;
+  final String establishmentCity;
+  final List<String> subjectsScope;
+  final List<String> classesScope;
+
+  TeacherEstablishmentLink({
+    required this.id,
+    required this.establishmentId,
+    required this.establishmentName,
+    required this.establishmentCity,
+    this.subjectsScope = const [],
+    this.classesScope = const [],
+  });
+
+  factory TeacherEstablishmentLink.fromJson(Map<String, dynamic> json) {
+    final est = json['establishments'] as Map<String, dynamic>?;
+    return TeacherEstablishmentLink(
+      id: json['id'] as String,
+      establishmentId: json['establishment_id'] as String,
+      establishmentName: est?['name'] as String? ?? 'Établissement',
+      establishmentCity: est?['city'] as String? ?? '',
+      subjectsScope: (json['subjects_scope'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      classesScope: (json['classes_scope'] as List?)?.map((e) => e.toString()).toList() ?? [],
+    );
+  }
+}
