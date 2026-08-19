@@ -45,7 +45,12 @@ class ElearningAdminApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.dark,
-      home: const SupabaseAuthGate(),
+      // Sans ce wrapper, aucun texte de l'application (emails, UUID, messages d'erreur...) n'est
+      // sélectionnable au clic-glissé : les `Text` Flutter ne sont pas sélectionnables par défaut,
+      // contrairement à une page web classique. Doit envelopper `home`, pas passer par `builder` :
+      // `builder` place son widget AU-DESSUS du Navigator (donc de l'Overlay) créé par MaterialApp,
+      // alors que SelectionArea exige un ancêtre Overlay pour afficher la poignée de sélection.
+      home: const SelectionArea(child: SupabaseAuthGate()),
     );
   }
 }
