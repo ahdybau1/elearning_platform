@@ -2696,6 +2696,51 @@ class SupabaseService {
     }
   }
 
+  Future<void> unsuspendAccount(String accountId) async {
+    final profiles = await fetchProfilesForAccount(accountId);
+    for (final profile in profiles) {
+      await client
+          .from('profiles')
+          .update({'status': 'actif'})
+          .eq('id', profile.id);
+    }
+  }
+
+  Future<void> setProfileStatus(String profileId, String status) async {
+    if (!_isValidUuid(profileId)) return;
+    await client.from('profiles').update({'status': status}).eq('id', profileId);
+  }
+
+  /// Ré-inscription d'un compte élève existant pour une nouvelle classe/année scolaire (le compte
+  /// et son historique de profils précédents sont conservés, un nouveau profil est simplement ajouté).
+  Future<void> addProfileToAccount({
+    required String accountId,
+    required String classNodeId,
+    required String schoolYear,
+  }) async {
+    await client.from('profiles').insert({
+      'account_id': accountId,
+      'class_node_id': classNodeId,
+      'school_year': schoolYear,
+      'status': 'actif',
+    });
+  }
+
+  Future<void> updateAccount(
+    String id, {
+    String? firstName,
+    String? lastName,
+    String? phone,
+  }) async {
+    if (!_isValidUuid(id)) return;
+    final data = <String, dynamic>{};
+    if (firstName != null) data['first_name'] = firstName;
+    if (lastName != null) data['last_name'] = lastName;
+    if (phone != null) data['phone'] = phone;
+    if (data.isEmpty) return;
+    await client.from('accounts').update(data).eq('id', id);
+  }
+
   // ─── Section 3.9 / 6.4 : Modèles de Notifications ──────────────
 
   Future<List<NotificationTemplate>> fetchNotificationTemplates() async {

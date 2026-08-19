@@ -27,29 +27,32 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Gestion des Comptes & Profils Élèves',
-                    style: GoogleFonts.outfit(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Gestion des Comptes & Profils Élèves',
+                      style: GoogleFonts.outfit(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Modèle 1 Compte = Plusieurs Profils (1 classe = 1 abonnement = 1 progression)',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: AppTheme.textMuted,
+                    const SizedBox(height: 4),
+                    Text(
+                      'Modèle 1 Compte = Plusieurs Profils (1 classe = 1 abonnement = 1 progression)',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: AppTheme.textMuted,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 14),
               ElevatedButton.icon(
                 onPressed: () => _showCreateAccountModal(context),
                 icon: const Icon(Icons.person_add_rounded, size: 18),
@@ -66,6 +69,15 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
               hintText: 'Rechercher par nom, prénom ou email...',
               hintStyle: GoogleFonts.inter(color: AppTheme.textMuted),
               prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.textMuted),
+              suffixIcon: _search.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 18, color: AppTheme.textMuted),
+                      onPressed: () => setState(() {
+                        _searchController.clear();
+                        _search = '';
+                      }),
+                    ),
               filled: true,
               fillColor: AppTheme.primarySurface,
               border: OutlineInputBorder(
@@ -143,6 +155,15 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
+                                      icon: const Icon(Icons.edit_rounded, size: 18, color: AppTheme.accentBlue),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      visualDensity: VisualDensity.compact,
+                                      tooltip: 'Modifier le compte',
+                                      onPressed: () => _showEditAccountModal(context, account),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    IconButton(
                                       icon: const Icon(Icons.badge_rounded, size: 18, color: AppTheme.accentBlue),
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(),
@@ -182,6 +203,102 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
     );
   }
 
+  void _showEditAccountModal(BuildContext context, Account account) {
+    final firstNameCtrl = TextEditingController(text: account.firstName);
+    final lastNameCtrl = TextEditingController(text: account.lastName);
+    final phoneCtrl = TextEditingController(text: account.phone ?? '');
+    String? formError;
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => AlertDialog(
+          backgroundColor: AppTheme.primarySurface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: AppDialogTitle(
+            icon: Icons.edit_rounded,
+            text: 'Modifier le Compte',
+            onClose: () => Navigator.pop(ctx),
+          ),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Email (non modifiable) : ${account.email}',
+                    style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted)),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: firstNameCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Prénom'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: lastNameCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Nom'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: phoneCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Téléphone (optionnel)'),
+                ),
+                if (formError != null) ...[
+                  const SizedBox(height: 12),
+                  Text(formError!, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(ctx),
+              child: Text('Annuler', style: GoogleFonts.inter(color: AppTheme.textMuted)),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      if (firstNameCtrl.text.trim().isEmpty || lastNameCtrl.text.trim().isEmpty) {
+                        setModalState(() => formError = 'Le prénom et le nom sont obligatoires.');
+                        return;
+                      }
+                      setModalState(() {
+                        formError = null;
+                        isLoading = true;
+                      });
+                      try {
+                        final service = ref.read(supabaseServiceProvider);
+                        await service.updateAccount(
+                          account.id,
+                          firstName: firstNameCtrl.text.trim(),
+                          lastName: lastNameCtrl.text.trim(),
+                          phone: phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
+                        );
+                        ref.invalidate(accountsProvider(_search.isEmpty ? null : _search));
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      } catch (e) {
+                        setModalState(() {
+                          isLoading = false;
+                          formError = '$e';
+                        });
+                      }
+                    },
+              child: isLoading
+                  ? const SizedBox(
+                      width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Enregistrer'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showProfilesDialog(BuildContext context, Account account) {
     showDialog(
       context: context,
@@ -193,31 +310,79 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
           onClose: () => Navigator.pop(ctx),
         ),
         content: SizedBox(
-          width: 420,
+          width: 440,
           height: MediaQuery.of(context).size.height * 0.5,
           child: Consumer(
             builder: (context, ref, _) {
               final profilesAsync = ref.watch(profilesForAccountProvider(account.id));
               return profilesAsync.when(
                 data: (profiles) {
-                  if (profiles.isEmpty) {
-                    return Text('Aucun profil.', style: GoogleFonts.inter(color: AppTheme.textMuted));
-                  }
-                  return ListView(
-                    shrinkWrap: true,
-                    children: profiles
-                        .map((p) => ListTile(
-                              dense: true,
-                              leading: Icon(
-                                p.status == 'actif' ? Icons.check_circle_rounded : Icons.archive_rounded,
-                                color: p.status == 'actif' ? AppTheme.accentEmerald : Colors.white38,
+                  final allActive = profiles.isNotEmpty && profiles.every((p) => p.status == 'actif');
+                  final allArchived = profiles.isNotEmpty && profiles.every((p) => p.status == 'archive');
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (allActive || allArchived) ...[
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: () async {
+                              final messenger = ScaffoldMessenger.of(context);
+                              try {
+                                final service = ref.read(supabaseServiceProvider);
+                                if (allActive) {
+                                  await service.suspendAccount(account.id);
+                                } else {
+                                  await service.unsuspendAccount(account.id);
+                                }
+                                ref.invalidate(profilesForAccountProvider(account.id));
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: AppTheme.accentEmerald,
+                                    content: Text(allActive
+                                        ? 'Tous les profils ont été archivés.'
+                                        : 'Tous les profils ont été désarchivés.'),
+                                  ),
+                                );
+                              } catch (e) {
+                                messenger.showSnackBar(
+                                  SnackBar(backgroundColor: AppTheme.accentRose, content: Text('Erreur : $e')),
+                                );
+                              }
+                            },
+                            icon: Icon(allActive ? Icons.archive_rounded : Icons.unarchive_rounded,
+                                size: 16, color: AppTheme.accentAmber),
+                            label: Text(
+                              allActive ? 'Archiver tous les profils' : 'Désarchiver tous les profils',
+                              style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentAmber),
+                            ),
+                          ),
+                        ),
+                      ],
+                      Expanded(
+                        child: profiles.isEmpty
+                            ? Center(
+                                child: Text('Aucun profil — utilisez "Ajouter un profil" ci-dessous.',
+                                    style: GoogleFonts.inter(color: AppTheme.textMuted)),
+                              )
+                            : ListView(
+                                shrinkWrap: true,
+                                children: profiles
+                                    .map((p) => _buildProfileTile(context, ref, account, p))
+                                    .toList(),
                               ),
-                              title: Text('Année ${p.schoolYear}',
-                                  style: GoogleFonts.inter(color: Colors.white)),
-                              subtitle: Text('Palier: ${p.subscriptionTier} · ${p.status}',
-                                  style: GoogleFonts.inter(color: AppTheme.textMuted, fontSize: 12)),
-                            ))
-                        .toList(),
+                      ),
+                      const Divider(color: AppTheme.primaryBorder),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _showAddProfileDialog(context, account),
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: const Text('Ajouter un profil (ré-inscription)'),
+                        ),
+                      ),
+                    ],
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -232,6 +397,152 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
             child: Text('Fermer', style: GoogleFonts.inter(color: AppTheme.textMuted)),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildProfileTile(BuildContext context, WidgetRef ref, Account account, StudentProfile p) {
+    final isActive = p.status == 'actif';
+    return ListTile(
+      dense: true,
+      leading: Icon(
+        isActive ? Icons.check_circle_rounded : Icons.archive_rounded,
+        color: isActive ? AppTheme.accentEmerald : Colors.white38,
+      ),
+      title: Text('Année ${p.schoolYear}', style: GoogleFonts.inter(color: Colors.white)),
+      subtitle: Text('Palier: ${p.subscriptionTier} · ${p.status}',
+          style: GoogleFonts.inter(color: AppTheme.textMuted, fontSize: 12)),
+      trailing: IconButton(
+        icon: Icon(
+          isActive ? Icons.archive_rounded : Icons.unarchive_rounded,
+          size: 18,
+          color: AppTheme.accentAmber,
+        ),
+        tooltip: isActive ? 'Archiver ce profil' : 'Désarchiver ce profil',
+        onPressed: () async {
+          final messenger = ScaffoldMessenger.of(context);
+          try {
+            final service = ref.read(supabaseServiceProvider);
+            await service.setProfileStatus(p.id, isActive ? 'archive' : 'actif');
+            ref.invalidate(profilesForAccountProvider(account.id));
+            messenger.showSnackBar(
+              SnackBar(
+                backgroundColor: AppTheme.accentEmerald,
+                content: Text(isActive ? 'Profil archivé.' : 'Profil désarchivé.'),
+              ),
+            );
+          } catch (e) {
+            messenger.showSnackBar(
+              SnackBar(backgroundColor: AppTheme.accentRose, content: Text('Erreur : $e')),
+            );
+          }
+        },
+      ),
+    );
+  }
+
+  void _showAddProfileDialog(BuildContext context, Account account) {
+    final schoolYearCtrl = TextEditingController(text: '2026-2027');
+    String? selectedClassId;
+    String? formError;
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => AlertDialog(
+          backgroundColor: AppTheme.primarySurface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: AppDialogTitle(
+            icon: Icons.add_rounded,
+            text: 'Ajouter un Profil',
+            onClose: () => Navigator.pop(ctx),
+          ),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Consumer(
+                  builder: (context, ref, _) {
+                    final classesAsync = ref.watch(nodesByTypeProvider('class'));
+                    return classesAsync.when(
+                      data: (classes) {
+                        selectedClassId ??= classes.isNotEmpty ? classes.first.id : null;
+                        return DropdownButtonFormField<String>(
+                          // ignore: deprecated_member_use
+                          value: selectedClassId,
+                          dropdownColor: AppTheme.primaryDark,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(labelText: 'Classe'),
+                          items: classes.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                          onChanged: (v) => setModalState(() => selectedClassId = v),
+                        );
+                      },
+                      loading: () => const LinearProgressIndicator(),
+                      error: (err, _) =>
+                          Text('Erreur: $err', style: GoogleFonts.inter(color: AppTheme.accentRose)),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: schoolYearCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Année scolaire (ex: 2026-2027)'),
+                ),
+                if (formError != null) ...[
+                  const SizedBox(height: 12),
+                  Text(formError!, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(ctx),
+              child: Text('Annuler', style: GoogleFonts.inter(color: AppTheme.textMuted)),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      if (selectedClassId == null) {
+                        setModalState(() => formError = 'Sélectionnez une classe.');
+                        return;
+                      }
+                      if (schoolYearCtrl.text.trim().isEmpty) {
+                        setModalState(() => formError = 'L\'année scolaire est obligatoire.');
+                        return;
+                      }
+                      setModalState(() {
+                        formError = null;
+                        isLoading = true;
+                      });
+                      try {
+                        final service = ref.read(supabaseServiceProvider);
+                        await service.addProfileToAccount(
+                          accountId: account.id,
+                          classNodeId: selectedClassId!,
+                          schoolYear: schoolYearCtrl.text.trim(),
+                        );
+                        ref.invalidate(profilesForAccountProvider(account.id));
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      } catch (e) {
+                        setModalState(() {
+                          isLoading = false;
+                          formError = '$e';
+                        });
+                      }
+                    },
+              child: isLoading
+                  ? const SizedBox(
+                      width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Ajouter'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -314,6 +625,7 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
     final phoneCtrl = TextEditingController();
     final schoolYearCtrl = TextEditingController(text: '2026-2027');
     String? selectedClassId;
+    String? formError;
     bool isLoading = false;
 
     showDialog(
@@ -355,7 +667,8 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                     controller: passwordCtrl,
                     obscureText: true,
                     style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(labelText: 'Mot de passe initial'),
+                    decoration: const InputDecoration(
+                        labelText: 'Mot de passe initial', helperText: 'Au moins 6 caractères'),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -370,7 +683,6 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                       return classesAsync.when(
                         data: (classes) {
                           selectedClassId ??= classes.isNotEmpty ? classes.first.id : null;
-                          // ignore: deprecated_member_use
                           return DropdownButtonFormField<String>(
                             // ignore: deprecated_member_use
                             value: selectedClassId,
@@ -395,6 +707,18 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                     style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(labelText: 'Année scolaire (ex: 2026-2027)'),
                   ),
+                  if (formError != null) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentRose.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(formError!,
+                          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -408,14 +732,26 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
               onPressed: isLoading
                   ? null
                   : () async {
-                      if (emailCtrl.text.trim().isEmpty ||
-                          passwordCtrl.text.trim().isEmpty ||
-                          firstNameCtrl.text.trim().isEmpty ||
-                          lastNameCtrl.text.trim().isEmpty ||
-                          selectedClassId == null) {
+                      if (firstNameCtrl.text.trim().isEmpty || lastNameCtrl.text.trim().isEmpty) {
+                        setModalState(() => formError = 'Le prénom et le nom sont obligatoires.');
                         return;
                       }
-                      setModalState(() => isLoading = true);
+                      if (emailCtrl.text.trim().isEmpty) {
+                        setModalState(() => formError = 'L\'email est obligatoire.');
+                        return;
+                      }
+                      if (passwordCtrl.text.trim().length < 6) {
+                        setModalState(() => formError = 'Le mot de passe doit contenir au moins 6 caractères.');
+                        return;
+                      }
+                      if (selectedClassId == null) {
+                        setModalState(() => formError = 'Sélectionnez une classe.');
+                        return;
+                      }
+                      setModalState(() {
+                        formError = null;
+                        isLoading = true;
+                      });
                       try {
                         final service = ref.read(supabaseServiceProvider);
                         await service.createStudentAccount(
@@ -442,15 +778,10 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                           );
                         }
                       } catch (e) {
-                        setModalState(() => isLoading = false);
-                        if (ctx.mounted) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(
-                              backgroundColor: AppTheme.accentRose,
-                              content: Text('Erreur: $e', style: GoogleFonts.inter(color: Colors.white)),
-                            ),
-                          );
-                        }
+                        setModalState(() {
+                          isLoading = false;
+                          formError = '$e';
+                        });
                       }
                     },
               child: isLoading
