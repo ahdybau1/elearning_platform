@@ -225,14 +225,46 @@ class _TeacherManagementScreenState extends ConsumerState<TeacherManagementScree
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Périmètre général (hors établissement)',
+                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textMuted)),
+                      const SizedBox(height: 6),
+                      _buildGeneralScopeRow(context, teacher),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: AppTheme.primaryBorder),
+                  ),
+                  onPressed: () => _showEditGeneralScopeModal(context, teacher),
+                  icon: const Icon(Icons.tune_rounded, size: 16),
+                  label: const Text('Périmètre'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            const Divider(color: AppTheme.primaryBorder, height: 1),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
                   child: Consumer(
                     builder: (context, ref, _) {
                       final linksAsync = ref.watch(teacherEstablishmentsProvider(teacher.id));
                       return linksAsync.when(
                         data: (links) {
                           if (links.isEmpty) {
-                            return Text('Aucun établissement rattaché.',
-                                style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted));
+                            return Text(
+                              'Aucun établissement rattaché — normal pour un enseignant qui contribue au '
+                              'contenu général sans être lié à un établissement précis.',
+                              style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted, height: 1.3),
+                            );
                           }
                           return Wrap(
                             spacing: 8,
@@ -290,6 +322,139 @@ class _TeacherManagementScreenState extends ConsumerState<TeacherManagementScree
                   label: const Text('Rattacher un Établissement'),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGeneralScopeRow(BuildContext context, AdminUser teacher) {
+    final subjects = (teacher.scopeJson['subjects'] as List?)?.map((e) => e.toString()).toList() ?? [];
+    final classes = (teacher.scopeJson['classes'] as List?)?.map((e) => e.toString()).toList() ?? [];
+    if (subjects.isEmpty && classes.isEmpty) {
+      return Text(
+        'Aucun — cet enseignant ne contribue qu\'au contenu d\'un ou plusieurs établissements rattachés '
+        'ci-dessous.',
+        style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted, height: 1.3),
+      );
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      children: [
+        if (subjects.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppTheme.accentEmerald.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppTheme.accentEmerald.withValues(alpha: 0.35)),
+            ),
+            child: Text('Matières : ${subjects.join(', ')}',
+                style: GoogleFonts.inter(fontSize: 11, color: AppTheme.accentEmerald, fontWeight: FontWeight.w600)),
+          ),
+        if (classes.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppTheme.accentEmerald.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppTheme.accentEmerald.withValues(alpha: 0.35)),
+            ),
+            child: Text('Classes : ${classes.join(', ')}',
+                style: GoogleFonts.inter(fontSize: 11, color: AppTheme.accentEmerald, fontWeight: FontWeight.w600)),
+          ),
+      ],
+    );
+  }
+
+  void _showEditGeneralScopeModal(BuildContext context, AdminUser teacher) {
+    final subjects = (teacher.scopeJson['subjects'] as List?)?.map((e) => e.toString()).toList() ?? [];
+    final classes = (teacher.scopeJson['classes'] as List?)?.map((e) => e.toString()).toList() ?? [];
+    final subjectsCtrl = TextEditingController(text: subjects.join(', '));
+    final classesCtrl = TextEditingController(text: classes.join(', '));
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => AlertDialog(
+          backgroundColor: AppTheme.primarySurface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: AppDialogTitle(
+            icon: Icons.tune_rounded,
+            text: 'Périmètre Général de ${teacher.firstName} ${teacher.lastName}',
+            onClose: () => Navigator.pop(ctx),
+          ),
+          content: SizedBox(
+            width: 440,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Pour un enseignant qui contribue au contenu pédagogique (leçons, exercices) sans être '
+                  'rattaché à un établissement précis — ce périmètre est totalement indépendant des '
+                  'rattachements ci-dessous.',
+                  style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted, height: 1.3),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: subjectsCtrl,
+                  autofocus: true,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Matières (séparées par des virgules)',
+                    hintText: 'ex : Mathématiques, Physique-Chimie',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: classesCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Classes (séparées par des virgules)',
+                    hintText: 'ex : 3e, Tle C',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: isLoading ? null : () => Navigator.pop(ctx), child: const Text('Annuler')),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      setModalState(() => isLoading = true);
+                      final messenger = ScaffoldMessenger.of(context);
+                      try {
+                        final service = ref.read(supabaseServiceProvider);
+                        final newScope = Map<String, dynamic>.from(teacher.scopeJson);
+                        newScope['subjects'] = subjectsCtrl.text
+                            .split(',')
+                            .map((s) => s.trim())
+                            .where((s) => s.isNotEmpty)
+                            .toList();
+                        newScope['classes'] = classesCtrl.text
+                            .split(',')
+                            .map((s) => s.trim())
+                            .where((s) => s.isNotEmpty)
+                            .toList();
+                        await service.updateAdminUser(teacher.id, scopeJson: newScope);
+                        ref.invalidate(adminUsersProvider);
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      } catch (e) {
+                        setModalState(() => isLoading = false);
+                        messenger.showSnackBar(
+                          SnackBar(backgroundColor: AppTheme.accentRose, content: Text('Erreur : $e')),
+                        );
+                      }
+                    },
+              child: isLoading
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Enregistrer'),
             ),
           ],
         ),

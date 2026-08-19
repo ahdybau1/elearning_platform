@@ -42,13 +42,19 @@ Deno.serve(async (req: Request) => {
 
     const { data: adminRow } = await supabase
       .from("admin_users")
-      .select("id, is_active")
+      .select("id, is_active, role")
       .eq("auth_user_id", callerData.user.id)
       .maybeSingle();
 
-    if (!adminRow || !adminRow.is_active) {
+    // Section 5.4 / 22 du CDC : la création d'un compte enseignant (attribution d'un email + mot de
+    // passe) est réservée au Super-admin ou à l'admin d'un pays — jamais à un admin_contenu, modérateur,
+    // support, ni à un enseignant lui-même. La restriction de navigation côté Flutter n'est qu'une
+    // commodité d'UX ; c'est cette vérification serveur qui fait réellement foi.
+    if (!adminRow || !adminRow.is_active || !["super_admin", "admin_pays"].includes(adminRow.role)) {
       return new Response(
-        JSON.stringify({ error: "Accès refusé : réservé aux administrateurs actifs" }),
+        JSON.stringify({
+          error: "Accès refusé : la création d'un compte enseignant est réservée au Super-administrateur ou à l'admin d'un pays",
+        }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
