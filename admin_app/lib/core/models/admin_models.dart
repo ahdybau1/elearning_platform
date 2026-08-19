@@ -287,6 +287,7 @@ class ParentAccount {
   final String phone;
   final String firstName;
   final String lastName;
+  final bool isActive;
   final DateTime createdAt;
 
   ParentAccount({
@@ -295,6 +296,7 @@ class ParentAccount {
     required this.phone,
     required this.firstName,
     required this.lastName,
+    this.isActive = true,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -305,6 +307,7 @@ class ParentAccount {
       phone: json['phone'] as String,
       firstName: json['first_name'] as String,
       lastName: json['last_name'] as String,
+      isActive: json['is_active'] as bool? ?? true,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),

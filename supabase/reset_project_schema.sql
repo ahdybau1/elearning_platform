@@ -91,6 +91,7 @@ CREATE TABLE parent_accounts (
     phone TEXT NOT NULL,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

@@ -2868,6 +2868,28 @@ class SupabaseService {
         .eq('profile_id', profileId);
   }
 
+  Future<void> updateParentAccount(
+    String id, {
+    String? firstName,
+    String? lastName,
+    String? phone,
+    bool? isActive,
+  }) async {
+    if (!_isValidUuid(id)) return;
+    final data = <String, dynamic>{};
+    if (firstName != null) data['first_name'] = firstName;
+    if (lastName != null) data['last_name'] = lastName;
+    if (phone != null) data['phone'] = phone;
+    if (isActive != null) data['is_active'] = isActive;
+    if (data.isEmpty) return;
+    await client.from('parent_accounts').update(data).eq('id', id);
+  }
+
+  Future<void> deleteParentAccount(String id) async {
+    if (!_isValidUuid(id)) return;
+    await client.from('parent_accounts').delete().eq('id', id);
+  }
+
   Future<List<UserSession>> fetchSessionsForAccount(String accountId) async {
     final rows = await client
         .from('sessions')
