@@ -12,8 +12,8 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _emailController = TextEditingController(text: 'ahdybau@gmail.com');
-  final _passwordController = TextEditingController(text: '123456');
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -168,21 +168,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _errorMessage = null;
     });
 
-    try {
-      await ref
-          .read(authProvider.notifier)
-          .signInWithPassword(
-            _emailController.text.trim(),
-            _passwordController.text,
-          );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = 'Échec de la connexion : ${e.toString()}';
-      });
-    } finally {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-    }
+    await ref
+        .read(authProvider.notifier)
+        .signInWithPassword(
+          _emailController.text.trim(),
+          _passwordController.text,
+        );
+
+    if (!mounted) return;
+
+    final authState = ref.read(authProvider);
+    setState(() {
+      _isLoading = false;
+      _errorMessage = authState.hasError
+          ? 'Échec de la connexion : ${authState.error}'
+          : null;
+    });
   }
 }

@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/auth/auth_provider.dart';
+import '../../../core/models/academic_node.dart';
+import '../../../core/providers/data_providers.dart';
+import '../../../core/widgets/app_dialog_title.dart';
 import 'dashboard_overview_screen.dart';
 import '../../academic_tree/screens/academic_tree_screen.dart';
 import '../../content_management/screens/lessons_manager_screen.dart';
@@ -25,6 +28,11 @@ import '../../community_support/screens/support_tickets_screen.dart';
 import '../../system_settings/screens/ai_agents_dashboard_screen.dart';
 import '../../system_settings/screens/announcements_screen.dart';
 import '../../system_settings/screens/system_settings_screen.dart';
+import '../../content_management/screens/pedagogical_catalog_screen.dart';
+import '../../subscriptions/screens/shop_management_screen.dart';
+import '../../subscriptions/screens/donations_screen.dart';
+import '../../academic_tree/screens/school_year_promotion_screen.dart';
+import '../../users_roles/screens/active_sessions_screen.dart';
 
 class MainAdminLayout extends ConsumerStatefulWidget {
   const MainAdminLayout({super.key});
@@ -34,14 +42,17 @@ class MainAdminLayout extends ConsumerStatefulWidget {
 }
 
 class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
-  int _selectedIndex = 0;
   bool _isSidebarCollapsed = false;
+  final Set<String> _expandedGroups = {};
+  bool _expansionInitialized = false;
 
-  final List<NavGroup> _navGroups = [
+  static const _allRoles = AdminRole.values;
+
+  final List<NavGroup> _rawNavGroups = [
     NavGroup(
       title: 'Aperçu Général',
       items: [
-        NavItem(id: 0, title: 'Tableau de Bord', icon: Icons.dashboard_rounded),
+        NavItem(id: 0, title: 'Tableau de Bord', icon: Icons.dashboard_rounded, allowedRoles: _allRoles),
       ],
     ),
     NavGroup(
@@ -51,57 +62,115 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
           id: 1,
           title: 'Arbre Académique',
           icon: Icons.account_tree_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu],
         ),
-        NavItem(id: 2, title: 'Leçons & Cours', icon: Icons.menu_book_rounded),
-        NavItem(id: 3, title: 'Banque d\'Exercices', icon: Icons.quiz_rounded),
+        NavItem(
+          id: 2,
+          title: 'Leçons & Cours',
+          icon: Icons.menu_book_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu, AdminRole.enseignant],
+        ),
+        NavItem(
+          id: 3,
+          title: 'Banque d\'Exercices',
+          icon: Icons.quiz_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu, AdminRole.enseignant],
+        ),
         NavItem(
           id: 4,
           title: 'File de Validation',
           icon: Icons.fact_check_rounded,
-          badgeCount: 3,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu],
+        ),
+        NavItem(
+          id: 22,
+          title: 'Catalogue Pédagogique (16.0)',
+          icon: Icons.auto_stories_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu],
+        ),
+        NavItem(
+          id: 25,
+          title: 'Année & Campagne Passage',
+          icon: Icons.calendar_month_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays],
         ),
       ],
     ),
     NavGroup(
       title: 'Offres & Tarification',
       items: [
-        NavItem(id: 5, title: 'Paliers & Tarifs', icon: Icons.sell_rounded),
+        NavItem(
+          id: 5,
+          title: 'Paliers & Tarifs',
+          icon: Icons.sell_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays],
+        ),
         NavItem(
           id: 6,
           title: 'Matrice de Droits',
           icon: Icons.grid_view_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays],
         ),
         NavItem(
           id: 7,
           title: 'Paiements & Litiges',
           icon: Icons.receipt_long_rounded,
           isFinancial: true,
+          allowedRoles: [AdminRole.superAdmin],
+        ),
+        NavItem(
+          id: 23,
+          title: 'Boutique (Documents)',
+          icon: Icons.storefront_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu],
+        ),
+        NavItem(
+          id: 24,
+          title: 'Dons & Caritatif',
+          icon: Icons.volunteer_activism_rounded,
+          isFinancial: true,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays],
         ),
       ],
     ),
     NavGroup(
       title: 'Comptes & Sécurité',
       items: [
-        NavItem(id: 8, title: 'Élèves & Profils', icon: Icons.school_rounded),
+        NavItem(
+          id: 8,
+          title: 'Élèves & Profils',
+          icon: Icons.school_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.support],
+        ),
         NavItem(
           id: 9,
           title: 'Comptes Parents',
           icon: Icons.family_restroom_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.support],
         ),
         NavItem(
           id: 10,
           title: 'Enseignants & Écoles',
           icon: Icons.badge_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays],
+        ),
+        NavItem(
+          id: 26,
+          title: 'Sessions & Anti-Partage',
+          icon: Icons.devices_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.support],
         ),
         NavItem(
           id: 11,
           title: 'Administrateurs & Rôles',
           icon: Icons.admin_panel_settings_rounded,
+          allowedRoles: [AdminRole.superAdmin],
         ),
         NavItem(
           id: 12,
           title: 'Audit Log & Traçabilité',
           icon: Icons.history_rounded,
+          allowedRoles: [AdminRole.superAdmin],
         ),
       ],
     ),
@@ -112,16 +181,19 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
           id: 13,
           title: 'Examens Officiels',
           icon: Icons.workspace_premium_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu],
         ),
         NavItem(
           id: 14,
           title: 'Épreuves Établissements',
           icon: Icons.domain_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu, AdminRole.enseignant],
         ),
         NavItem(
           id: 15,
           title: 'Olympiades & Examens Blancs',
           icon: Icons.emoji_events_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu],
         ),
       ],
     ),
@@ -133,13 +205,20 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
           title: 'Modération Forum',
           icon: Icons.forum_rounded,
           badgeCount: 2,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.moderateur],
         ),
-        NavItem(id: 17, title: 'Groupes WhatsApp', icon: Icons.groups_rounded),
+        NavItem(
+          id: 17,
+          title: 'Groupes WhatsApp',
+          icon: Icons.groups_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.moderateur, AdminRole.support],
+        ),
         NavItem(
           id: 18,
           title: 'Support Client',
           icon: Icons.support_agent_rounded,
           badgeCount: 5,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.support, AdminRole.moderateur],
         ),
       ],
     ),
@@ -150,23 +229,54 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
           id: 19,
           title: 'Agents IA & Coûts',
           icon: Icons.psychology_rounded,
+          allowedRoles: [AdminRole.superAdmin],
         ),
         NavItem(
           id: 20,
           title: 'Bannières Annonces',
           icon: Icons.campaign_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays],
         ),
         NavItem(
           id: 21,
           title: 'Paramètres Système',
           icon: Icons.settings_rounded,
+          allowedRoles: [AdminRole.superAdmin],
         ),
       ],
     ),
   ];
 
-  Widget _getSelectedScreen() {
-    switch (_selectedIndex) {
+  List<NavGroup> _getFilteredNavGroups(AdminRole role, {int? pendingValidationCount}) {
+    final List<NavGroup> filtered = [];
+    for (final group in _rawNavGroups) {
+      final allowedItems = group.items
+          .where((item) => item.isAllowedFor(role))
+          .map((item) {
+            // Le badge "File de Validation" (id 4) reflète le vrai nombre d'éléments en attente,
+            // pas une valeur factice codée en dur.
+            if (item.id == 4 && pendingValidationCount != null) {
+              return NavItem(
+                id: item.id,
+                title: item.title,
+                icon: item.icon,
+                badgeCount: pendingValidationCount > 0 ? pendingValidationCount : null,
+                isFinancial: item.isFinancial,
+                allowedRoles: item.allowedRoles,
+              );
+            }
+            return item;
+          })
+          .toList();
+      if (allowedItems.isNotEmpty) {
+        filtered.add(NavGroup(title: group.title, items: allowedItems));
+      }
+    }
+    return filtered;
+  }
+
+  Widget _getSelectedScreen(int selectedIndex) {
+    switch (selectedIndex) {
       case 0:
         return const DashboardOverviewScreen();
       case 1:
@@ -211,22 +321,176 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
         return const AnnouncementsScreen();
       case 21:
         return const SystemSettingsScreen();
+      case 22:
+        return const PedagogicalCatalogScreen();
+      case 23:
+        return const ShopManagementScreen();
+      case 24:
+        return const DonationsScreen();
+      case 25:
+        return const SchoolYearPromotionScreen();
+      case 26:
+        return const ActiveSessionsScreen();
       default:
         return const DashboardOverviewScreen();
     }
+  }
+
+  // La couleur de fond de l'état sélectionné est portée par ce Container (pas par
+  // ListTile.selectedTileColor) : ListTile peint son fond sur le Material ancestor le plus
+  // proche, et le DecoratedBox de la barre latérale au-dessus masquait cet effet (voir
+  // l'assertion Flutter "ListTile background color or ink splashes may be invisible").
+  Widget _buildNavTile({
+    required BuildContext context,
+    required NavItem item,
+    required bool isSelected,
+    required bool isRestrictedFinancial,
+    bool indented = false,
+  }) {
+    return Container(
+      margin: EdgeInsets.only(
+        left: indented && !_isSidebarCollapsed ? 20 : 12,
+        right: 12,
+        top: 2,
+        bottom: 2,
+      ),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? AppTheme.accentBlue.withValues(alpha: 0.15)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          dense: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          hoverColor: Colors.white.withValues(alpha: 0.05),
+          leading: Icon(
+            item.icon,
+            size: 20,
+            color: isSelected
+                ? AppTheme.accentBlue
+                : isRestrictedFinancial
+                    ? AppTheme.accentRose.withValues(alpha: 0.5)
+                    : Colors.white70,
+          ),
+          title: _isSidebarCollapsed
+              ? null
+              : Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.title,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          color: isSelected
+                              ? Colors.white
+                              : isRestrictedFinancial
+                                  ? Colors.white38
+                                  : Colors.white70,
+                        ),
+                      ),
+                    ),
+                    if (isRestrictedFinancial)
+                      const Icon(
+                        Icons.lock_rounded,
+                        size: 14,
+                        color: AppTheme.accentRose,
+                      )
+                    else if (item.badgeCount != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.accentRose,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${item.badgeCount}',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+          onTap: () {
+            if (isRestrictedFinancial) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Accès restreint : Seul le Super-Administrateur peut consulter les données financières.',
+                  ),
+                  backgroundColor: AppTheme.accentRose,
+                ),
+              );
+            } else {
+              ref.read(selectedNavIndexProvider.notifier).state = item.id;
+            }
+          },
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final authAsync = ref.watch(authProvider);
     final authState = authAsync.valueOrNull;
+    final selectedIndex = ref.watch(selectedNavIndexProvider);
 
     if (authAsync.isLoading || authState == null) {
-      return Scaffold(
+      return const Scaffold(
         backgroundColor: AppTheme.primaryDark,
-        body: const Center(child: CircularProgressIndicator()),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
+
+    final pendingValidationCount = ref.watch(pendingValidationCountProvider).valueOrNull;
+    final filteredGroups = _getFilteredNavGroups(
+      authState.role,
+      pendingValidationCount: pendingValidationCount,
+    );
+
+    // If active screen is not allowed for current role, default back to index 0
+    final isCurrentAllowed = filteredGroups.any(
+      (g) => g.items.any((item) => item.id == selectedIndex),
+    );
+    if (!isCurrentAllowed && selectedIndex != 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ref.read(selectedNavIndexProvider.notifier).state = 0;
+      });
+    }
+
+    String? groupTitleFor(int navId) {
+      for (final g in filteredGroups) {
+        if (g.items.any((item) => item.id == navId)) return g.title;
+      }
+      return null;
+    }
+
+    // Le groupe contenant l'écran actif s'ouvre automatiquement à l'entrée dans l'app.
+    if (!_expansionInitialized) {
+      _expansionInitialized = true;
+      final activeGroup = groupTitleFor(selectedIndex);
+      if (activeGroup != null) _expandedGroups.add(activeGroup);
+    }
+
+    // Une navigation déclenchée ailleurs (ex: raccourci du tableau de bord) doit aussi
+    // dérouler automatiquement le groupe correspondant, même s'il était replié.
+    ref.listen<int>(selectedNavIndexProvider, (previous, next) {
+      final group = groupTitleFor(next);
+      if (group != null && !_expandedGroups.contains(group)) {
+        setState(() => _expandedGroups.add(group));
+      }
+    });
 
     return Scaffold(
       body: Row(
@@ -298,130 +562,95 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
                 ),
                 const Divider(height: 1),
 
-                // Navigation Items List
+                // Navigation Items List (STRICTLY FILTERED BY ROLE)
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    itemCount: _navGroups.length,
+                    itemCount: filteredGroups.length,
                     itemBuilder: (context, groupIdx) {
-                      final group = _navGroups[groupIdx];
+                      final group = filteredGroups[groupIdx];
+                      final isGroupExpanded = _expandedGroups.contains(group.title);
+                      final isGroupActive = group.items.any((i) => i.id == selectedIndex);
+                      final groupHasBadges = group.items.any((i) => i.badgeCount != null);
+
+                      if (_isSidebarCollapsed) {
+                        // Barre réduite en rail d'icônes : pas de groupes, accès direct à toutes
+                        // les pages autorisées (le nom du groupe est de toute façon invisible ici).
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: group.items.map((item) => _buildNavTile(
+                                context: context,
+                                item: item,
+                                isSelected: selectedIndex == item.id,
+                                isRestrictedFinancial:
+                                    item.isFinancial && !authState.canViewFinancials,
+                              )).toList(),
+                        );
+                      }
+
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (!_isSidebarCollapsed)
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                              child: Text(
-                                group.title.toUpperCase(),
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.textMuted,
-                                  letterSpacing: 1.0,
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => setState(() {
+                                if (isGroupExpanded) {
+                                  _expandedGroups.remove(group.title);
+                                } else {
+                                  _expandedGroups.add(group.title);
+                                }
+                              }),
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        group.title.toUpperCase(),
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: isGroupActive
+                                              ? AppTheme.accentBlue
+                                              : AppTheme.textMuted,
+                                          letterSpacing: 1.0,
+                                        ),
+                                      ),
+                                    ),
+                                    if (groupHasBadges && !isGroupExpanded)
+                                      Container(
+                                        margin: const EdgeInsets.only(right: 6),
+                                        width: 6,
+                                        height: 6,
+                                        decoration: const BoxDecoration(
+                                          color: AppTheme.accentRose,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    Icon(
+                                      isGroupExpanded
+                                          ? Icons.keyboard_arrow_down_rounded
+                                          : Icons.keyboard_arrow_right_rounded,
+                                      size: 18,
+                                      color: isGroupActive
+                                          ? AppTheme.accentBlue
+                                          : AppTheme.textMuted,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                          ...group.items.map((item) {
-                            final isSelected = _selectedIndex == item.id;
-                            final isRestrictedFinancial =
-                                item.isFinancial &&
-                                !authState.canViewFinancials;
-
-                            return Container(
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 2,
-                              ),
-                              child: ListTile(
-                                dense: true,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                selected: isSelected,
-                                selectedTileColor: AppTheme.accentBlue
-                                    .withValues(alpha: 0.15),
-                                hoverColor: Colors.white.withValues(
-                                  alpha: 0.05,
-                                ),
-                                leading: Icon(
-                                  item.icon,
-                                  size: 20,
-                                  color: isSelected
-                                      ? AppTheme.accentBlue
-                                      : isRestrictedFinancial
-                                      ? AppTheme.accentRose.withValues(
-                                          alpha: 0.5,
-                                        )
-                                      : Colors.white70,
-                                ),
-                                title: _isSidebarCollapsed
-                                    ? null
-                                    : Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              item.title,
-                                              style: GoogleFonts.inter(
-                                                fontSize: 13,
-                                                fontWeight: isSelected
-                                                    ? FontWeight.w600
-                                                    : FontWeight.normal,
-                                                color: isSelected
-                                                    ? Colors.white
-                                                    : isRestrictedFinancial
-                                                    ? Colors.white38
-                                                    : Colors.white70,
-                                              ),
-                                            ),
-                                          ),
-                                          if (isRestrictedFinancial)
-                                            const Icon(
-                                              Icons.lock_rounded,
-                                              size: 14,
-                                              color: AppTheme.accentRose,
-                                            )
-                                          else if (item.badgeCount != null)
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 6,
-                                                    vertical: 2,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                color: AppTheme.accentRose,
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                              ),
-                                              child: Text(
-                                                '${item.badgeCount}',
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 10,
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                onTap: () {
-                                  if (isRestrictedFinancial) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Accès restreint : Seul le Super-Administrateur peut consulter les données financières.',
-                                        ),
-                                        backgroundColor: AppTheme.accentRose,
-                                      ),
-                                    );
-                                  } else {
-                                    setState(() {
-                                      _selectedIndex = item.id;
-                                    });
-                                  }
-                                },
-                              ),
-                            );
-                          }),
+                          ),
+                          if (isGroupExpanded)
+                            ...group.items.map((item) => _buildNavTile(
+                                  context: context,
+                                  item: item,
+                                  isSelected: selectedIndex == item.id,
+                                  isRestrictedFinancial:
+                                      item.isFinancial && !authState.canViewFinancials,
+                                  indented: true,
+                                )),
                         ],
                       );
                     },
@@ -451,15 +680,15 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
                           _isSidebarCollapsed
                               ? Icons.chevron_right_rounded
                               : Icons.chevron_left_rounded,
-                          color: Colors.white60,
+                          color: AppTheme.textMuted,
                         ),
                         if (!_isSidebarCollapsed) ...[
                           const SizedBox(width: 12),
                           Text(
-                            'Réduire le menu',
+                            'Réduire la barre',
                             style: GoogleFonts.inter(
                               fontSize: 12,
-                              color: Colors.white60,
+                              color: AppTheme.textMuted,
                             ),
                           ),
                         ],
@@ -471,98 +700,62 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
             ),
           ),
 
-          // Main Content Right Panel
+          // Main Screen Right Workspace
           Expanded(
             child: Column(
               children: [
                 // Top Global Header Bar
                 Container(
                   height: 70,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
                   decoration: const BoxDecoration(
                     color: AppTheme.primarySurface,
                     border: Border(
-                      bottom: BorderSide(
-                        color: AppTheme.primaryBorder,
-                        width: 1,
-                      ),
+                      bottom: BorderSide(color: AppTheme.primaryBorder, width: 1),
                     ),
                   ),
                   child: Row(
                     children: [
-                      // Global Search Input
-                      Expanded(
-                        child: Container(
-                          height: 42,
-                          constraints: const BoxConstraints(maxWidth: 400),
-                          child: TextField(
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              color: Colors.white,
-                            ),
-                            decoration: InputDecoration(
-                              hintText:
-                                  'Rechercher un élève, un cours, un établissement...',
-                              hintStyle: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: AppTheme.textMuted,
-                              ),
-                              prefixIcon: const Icon(
-                                Icons.search_rounded,
-                                size: 20,
-                                color: AppTheme.textMuted,
-                              ),
-                              filled: true,
-                              fillColor: AppTheme.primaryDark,
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 0,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 24),
-
-                      // Country Selector Badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryDark,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppTheme.primaryBorder),
-                        ),
-                        child: Row(
-                          children: [
-                            const Text('🇨🇲', style: TextStyle(fontSize: 16)),
-                            const SizedBox(width: 6),
-                            Text(
-                              authState.selectedCountry,
-                              style: GoogleFonts.outfit(
-                                fontSize: 13,
+                      // Active Context Indicator — Flexible pour ne jamais forcer un overflow du
+                      // Row quand la fenêtre est étroite (RenderFlex overflow constaté).
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final selectedIds = ref.watch(selectedCountryIdsProvider);
+                          final countriesAsync = ref.watch(nodesByTypeProvider('country'));
+                          final countries = countriesAsync.valueOrNull ?? [];
+                          final label = selectedIds == null
+                              ? 'Tous les pays'
+                              : selectedIds.length == 1
+                                  ? (countries.where((c) => c.id == selectedIds.first).firstOrNull?.name ??
+                                      '1 pays')
+                                  : '${selectedIds.length} pays';
+                          return Flexible(
+                            child: Text(
+                              'Espace Administration ($label)',
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                                color: Colors.white70,
                               ),
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
+                      const Spacer(),
+
+                      // Sélecteur de pays — multi-sélection réelle + "Tous les pays", remplace
+                      // l'ancienne liste factice codée en dur jamais connectée à rien.
+                      const _CountryScopeSelector(),
                       const SizedBox(width: 16),
 
-                      // Live Role Switcher (For testing permissions enforcement)
+                      // Role Switcher Test Dropdown (FOR TESTING STRICT RBAC VIEW FILTERING)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
-                          color: authState.isSuperAdmin
-                              ? AppTheme.accentEmerald.withValues(alpha: 0.15)
-                              : AppTheme.accentBlue.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
+                          color: AppTheme.primaryDark,
+                          borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: authState.isSuperAdmin
                                 ? AppTheme.accentEmerald
@@ -571,11 +764,11 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<AdminRole>(
+                            // ignore: deprecated_member_use
                             value: authState.role,
-                            dropdownColor: AppTheme.primarySurface,
+                            dropdownColor: AppTheme.primaryDark,
                             icon: const Icon(
-                              Icons.swap_horiz_rounded,
-                              size: 18,
+                              Icons.arrow_drop_down_rounded,
                               color: Colors.white,
                             ),
                             items: AdminRole.values.map((role) {
@@ -607,9 +800,7 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
                             }).toList(),
                             onChanged: (newRole) {
                               if (newRole != null) {
-                                ref
-                                    .read(authProvider.notifier)
-                                    .switchRole(newRole);
+                                ref.read(authProvider.notifier).switchRole(newRole);
                               }
                             },
                           ),
@@ -640,16 +831,20 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
                       ),
                       const SizedBox(width: 16),
 
-                      // User Avatar & Name
+                      // Profile Avatar User Info
                       Row(
                         children: [
-                          const CircleAvatar(
+                          CircleAvatar(
                             radius: 18,
                             backgroundColor: AppTheme.accentBlue,
-                            child: Icon(
-                              Icons.person_rounded,
-                              color: Colors.white,
-                              size: 20,
+                            child: Text(
+                              authState.firstName.isNotEmpty
+                                  ? authState.firstName[0].toUpperCase()
+                                  : 'A',
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -684,13 +879,154 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
                 Expanded(
                   child: Container(
                     color: AppTheme.primaryDark,
-                    child: _getSelectedScreen(),
+                    child: _getSelectedScreen(selectedIndex),
                   ),
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Sélecteur de pays de la navbar : "Tous les pays" ou une sélection spécifique, qui filtre
+/// réellement ce qui est affiché/créé dans toute l'application (via selectedCountryIdsProvider,
+/// lu en interne par nodesByTypeProvider/termsProvider/subjectsProvider) — remplace l'ancienne
+/// liste factice codée en dur (Cameroun/Côte d'Ivoire/Sénégal) jamais connectée à rien.
+class _CountryScopeSelector extends ConsumerWidget {
+  const _CountryScopeSelector();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedIds = ref.watch(selectedCountryIdsProvider);
+    final countriesAsync = ref.watch(nodesByTypeProvider('country'));
+    final countries = countriesAsync.valueOrNull ?? [];
+    final label = selectedIds == null
+        ? 'Tous les pays'
+        : selectedIds.length == 1
+            ? (countries.where((c) => c.id == selectedIds.first).firstOrNull?.name ?? '1 pays')
+            : '${selectedIds.length} pays';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.primaryDark,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.primaryBorder),
+      ),
+      child: TextButton.icon(
+        style: TextButton.styleFrom(
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        ),
+        onPressed: countries.isEmpty ? null : () => _showPicker(context, ref, countries, selectedIds),
+        icon: const Icon(Icons.flag_rounded, color: AppTheme.accentEmerald, size: 18),
+        label: Text(label, style: GoogleFonts.inter(fontSize: 13, color: Colors.white)),
+      ),
+    );
+  }
+
+  void _showPicker(
+    BuildContext context,
+    WidgetRef ref,
+    List<AcademicNode> countries,
+    Set<String>? current,
+  ) {
+    bool allSelected = current == null;
+    final specific = Set<String>.from(current ?? countries.map((c) => c.id));
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => AlertDialog(
+          backgroundColor: AppTheme.primarySurface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: AppDialogTitle(
+            icon: Icons.flag_rounded,
+            iconColor: AppTheme.accentEmerald,
+            text: 'Pays actifs',
+            onClose: () => Navigator.pop(ctx),
+          ),
+          content: SizedBox(
+            width: 360,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Filtre ce qui est affiché et créé dans toute l\'application.',
+                    style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted),
+                  ),
+                  const SizedBox(height: 12),
+                  // ignore: deprecated_member_use
+                  RadioListTile<bool>(
+                    // ignore: deprecated_member_use
+                    value: true,
+                    // ignore: deprecated_member_use
+                    groupValue: allSelected,
+                    activeColor: AppTheme.accentEmerald,
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('Tous les pays', style: GoogleFonts.inter(color: Colors.white, fontSize: 13)),
+                    // ignore: deprecated_member_use
+                    onChanged: (_) => setModalState(() => allSelected = true),
+                  ),
+                  // ignore: deprecated_member_use
+                  RadioListTile<bool>(
+                    // ignore: deprecated_member_use
+                    value: false,
+                    // ignore: deprecated_member_use
+                    groupValue: allSelected,
+                    activeColor: AppTheme.accentEmerald,
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('Pays spécifiques', style: GoogleFonts.inter(color: Colors.white, fontSize: 13)),
+                    // ignore: deprecated_member_use
+                    onChanged: (_) => setModalState(() => allSelected = false),
+                  ),
+                  if (!allSelected)
+                    ...countries.map((c) => CheckboxListTile(
+                          dense: true,
+                          contentPadding: const EdgeInsets.only(left: 24),
+                          value: specific.contains(c.id),
+                          activeColor: AppTheme.accentEmerald,
+                          title: Text(c.name, style: GoogleFonts.inter(color: Colors.white, fontSize: 13)),
+                          onChanged: (checked) => setModalState(() {
+                            if (checked == true) {
+                              specific.add(c.id);
+                            } else {
+                              specific.remove(c.id);
+                            }
+                          }),
+                        )),
+                ],
+              ),
+            ),
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Annuler', style: GoogleFonts.inter(color: AppTheme.textMuted)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentEmerald),
+              onPressed: () {
+                if (allSelected || specific.isEmpty) {
+                  // Rien de coché en mode "spécifique" : on retombe sur "Tous" plutôt que de
+                  // filtrer silencieusement sur un ensemble vide qui masquerait tout.
+                  ref.read(selectedCountryIdsProvider.notifier).state = null;
+                } else {
+                  ref.read(selectedCountryIdsProvider.notifier).state = Set.from(specific);
+                }
+                Navigator.pop(ctx);
+              },
+              child: const Text('Appliquer'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -708,6 +1044,7 @@ class NavItem {
   final IconData icon;
   final int? badgeCount;
   final bool isFinancial;
+  final List<AdminRole>? allowedRoles;
 
   NavItem({
     required this.id,
@@ -715,5 +1052,12 @@ class NavItem {
     required this.icon,
     this.badgeCount,
     this.isFinancial = false,
+    this.allowedRoles,
   });
+
+  bool isAllowedFor(AdminRole role) {
+    if (role == AdminRole.superAdmin) return true;
+    if (allowedRoles == null || allowedRoles!.isEmpty) return true;
+    return allowedRoles!.contains(role);
+  }
 }

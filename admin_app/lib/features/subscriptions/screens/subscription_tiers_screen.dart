@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/models/academic_node.dart';
 import '../../../core/models/subscription_models.dart';
 import '../../../core/providers/data_providers.dart';
+import '../../../core/widgets/app_dialog_title.dart';
 
 class SubscriptionTiersScreen extends ConsumerStatefulWidget {
   const SubscriptionTiersScreen({super.key});
@@ -15,8 +17,6 @@ class SubscriptionTiersScreen extends ConsumerStatefulWidget {
 
 class _SubscriptionTiersScreenState
     extends ConsumerState<SubscriptionTiersScreen> {
-  final String _selectedCountry = 'Cameroun';
-
   @override
   Widget build(BuildContext context) {
     final tiersAsync = ref.watch(subscriptionTiersProvider(null));
@@ -42,7 +42,7 @@ class _SubscriptionTiersScreenState
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Configuration des tarifs par classe et par durée ($_selectedCountry MVP)',
+                    'Configuration des tarifs par classe et par durée',
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       color: AppTheme.textMuted,
@@ -165,6 +165,17 @@ class _SubscriptionTiersScreenState
                 'Durée : ${tier.durationDays} jours',
                 style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
               ),
+              const SizedBox(height: 4),
+              // La classe/le pays rattachés n'étaient affichés nulle part — le concept "tarif PAR
+              // classe" annoncé par le sous-titre de la page était donc invisible depuis cet écran.
+              FutureBuilder<AcademicNode?>(
+                future: ref.read(supabaseServiceProvider).getNode(tier.classNodeId),
+                builder: (context, snapshot) => Text(
+                  'Classe : ${snapshot.data?.name ?? '…'}',
+                  style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           Row(
@@ -211,70 +222,309 @@ class _SubscriptionTiersScreenState
     final durationController = TextEditingController(
       text: tier?.durationDays.toString() ?? '',
     );
+    String? selectedCountryId = tier?.countryId;
+    String? selectedClassNodeId = tier?.classNodeId;
+    String? fieldError;
+    String? submitError;
+    bool isLoading = false;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.primarySurface,
-        title: Text(
-          tier == null ? 'Créer un Palier' : 'Modifier ${tier.name}',
-          style: GoogleFonts.outfit(color: Colors.white),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => AlertDialog(
+          backgroundColor: AppTheme.primarySurface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: AppDialogTitle(
+            icon: Icons.price_change_rounded,
+            text: tier == null ? 'Créer un Palier Tarifaire' : 'Modifier ${tier.name}',
+            onClose: () => Navigator.pop(ctx),
+          ),
+          content: SizedBox(
+            width: 450,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Nom du palier (ex: Mensuel, Journalier)',
+                      errorText: fieldError,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: priceController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(labelText: 'Prix en FCFA'),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: durationController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Durée de validité (en jours)',
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  // Le pays n'est PAS re-demandé ici : il est déjà fixé par le sélecteur de pays
+                  // de la barre de navigation (un seul champ de vérité pour tout l'admin plutôt
+                  // qu'un pays différent par formulaire). Si "Tous les pays" ou plusieurs pays
+                  // sont actifs dans la navbar, on ne peut pas déduire un pays unique pour ce
+                  // palier — l'admin doit d'abord restreindre la navbar à un seul pays.
+                  if (tier == null) ...[
+                    const SizedBox(height: 12),
+                    Consumer(
+                      builder: (context, ref, _) {
+                        final scopedCountryIds = ref.watch(selectedCountryIdsProvider);
+                        if (scopedCountryIds == null || scopedCountryIds.length != 1) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (selectedCountryId != null) {
+                              setModalState(() => selectedCountryId = null);
+                            }
+                          });
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.accentAmber.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppTheme.accentAmber.withValues(alpha: 0.3)),
+                            ),
+                            child: Text(
+                              'Sélectionnez un seul pays précis dans la barre de navigation en haut '
+                              'de l\'écran avant de créer un palier ("Tous les pays" ou plusieurs '
+                              'pays sélectionnés ne permettent pas de savoir à quel pays rattacher ce palier).',
+                              style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentAmber, height: 1.4),
+                            ),
+                          );
+                        }
+                        final resolvedCountryId = scopedCountryIds.first;
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (selectedCountryId != resolvedCountryId) {
+                            setModalState(() => selectedCountryId = resolvedCountryId);
+                          }
+                        });
+                        final countryName = ref
+                            .watch(nodesByTypeProvider('country'))
+                            .valueOrNull
+                            ?.where((c) => c.id == resolvedCountryId)
+                            .firstOrNull
+                            ?.name;
+                        return Row(
+                          children: [
+                            const Icon(Icons.public_rounded, size: 16, color: AppTheme.textMuted),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Pays : ${countryName ?? '…'} (sélectionné dans la barre de navigation)',
+                              style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    Consumer(
+                      builder: (context, ref, _) {
+                        final classesAsync = ref.watch(nodesByTypeProvider('class'));
+                        final seriesAsync = ref.watch(nodesByTypeProvider('series'));
+                        final options = <AcademicNode>[
+                          ...classesAsync.valueOrNull ?? [],
+                          ...seriesAsync.valueOrNull ?? [],
+                        ]
+                            .where((c) => selectedCountryId == null || c.countryId == selectedCountryId)
+                            .toList()
+                          ..sort((a, b) => a.name.compareTo(b.name));
+                        return DropdownButtonFormField<String?>(
+                          // ignore: deprecated_member_use
+                          value: selectedClassNodeId,
+                          dropdownColor: AppTheme.primaryDark,
+                          style: const TextStyle(color: Colors.white),
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Classe / Série',
+                            prefixIcon: Icon(Icons.school_rounded, size: 20),
+                          ),
+                          items: options
+                              .map((c) => DropdownMenuItem<String?>(
+                                  value: c.id, child: Text(c.name, overflow: TextOverflow.ellipsis)))
+                              .toList(),
+                          onChanged: selectedCountryId == null
+                              ? null
+                              : (v) => setModalState(() => selectedClassNodeId = v),
+                        );
+                      },
+                    ),
+                  ],
+                  if (submitError != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentRose.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(submitError!,
+                          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            if (tier != null)
+              IconButton(
+                icon: const Icon(Icons.delete_forever_rounded, color: AppTheme.accentRose),
+                tooltip: 'Supprimer définitivement',
+                onPressed: isLoading ? null : () => _showDeleteTierConfirmation(context, ctx, tier),
+              ),
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(ctx),
+              child: Text('Annuler', style: GoogleFonts.inter(color: AppTheme.textMuted)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentEmerald),
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      final name = nameController.text.trim();
+                      final price = double.tryParse(priceController.text.trim()) ?? 0.0;
+                      final duration = int.tryParse(durationController.text.trim()) ?? 30;
+                      if (name.isEmpty) {
+                        setModalState(() => fieldError = 'Le nom est obligatoire');
+                        return;
+                      }
+                      if (tier == null && (selectedCountryId == null || selectedClassNodeId == null)) {
+                        setModalState(() => submitError = 'Pays et Classe/Série sont obligatoires.');
+                        return;
+                      }
+
+                      setModalState(() {
+                        fieldError = null;
+                        submitError = null;
+                        isLoading = true;
+                      });
+                      try {
+                        final service = ref.read(supabaseServiceProvider);
+                        if (tier == null) {
+                          await service.createTier(
+                            name: name,
+                            countryId: selectedCountryId!,
+                            classNodeId: selectedClassNodeId!,
+                            price: price,
+                            durationDays: duration,
+                          );
+                        } else {
+                          await service.updateTier(
+                            tier.id,
+                            name: name,
+                            price: price,
+                            durationDays: duration,
+                          );
+                        }
+                        ref.invalidate(subscriptionTiersProvider(null));
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (context.mounted) {
+                          // ignore: use_build_context_synchronously
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: AppTheme.accentEmerald,
+                              content: Text(
+                                tier == null ? 'Palier "$name" créé avec succès !' : 'Palier "$name" mis à jour !',
+                                style: GoogleFonts.inter(color: Colors.white),
+                              ),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setModalState(() {
+                          isLoading = false;
+                          submitError = '$e';
+                        });
+                      }
+                    },
+              child: isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Enregistrer'),
+            ),
+          ],
         ),
-        content: SizedBox(
-          width: 450,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Nom du palier'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: priceController,
-                decoration: const InputDecoration(labelText: 'Prix en FCFA'),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: durationController,
-                decoration: const InputDecoration(
-                  labelText: 'Durée de validité (jours)',
-                ),
-                keyboardType: TextInputType.number,
-              ),
-            ],
+      ),
+    );
+  }
+
+  /// Suppression jusqu'ici sans AUCUNE confirmation (un clic sur l'icône poubelle supprimait
+  /// immédiatement) — irréversible, contrairement à tous les autres flux de suppression de l'app.
+  void _showDeleteTierConfirmation(BuildContext context, BuildContext editModalCtx, SubscriptionTier tier) {
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (dialogCtx, setModalState) => AlertDialog(
+          backgroundColor: AppTheme.primarySurface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: AppDialogTitle(
+            icon: Icons.delete_forever_rounded,
+            iconColor: AppTheme.accentRose,
+            text: 'Supprimer "${tier.name}" ?',
+            onClose: () => Navigator.pop(dialogCtx),
           ),
+          content: SizedBox(
+            width: 420,
+            child: Text(
+              'IRRÉVERSIBLE : les élèves abonnés à ce palier ne seront plus rattachés à aucun tarif actif.',
+              style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.4),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(dialogCtx),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentRose),
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      setModalState(() => isLoading = true);
+                      final messenger = ScaffoldMessenger.of(context);
+                      try {
+                        final service = ref.read(supabaseServiceProvider);
+                        await service.deleteTier(tier.id);
+                        ref.invalidate(subscriptionTiersProvider(null));
+                        if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+                        if (editModalCtx.mounted) Navigator.pop(editModalCtx);
+                        messenger.showSnackBar(
+                          SnackBar(
+                            backgroundColor: AppTheme.accentRose,
+                            content: Text('Palier "${tier.name}" supprimé.'),
+                          ),
+                        );
+                      } catch (e) {
+                        setModalState(() => isLoading = false);
+                        messenger.showSnackBar(
+                          SnackBar(backgroundColor: AppTheme.accentRose, content: Text('Erreur : $e')),
+                        );
+                      }
+                    },
+              child: isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Supprimer'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final service = ref.read(supabaseServiceProvider);
-              if (tier == null) {
-                await service.createTier(
-                  name: nameController.text,
-                  countryId: '',
-                  classNodeId: '',
-                  price: double.parse(priceController.text),
-                  durationDays: int.parse(durationController.text),
-                );
-              } else {
-                await service.updateTier(
-                  tier.id,
-                  price: double.parse(priceController.text),
-                  durationDays: int.parse(durationController.text),
-                );
-              }
-              ref.refresh(subscriptionTiersProvider(null));
-              Navigator.pop(context);
-            },
-            child: const Text('Sauvegarder'),
-          ),
-        ],
       ),
     );
   }

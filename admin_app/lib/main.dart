@@ -64,15 +64,10 @@ class SupabaseAuthGate extends ConsumerWidget {
         backgroundColor: AppTheme.primaryDark,
         body: Center(child: CircularProgressIndicator()),
       ),
-      error: (err, _) => Scaffold(
-        backgroundColor: AppTheme.primaryDark,
-        body: Center(
-          child: Text(
-            'Erreur de connexion: $err',
-            style: const TextStyle(color: Colors.white),
-          ),
-        ),
-      ),
+      error: (err, stack) {
+        debugPrint('AuthGate connection/permission error: $err');
+        return const LoginScreen();
+      },
     );
   }
 }

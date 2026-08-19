@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_dialog_title.dart';
 
 class SchoolPapersScreen extends StatefulWidget {
   const SchoolPapersScreen({super.key});
@@ -140,9 +141,10 @@ class _SchoolPapersScreenState extends State<SchoolPapersScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.primarySurface,
-        title: Text(
-          'Créer un Établissement Physique',
-          style: GoogleFonts.outfit(color: Colors.white),
+        title: AppDialogTitle(
+          icon: Icons.domain_add_rounded,
+          text: 'Créer un Établissement Physique',
+          onClose: () => Navigator.pop(context),
         ),
         content: SizedBox(
           width: 450,

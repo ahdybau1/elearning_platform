@@ -1,3 +1,6 @@
 .env
 .env.local
 .env.*.local
+
+# Supabase CLI local link state (project ref/org, machine-local, not a build artifact to version)
+supabase/.temp/

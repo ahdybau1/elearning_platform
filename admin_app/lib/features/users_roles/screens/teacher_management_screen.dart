@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_dialog_title.dart';
 
 class TeacherManagementScreen extends StatefulWidget {
   const TeacherManagementScreen({super.key});
@@ -236,9 +237,10 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.primarySurface,
-        title: Text(
-          'Nouveau Compte Enseignant',
-          style: GoogleFonts.outfit(color: Colors.white),
+        title: AppDialogTitle(
+          icon: Icons.person_add_rounded,
+          text: 'Nouveau Compte Enseignant',
+          onClose: () => Navigator.pop(context),
         ),
         content: SizedBox(
           width: 450,
@@ -280,9 +282,10 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.primarySurface,
-        title: Text(
-          'Rattacher un Établissement à $teacherName',
-          style: GoogleFonts.outfit(color: Colors.white),
+        title: AppDialogTitle(
+          icon: Icons.add_location_alt_rounded,
+          text: 'Rattacher un Établissement à $teacherName',
+          onClose: () => Navigator.pop(context),
         ),
         content: SizedBox(
           width: 450,

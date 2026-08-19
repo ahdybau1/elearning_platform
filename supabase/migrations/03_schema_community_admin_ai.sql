@@ -13,6 +13,10 @@ CREATE TABLE IF NOT EXISTS admin_users (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Liaison vers Supabase Auth (auth.users) — sans cette colonne, aucune policy RLS basée sur
+-- auth.uid() ne peut jamais identifier un admin (voir 03_auth_flow.md, section 2.1 du CDC MVP).
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS auth_user_id UUID UNIQUE REFERENCES auth.users(id);
+
 -- 2. Permissions individuelles nommées (Ajustables par Super-Admin)
 CREATE TABLE IF NOT EXISTS admin_permissions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

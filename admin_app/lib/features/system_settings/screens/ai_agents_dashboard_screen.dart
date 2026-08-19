@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/providers/data_providers.dart';
 import '../../../core/theme/app_theme.dart';
 
 class AiAgentsDashboardScreen extends ConsumerWidget {
@@ -8,52 +9,7 @@ class AiAgentsDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final List<Map<String, dynamic>> subjectCatalogs = [
-      {
-        'subject': 'Mathématiques',
-        'elements': [
-          'Définition',
-          'Propriété',
-          'Théorème',
-          'Démonstration',
-          'Exemple',
-          'Exercice d\'application',
-          'Exercice d\'approfondissement',
-        ],
-      },
-      {
-        'subject': 'Français',
-        'elements': [
-          'Texte support',
-          'Biographie d\'auteur',
-          'Notion grammaticale',
-          'Figure de style',
-          'Méthodologie dissertation',
-          'Exercice de langue',
-        ],
-      },
-      {
-        'subject': 'Physique-Chimie',
-        'elements': [
-          'Définition',
-          'Loi physique',
-          'Formule',
-          'Protocole d\'expérience',
-          'Schéma montages',
-          'Application numérique',
-        ],
-      },
-      {
-        'subject': 'SVT',
-        'elements': [
-          'Définition',
-          'Schéma annoté',
-          'Observation micrographique',
-          'Protocole expérimental',
-          'Bilan de synthèse',
-        ],
-      },
-    ];
+    final subjectsAsync = ref.watch(subjectsProvider((countryId: null, includeInactive: false)));
 
     return Padding(
       padding: const EdgeInsets.all(28),
@@ -88,9 +44,11 @@ class AiAgentsDashboardScreen extends ConsumerWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.accentCyan,
                 ),
-                onPressed: () {},
+                // Renvoie vers l'écran dédié plutôt que de dupliquer sa logique de création ici
+                // (voir 05_flutter_architecture.md, règle 4 : pas de logique dupliquée).
+                onPressed: () => ref.read(selectedNavIndexProvider.notifier).state = 22,
                 icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('Ajouter un Type d\'Élément au Catalogue'),
+                label: const Text('Gérer le Catalogue Pédagogique'),
               ),
             ],
           ),
@@ -136,18 +94,27 @@ class AiAgentsDashboardScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 14),
 
-          // Catalog Grid
+          // Catalog Grid — données réelles (content_catalog), un onglet par matière
           Expanded(
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 2.5,
-              ),
-              itemCount: subjectCatalogs.length,
-              itemBuilder: (context, idx) {
-                final cat = subjectCatalogs[idx];
+            child: subjectsAsync.when(
+              data: (subjects) {
+                if (subjects.isEmpty) {
+                  return Center(
+                    child: Text('Aucune matière créée.',
+                        style: GoogleFonts.inter(color: AppTheme.textMuted)),
+                  );
+                }
+                return GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 2.5,
+                  ),
+                  itemCount: subjects.length,
+                  itemBuilder: (context, idx) {
+                final subject = subjects[idx];
+                final catalogAsync = ref.watch(contentCatalogProvider(subject.id));
                 return Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -162,7 +129,7 @@ class AiAgentsDashboardScreen extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            cat['subject'],
+                            subject.name,
                             style: GoogleFonts.outfit(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -177,33 +144,56 @@ class AiAgentsDashboardScreen extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: (cat['elements'] as List<String>).map((el) {
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryDark,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              el,
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                color: Colors.white70,
+                      Expanded(
+                        child: catalogAsync.when(
+                          data: (items) {
+                            if (items.isEmpty) {
+                              return Text(
+                                'Aucun élément de catalogue pour cette matière.',
+                                style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted),
+                              );
+                            }
+                            return SingleChildScrollView(
+                              child: Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: items.map((item) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryDark,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      item.elementType,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        color: Colors.white70,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
                               ),
-                            ),
-                          );
-                        }).toList(),
+                            );
+                          },
+                          loading: () => const LinearProgressIndicator(),
+                          error: (err, _) => Text('Erreur: $err',
+                              style: GoogleFonts.inter(fontSize: 11, color: AppTheme.accentRose)),
+                        ),
                       ),
                     ],
                   ),
                 );
+                  },
+                );
               },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(
+                child: Text('Erreur: $err', style: GoogleFonts.inter(color: AppTheme.accentRose)),
+              ),
             ),
           ),
         ],

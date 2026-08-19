@@ -66,7 +66,11 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+-- SECURITY DEFINER : ce trigger peut être déclenché par un admin authentifié qui met à jour une
+-- transaction manuellement depuis l'écran de réconciliation (pas seulement par le webhook en
+-- service_role) ; il doit pouvoir écrire dans monthly_spend_counter/subscriptions/notification_log
+-- quel que soit le rôle de l'appelant (voir 01_rls_security.md).
 
 CREATE OR REPLACE TRIGGER trigger_monthly_spend_accumulation
 AFTER INSERT OR UPDATE ON transactions
@@ -80,10 +84,15 @@ EXECUTE FUNCTION handle_monthly_spend_accumulation();
 
 CREATE OR REPLACE FUNCTION log_admin_action()
 RETURNS TRIGGER AS $$
+DECLARE
+    v_admin_id UUID;
 BEGIN
+    -- Résolu via auth.uid() -> admin_users.auth_user_id, plus jamais via current_setting (variable
+    -- de session que rien ne définit côté client — voir 01_rls_security.md).
+    SELECT id INTO v_admin_id FROM admin_users WHERE auth_user_id = auth.uid();
     INSERT INTO audit_log (admin_user_id, action_type, entity_type, entity_id, before_json, after_json)
     VALUES (
-        NULLIF(current_setting('app.current_admin_id', true), '')::UUID,
+        v_admin_id,
         TG_OP,
         TG_TABLE_NAME,
         COALESCE(NEW.id, OLD.id),
@@ -92,7 +101,9 @@ BEGIN
     );
     RETURN COALESCE(NEW, OLD);
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+-- SECURITY DEFINER : déclenché par des DML faites par des admins authentifiés (pas service_role),
+-- doit pouvoir écrire dans audit_log même sans policy INSERT pour le rôle appelant.
 
 -- Attacher l'audit log sur les tables sensibles de l'administration
 CREATE OR REPLACE TRIGGER audit_academic_nodes AFTER INSERT OR UPDATE OR DELETE ON academic_nodes FOR EACH ROW EXECUTE FUNCTION log_admin_action();
@@ -104,37 +115,15 @@ CREATE OR REPLACE TRIGGER audit_admin_users AFTER INSERT OR UPDATE OR DELETE ON 
 -- ============================================================================
 -- 3. ROW LEVEL SECURITY (RLS) POLICIES
 -- ============================================================================
-
-ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE monthly_spend_counter ENABLE ROW LEVEL SECURITY;
-ALTER TABLE subscription_tiers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE access_matrix ENABLE ROW LEVEL SECURITY;
-ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
-
--- Allow all authenticated users to read admin_users (role filtering happens in app logic)
-CREATE POLICY admin_users_authenticated_select ON admin_users
-    FOR SELECT
-    USING (auth.role() = 'authenticated');
-
--- Politique de sécurité stricte : les données financières ne sont visibles QUE par le rôle 'super_admin'
-CREATE POLICY super_admin_transactions_policy ON transactions
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM admin_users 
-            WHERE id = NULLIF(current_setting('app.current_admin_id', true), '')::UUID 
-            AND role = 'super_admin'
-        )
-    );
-
-CREATE POLICY super_admin_audit_log_policy ON audit_log
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM admin_users 
-            WHERE id = NULLIF(current_setting('app.current_admin_id', true), '')::UUID 
-            AND role = 'super_admin'
-        )
-    );
+-- Déplacé dans son intégralité vers 06_integrity_and_rls.sql : les anciennes policies de ce
+-- fichier reposaient sur current_setting('app.current_admin_id', true), une variable de session que
+-- rien côté client ne définit jamais — elles ne laissaient donc jamais rien passer (RLS activé, 0
+-- ligne accessible à personne, y compris aux vrais super-admins). Elles ne sont plus recréées ici.
+-- La migration 06 couvre les ~45 tables du schéma avec des policies basées sur auth.uid(), et
+-- redéfinit ENABLE ROW LEVEL SECURITY pour transactions / monthly_spend_counter /
+-- subscription_tiers / access_matrix / admin_users / audit_log au passage (idempotent : ALTER
+-- TABLE ... ENABLE ROW LEVEL SECURITY ne provoque pas d'erreur si déjà activé).
+-- Voir 01_rls_security.md.
 
 
 -- ============================================================================
@@ -269,7 +258,7 @@ BEGIN
 
     -- 10. Compte Super-Admin initial
     INSERT INTO admin_users (email, first_name, last_name, role)
-    VALUES ('admin@elearning.cm', 'Super', 'Administrateur', 'super_admin')
+    VALUES ('ahdybau@gmail.com', 'Super', 'Administrateur', 'super_admin')
     RETURNING id INTO v_super_admin_id;
 
 END $$;

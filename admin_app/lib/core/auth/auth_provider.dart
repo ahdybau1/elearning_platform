@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/supabase_provider.dart';
@@ -55,7 +56,6 @@ class AdminUserState {
   final String firstName;
   final String lastName;
   final AdminRole role;
-  final String selectedCountry;
   final List<String> permissions;
 
   AdminUserState({
@@ -64,7 +64,6 @@ class AdminUserState {
     required this.firstName,
     required this.lastName,
     required this.role,
-    this.selectedCountry = 'Cameroun',
     this.permissions = const [],
   });
 
@@ -83,7 +82,6 @@ class AdminUserState {
     String? firstName,
     String? lastName,
     AdminRole? role,
-    String? selectedCountry,
     List<String>? permissions,
   }) {
     return AdminUserState(
@@ -92,7 +90,6 @@ class AdminUserState {
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
       role: role ?? this.role,
-      selectedCountry: selectedCountry ?? this.selectedCountry,
       permissions: permissions ?? this.permissions,
     );
   }
@@ -104,40 +101,67 @@ class AdminUserState {
       firstName: adminUser.firstName,
       lastName: adminUser.lastName,
       role: AdminRole.fromString(adminUser.role),
-      selectedCountry: adminUser.scopeJson['selected_country'] ?? 'Cameroun',
       permissions: List<String>.from(adminUser.scopeJson['permissions'] ?? []),
     );
   }
 }
 
 class AuthNotifier extends StateNotifier<AsyncValue<AdminUserState?>> {
-  AuthNotifier() : super(const AsyncValue.data(null)) {
+  AuthNotifier(this._client) : super(const AsyncValue.data(null)) {
     _listenAuthChanges();
+    _maybeAutoLogin();
+  }
+
+  final SupabaseClient _client;
+
+  // Connexion automatique en développement local UNIQUEMENT, pour éviter d'avoir à ressaisir les
+  // identifiants à chaque rechargement pendant les tests. Gardée par DEMO_AUTO_LOGIN dans .env
+  // (absent par défaut, jamais commit — voir 03_auth_flow.md). Ne contourne rien : passe par le
+  // vrai signInWithPassword ci-dessous, donc RLS et la vérification admin_users restent la seule
+  // source de vérité — un mauvais mot de passe ou un compte non lié échoue exactement pareil.
+  Future<void> _maybeAutoLogin() async {
+    if (dotenv.env['DEMO_AUTO_LOGIN'] != 'true') return;
+    if (_client.auth.currentSession != null) return;
+    final email = dotenv.env['DEMO_EMAIL'];
+    final password = dotenv.env['DEMO_PASSWORD'];
+    if (email == null || password == null) return;
+    await signInWithPassword(email, password);
   }
 
   void _listenAuthChanges() {
-    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
-      data,
-    ) {
+    _authSubscription = _client.auth.onAuthStateChange.listen((data) async {
       final user = data.session?.user;
       if (user == null) {
         state = const AsyncValue.data(null);
         return;
       }
-      state = const AsyncValue.loading();
-      SupabaseService(Supabase.instance.client)
-          .getAdminUserByEmail(user.email ?? '')
-          .then((adminUser) {
-            if (adminUser == null) {
-              state = const AsyncValue.data(null);
-              return;
-            }
-            state = AsyncValue.data(AdminUserState.fromAdminUser(adminUser));
-          })
-          .catchError((err) {
-            state = AsyncError(err, StackTrace.current);
-          });
+      await _resolveAdmin(user.id);
+    }, onError: (err) {
+      state = const AsyncValue.data(null);
     });
+  }
+
+  // Le rôle affiché vient toujours d'une requête à admin_users filtrée par auth.uid(), jamais d'un
+  // état codé en dur côté client (voir 03_auth_flow.md). Un compte authentifié via Supabase Auth
+  // mais absent/inactif dans admin_users n'est pas un admin autorisé : la session est révoquée et
+  // l'échec reste visible.
+  Future<void> _resolveAdmin(String authUserId) async {
+    try {
+      final adminUser = await SupabaseService(
+        _client,
+      ).getAdminUserByAuthId(authUserId);
+      if (adminUser == null || !adminUser.isActive) {
+        await _client.auth.signOut();
+        state = AsyncValue.error(
+          'Compte non autorisé ou inactif.',
+          StackTrace.current,
+        );
+        return;
+      }
+      state = AsyncValue.data(AdminUserState.fromAdminUser(adminUser));
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
   }
 
   StreamSubscription<AuthState>? _authSubscription;
@@ -154,82 +178,31 @@ class AuthNotifier extends StateNotifier<AsyncValue<AdminUserState?>> {
     }
   }
 
-  void switchCountry(String countryName) {
-    if (state.hasValue && state.value != null) {
-      state = AsyncValue.data(
-        state.value!.copyWith(selectedCountry: countryName),
-      );
-    }
-  }
-
   Future<void> signInWithPassword(String email, String password) async {
     state = const AsyncValue.loading();
     try {
-      final res = await Supabase.instance.client.auth.signInWithPassword(
+      final res = await _client.auth.signInWithPassword(
         email: email,
         password: password,
       );
       final user = res.user;
       if (user == null) {
-        throw Exception(
-          'Échec de l’authentification. Vérifiez vos identifiants.',
-        );
+        state = AsyncValue.error('Authentification échouée.', StackTrace.current);
+        return;
       }
-      final adminUser = await SupabaseService(
-        Supabase.instance.client,
-      ).getAdminUserByEmail(user.email ?? '');
-      if (adminUser == null) {
-        throw Exception(
-          'Adresse email non associée à un compte administrateur.',
-        );
-      }
-      state = AsyncValue.data(AdminUserState.fromAdminUser(adminUser));
+      await _resolveAdmin(user.id);
     } catch (e, st) {
-      state = AsyncError(e, st);
-      rethrow;
+      state = AsyncValue.error(e, st);
     }
   }
 
   Future<void> signOut() async {
-    await Supabase.instance.client.auth.signOut();
+    await _client.auth.signOut();
+    state = const AsyncValue.data(null);
   }
 }
 
 final authProvider =
     StateNotifierProvider<AuthNotifier, AsyncValue<AdminUserState?>>((ref) {
-      return AuthNotifier();
+      return AuthNotifier(ref.watch(supabaseClientProvider));
     });
-
-final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  final client = ref.watch(supabaseClientProvider);
-  return AuthRepository(client);
-});
-
-class AuthRepository {
-  final SupabaseClient client;
-
-  AuthRepository(this.client);
-
-  Future<AdminUserState?> signInWithPassword(
-    String email,
-    String password,
-  ) async {
-    final res = await client.auth.signInWithPassword(
-      email: email,
-      password: password,
-    );
-    final user = res.user;
-    if (user == null) return null;
-
-    final adminUser = await SupabaseService(
-      client,
-    ).getAdminUserByEmail(user.email ?? '');
-    if (adminUser == null) return null;
-
-    return AdminUserState.fromAdminUser(adminUser);
-  }
-
-  Future<void> signOut() async {
-    await client.auth.signOut();
-  }
-}

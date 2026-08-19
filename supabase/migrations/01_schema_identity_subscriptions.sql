@@ -16,6 +16,11 @@ CREATE TABLE IF NOT EXISTS accounts (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Liaison vers Supabase Auth (auth.users), condition préalable pour toute policy RLS basée sur
+-- auth.uid() sur cette table (voir 01_rls_security.md / 03_auth_flow.md). ADD COLUMN IF NOT EXISTS
+-- pour rester rejouable sur une base où cette migration a déjà tourné sans cette colonne.
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS auth_user_id UUID UNIQUE REFERENCES auth.users(id);
+
 -- 2. Compte Parent distinct
 CREATE TABLE IF NOT EXISTS parent_accounts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

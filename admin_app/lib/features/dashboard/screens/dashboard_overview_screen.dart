@@ -21,10 +21,27 @@ class DashboardOverviewScreen extends ConsumerWidget {
           role: AdminRole.superAdmin,
         );
 
+    final selectedCountryIds = ref.watch(selectedCountryIdsProvider);
+    final countriesAsync = ref.watch(nodesByTypeProvider('country'));
+    final countries = countriesAsync.valueOrNull ?? [];
+    final countryScopeLabel = selectedCountryIds == null
+        ? 'Tous les pays'
+        : selectedCountryIds.length == 1
+            ? (countries.where((c) => c.id == selectedCountryIds.first).firstOrNull?.name ?? '1 pays')
+            : '${selectedCountryIds.length} pays';
+
     final validationAsync = ref.watch(validationQueueProvider);
     final aiCallsAsync = ref.watch(aiAgentCallsProvider(30));
+    final activeProfilesAsync = ref.watch(activeProfilesCountProvider);
+    final publishedLessonsAsync = ref.watch(publishedLessonsCountProvider);
+    final exercisesAsync = ref.watch(exercisesCountProvider);
+    final openTicketsAsync = ref.watch(openTicketsCountProvider);
 
     final validationCount = validationAsync.asData?.value.length ?? 0;
+    final activeProfiles = activeProfilesAsync.asData?.value ?? 0;
+    final publishedLessons = publishedLessonsAsync.asData?.value ?? 0;
+    final exercisesCount = exercisesAsync.asData?.value ?? 0;
+    final openTickets = openTicketsAsync.asData?.value ?? 0;
 
     final aiCalls = aiCallsAsync.asData?.value ?? [];
     double totalAiCost = 0;
@@ -39,32 +56,49 @@ class DashboardOverviewScreen extends ConsumerWidget {
         children: [
           // Screen Title
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Tableau de Bord Global',
-                    style: GoogleFonts.outfit(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tableau de Bord Global',
+                      style: GoogleFonts.outfit(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Vue d\'ensemble de l\'activité, des contenus et des performances du système (${authState.selectedCountry})',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: AppTheme.textMuted,
+                    const SizedBox(height: 4),
+                    Text(
+                      'Vue d\'ensemble de l\'activité, des contenus et des performances du système ($countryScopeLabel)',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: AppTheme.textMuted,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(width: 16),
               ElevatedButton.icon(
-                onPressed: () => ref.refresh(validationQueueProvider),
+                onPressed: () {
+                  // ignore: unused_result
+                  ref.refresh(validationQueueProvider);
+                  // ignore: unused_result
+                  ref.refresh(activeProfilesCountProvider);
+                  // ignore: unused_result
+                  ref.refresh(publishedLessonsCountProvider);
+                  // ignore: unused_result
+                  ref.refresh(exercisesCountProvider);
+                  // ignore: unused_result
+                  ref.refresh(openTicketsCountProvider);
+                  // ignore: unused_result
+                  ref.refresh(aiAgentCallsProvider(30));
+                },
                 icon: const Icon(Icons.refresh_rounded, size: 18),
                 label: const Text('Actualiser'),
               ),
@@ -92,27 +126,45 @@ class DashboardOverviewScreen extends ConsumerWidget {
                     subtitle: '$validationCount leçons/exercices',
                     icon: Icons.fact_check_rounded,
                     color: AppTheme.accentAmber,
+                    isLoading: validationAsync.isLoading,
                   ),
                   _buildKpiCard(
                     title: 'Élèves Actifs',
-                    value: '14,280',
-                    subtitle: '+12% ce mois',
+                    value: activeProfiles > 0
+                        ? _formatCount(activeProfiles)
+                        : '—',
+                    subtitle: '$activeProfiles profils actifs',
                     icon: Icons.school_rounded,
                     color: AppTheme.accentBlue,
+                    isLoading: activeProfilesAsync.isLoading,
                   ),
                   _buildKpiCard(
                     title: 'Cours & Leçons Publiés',
-                    value: '1,450',
-                    subtitle: '98% de couverture du programme',
+                    value: publishedLessons > 0
+                        ? _formatCount(publishedLessons)
+                        : '—',
+                    subtitle: '$publishedLessons leçons publiées',
                     icon: Icons.menu_book_rounded,
                     color: AppTheme.accentEmerald,
+                    isLoading: publishedLessonsAsync.isLoading,
                   ),
                   _buildKpiCard(
                     title: 'Exercices en Banque',
-                    value: '18,920',
-                    subtitle: '3,400 générés par IA',
+                    value: exercisesCount > 0
+                        ? _formatCount(exercisesCount)
+                        : '—',
+                    subtitle: '$exercisesCount exercices au total',
                     icon: Icons.quiz_rounded,
                     color: AppTheme.accentIndigo,
+                    isLoading: exercisesAsync.isLoading,
+                  ),
+                  _buildKpiCard(
+                    title: 'Tickets Support Ouverts',
+                    value: openTickets.toString(),
+                    subtitle: '$openTickets en attente de traitement',
+                    icon: Icons.support_agent_rounded,
+                    color: AppTheme.accentRose,
+                    isLoading: openTicketsAsync.isLoading,
                   ),
                   _buildFinancialKpiCard(
                     context: context,
@@ -128,6 +180,7 @@ class DashboardOverviewScreen extends ConsumerWidget {
             },
           ),
           const SizedBox(height: 28),
+
 
           // System Activity & Validation Workflow Status Row
           Row(
@@ -147,16 +200,19 @@ class DashboardOverviewScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Contenus en Attente de Validation',
-                            style: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                          Expanded(
+                            child: Text(
+                              'Contenus en Attente de Validation',
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.outfit(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
@@ -199,7 +255,7 @@ class DashboardOverviewScreen extends ConsumerWidget {
                               )
                             : Column(
                                 children: items
-                                    .map((item) => _buildValidationItem(item))
+                                    .map((item) => _buildValidationItem(ref, item))
                                     .toList(),
                               ),
                         loading: () =>
@@ -239,12 +295,15 @@ class DashboardOverviewScreen extends ConsumerWidget {
                             color: AppTheme.accentCyan,
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            'Agents IA - Consommation API',
-                            style: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                          Expanded(
+                            child: Text(
+                              'Agents IA - Consommation API',
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.outfit(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ],
@@ -294,15 +353,18 @@ class DashboardOverviewScreen extends ConsumerWidget {
                           border: Border.all(color: AppTheme.primaryBorder),
                         ),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'Coût Total Estimé (30j) :',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: Colors.white70,
+                            Expanded(
+                              child: Text(
+                                'Coût Total Estimé (30j) :',
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: Colors.white70,
+                                ),
                               ),
                             ),
+                            const SizedBox(width: 8),
                             Text(
                               '${totalAiCost.toStringAsFixed(2)} \$',
                               style: GoogleFonts.outfit(
@@ -325,12 +387,19 @@ class DashboardOverviewScreen extends ConsumerWidget {
     );
   }
 
+  static String _formatCount(int count) {
+    if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
+    if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}k';
+    return count.toString();
+  }
+
   Widget _buildKpiCard({
     required String title,
     required String value,
     required String subtitle,
     required IconData icon,
     required Color color,
+    bool isLoading = false,
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -346,14 +415,19 @@ class DashboardOverviewScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: AppTheme.textMuted,
-                  fontWeight: FontWeight.w500,
+              Flexible(
+                child: Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: AppTheme.textMuted,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
                 ),
               ),
+              const SizedBox(width: 8),
               CircleAvatar(
                 radius: 18,
                 backgroundColor: color.withValues(alpha: 0.15),
@@ -361,14 +435,24 @@ class DashboardOverviewScreen extends ConsumerWidget {
               ),
             ],
           ),
-          Text(
-            value,
-            style: GoogleFonts.outfit(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+          if (isLoading)
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: color,
+              ),
+            )
+          else
+            Text(
+              value,
+              style: GoogleFonts.outfit(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
-          ),
           Text(
             subtitle,
             style: GoogleFonts.inter(
@@ -376,6 +460,7 @@ class DashboardOverviewScreen extends ConsumerWidget {
               color: color,
               fontWeight: FontWeight.w600,
             ),
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -409,14 +494,19 @@ class DashboardOverviewScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: AppTheme.textMuted,
-                  fontWeight: FontWeight.w500,
+              Flexible(
+                child: Text(
+                  title,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: AppTheme.textMuted,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               CircleAvatar(
                 radius: 18,
                 backgroundColor: canViewFinancials
@@ -448,12 +538,15 @@ class DashboardOverviewScreen extends ConsumerWidget {
                   color: AppTheme.accentRose,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  '•••••••• \$',
-                  style: GoogleFonts.outfit(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textMuted,
+                Flexible(
+                  child: Text(
+                    '•••••••• \$',
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.outfit(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textMuted,
+                    ),
                   ),
                 ),
               ],
@@ -473,7 +566,7 @@ class DashboardOverviewScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildValidationItem(dynamic item) {
+  Widget _buildValidationItem(WidgetRef ref, dynamic item) {
     final title = item.title ?? 'Titre inconnu';
     final author = item.authorId ?? '';
 
@@ -496,6 +589,7 @@ class DashboardOverviewScreen extends ConsumerWidget {
               children: [
                 Text(
                   title,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.outfit(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -505,6 +599,7 @@ class DashboardOverviewScreen extends ConsumerWidget {
                 const SizedBox(height: 2),
                 Text(
                   '$author • Statut: ${item.status}',
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: AppTheme.textMuted,
@@ -513,17 +608,20 @@ class DashboardOverviewScreen extends ConsumerWidget {
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Text(
-            item.createdAt.toLocal().toString().split('.').first,
+            item.createdAt.toLocal().toString().split(' ').first,
             style: GoogleFonts.inter(fontSize: 11, color: Colors.white38),
           ),
-          const SizedBox(width: 12),
           IconButton(
             icon: const Icon(
               Icons.chevron_right_rounded,
               color: Colors.white70,
             ),
-            onPressed: () {},
+            tooltip: 'Aller à la File de Validation',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            onPressed: () => ref.read(selectedNavIndexProvider.notifier).state = 4,
           ),
         ],
       ),
@@ -539,11 +637,14 @@ class DashboardOverviewScreen extends ConsumerWidget {
           Expanded(
             child: Text(
               task,
+              overflow: TextOverflow.ellipsis,
               style: GoogleFonts.inter(fontSize: 13, color: Colors.white70),
             ),
           ),
+          const SizedBox(width: 8),
           Text(
             requests,
+            overflow: TextOverflow.ellipsis,
             style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted),
           ),
           const SizedBox(width: 16),

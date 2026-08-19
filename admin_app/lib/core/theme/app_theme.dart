@@ -20,6 +20,13 @@ class AppTheme {
   static const Color textDark = Color(0xFF0F172A);
   static const Color textMuted = Color(0xFF64748B);
 
+  // Convenient Aliases for Dark Theme
+  static const Color cardBackground = primarySurface;
+  static const Color surfaceDark = primarySurface;
+  static const Color borderColor = primaryBorder;
+  static const Color textSecondary = textMuted;
+  static const Color accentPurple = accentIndigo;
+
   // Dark Theme Data
   static ThemeData get darkTheme {
     return ThemeData(

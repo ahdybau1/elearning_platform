@@ -1,55 +1,26 @@
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../../../core/theme/app_theme.dart';
+import 'dart:convert';
+import 'dart:html' as html;
 
-class AuditLogScreen extends StatefulWidget {
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../core/models/admin_models.dart';
+import '../../../core/providers/data_providers.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_dialog_title.dart';
+
+class AuditLogScreen extends ConsumerWidget {
   const AuditLogScreen({super.key});
 
   @override
-  State<AuditLogScreen> createState() => _AuditLogScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final logsAsync = ref.watch(auditLogsProvider);
+    final adminsAsync = ref.watch(adminUsersProvider);
+    final adminNames = <String, String>{
+      for (final admin in adminsAsync.valueOrNull ?? <AdminUser>[])
+        admin.id: '${admin.firstName} ${admin.lastName}',
+    };
 
-class _AuditLogScreenState extends State<AuditLogScreen> {
-  final List<Map<String, dynamic>> _logs = [
-    {
-      'id': 'log-9901',
-      'admin': 'Mme. Béatrice Eboko (Admin Pays)',
-      'action': 'UPDATE',
-      'entity': 'subscription_tiers',
-      'entityId': 'tier-3e-mensuel',
-      'details':
-          'Modification du prix du palier Mensuel de 2,000 FCFA à 2,500 FCFA',
-      'time': '10/10/2026 à 15:45',
-      'before': '{"price": 2000}',
-      'after': '{"price": 2500}',
-    },
-    {
-      'id': 'log-9902',
-      'admin': 'M. Marc Nguema (Admin Contenu)',
-      'action': 'PUBLISH',
-      'entity': 'lessons',
-      'entityId': 'les-001',
-      'details': 'Publication de la Leçon 1 : PGCD et nombres premiers',
-      'time': '10/10/2026 à 14:22',
-      'before': '{"status": "en_attente"}',
-      'after': '{"status": "publie"}',
-    },
-    {
-      'id': 'log-9903',
-      'admin': 'Super Administrateur HQ',
-      'action': 'RECONCILE',
-      'entity': 'transactions',
-      'entityId': 'tx-88213',
-      'details':
-          'Réconciliation manuelle de la transaction Mobile Money MTN MoMo',
-      'time': '09/10/2026 à 11:10',
-      'before': '{"status": "ambiguous"}',
-      'after': '{"status": "success"}',
-    },
-  ];
-
-  @override
-  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(28),
       child: Column(
@@ -84,137 +55,87 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                   foregroundColor: Colors.white,
                   side: const BorderSide(color: AppTheme.primaryBorder),
                 ),
-                onPressed: () {},
+                onPressed: logsAsync.valueOrNull == null
+                    ? null
+                    : () => _exportCsv(context, logsAsync.valueOrNull!, adminNames),
                 icon: const Icon(Icons.download_rounded, size: 18),
-                label: const Text('Exporter l\'Audit Log (CSV/JSON)'),
+                label: const Text('Exporter l\'Audit Log (CSV)'),
               ),
             ],
           ),
           const SizedBox(height: 24),
 
-          // Log List Table
           Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppTheme.primarySurface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.primaryBorder),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: DataTable(
-                  headingRowColor: WidgetStateProperty.all(
-                    AppTheme.primaryDark,
+            child: logsAsync.when(
+              data: (logs) {
+                if (logs.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'Aucune action journalisée pour le moment.',
+                      style: GoogleFonts.inter(color: AppTheme.textMuted),
+                    ),
+                  );
+                }
+                return Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.primarySurface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.primaryBorder),
                   ),
-                  columns: [
-                    DataColumn(
-                      label: Text(
-                        'Horodatage',
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: SingleChildScrollView(
+                      child: DataTable(
+                        headingRowColor: WidgetStateProperty.all(AppTheme.primaryDark),
+                        columns: [
+                          DataColumn(
+                              label: Text('Horodatage',
+                                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white))),
+                          DataColumn(
+                              label: Text('Administrateur',
+                                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white))),
+                          DataColumn(
+                              label: Text('Action',
+                                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white))),
+                          DataColumn(
+                              label: Text('Table / Entité',
+                                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white))),
+                          DataColumn(
+                              label: Text('Diff JSON',
+                                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white))),
+                        ],
+                        rows: logs.map((log) {
+                          final adminName = log.adminUserId != null
+                              ? (adminNames[log.adminUserId] ?? 'Admin inconnu')
+                              : 'Système';
+                          return DataRow(
+                            cells: [
+                              DataCell(Text(
+                                log.createdAt.toLocal().toString().split('.').first,
+                                style: GoogleFonts.inter(fontSize: 12, color: Colors.white38),
+                              )),
+                              DataCell(Text(adminName,
+                                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white))),
+                              DataCell(_buildActionBadge(log.actionType)),
+                              DataCell(Text(log.entityType,
+                                  style: GoogleFonts.inter(color: AppTheme.accentCyan))),
+                              DataCell(
+                                IconButton(
+                                  icon: const Icon(Icons.code_rounded, size: 18, color: AppTheme.accentBlue),
+                                  onPressed: () => _showJsonDiffModal(context, log),
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
                       ),
                     ),
-                    DataColumn(
-                      label: Text(
-                        'Administrateur',
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        'Action',
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        'Table / Entité',
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        'Détails du changement',
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        'Diff JSON',
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                  rows: _logs.map((log) {
-                    return DataRow(
-                      cells: [
-                        DataCell(
-                          Text(
-                            log['time'],
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: Colors.white38,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            log['admin'],
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        DataCell(_buildActionBadge(log['action'])),
-                        DataCell(
-                          Text(
-                            log['entity'],
-                            style: GoogleFonts.inter(
-                              color: AppTheme.accentCyan,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            log['details'],
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          IconButton(
-                            icon: const Icon(
-                              Icons.code_rounded,
-                              size: 18,
-                              color: AppTheme.accentBlue,
-                            ),
-                            onPressed: () => _showJsonDiffModal(context, log),
-                          ),
-                        ),
-                      ],
-                    );
-                  }).toList(),
-                ),
+                  ),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(
+                child: Text('Erreur: $err', style: GoogleFonts.inter(color: AppTheme.accentRose)),
               ),
             ),
           ),
@@ -226,86 +147,82 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
   Widget _buildActionBadge(String action) {
     Color bg;
     Color fg;
-    if (action == 'CREATE') {
-      bg = AppTheme.accentEmerald.withValues(alpha: 0.15);
-      fg = AppTheme.accentEmerald;
-    } else if (action == 'UPDATE' || action == 'PUBLISH') {
-      bg = AppTheme.accentBlue.withValues(alpha: 0.15);
-      fg = AppTheme.accentBlue;
-    } else if (action == 'RECONCILE') {
-      bg = AppTheme.accentIndigo.withValues(alpha: 0.15);
-      fg = AppTheme.accentIndigo;
-    } else {
-      bg = AppTheme.accentRose.withValues(alpha: 0.15);
-      fg = AppTheme.accentRose;
+    switch (action) {
+      case 'INSERT':
+        fg = AppTheme.accentEmerald;
+        break;
+      case 'UPDATE':
+        fg = AppTheme.accentBlue;
+        break;
+      case 'merge':
+        fg = AppTheme.accentIndigo;
+        break;
+      case 'duplicate_to_class':
+        fg = AppTheme.accentCyan;
+        break;
+      case 'twin_declare':
+      case 'twin_add_member':
+        fg = AppTheme.accentAmber;
+        break;
+      case 'twin_remove_member':
+      case 'twin_dissolve':
+        fg = AppTheme.accentRose;
+        break;
+      default:
+        fg = AppTheme.accentRose;
     }
+    bg = fg.withValues(alpha: 0.15);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(6),
-      ),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
       child: Text(
         action,
-        style: GoogleFonts.inter(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: fg,
-        ),
+        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: fg),
       ),
     );
   }
 
-  void _showJsonDiffModal(BuildContext context, Map<String, dynamic> log) {
+  void _showJsonDiffModal(BuildContext context, AuditLog log) {
+    const encoder = JsonEncoder.withIndent('  ');
+    final before = log.beforeJson != null ? encoder.convert(log.beforeJson) : '(aucun)';
+    final after = log.afterJson != null ? encoder.convert(log.afterJson) : '(aucun)';
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.primarySurface,
-        title: Text(
-          'Diff JSON pour l\'action ${log['id']}',
-          style: GoogleFonts.outfit(color: Colors.white),
+        title: AppDialogTitle(
+          icon: Icons.code_rounded,
+          text: 'Diff JSON — ${log.actionType} sur ${log.entityType}',
+          onClose: () => Navigator.pop(context),
         ),
         content: SizedBox(
-          width: 500,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Avant (Before) :',
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.accentRose,
+          width: 560,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Avant (Before) :',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.accentRose)),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  color: AppTheme.primaryDark,
+                  child: Text(before, style: GoogleFonts.robotoMono(color: Colors.white70, fontSize: 12)),
                 ),
-              ),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                color: AppTheme.primaryDark,
-                child: Text(
-                  log['before'],
-                  style: GoogleFonts.robotoMono(color: Colors.white70),
+                const SizedBox(height: 12),
+                Text('Après (After) :',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.accentEmerald)),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  color: AppTheme.primaryDark,
+                  child: Text(after, style: GoogleFonts.robotoMono(color: Colors.white70, fontSize: 12)),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Après (After) :',
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.accentEmerald,
-                ),
-              ),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                color: AppTheme.primaryDark,
-                child: Text(
-                  log['after'],
-                  style: GoogleFonts.robotoMono(color: Colors.white70),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         actions: [
@@ -314,6 +231,40 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
             child: const Text('Fermer'),
           ),
         ],
+      ),
+    );
+  }
+
+  // Export web uniquement (dart:html) — l'app admin est une cible Flutter Web (CDC section 1.3).
+  void _exportCsv(BuildContext context, List<AuditLog> logs, Map<String, String> adminNames) {
+    final buffer = StringBuffer('Horodatage,Administrateur,Action,Entité,ID Entité\n');
+    for (final log in logs) {
+      final adminName = log.adminUserId != null
+          ? (adminNames[log.adminUserId] ?? 'Admin inconnu')
+          : 'Système';
+      buffer.writeln(
+        [
+          log.createdAt.toIso8601String(),
+          adminName,
+          log.actionType,
+          log.entityType,
+          log.entityId ?? '',
+        ].map((f) => '"${f.replaceAll('"', '""')}"').join(','),
+      );
+    }
+
+    final bytes = utf8.encode(buffer.toString());
+    final blob = html.Blob([bytes], 'text/csv');
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    html.AnchorElement(href: url)
+      ..setAttribute('download', 'audit_log_${DateTime.now().millisecondsSinceEpoch}.csv')
+      ..click();
+    html.Url.revokeObjectUrl(url);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: AppTheme.accentEmerald,
+        content: Text('${logs.length} entrées exportées.', style: GoogleFonts.inter(color: Colors.white)),
       ),
     );
   }

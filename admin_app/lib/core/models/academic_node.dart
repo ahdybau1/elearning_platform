@@ -89,3 +89,47 @@ class AcademicNode {
     }
   }
 }
+
+/// Une classe/série membre d'un groupe de classes jumelées (class_twin_group_members).
+class TwinGroupMember {
+  final String classNodeId;
+  final String className;
+
+  TwinGroupMember({required this.classNodeId, required this.className});
+}
+
+/// Groupe de classes/séries jumelées — relation réelle et persistée (migrations 19-20), distincte
+/// de la fusion destructive : aucune classe n'est désactivée, seulement déclarée "même programme
+/// pour cette matière précise" — une classe peut appartenir à plusieurs groupes (un par matière).
+class TwinGroup {
+  final String id;
+  final String? label;
+  final String? subjectId;
+  final String? subjectName;
+  final List<TwinGroupMember> members;
+
+  TwinGroup({
+    required this.id,
+    this.label,
+    this.subjectId,
+    this.subjectName,
+    required this.members,
+  });
+}
+
+/// Une ligne d'aperçu d'impact avant une fusion de classes (get_class_node_merge_impact).
+class MergeImpactRow {
+  final String entityKey;
+  final String entityLabel;
+  final int rowCount;
+
+  MergeImpactRow({required this.entityKey, required this.entityLabel, required this.rowCount});
+}
+
+/// Aperçu du nombre de leçons/exercices qui seraient dupliqués depuis un chapitre.
+class ChapterDuplicationImpact {
+  final int lessonCount;
+  final int exerciseCount;
+
+  ChapterDuplicationImpact({required this.lessonCount, required this.exerciseCount});
+}

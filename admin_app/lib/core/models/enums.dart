@@ -47,6 +47,68 @@ enum ExerciseFormat { qcm, reponseCourte, redaction, manuscritScan, flashcard }
 
 enum ExerciseDifficulty { facile, intermediaire, approfondissement }
 
+// Conversions vers/depuis les valeurs exactes des contraintes CHECK de la table `exercises`
+// (voir supabase/reset_project_schema.sql). Ne jamais dériver ces chaînes de `enum.toString()` :
+// les noms Dart (ex: "training", "intermediaire") ne correspondent pas aux valeurs DB françaises
+// avec accents (ex: "entraînement", "intermédiaire").
+String exerciseTypeToDb(ExerciseType t) =>
+    t == ExerciseType.evaluation ? 'évaluation' : 'entraînement';
+
+ExerciseType exerciseTypeFromDb(String? raw) =>
+    raw == 'évaluation' ? ExerciseType.evaluation : ExerciseType.training;
+
+String exerciseFormatToDb(ExerciseFormat f) {
+  switch (f) {
+    case ExerciseFormat.qcm:
+      return 'qcm';
+    case ExerciseFormat.reponseCourte:
+      return 'reponse_courte';
+    case ExerciseFormat.redaction:
+      return 'redaction';
+    case ExerciseFormat.manuscritScan:
+      return 'manuscrit_scan';
+    case ExerciseFormat.flashcard:
+      return 'flashcard';
+  }
+}
+
+ExerciseFormat exerciseFormatFromDb(String? raw) {
+  switch (raw) {
+    case 'reponse_courte':
+      return ExerciseFormat.reponseCourte;
+    case 'redaction':
+      return ExerciseFormat.redaction;
+    case 'manuscrit_scan':
+      return ExerciseFormat.manuscritScan;
+    case 'flashcard':
+      return ExerciseFormat.flashcard;
+    default:
+      return ExerciseFormat.qcm;
+  }
+}
+
+String exerciseDifficultyToDb(ExerciseDifficulty d) {
+  switch (d) {
+    case ExerciseDifficulty.facile:
+      return 'facile';
+    case ExerciseDifficulty.intermediaire:
+      return 'intermédiaire';
+    case ExerciseDifficulty.approfondissement:
+      return 'approfondissement';
+  }
+}
+
+ExerciseDifficulty exerciseDifficultyFromDb(String? raw) {
+  switch (raw) {
+    case 'intermédiaire':
+      return ExerciseDifficulty.intermediaire;
+    case 'approfondissement':
+      return ExerciseDifficulty.approfondissement;
+    default:
+      return ExerciseDifficulty.facile;
+  }
+}
+
 enum TierName { gratuit, journalier, hebdomadaire, mensuel, annuel }
 
 final Map<TierName, String> tierNames = {
@@ -81,21 +143,33 @@ final Map<NodeType, String> nodeTypeLabels = {
   NodeType.series: 'Série',
 };
 
-final Map<NodeType, NodeType?> childNodeTypes = {
-  NodeType.country: NodeType.section,
-  NodeType.section: NodeType.educationType,
-  NodeType.educationType: NodeType.classType,
-  NodeType.classType: NodeType.series,
-  NodeType.series: null,
+/// Types d'enfants AUTORISÉS sous chaque type de nœud (plusieurs possibles, pas un seul type
+/// imposé) — permet de sauter des niveaux intermédiaires (ex: ajouter une Classe directement sous
+/// un Pays sans devoir créer Section puis Type d'Enseignement). Une Série reste terminale : le
+/// contenu pédagogique s'y rattache via class_node_id, pas via l'arbre.
+final Map<NodeType, List<NodeType>> childNodeTypeOptions = {
+  NodeType.country: [NodeType.section, NodeType.educationType, NodeType.classType],
+  NodeType.section: [NodeType.educationType, NodeType.classType],
+  NodeType.educationType: [NodeType.classType],
+  NodeType.classType: [NodeType.series],
+  NodeType.series: [],
 };
 
-final Map<NodeType, String> childNodeLabels = {
-  NodeType.country: 'une Section',
-  NodeType.section: "un Type d'Enseignement",
-  NodeType.educationType: 'une Classe',
-  NodeType.classType: 'une Série',
-  NodeType.series: 'un Sous-nœud',
-};
+
+String nodeTypeToDb(NodeType type) {
+  switch (type) {
+    case NodeType.country:
+      return 'country';
+    case NodeType.section:
+      return 'section';
+    case NodeType.educationType:
+      return 'education_type';
+    case NodeType.classType:
+      return 'class';
+    case NodeType.series:
+      return 'series';
+  }
+}
 
 String formatNodeTypeString(String raw) {
   switch (raw) {
