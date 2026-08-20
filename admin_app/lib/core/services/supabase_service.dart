@@ -1563,6 +1563,10 @@ class SupabaseService {
     bool? isActive,
     DateTime? startDate,
     DateTime? endDate,
+    bool clearTargetCountry = false,
+    String? targetCountryId,
+    bool clearTargetClass = false,
+    String? targetClassId,
   }) async {
     final data = <String, dynamic>{};
     if (title != null) data['title'] = title;
@@ -1571,6 +1575,12 @@ class SupabaseService {
     if (isActive != null) data['is_active'] = isActive;
     if (startDate != null) data['start_date'] = startDate.toIso8601String();
     if (endDate != null) data['end_date'] = endDate.toIso8601String();
+    if (clearTargetCountry || targetCountryId != null) {
+      data['target_country_id'] = targetCountryId;
+    }
+    if (clearTargetClass || targetClassId != null) {
+      data['target_class_id'] = targetClassId;
+    }
     await client.from('announcements').update(data).eq('id', id);
   }
 

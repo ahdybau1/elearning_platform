@@ -139,6 +139,7 @@ class SystemSettingsScreen extends ConsumerWidget {
   void _showEditTemplateModal(BuildContext context, WidgetRef ref, NotificationTemplate tpl) {
     final titleCtrl = TextEditingController(text: tpl.titleTemplate);
     final bodyCtrl = TextEditingController(text: tpl.bodyTemplate);
+    String? formError;
     bool isLoading = false;
 
     showDialog(
@@ -169,6 +170,10 @@ class SystemSettingsScreen extends ConsumerWidget {
                     style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(labelText: 'Corps du message'),
                   ),
+                  if (formError != null) ...[
+                    const SizedBox(height: 12),
+                    Text(formError!, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                  ],
                 ],
               ),
             ),
@@ -182,23 +187,30 @@ class SystemSettingsScreen extends ConsumerWidget {
               onPressed: isLoading
                   ? null
                   : () async {
-                      setModalState(() => isLoading = true);
+                      final title = titleCtrl.text.trim();
+                      final body = bodyCtrl.text.trim();
+                      if (title.isEmpty || body.isEmpty) {
+                        setModalState(() => formError = 'Le titre et le corps du message sont obligatoires.');
+                        return;
+                      }
+                      setModalState(() {
+                        formError = null;
+                        isLoading = true;
+                      });
                       try {
                         final service = ref.read(supabaseServiceProvider);
                         await service.updateNotificationTemplate(
                           tpl.id,
-                          titleTemplate: titleCtrl.text.trim(),
-                          bodyTemplate: bodyCtrl.text.trim(),
+                          titleTemplate: title,
+                          bodyTemplate: body,
                         );
                         ref.invalidate(notificationTemplatesProvider);
                         if (ctx.mounted) Navigator.pop(ctx);
                       } catch (e) {
-                        setModalState(() => isLoading = false);
-                        if (ctx.mounted) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(backgroundColor: AppTheme.accentRose, content: Text('Erreur: $e')),
-                          );
-                        }
+                        setModalState(() {
+                          isLoading = false;
+                          formError = '$e';
+                        });
                       }
                     },
               child: isLoading
