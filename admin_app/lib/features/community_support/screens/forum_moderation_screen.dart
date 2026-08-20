@@ -1,83 +1,59 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import '../../../core/models/community_models.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/data_providers.dart';
+import '../../../core/widgets/app_dialog_title.dart';
 
-class ForumModerationScreen extends ConsumerStatefulWidget {
+class ForumModerationScreen extends ConsumerWidget {
   const ForumModerationScreen({super.key});
 
   @override
-  ConsumerState<ForumModerationScreen> createState() => _ForumModerationScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final postsAsync = ref.watch(flaggedPostsProvider);
 
-class _ForumModerationScreenState extends ConsumerState<ForumModerationScreen> {
-  final List<Map<String, dynamic>> _flaggedPosts = [
-    {
-      'id': 'post-501',
-      'author': 'Élève A (Profil 3e)',
-      'class': 'Classe de 3ème • Mathématiques',
-      'content':
-          'Le prof de math est v222m3nt un i.d.i.o.t il donne trop de devoirs...',
-      'flagReason':
-          'Signalé par camarade + AI Risk Score élevé (Contournement orthographique)',
-      'aiScore': '94% Risque Propos Insultants',
-      'autoHidden': true,
-      'time': 'Il y a 15 min',
-    },
-    {
-      'id': 'post-502',
-      'author': 'Élève B (Profil Tle C)',
-      'content': 'Lien externe suspect de triche pour le devoir de physique',
-      'flagReason': 'Lien suspect externe détecté par le filtre anti-spam',
-      'aiScore': '88% Lien non vérifié',
-      'autoHidden': true,
-      'time': 'Il y a 45 min',
-    },
-  ];
-
-  @override
-  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Modération du Forum d\'Entraide',
-                    style: GoogleFonts.outfit(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Modération du Forum d\'Entraide',
+                      style: GoogleFonts.outfit(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Protection des mineurs : Masquage automatique préventif via Agent IA (Gemini) + Décision du Modérateur',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: AppTheme.textMuted,
+                    const SizedBox(height: 4),
+                    Text(
+                      'Protection des mineurs : Masquage automatique préventif via Agent IA (Gemini) + Décision du Modérateur',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: AppTheme.textMuted,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
+                  ],
                 ),
+              ),
+              const SizedBox(width: 14),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppTheme.accentRose.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '${_flaggedPosts.length} signalements à traiter',
+                  '${postsAsync.valueOrNull?.length ?? 0} signalements à traiter',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -89,120 +65,176 @@ class _ForumModerationScreenState extends ConsumerState<ForumModerationScreen> {
           ),
           const SizedBox(height: 24),
           Expanded(
-            child: _flaggedPosts.isEmpty
-                ? Center(
+            child: postsAsync.when(
+              data: (posts) {
+                if (posts.isEmpty) {
+                  return Center(
                     child: Text(
                       'Aucun signalement en attente de modération.',
                       style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMuted),
                     ),
-                  )
-                : ListView.builder(
-                    itemCount: _flaggedPosts.length,
-                    itemBuilder: (context, idx) {
-                      final post = _flaggedPosts[idx];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primarySurface,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppTheme.accentRose),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Signalement : ${post['author']}',
+                  );
+                }
+                return ListView.builder(
+                  itemCount: posts.length,
+                  itemBuilder: (context, idx) {
+                    final post = posts[idx];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primarySurface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppTheme.accentRose),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Signalement : ${post.authorDisplayName}',
+                                  overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.outfit(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
                                   ),
                                 ),
-                                Text(
-                                  post['time'],
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    color: Colors.white38,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${post['class'] ?? 'Forum'} • ${post['flagReason']}',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: AppTheme.accentRose,
                               ),
-                            ),
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryDark,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                'Message masqué : "${post['content']}"',
+                              const SizedBox(width: 10),
+                              Text(
+                                DateFormat('dd/MM/yyyy HH:mm').format(post.createdAt.toLocal()),
                                 style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: Colors.white70,
-                                  fontStyle: FontStyle.italic,
+                                  fontSize: 11,
+                                  color: Colors.white38,
                                 ),
                               ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Consumer(
+                            builder: (context, ref, _) {
+                              final nodeAsync = ref.watch(nodeByIdProvider(post.threadClassNodeId));
+                              final className = nodeAsync.valueOrNull?.name;
+                              return Text(
+                                [
+                                  ?post.threadTitle,
+                                  ?className,
+                                  post.flagReason ?? 'Signalé automatiquement',
+                                ].join(' • '),
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: AppTheme.accentRose,
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryDark,
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            const SizedBox(height: 14),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                OutlinedButton(
-                                  onPressed: () async {
-                                    final messenger = ScaffoldMessenger.of(context);
-                                    final service = ref.read(supabaseServiceProvider);
-                                    await service.dismissFlag(post['id']);
-                                    setState(() => _flaggedPosts.removeAt(idx));
+                            child: Text(
+                              'Message masqué : "${post.content}"',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: Colors.white70,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Wrap(
+                            alignment: WrapAlignment.end,
+                            spacing: 12,
+                            runSpacing: 8,
+                            children: [
+                              OutlinedButton(
+                                onPressed: () async {
+                                  final messenger = ScaffoldMessenger.of(context);
+                                  final service = ref.read(supabaseServiceProvider);
+                                  try {
+                                    await service.dismissFlag(post.id);
+                                    ref.invalidate(flaggedPostsProvider);
                                     messenger.showSnackBar(
                                       const SnackBar(
                                         backgroundColor: AppTheme.accentEmerald,
                                         content: Text('Message rétabli sur le forum.'),
                                       ),
                                     );
-                                  },
-                                  child: const Text(
-                                    'Rétablir le Message (Faux Positif)',
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.accentRose,
-                                  ),
-                                  onPressed: () async {
-                                    final messenger = ScaffoldMessenger.of(context);
-                                    final service = ref.read(supabaseServiceProvider);
-                                    await service.deleteForumPost(post['id']);
-                                    setState(() => _flaggedPosts.removeAt(idx));
+                                  } catch (e) {
                                     messenger.showSnackBar(
-                                      const SnackBar(
-                                        backgroundColor: AppTheme.accentRose,
-                                        content: Text('Message définitivement supprimé.'),
-                                      ),
+                                      SnackBar(backgroundColor: AppTheme.accentRose, content: Text('Erreur : $e')),
                                     );
-                                  },
-                                  icon: const Icon(Icons.delete_forever_rounded, size: 16),
-                                  label: const Text('Confirmer la Suppression'),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                                  }
+                                },
+                                child: const Text('Rétablir le Message (Faux Positif)'),
+                              ),
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentRose),
+                                onPressed: () => _showDeleteConfirmation(context, ref, post),
+                                icon: const Icon(Icons.delete_forever_rounded, size: 16),
+                                label: const Text('Confirmer la Suppression'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(child: Text('Erreur: $err', style: GoogleFonts.inter(color: AppTheme.accentRose))),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context, WidgetRef ref, ForumPost post) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.primarySurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: AppDialogTitle(
+          icon: Icons.delete_forever_rounded,
+          iconColor: AppTheme.accentRose,
+          text: 'Supprimer ce message définitivement ?',
+          onClose: () => Navigator.pop(ctx),
+        ),
+        content: Text(
+          'IRRÉVERSIBLE : le message de ${post.authorDisplayName} sera définitivement supprimé du forum. '
+          'Un avertissement n\'est pas envoyé automatiquement — contactez l\'élève séparément si nécessaire.',
+          style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.4),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentRose),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final messenger = ScaffoldMessenger.of(context);
+              final service = ref.read(supabaseServiceProvider);
+              try {
+                await service.deleteForumPost(post.id);
+                ref.invalidate(flaggedPostsProvider);
+                messenger.showSnackBar(
+                  const SnackBar(backgroundColor: AppTheme.accentRose, content: Text('Message définitivement supprimé.')),
+                );
+              } catch (e) {
+                messenger.showSnackBar(
+                  SnackBar(backgroundColor: AppTheme.accentRose, content: Text('Erreur : $e')),
+                );
+              }
+            },
+            child: const Text('Supprimer'),
           ),
         ],
       ),

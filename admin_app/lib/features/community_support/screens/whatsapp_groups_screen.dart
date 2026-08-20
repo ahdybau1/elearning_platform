@@ -1,59 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/models/academic_node.dart';
+import '../../../core/models/community_models.dart';
+import '../../../core/providers/data_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_dialog_title.dart';
 
-class WhatsappGroupsScreen extends StatefulWidget {
+class WhatsappGroupsScreen extends ConsumerStatefulWidget {
   const WhatsappGroupsScreen({super.key});
 
   @override
-  State<WhatsappGroupsScreen> createState() => _WhatsappGroupsScreenState();
+  ConsumerState<WhatsappGroupsScreen> createState() => _WhatsappGroupsScreenState();
 }
 
-class _WhatsappGroupsScreenState extends State<WhatsappGroupsScreen> {
-  String _selectedStatusFilter = 'Tous';
-
-  final List<Map<String, dynamic>> _groups = [
-    {
-      'id': 'grp_1',
-      'class': 'Classe de 3ème (Général)',
-      'inviteLink': 'https://chat.whatsapp.com/Km89Xz901AB',
-      'membersCount': 850,
-      'maxMembers': 1024,
-      'status': 'Actif',
-    },
-    {
-      'id': 'grp_2',
-      'class': 'Classe de Terminale C (Maths & Physiques)',
-      'inviteLink': 'https://chat.whatsapp.com/TleC2026TleC',
-      'membersCount': 1024,
-      'maxMembers': 1024,
-      'status': 'Complet',
-    },
-    {
-      'id': 'grp_3',
-      'class': 'Classe de 1ère D (Sciences)',
-      'inviteLink': 'https://chat.whatsapp.com/1ereD2026Sci',
-      'membersCount': 640,
-      'maxMembers': 1024,
-      'status': 'Actif',
-    },
-    {
-      'id': 'grp_4',
-      'class': 'Préparation BEPC (Entraînement Intensif)',
-      'inviteLink': 'https://chat.whatsapp.com/BEPCPrep2027',
-      'membersCount': 310,
-      'maxMembers': 1024,
-      'status': 'Maintenance',
-    },
-  ];
+class _WhatsappGroupsScreenState extends ConsumerState<WhatsappGroupsScreen> {
+  String _statusFilter = 'Tous'; // Tous, Actif, Archivé
 
   @override
   Widget build(BuildContext context) {
-    final filteredGroups = _groups.where((grp) {
-      if (_selectedStatusFilter == 'Tous') return true;
-      return grp['status'] == _selectedStatusFilter;
-    }).toList();
+    final communitiesAsync = ref.watch(whatsappCommunitiesProvider(null));
 
     return Padding(
       padding: const EdgeInsets.all(28),
@@ -62,34 +29,36 @@ class _WhatsappGroupsScreenState extends State<WhatsappGroupsScreen> {
         children: [
           // Header
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Communautés d\'Étude WhatsApp Officielles',
-                    style: GoogleFonts.outfit(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Communautés d\'Étude WhatsApp Officielles',
+                      style: GoogleFonts.outfit(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Gestion des liens d\'invitation des groupes WhatsApp officiels par classe (Cloisonnement strict)',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: AppTheme.textMuted,
+                    const SizedBox(height: 4),
+                    Text(
+                      'Gestion des liens d\'invitation des groupes WhatsApp officiels par classe (Cloisonnement strict)',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: AppTheme.textMuted,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 14),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.accentEmerald,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -126,9 +95,8 @@ class _WhatsappGroupsScreenState extends State<WhatsappGroupsScreen> {
                 const SizedBox(width: 12),
                 Wrap(
                   spacing: 8,
-                  children: ['Tous', 'Actif', 'Complet', 'Maintenance']
-                      .map((st) {
-                    final isSel = _selectedStatusFilter == st;
+                  children: ['Tous', 'Actif', 'Archivé'].map((st) {
+                    final isSel = _statusFilter == st;
                     return ChoiceChip(
                       selected: isSel,
                       showCheckmark: false,
@@ -140,8 +108,7 @@ class _WhatsappGroupsScreenState extends State<WhatsappGroupsScreen> {
                       ),
                       selectedColor: AppTheme.accentEmerald,
                       backgroundColor: AppTheme.primaryDark,
-                      onSelected: (_) =>
-                          setState(() => _selectedStatusFilter = st),
+                      onSelected: (_) => setState(() => _statusFilter = st),
                     );
                   }).toList(),
                 ),
@@ -152,32 +119,36 @@ class _WhatsappGroupsScreenState extends State<WhatsappGroupsScreen> {
 
           // Groups List
           Expanded(
-            child: filteredGroups.isEmpty
-                ? Center(
+            child: communitiesAsync.when(
+              data: (communities) {
+                final filtered = communities.where((c) {
+                  if (_statusFilter == 'Tous') return true;
+                  if (_statusFilter == 'Actif') return c.isActive;
+                  return !c.isActive;
+                }).toList();
+
+                if (filtered.isEmpty) {
+                  return Center(
                     child: Text(
-                      'Aucun groupe WhatsApp avec ce statut.',
+                      communities.isEmpty
+                          ? 'Aucun groupe WhatsApp créé — commencez par "Ajouter un Groupe WhatsApp".'
+                          : 'Aucun groupe WhatsApp avec ce statut.',
                       style: GoogleFonts.inter(color: AppTheme.textMuted),
                     ),
-                  )
-                : ListView.builder(
-                    itemCount: filteredGroups.length,
-                    itemBuilder: (context, idx) {
-                      final grp = filteredGroups[idx];
-                      final status = grp['status'] as String;
+                  );
+                }
+                return ListView.builder(
+                  itemCount: filtered.length,
+                  itemBuilder: (context, idx) {
+                    final grp = filtered[idx];
+                    final statusBg = grp.isActive
+                        ? AppTheme.accentEmerald.withValues(alpha: 0.15)
+                        : AppTheme.accentAmber.withValues(alpha: 0.15);
+                    final statusFg = grp.isActive ? AppTheme.accentEmerald : AppTheme.accentAmber;
 
-                      Color statusBg = status == 'Actif'
-                          ? AppTheme.accentEmerald.withValues(alpha: 0.15)
-                          : status == 'Complet'
-                              ? AppTheme.accentRose.withValues(alpha: 0.15)
-                              : AppTheme.accentAmber.withValues(alpha: 0.15);
-
-                      Color statusFg = status == 'Actif'
-                          ? AppTheme.accentEmerald
-                          : status == 'Complet'
-                              ? AppTheme.accentRose
-                              : AppTheme.accentAmber;
-
-                      return Container(
+                    return Opacity(
+                      opacity: grp.isActive ? 1.0 : 0.55,
+                      child: Container(
                         margin: const EdgeInsets.only(bottom: 16),
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
@@ -186,11 +157,11 @@ class _WhatsappGroupsScreenState extends State<WhatsappGroupsScreen> {
                           border: Border.all(color: AppTheme.primaryBorder),
                         ),
                         child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             CircleAvatar(
                               radius: 24,
-                              backgroundColor:
-                                  AppTheme.accentEmerald.withValues(alpha: 0.15),
+                              backgroundColor: AppTheme.accentEmerald.withValues(alpha: 0.15),
                               child: const Icon(
                                 Icons.groups_rounded,
                                 color: AppTheme.accentEmerald,
@@ -204,25 +175,31 @@ class _WhatsappGroupsScreenState extends State<WhatsappGroupsScreen> {
                                 children: [
                                   Row(
                                     children: [
-                                      Text(
-                                        grp['class'],
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
+                                      Expanded(
+                                        child: Consumer(
+                                          builder: (context, ref, _) {
+                                            final nodeAsync = ref.watch(nodeByIdProvider(grp.classNodeId));
+                                            return Text(
+                                              nodeAsync.valueOrNull?.name ?? '...',
+                                              overflow: TextOverflow.ellipsis,
+                                              style: GoogleFonts.outfit(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
+                                            );
+                                          },
                                         ),
                                       ),
                                       const SizedBox(width: 10),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                         decoration: BoxDecoration(
                                           color: statusBg,
-                                          borderRadius:
-                                              BorderRadius.circular(6),
+                                          borderRadius: BorderRadius.circular(6),
                                         ),
                                         child: Text(
-                                          status,
+                                          grp.isActive ? 'Actif' : 'Archivé',
                                           style: GoogleFonts.inter(
                                             fontSize: 11,
                                             fontWeight: FontWeight.bold,
@@ -234,7 +211,7 @@ class _WhatsappGroupsScreenState extends State<WhatsappGroupsScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Lien d\'invitation : ${grp['inviteLink']}',
+                                    'Lien d\'invitation : ${grp.inviteLink}',
                                     style: GoogleFonts.inter(
                                       fontSize: 12,
                                       color: AppTheme.accentCyan,
@@ -242,7 +219,7 @@ class _WhatsappGroupsScreenState extends State<WhatsappGroupsScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Membres actuels : ${grp['membersCount']} / ${grp['maxMembers']}',
+                                    'Membres (estimation manuelle) : ${grp.memberCountEstimate}',
                                     style: GoogleFonts.inter(
                                       fontSize: 12,
                                       color: AppTheme.textMuted,
@@ -251,159 +228,254 @@ class _WhatsappGroupsScreenState extends State<WhatsappGroupsScreen> {
                                 ],
                               ),
                             ),
-                            OutlinedButton.icon(
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppTheme.accentCyan,
-                                side: BorderSide(
-                                    color: AppTheme.accentCyan
-                                        .withValues(alpha: 0.5)),
-                              ),
-                              onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                        'Lien copié : ${grp['inviteLink']}'),
+                            const SizedBox(width: 8),
+                            Wrap(
+                              spacing: 4,
+                              children: [
+                                OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppTheme.accentCyan,
+                                    side: BorderSide(color: AppTheme.accentCyan.withValues(alpha: 0.5)),
                                   ),
-                                );
-                              },
-                              icon: const Icon(Icons.copy_rounded, size: 16),
-                              label: const Text('Copier Lien'),
-                            ),
-                            const SizedBox(width: 10),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.edit_rounded,
-                                color: Colors.white70,
-                              ),
-                              onPressed: () =>
-                                  _showGroupModal(context, group: grp),
+                                  onPressed: () async {
+                                    await Clipboard.setData(ClipboardData(text: grp.inviteLink));
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          backgroundColor: AppTheme.accentEmerald,
+                                          content: Text('Lien copié dans le presse-papiers.'),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  icon: const Icon(Icons.copy_rounded, size: 16),
+                                  label: const Text('Copier Lien'),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.edit_rounded, color: Colors.white70),
+                                  tooltip: 'Modifier',
+                                  onPressed: () => _showGroupModal(context, existing: grp),
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    grp.isActive ? Icons.archive_rounded : Icons.unarchive_rounded,
+                                    color: AppTheme.accentAmber,
+                                  ),
+                                  tooltip: grp.isActive ? 'Archiver' : 'Désarchiver',
+                                  onPressed: () => grp.isActive
+                                      ? _showArchiveConfirmation(context, grp)
+                                      : _toggleActive(context, grp, true),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(child: Text('Erreur: $err', style: GoogleFonts.inter(color: AppTheme.accentRose))),
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _showGroupModal(BuildContext context, {Map<String, dynamic>? group}) {
-    final nameCtrl = TextEditingController(text: group?['class'] ?? '');
-    final linkCtrl = TextEditingController(text: group?['inviteLink'] ?? '');
-    final countCtrl =
-        TextEditingController(text: group?['membersCount']?.toString() ?? '100');
-    String selectedStatus = group?['status'] ?? 'Actif';
+  Future<void> _toggleActive(BuildContext context, WhatsappCommunity grp, bool isActive) async {
+    final service = ref.read(supabaseServiceProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      if (isActive) {
+        await service.upsertWhatsappCommunity(
+          id: grp.id,
+          classNodeId: grp.classNodeId,
+          inviteLink: grp.inviteLink,
+          memberCountEstimate: grp.memberCountEstimate,
+          isActive: true,
+        );
+      } else {
+        await service.deleteWhatsappCommunity(grp.id);
+      }
+      ref.invalidate(whatsappCommunitiesProvider(null));
+      messenger.showSnackBar(
+        SnackBar(
+          backgroundColor: AppTheme.accentEmerald,
+          content: Text(isActive ? 'Groupe désarchivé.' : 'Groupe archivé.'),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(backgroundColor: AppTheme.accentRose, content: Text('Erreur : $e')));
+    }
+  }
+
+  void _showArchiveConfirmation(BuildContext context, WhatsappCommunity grp) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.primarySurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: AppDialogTitle(
+          icon: Icons.archive_rounded,
+          iconColor: AppTheme.accentAmber,
+          text: 'Archiver ce groupe ?',
+          onClose: () => Navigator.pop(ctx),
+        ),
+        content: Text(
+          'Le lien d\'invitation ne sera plus affiché aux élèves de cette classe, mais reste conservé — '
+          'vous pourrez le désarchiver plus tard.',
+          style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.4),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentAmber),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _toggleActive(context, grp, false);
+            },
+            child: const Text('Archiver'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showGroupModal(BuildContext context, {WhatsappCommunity? existing}) {
+    final isEditing = existing != null;
+    final linkCtrl = TextEditingController(text: existing?.inviteLink ?? '');
+    final countCtrl = TextEditingController(text: existing?.memberCountEstimate.toString() ?? '0');
+    String? selectedClassId = existing?.classNodeId;
+    String? formError;
+    bool isLoading = false;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.primarySurface,
-        title: AppDialogTitle(
-          icon: Icons.groups_rounded,
-          text: group == null
-              ? 'Ajouter un Groupe WhatsApp'
-              : 'Éditer ${group['class']}',
-          onClose: () => Navigator.pop(context),
-        ),
-        content: SizedBox(
-          width: 460,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                style: GoogleFonts.inter(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'Nom du Groupe (ex: Classe de 3ème Général)',
-                  prefixIcon: Icon(Icons.groups),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: linkCtrl,
-                style: GoogleFonts.inter(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'Lien d\'invitation WhatsApp (https://chat...)',
-                  prefixIcon: Icon(Icons.link),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => AlertDialog(
+          backgroundColor: AppTheme.primarySurface,
+          title: AppDialogTitle(
+            icon: Icons.groups_rounded,
+            text: isEditing ? 'Modifier le Groupe WhatsApp' : 'Ajouter un Groupe WhatsApp',
+            onClose: () => Navigator.pop(ctx),
+          ),
+          content: SizedBox(
+            width: 460,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: countCtrl,
-                      style: GoogleFonts.inter(color: Colors.white),
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre de Membres',
-                        prefixIcon: Icon(Icons.people),
-                      ),
-                      keyboardType: TextInputType.number,
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final classesAsync = ref.watch(nodesByTypeProvider('class'));
+                      final seriesAsync = ref.watch(nodesByTypeProvider('series'));
+                      if (classesAsync.isLoading || seriesAsync.isLoading) {
+                        return const LinearProgressIndicator();
+                      }
+                      final classOptions = <AcademicNode>[
+                        ...classesAsync.valueOrNull ?? [],
+                        ...seriesAsync.valueOrNull ?? [],
+                      ]..sort((a, b) => a.name.compareTo(b.name));
+                      selectedClassId ??= classOptions.isNotEmpty ? classOptions.first.id : null;
+                      return DropdownButtonFormField<String>(
+                        // ignore: deprecated_member_use
+                        value: selectedClassId,
+                        dropdownColor: AppTheme.primaryDark,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(labelText: 'Classe / Série'),
+                        items: classOptions.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                        onChanged: (v) => setModalState(() => selectedClassId = v),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: linkCtrl,
+                    style: GoogleFonts.inter(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Lien d\'invitation WhatsApp (https://chat...)',
+                      prefixIcon: Icon(Icons.link),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: selectedStatus,
-                      dropdownColor: AppTheme.primarySurface,
-                      style: GoogleFonts.inter(color: Colors.white),
-                      decoration: const InputDecoration(labelText: 'Statut'),
-                      items: ['Actif', 'Complet', 'Maintenance']
-                          .map(
-                              (s) => DropdownMenuItem(value: s, child: Text(s)))
-                          .toList(),
-                      onChanged: (val) {
-                        if (val != null) selectedStatus = val;
-                      },
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: countCtrl,
+                    style: GoogleFonts.inter(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre de membres (estimation manuelle)',
+                      prefixIcon: Icon(Icons.people),
                     ),
+                    keyboardType: TextInputType.number,
                   ),
+                  if (formError != null) ...[
+                    const SizedBox(height: 12),
+                    Text(formError!, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                  ],
                 ],
               ),
-            ],
+            ),
           ),
+          actions: [
+            TextButton(onPressed: isLoading ? null : () => Navigator.pop(ctx), child: const Text('Annuler')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentEmerald),
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      final link = linkCtrl.text.trim();
+                      if (link.isEmpty || !link.startsWith('https://chat.whatsapp.com/')) {
+                        setModalState(() => formError =
+                            'Lien invalide — doit commencer par https://chat.whatsapp.com/');
+                        return;
+                      }
+                      if (selectedClassId == null) {
+                        setModalState(() => formError = 'Sélectionnez une classe.');
+                        return;
+                      }
+                      final count = int.tryParse(countCtrl.text.trim());
+                      if (count == null || count < 0) {
+                        setModalState(() => formError = 'Nombre de membres invalide.');
+                        return;
+                      }
+                      setModalState(() {
+                        formError = null;
+                        isLoading = true;
+                      });
+                      try {
+                        final service = ref.read(supabaseServiceProvider);
+                        await service.upsertWhatsappCommunity(
+                          id: existing?.id,
+                          classNodeId: selectedClassId!,
+                          inviteLink: link,
+                          memberCountEstimate: count,
+                          isActive: existing?.isActive ?? true,
+                        );
+                        ref.invalidate(whatsappCommunitiesProvider(null));
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (context.mounted) {
+                          // ignore: use_build_context_synchronously
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(isEditing ? 'Groupe mis à jour.' : 'Nouveau groupe WhatsApp enregistré !'),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setModalState(() {
+                          isLoading = false;
+                          formError = '$e';
+                        });
+                      }
+                    },
+              child: isLoading
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Enregistrer'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            style:
-                ElevatedButton.styleFrom(backgroundColor: AppTheme.accentEmerald),
-            onPressed: () {
-              if (nameCtrl.text.isNotEmpty && linkCtrl.text.isNotEmpty) {
-                setState(() {
-                  if (group == null) {
-                    _groups.add({
-                      'id': 'grp_${DateTime.now().millisecondsSinceEpoch}',
-                      'class': nameCtrl.text,
-                      'inviteLink': linkCtrl.text,
-                      'membersCount': int.tryParse(countCtrl.text) ?? 0,
-                      'maxMembers': 1024,
-                      'status': selectedStatus,
-                    });
-                  } else {
-                    group['class'] = nameCtrl.text;
-                    group['inviteLink'] = linkCtrl.text;
-                    group['membersCount'] = int.tryParse(countCtrl.text) ?? 0;
-                    group['status'] = selectedStatus;
-                  }
-                });
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(group == null
-                        ? 'Nouveau groupe WhatsApp enregistré !'
-                        : 'Groupe mis à jour.'),
-                  ),
-                );
-              }
-            },
-            child: const Text('Enregistrer'),
-          ),
-        ],
       ),
     );
   }

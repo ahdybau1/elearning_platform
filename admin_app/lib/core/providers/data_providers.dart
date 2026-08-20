@@ -253,9 +253,10 @@ final flaggedPostsProvider = FutureProvider<List<ForumPost>>((ref) async {
   return service.fetchFlaggedPosts();
 });
 
-final supportTicketsStreamProvider = StreamProvider<List<SupportTicket>>((ref) {
+final supportTicketsStreamProvider =
+    StreamProvider.family<List<SupportTicket>, String?>((ref, status) {
   final service = ref.watch(supabaseServiceProvider);
-  return service.watchSupportTickets(status: 'ouvert');
+  return service.watchSupportTickets(status: status);
 });
 
 final whatsappCommunitiesProvider =
@@ -392,6 +393,12 @@ final nodesByTypeProvider =
   // 'country' n'est jamais filtré par lui-même — sinon impossible de voir les pays à sélectionner.
   final countryIds = nodeType == 'country' ? null : ref.watch(selectedCountryIdsProvider);
   return service.fetchNodesByType(nodeType, countryIds: countryIds);
+});
+
+final nodeByIdProvider = FutureProvider.family<AcademicNode?, String?>((ref, nodeId) async {
+  if (nodeId == null) return null;
+  final service = ref.watch(supabaseServiceProvider);
+  return service.getNode(nodeId);
 });
 
 final accountsProvider =

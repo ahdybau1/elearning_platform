@@ -204,7 +204,6 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
           id: 16,
           title: 'Modération Forum',
           icon: Icons.forum_rounded,
-          badgeCount: 2,
           allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.moderateur],
         ),
         NavItem(
@@ -217,7 +216,6 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
           id: 18,
           title: 'Support Client',
           icon: Icons.support_agent_rounded,
-          badgeCount: 5,
           allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.support, AdminRole.moderateur],
         ),
       ],
@@ -247,20 +245,30 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
     ),
   ];
 
-  List<NavGroup> _getFilteredNavGroups(AdminRole role, {int? pendingValidationCount}) {
+  List<NavGroup> _getFilteredNavGroups(
+    AdminRole role, {
+    int? pendingValidationCount,
+    int? flaggedPostsCount,
+    int? openTicketsCount,
+  }) {
+    // Les badges reflètent le vrai décompte de chaque provider, jamais une valeur factice codée en dur.
+    final liveBadgeCounts = <int, int?>{
+      4: pendingValidationCount,
+      16: flaggedPostsCount,
+      18: openTicketsCount,
+    };
     final List<NavGroup> filtered = [];
     for (final group in _rawNavGroups) {
       final allowedItems = group.items
           .where((item) => item.isAllowedFor(role))
           .map((item) {
-            // Le badge "File de Validation" (id 4) reflète le vrai nombre d'éléments en attente,
-            // pas une valeur factice codée en dur.
-            if (item.id == 4 && pendingValidationCount != null) {
+            if (liveBadgeCounts.containsKey(item.id) && liveBadgeCounts[item.id] != null) {
+              final count = liveBadgeCounts[item.id]!;
               return NavItem(
                 id: item.id,
                 title: item.title,
                 icon: item.icon,
-                badgeCount: pendingValidationCount > 0 ? pendingValidationCount : null,
+                badgeCount: count > 0 ? count : null,
                 isFinancial: item.isFinancial,
                 allowedRoles: item.allowedRoles,
               );
@@ -454,9 +462,13 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
     }
 
     final pendingValidationCount = ref.watch(pendingValidationCountProvider).valueOrNull;
+    final flaggedPostsCount = ref.watch(flaggedPostsProvider).valueOrNull?.length;
+    final openTicketsCount = ref.watch(openTicketsCountProvider).valueOrNull;
     final filteredGroups = _getFilteredNavGroups(
       authState.role,
       pendingValidationCount: pendingValidationCount,
+      flaggedPostsCount: flaggedPostsCount,
+      openTicketsCount: openTicketsCount,
     );
 
     // If active screen is not allowed for current role, default back to index 0

@@ -766,7 +766,7 @@ class SupabaseService {
   Future<List<ForumPost>> fetchFlaggedPosts() async {
     final rows = await client
         .from('forum_posts')
-        .select()
+        .select('*, accounts(first_name, last_name), forum_threads(title, class_node_id)')
         .eq('flagged', true)
         .order('created_at', ascending: false)
         .then((rows) => rows as List);

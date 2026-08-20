@@ -47,6 +47,10 @@ class ForumPost {
   final String id;
   final String threadId;
   final String authorId;
+  final String? authorFirstName;
+  final String? authorLastName;
+  final String? threadTitle;
+  final String? threadClassNodeId;
   final String content;
   final bool flagged;
   final String? flagReason;
@@ -57,6 +61,10 @@ class ForumPost {
     required this.id,
     required this.threadId,
     required this.authorId,
+    this.authorFirstName,
+    this.authorLastName,
+    this.threadTitle,
+    this.threadClassNodeId,
     required this.content,
     this.flagged = false,
     this.flagReason,
@@ -64,11 +72,24 @@ class ForumPost {
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
+  String get authorDisplayName {
+    if (authorFirstName != null && authorLastName != null) {
+      return '$authorFirstName $authorLastName';
+    }
+    return 'Élève';
+  }
+
   factory ForumPost.fromJson(Map<String, dynamic> json) {
+    final account = json['accounts'] as Map<String, dynamic>?;
+    final thread = json['forum_threads'] as Map<String, dynamic>?;
     return ForumPost(
       id: json['id'] as String,
       threadId: json['thread_id'] as String,
       authorId: json['author_id'] as String,
+      authorFirstName: account?['first_name'] as String?,
+      authorLastName: account?['last_name'] as String?,
+      threadTitle: thread?['title'] as String?,
+      threadClassNodeId: thread?['class_node_id'] as String?,
       content: json['content'] as String,
       flagged: (json['flagged'] as bool?) ?? false,
       flagReason: json['flag_reason'] as String?,
