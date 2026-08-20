@@ -1,4 +1,6 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
@@ -807,7 +809,15 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
                 Expanded(
                   child: Container(
                     color: AppTheme.primaryDark,
-                    child: _getSelectedScreen(selectedIndex),
+                    // `ListView`/`SingleChildScrollView` ne réclament jamais le focus au clic sur
+                    // leur contenu (texte, cartes) : sans widget dédié, les flèches du clavier
+                    // n'ont donc aucune Scrollable ciblée et ne font jamais rien, sur aucune page.
+                    // Reclé sur `selectedIndex` pour redonner le focus (et donc le défilement au
+                    // clavier) à chaque changement de page.
+                    child: _KeyboardScrollBridge(
+                      key: ValueKey('kb-scroll-$selectedIndex'),
+                      child: _getSelectedScreen(selectedIndex),
+                    ),
                   ),
                 ),
               ],
@@ -987,5 +997,62 @@ class NavItem {
     if (role == AdminRole.superAdmin) return true;
     if (allowedRoles == null || allowedRoles!.isEmpty) return true;
     return allowedRoles!.contains(role);
+  }
+}
+
+/// Fait fonctionner les flèches Haut/Bas/PageUp/PageDown sur la page affichée.
+///
+/// Aucune des `ListView`/`SingleChildScrollView` de l'app ne réclame le focus clavier au clic sur
+/// son contenu (texte, cartes) — seuls les boutons/champs le font. Sans ce pont, une pression sur
+/// une flèche n'a donc aucune Scrollable ciblée et ne fait jamais rien, quelle que soit la page. On
+/// simule plutôt un vrai `PointerScrollEvent` (identique à celui de la molette, qui lui fonctionne
+/// déjà) au centre de la zone de contenu : ça déclenche le même chemin de défilement natif sans
+/// dépendre du système de focus. `autofocus: true` + la ValueKey posée par l'appelant (recréée à
+/// chaque changement de page) redonnent ce comportement à chaque nouvelle page, même après qu'un
+/// champ/bouton ait pris le focus sur une page précédente.
+class _KeyboardScrollBridge extends StatefulWidget {
+  const _KeyboardScrollBridge({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeyboardScrollBridge> createState() => _KeyboardScrollBridgeState();
+}
+
+class _KeyboardScrollBridgeState extends State<_KeyboardScrollBridge> {
+  final GlobalKey _contentKey = GlobalKey();
+
+  static final Map<LogicalKeyboardKey, double> _scrollDeltas = {
+    LogicalKeyboardKey.arrowDown: 70,
+    LogicalKeyboardKey.arrowUp: -70,
+    LogicalKeyboardKey.pageDown: 500,
+    LogicalKeyboardKey.pageUp: -500,
+  };
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final delta = _scrollDeltas[event.logicalKey];
+    if (delta == null) return KeyEventResult.ignored;
+
+    final renderObject = _contentKey.currentContext?.findRenderObject();
+    if (renderObject is! RenderBox || !renderObject.attached) {
+      return KeyEventResult.ignored;
+    }
+    final center = renderObject.localToGlobal(renderObject.size.center(Offset.zero));
+    GestureBinding.instance.handlePointerEvent(
+      PointerScrollEvent(position: center, scrollDelta: Offset(0, delta)),
+    );
+    return KeyEventResult.handled;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      autofocus: true,
+      onKeyEvent: _handleKeyEvent,
+      child: KeyedSubtree(key: _contentKey, child: widget.child),
+    );
   }
 }
