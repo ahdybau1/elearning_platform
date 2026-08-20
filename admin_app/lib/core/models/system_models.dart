@@ -147,6 +147,107 @@ class Event {
   }
 }
 
+/// Résultat d'un élève à un examen blanc / une olympiade (Section 11 du CDC).
+class EventResult {
+  final String id;
+  final String eventId;
+  final String profileId;
+  final String? studentFirstName;
+  final String? studentLastName;
+  final double score;
+  final int? rank;
+  final double? percentile;
+  final DateTime createdAt;
+
+  EventResult({
+    required this.id,
+    required this.eventId,
+    required this.profileId,
+    this.studentFirstName,
+    this.studentLastName,
+    required this.score,
+    this.rank,
+    this.percentile,
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  String get studentDisplayName {
+    if (studentFirstName != null && studentLastName != null) {
+      return '$studentFirstName $studentLastName';
+    }
+    return profileId;
+  }
+
+  factory EventResult.fromJson(Map<String, dynamic> json) {
+    final profile = json['profiles'] as Map<String, dynamic>?;
+    final account = profile?['accounts'] as Map<String, dynamic>?;
+    return EventResult(
+      id: json['id'] as String,
+      eventId: json['event_id'] as String,
+      profileId: json['profile_id'] as String,
+      studentFirstName: account?['first_name'] as String?,
+      studentLastName: account?['last_name'] as String?,
+      score: double.parse((json['score'] as num).toString()),
+      rank: json['rank'] as int?,
+      percentile: json['percentile'] != null ? double.parse((json['percentile'] as num).toString()) : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+    );
+  }
+}
+
+/// Contestation de note (Section 27 du CDC) — second correcteur obligatoire.
+class GradeDispute {
+  final String id;
+  final String eventResultId;
+  final String reason;
+  final String status;
+  final double originalScore;
+  final double? revisedScore;
+  final String? assignedReviewerId;
+  final String? resolutionNotes;
+  final DateTime createdAt;
+  final String? studentName;
+  final String? eventTitle;
+
+  GradeDispute({
+    required this.id,
+    required this.eventResultId,
+    required this.reason,
+    required this.status,
+    required this.originalScore,
+    this.revisedScore,
+    this.assignedReviewerId,
+    this.resolutionNotes,
+    DateTime? createdAt,
+    this.studentName,
+    this.eventTitle,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  factory GradeDispute.fromJson(Map<String, dynamic> json) {
+    final result = json['event_results'] as Map<String, dynamic>?;
+    final profile = result?['profiles'] as Map<String, dynamic>?;
+    final account = profile?['accounts'] as Map<String, dynamic>?;
+    final event = result?['events'] as Map<String, dynamic>?;
+    return GradeDispute(
+      id: json['id'] as String,
+      eventResultId: json['event_result_id'] as String,
+      reason: json['reason'] as String,
+      status: json['status'] as String? ?? 'ouvert',
+      originalScore: double.parse((json['original_score'] as num).toString()),
+      revisedScore: json['revised_score'] != null ? double.parse((json['revised_score'] as num).toString()) : null,
+      assignedReviewerId: json['assigned_reviewer_id'] as String?,
+      resolutionNotes: json['resolution_notes'] as String?,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+      studentName: account != null ? '${account['first_name']} ${account['last_name']}' : null,
+      eventTitle: event?['title'] as String?,
+    );
+  }
+}
+
 class OfficialExam {
   final String id;
   final String countryId;
@@ -237,6 +338,7 @@ class Establishment {
   final String countryId;
   final String name;
   final String city;
+  final bool isActive;
   final DateTime createdAt;
 
   Establishment({
@@ -244,6 +346,7 @@ class Establishment {
     required this.countryId,
     required this.name,
     required this.city,
+    this.isActive = true,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -253,6 +356,46 @@ class Establishment {
       countryId: json['country_id'] as String,
       name: json['name'] as String,
       city: json['city'] as String,
+      isActive: (json['is_active'] as bool?) ?? true,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+    );
+  }
+}
+
+/// Épreuve interne d'un établissement (Section 4.2 du CDC) — distincte des examens officiels
+/// nationaux : devoirs/compositions propres à un lycée/collège précis.
+class EstablishmentPaper {
+  final String id;
+  final String establishmentId;
+  final String classNodeId;
+  final String subjectId;
+  final int year;
+  final String documentUrl;
+  final String? correctionUrl;
+  final DateTime createdAt;
+
+  EstablishmentPaper({
+    required this.id,
+    required this.establishmentId,
+    required this.classNodeId,
+    required this.subjectId,
+    required this.year,
+    required this.documentUrl,
+    this.correctionUrl,
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  factory EstablishmentPaper.fromJson(Map<String, dynamic> json) {
+    return EstablishmentPaper(
+      id: json['id'] as String,
+      establishmentId: json['establishment_id'] as String,
+      classNodeId: json['class_node_id'] as String,
+      subjectId: json['subject_id'] as String,
+      year: json['year'] as int,
+      documentUrl: json['document_url'] as String,
+      correctionUrl: json['correction_url'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),

@@ -408,6 +408,7 @@ CREATE TABLE establishments (
     country_id UUID NOT NULL REFERENCES academic_nodes(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     city TEXT NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

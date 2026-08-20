@@ -39,23 +39,28 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Gestion des Examens Officiels Nationaux',
-                    style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Sujets et corrigés d\'examens officiels (BEPC, Probatoire, Baccalauréat Cameroun)',
-                    style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMuted),
-                  ),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Gestion des Examens Officiels Nationaux',
+                      style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Sujets et corrigés d\'examens officiels (BEPC, Probatoire, Baccalauréat Cameroun)',
+                      style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMuted),
+                    ),
+                  ],
+                ),
               ),
-              Row(
+              const SizedBox(width: 14),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
                 children: [
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
@@ -63,7 +68,6 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
                     icon: const Icon(Icons.add_rounded, size: 18),
                     label: const Text('Nouvel Examen Officiel'),
                   ),
-                  const SizedBox(width: 12),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.accentEmerald,
@@ -199,14 +203,30 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
                               ],
                             ),
                           ),
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.accentBlue,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            ),
-                            onPressed: () => _showManagePapersModal(context, exam),
-                            icon: const Icon(Icons.folder_open_rounded, size: 16),
-                            label: const Text('Gérer les Sujets'),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.accentBlue,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                ),
+                                onPressed: () => _showManagePapersModal(context, exam),
+                                icon: const Icon(Icons.folder_open_rounded, size: 16),
+                                label: const Text('Gérer les Sujets'),
+                              ),
+                              IconButton(
+                                onPressed: () => _showEditExamModal(context, exam, classesAsync.valueOrNull ?? []),
+                                icon: const Icon(Icons.edit_rounded, color: AppTheme.accentBlue, size: 20),
+                                tooltip: 'Modifier',
+                              ),
+                              IconButton(
+                                onPressed: () => _showDeleteExamConfirmation(context, exam),
+                                icon: const Icon(Icons.delete_forever_rounded, color: AppTheme.accentRose, size: 20),
+                                tooltip: 'Supprimer définitivement',
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -319,6 +339,212 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
                   ? const SizedBox(
                       width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : const Text('Créer'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditExamModal(BuildContext context, OfficialExam exam, List<AcademicNode> classes) {
+    final nameCtrl = TextEditingController(text: exam.name);
+    DateTime? examDate = exam.examDate;
+    String? selectedClassId = exam.classNodeId;
+    String? formError;
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => AlertDialog(
+          backgroundColor: AppTheme.primarySurface,
+          title: AppDialogTitle(
+            icon: Icons.edit_rounded,
+            text: 'Modifier "${exam.name}"',
+            onClose: () => Navigator.pop(ctx),
+          ),
+          content: SizedBox(
+            width: 460,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: nameCtrl,
+                    autofocus: true,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(labelText: 'Nom (ex: BEPC, Probatoire C & D, Baccalauréat)'),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    // ignore: deprecated_member_use
+                    value: selectedClassId,
+                    dropdownColor: AppTheme.primaryDark,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(labelText: 'Classe concernée'),
+                    items: classes.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                    onChanged: (v) => setModalState(() => selectedClassId = v),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate: examDate ?? DateTime.now(),
+                        firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                        lastDate: DateTime.now().add(const Duration(days: 730)),
+                      );
+                      if (picked != null) setModalState(() => examDate = picked);
+                    },
+                    icon: const Icon(Icons.calendar_today_rounded, size: 16),
+                    label: Text(
+                      examDate == null ? 'Date de session (optionnel)' : examDate!.toString().split(' ').first,
+                    ),
+                  ),
+                  if (formError != null) ...[
+                    const SizedBox(height: 12),
+                    Text(formError!, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(ctx),
+              child: Text('Annuler', style: GoogleFonts.inter(color: AppTheme.textMuted)),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      if (nameCtrl.text.trim().isEmpty) {
+                        setModalState(() => formError = 'Le nom est obligatoire.');
+                        return;
+                      }
+                      if (selectedClassId == null) {
+                        setModalState(() => formError = 'Sélectionnez une classe.');
+                        return;
+                      }
+                      setModalState(() {
+                        formError = null;
+                        isLoading = true;
+                      });
+                      try {
+                        final service = ref.read(supabaseServiceProvider);
+                        await service.updateOfficialExam(
+                          exam.id,
+                          name: nameCtrl.text.trim(),
+                          classNodeId: selectedClassId,
+                          examDate: examDate,
+                        );
+                        ref.invalidate(officialExamsProvider(const {}));
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      } catch (e) {
+                        setModalState(() {
+                          isLoading = false;
+                          formError = '$e';
+                        });
+                      }
+                    },
+              child: isLoading
+                  ? const SizedBox(
+                      width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Enregistrer'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteExamConfirmation(BuildContext context, OfficialExam exam) {
+    final confirmController = TextEditingController();
+    bool nameMatches = false;
+    bool isLoading = false;
+    String? errorText;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => AlertDialog(
+          backgroundColor: AppTheme.primarySurface,
+          title: AppDialogTitle(
+            icon: Icons.delete_forever_rounded,
+            iconColor: AppTheme.accentRose,
+            text: 'Supprimer "${exam.name}" ?',
+            onClose: () => Navigator.pop(ctx),
+          ),
+          content: SizedBox(
+            width: 440,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentRose.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.accentRose.withValues(alpha: 0.3)),
+                  ),
+                  child: Text(
+                    'IRRÉVERSIBLE : cet examen officiel ET tous ses sujets/corrigés déjà uploadés seront '
+                    'définitivement supprimés.',
+                    style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose, height: 1.4),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text('Tapez "${exam.name}" pour confirmer :',
+                    style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: confirmController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(hintText: exam.name),
+                  onChanged: (v) => setModalState(() => nameMatches = v.trim() == exam.name),
+                ),
+                if (errorText != null) ...[
+                  const SizedBox(height: 12),
+                  Text(errorText!, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(ctx),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentRose),
+              onPressed: (isLoading || !nameMatches)
+                  ? null
+                  : () async {
+                      setModalState(() => isLoading = true);
+                      final messenger = ScaffoldMessenger.of(context);
+                      try {
+                        final service = ref.read(supabaseServiceProvider);
+                        await service.deleteOfficialExam(exam.id);
+                        ref.invalidate(officialExamsProvider(const {}));
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        messenger.showSnackBar(
+                          SnackBar(
+                            backgroundColor: AppTheme.accentRose,
+                            content: Text('Examen "${exam.name}" supprimé définitivement.'),
+                          ),
+                        );
+                      } catch (e) {
+                        setModalState(() {
+                          isLoading = false;
+                          errorText = '$e';
+                        });
+                      }
+                    },
+              child: isLoading
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Supprimer'),
             ),
           ],
         ),
@@ -505,11 +731,8 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.accentRose, size: 18),
-                              onPressed: () async {
-                                final service = ref.read(supabaseServiceProvider);
-                                await service.deleteExamPaper(paper.id);
-                                ref.invalidate(examPapersProvider(exam.id));
-                              },
+                              tooltip: 'Supprimer',
+                              onPressed: () => _showDeletePaperConfirmation(context, exam, paper),
                             ),
                           ],
                         ),
@@ -525,6 +748,50 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Fermer')),
+        ],
+      ),
+    );
+  }
+
+  void _showDeletePaperConfirmation(BuildContext context, OfficialExam exam, ExamPaper paper) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.primarySurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: AppDialogTitle(
+          icon: Icons.delete_forever_rounded,
+          iconColor: AppTheme.accentRose,
+          text: 'Supprimer ce sujet ${paper.year} ?',
+          onClose: () => Navigator.pop(ctx),
+        ),
+        content: Text(
+          'IRRÉVERSIBLE : le sujet${paper.correctionUrl != null ? ' et son corrigé' : ''} de ${exam.name} '
+          '(${paper.year}) seront définitivement supprimés.',
+          style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.4),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentRose),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final service = ref.read(supabaseServiceProvider);
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                await service.deleteExamPaper(paper.id);
+                ref.invalidate(examPapersProvider(exam.id));
+                messenger.showSnackBar(
+                  const SnackBar(backgroundColor: AppTheme.accentEmerald, content: Text('Sujet supprimé.')),
+                );
+              } catch (e) {
+                messenger.showSnackBar(
+                  SnackBar(backgroundColor: AppTheme.accentRose, content: Text('Erreur : $e')),
+                );
+              }
+            },
+            child: const Text('Supprimer'),
+          ),
         ],
       ),
     );

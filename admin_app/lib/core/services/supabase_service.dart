@@ -1276,6 +1276,72 @@ class SupabaseService {
     });
   }
 
+  Future<void> updateEstablishment(
+    String id, {
+    String? name,
+    String? city,
+    bool? isActive,
+  }) async {
+    if (!_isValidUuid(id)) return;
+    final data = <String, dynamic>{};
+    if (name != null) data['name'] = name;
+    if (city != null) data['city'] = city;
+    if (isActive != null) data['is_active'] = isActive;
+    if (data.isEmpty) return;
+    await client.from('establishments').update(data).eq('id', id);
+  }
+
+  Future<void> deleteEstablishment(String id) async {
+    if (!_isValidUuid(id)) return;
+    await client.from('establishments').delete().eq('id', id);
+  }
+
+  Future<int> countTeachersForEstablishment(String establishmentId) async {
+    if (!_isValidUuid(establishmentId)) return 0;
+    final rows = await client
+        .from('teacher_establishments')
+        .select('id')
+        .eq('establishment_id', establishmentId)
+        .then((r) => r as List);
+    return rows.length;
+  }
+
+  // ─── Section 4.2 : Épreuves d'Établissement ────────────────────
+
+  Future<List<EstablishmentPaper>> fetchEstablishmentPapers(String establishmentId) async {
+    if (!_isValidUuid(establishmentId)) return [];
+    final rows = await client
+        .from('establishment_papers')
+        .select()
+        .eq('establishment_id', establishmentId)
+        .order('year', ascending: false)
+        .then((r) => r as List);
+    return rows.map((r) => EstablishmentPaper.fromJson(Map<String, dynamic>.from(r))).toList();
+  }
+
+  Future<void> addEstablishmentPaper({
+    required String establishmentId,
+    required String classNodeId,
+    required String subjectId,
+    required int year,
+    required String documentUrl,
+    String? correctionUrl,
+  }) async {
+    await client.from('establishment_papers').insert({
+      'establishment_id': establishmentId,
+      'class_node_id': classNodeId,
+      'subject_id': subjectId,
+      'year': year,
+      'document_url': documentUrl,
+      'correction_url': correctionUrl,
+    });
+  }
+
+  Future<void> deleteEstablishmentPaper(String id) async {
+    if (!_isValidUuid(id)) return;
+    await client.from('establishment_papers').delete().eq('id', id);
+  }
+
   Future<List<TeacherEstablishmentLink>> fetchTeacherEstablishments(String teacherId) async {
     if (!_isValidUuid(teacherId)) return [];
     final rows = await client
@@ -1557,6 +1623,83 @@ class SupabaseService {
     await client.from('events').update(data).eq('id', id);
   }
 
+  Future<void> deleteEvent(String id) async {
+    if (!_isValidUuid(id)) return;
+    await client.from('events').delete().eq('id', id);
+  }
+
+  // ─── Section 11 : Résultats & Section 27 : Contestations de Notes ──────
+
+  Future<List<EventResult>> fetchEventResults(String eventId) async {
+    if (!_isValidUuid(eventId)) return [];
+    final rows = await client
+        .from('event_results')
+        .select('*, profiles(school_year, accounts(first_name, last_name))')
+        .eq('event_id', eventId)
+        .order('score', ascending: false)
+        .then((r) => r as List);
+    return rows.map((r) => EventResult.fromJson(Map<String, dynamic>.from(r))).toList();
+  }
+
+  /// Saisie manuelle d'une note (interface de correction, §11) — utilisée telle quelle pour les
+  /// formats numériques/QCM ; sert aussi de point de saisie final pour l'oral et le manuscrit, dont la
+  /// correction elle-même (écoute audio/vidéo, lecture de copie) se fait hors de cette interface tant
+  /// que le stockage des soumissions élève n'existe pas côté student_app.
+  Future<void> addEventResult({
+    required String eventId,
+    required String profileId,
+    required double score,
+  }) async {
+    await client.from('event_results').insert({
+      'event_id': eventId,
+      'profile_id': profileId,
+      'score': score,
+    });
+  }
+
+  Future<void> updateEventResultScore(String id, double score) async {
+    if (!_isValidUuid(id)) return;
+    await client.from('event_results').update({'score': score}).eq('id', id);
+  }
+
+  Future<List<GradeDispute>> fetchGradeDisputes() async {
+    final rows = await client
+        .from('grade_disputes')
+        .select('*, event_results(profiles(accounts(first_name, last_name)), events(title))')
+        .order('created_at', ascending: false)
+        .then((r) => r as List);
+    return rows.map((r) => GradeDispute.fromJson(Map<String, dynamic>.from(r))).toList();
+  }
+
+  /// Décision sur une contestation (§27) : maintenue (statut rejete, note inchangée) ou révisée
+  /// (statut resolu, nouvelle note propagée sur event_results.score par le trigger applicatif — ici
+  /// fait explicitement pour rester simple, pas de trigger DB dédié).
+  Future<void> resolveGradeDispute(
+    String disputeId, {
+    required bool accepted,
+    double? revisedScore,
+    required String resolutionNotes,
+    required String reviewerId,
+  }) async {
+    if (!_isValidUuid(disputeId)) return;
+    final dispute = await client
+        .from('grade_disputes')
+        .select('event_result_id')
+        .eq('id', disputeId)
+        .single();
+    await client.from('grade_disputes').update({
+      'status': accepted ? 'resolu' : 'rejete',
+      'revised_score': accepted ? revisedScore : null,
+      'resolution_notes': resolutionNotes,
+      'assigned_reviewer_id': reviewerId,
+    }).eq('id', disputeId);
+    if (accepted && revisedScore != null) {
+      await client
+          .from('event_results')
+          .update({'score': revisedScore}).eq('id', dispute['event_result_id'] as String);
+    }
+  }
+
   // ─── Refund Decisions ─────────────────────────────────────────
 
   Future<void> approveRefund(
@@ -1605,6 +1748,26 @@ class SupabaseService {
         .then((r) => r as List);
     if (rows.isEmpty) return null;
     return OfficialExam.fromJson(Map<String, dynamic>.from(rows.first));
+  }
+
+  Future<void> updateOfficialExam(
+    String id, {
+    String? name,
+    String? classNodeId,
+    DateTime? examDate,
+  }) async {
+    if (!_isValidUuid(id)) return;
+    final data = <String, dynamic>{};
+    if (name != null) data['name'] = name;
+    if (classNodeId != null) data['class_node_id'] = classNodeId;
+    if (examDate != null) data['exam_date'] = examDate.toIso8601String();
+    if (data.isEmpty) return;
+    await client.from('official_exams').update(data).eq('id', id);
+  }
+
+  Future<void> deleteOfficialExam(String id) async {
+    if (!_isValidUuid(id)) return;
+    await client.from('official_exams').delete().eq('id', id);
   }
 
   Future<ExamPaper?> addExamPaper({

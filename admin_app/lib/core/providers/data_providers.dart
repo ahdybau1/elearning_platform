@@ -223,6 +223,18 @@ final establishmentsProvider = FutureProvider<List<Establishment>>((ref) async {
   return all.where((e) => countryIds.contains(e.countryId)).toList();
 });
 
+final establishmentPapersProvider =
+    FutureProvider.family<List<EstablishmentPaper>, String>((ref, establishmentId) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchEstablishmentPapers(establishmentId);
+});
+
+final establishmentTeacherCountProvider =
+    FutureProvider.family<int, String>((ref, establishmentId) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.countTeachersForEstablishment(establishmentId);
+});
+
 final teacherEstablishmentsProvider =
     FutureProvider.family<List<TeacherEstablishmentLink>, String>((ref, teacherId) async {
   final service = ref.watch(supabaseServiceProvider);
@@ -257,6 +269,16 @@ final whatsappCommunitiesProvider =
 final eventsStreamProvider = StreamProvider<List<Event>>((ref) {
   final service = ref.watch(supabaseServiceProvider);
   return service.watchEvents();
+});
+
+final eventResultsProvider = FutureProvider.family<List<EventResult>, String>((ref, eventId) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchEventResults(eventId);
+});
+
+final gradeDisputesProvider = FutureProvider<List<GradeDispute>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchGradeDisputes();
 });
 
 final examPapersProvider =
