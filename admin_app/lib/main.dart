@@ -31,6 +31,16 @@ void main() async {
     publishableKey: supabaseAnonKey,
     debug: true,
   );
+  // Sans ce wrapper, aucun texte de l'application (emails, UUID, messages d'erreur...) n'est
+  // sélectionnable au clic-glissé : les `Text` Flutter ne sont pas sélectionnables par défaut,
+  // contrairement à une page web classique. Un essai pour étendre cette couverture aux modales
+  // (`showDialog` pousse une route séparée, donc hors de portée d'un `SelectionArea` posé sur
+  // `home:` seul) via un Overlay+Localizations manuels avant MaterialApp s'est révélé instable —
+  // `Localizations` ne résout ses delegates qu'après un microtask, donc `SelectionArea` échoue sur
+  // sa toute première frame (`No MaterialLocalizations found`, vérifié en relançant l'app). On
+  // revient donc à la version stable, qui couvre déjà tout le contenu des pages/listes (l'essentiel
+  // de ce qu'un admin copie) ; seul le texte à l'intérieur des boîtes de dialogue reste hors
+  // couverture — à traiter séparément et plus précisément si besoin.
   runApp(const ProviderScope(child: ElearningAdminApp()));
 }
 
@@ -45,11 +55,6 @@ class ElearningAdminApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.dark,
-      // Sans ce wrapper, aucun texte de l'application (emails, UUID, messages d'erreur...) n'est
-      // sélectionnable au clic-glissé : les `Text` Flutter ne sont pas sélectionnables par défaut,
-      // contrairement à une page web classique. Doit envelopper `home`, pas passer par `builder` :
-      // `builder` place son widget AU-DESSUS du Navigator (donc de l'Overlay) créé par MaterialApp,
-      // alors que SelectionArea exige un ancêtre Overlay pour afficher la poignée de sélection.
       home: const SelectionArea(child: SupabaseAuthGate()),
     );
   }

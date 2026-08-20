@@ -247,6 +247,7 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
 
   List<NavGroup> _getFilteredNavGroups(
     AdminRole role, {
+    required bool canViewFinancials,
     int? pendingValidationCount,
     int? flaggedPostsCount,
     int? openTicketsCount,
@@ -261,6 +262,10 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
     for (final group in _rawNavGroups) {
       final allowedItems = group.items
           .where((item) => item.isAllowedFor(role))
+          // Un item financier sans la permission réelle (admin_permissions) ne doit même pas être
+          // visible — pas de "teaser" verrouillé qui trahit l'existence d'une fonctionnalité que
+          // cet admin n'a pas le droit de voir.
+          .where((item) => !item.isFinancial || canViewFinancials)
           .map((item) {
             if (liveBadgeCounts.containsKey(item.id) && liveBadgeCounts[item.id] != null) {
               final count = liveBadgeCounts[item.id]!;
@@ -352,7 +357,6 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
     required BuildContext context,
     required NavItem item,
     required bool isSelected,
-    required bool isRestrictedFinancial,
     bool indented = false,
   }) {
     return Container(
@@ -381,11 +385,7 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
           leading: Icon(
             item.icon,
             size: 20,
-            color: isSelected
-                ? AppTheme.accentBlue
-                : isRestrictedFinancial
-                    ? AppTheme.accentRose.withValues(alpha: 0.5)
-                    : Colors.white70,
+            color: isSelected ? AppTheme.accentBlue : Colors.white70,
           ),
           title: _isSidebarCollapsed
               ? null
@@ -397,21 +397,11 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                          color: isSelected
-                              ? Colors.white
-                              : isRestrictedFinancial
-                                  ? Colors.white38
-                                  : Colors.white70,
+                          color: isSelected ? Colors.white : Colors.white70,
                         ),
                       ),
                     ),
-                    if (isRestrictedFinancial)
-                      const Icon(
-                        Icons.lock_rounded,
-                        size: 14,
-                        color: AppTheme.accentRose,
-                      )
-                    else if (item.badgeCount != null)
+                    if (item.badgeCount != null)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
@@ -429,20 +419,7 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
                       ),
                   ],
                 ),
-          onTap: () {
-            if (isRestrictedFinancial) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Accès restreint : Seul le Super-Administrateur peut consulter les données financières.',
-                  ),
-                  backgroundColor: AppTheme.accentRose,
-                ),
-              );
-            } else {
-              ref.read(selectedNavIndexProvider.notifier).state = item.id;
-            }
-          },
+          onTap: () => ref.read(selectedNavIndexProvider.notifier).state = item.id,
         ),
       ),
     );
@@ -466,6 +443,7 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
     final openTicketsCount = ref.watch(openTicketsCountProvider).valueOrNull;
     final filteredGroups = _getFilteredNavGroups(
       authState.role,
+      canViewFinancials: authState.canViewFinancials,
       pendingValidationCount: pendingValidationCount,
       flaggedPostsCount: flaggedPostsCount,
       openTicketsCount: openTicketsCount,
@@ -594,8 +572,6 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
                                 context: context,
                                 item: item,
                                 isSelected: selectedIndex == item.id,
-                                isRestrictedFinancial:
-                                    item.isFinancial && !authState.canViewFinancials,
                               )).toList(),
                         );
                       }
@@ -659,8 +635,6 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
                                   context: context,
                                   item: item,
                                   isSelected: selectedIndex == item.id,
-                                  isRestrictedFinancial:
-                                      item.isFinancial && !authState.canViewFinancials,
                                   indented: true,
                                 )),
                         ],
@@ -760,64 +734,6 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
                       // Sélecteur de pays — multi-sélection réelle + "Tous les pays", remplace
                       // l'ancienne liste factice codée en dur jamais connectée à rien.
                       const _CountryScopeSelector(),
-                      const SizedBox(width: 16),
-
-                      // Role Switcher Test Dropdown (FOR TESTING STRICT RBAC VIEW FILTERING)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryDark,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: authState.isSuperAdmin
-                                ? AppTheme.accentEmerald
-                                : AppTheme.accentBlue,
-                          ),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<AdminRole>(
-                            // ignore: deprecated_member_use
-                            value: authState.role,
-                            dropdownColor: AppTheme.primaryDark,
-                            icon: const Icon(
-                              Icons.arrow_drop_down_rounded,
-                              color: Colors.white,
-                            ),
-                            items: AdminRole.values.map((role) {
-                              return DropdownMenuItem<AdminRole>(
-                                value: role,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      role == AdminRole.superAdmin
-                                          ? Icons.shield_rounded
-                                          : Icons.person_rounded,
-                                      size: 16,
-                                      color: role == AdminRole.superAdmin
-                                          ? AppTheme.accentEmerald
-                                          : AppTheme.accentBlue,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      role.label,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (newRole) {
-                              if (newRole != null) {
-                                ref.read(authProvider.notifier).switchRole(newRole);
-                              }
-                            },
-                          ),
-                        ),
-                      ),
                       const SizedBox(width: 16),
 
                       // Financial Rights Badge Indicator

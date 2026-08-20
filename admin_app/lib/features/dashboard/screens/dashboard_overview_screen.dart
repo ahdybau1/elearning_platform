@@ -166,15 +166,16 @@ class DashboardOverviewScreen extends ConsumerWidget {
                     color: AppTheme.accentRose,
                     isLoading: openTicketsAsync.isLoading,
                   ),
-                  _buildFinancialKpiCard(
-                    context: context,
-                    canViewFinancials: authState.canViewFinancials,
-                    title: 'Coût IA (30 derniers jours)',
-                    value: '${totalAiCost.toStringAsFixed(2)} \$',
-                    subtitle: '${aiCalls.length} appels API',
-                    icon: Icons.psychology_rounded,
-                    color: AppTheme.accentCyan,
-                  ),
+                  // Absente entièrement pour un admin sans la permission viewAiCosts — pas de
+                  // carte verrouillée qui trahirait l'existence de cette donnée.
+                  if (authState.canViewAiCosts)
+                    _buildKpiCard(
+                      title: 'Coût IA (30 derniers jours)',
+                      value: '${totalAiCost.toStringAsFixed(2)} \$',
+                      subtitle: '${aiCalls.length} appels API',
+                      icon: Icons.psychology_rounded,
+                      color: AppTheme.accentCyan,
+                    ),
                 ],
               );
             },
@@ -273,6 +274,9 @@ class DashboardOverviewScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+              // Absente entièrement sans la permission viewAiCosts — même principe que la carte
+              // KPI : pas de fuite du détail des coûts/appels IA à un admin non autorisé.
+              if (authState.canViewAiCosts) ...[
               const SizedBox(width: 24),
 
               // AI Usage & Cost Tracker Summary
@@ -380,6 +384,7 @@ class DashboardOverviewScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+              ],
             ],
           ),
         ],
@@ -461,105 +466,6 @@ class DashboardOverviewScreen extends ConsumerWidget {
               fontWeight: FontWeight.w600,
             ),
             overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFinancialKpiCard({
-    required BuildContext context,
-    required bool canViewFinancials,
-    required String title,
-    required String value,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.primarySurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: canViewFinancials
-              ? AppTheme.primaryBorder
-              : AppTheme.accentRose.withValues(alpha: 0.4),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Flexible(
-                child: Text(
-                  title,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: AppTheme.textMuted,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: canViewFinancials
-                    ? color.withValues(alpha: 0.15)
-                    : AppTheme.accentRose.withValues(alpha: 0.15),
-                child: Icon(
-                  canViewFinancials ? icon : Icons.lock_rounded,
-                  color: canViewFinancials ? color : AppTheme.accentRose,
-                  size: 20,
-                ),
-              ),
-            ],
-          ),
-          if (canViewFinancials)
-            Text(
-              value,
-              style: GoogleFonts.outfit(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            )
-          else
-            Row(
-              children: [
-                const Icon(
-                  Icons.lock_outline_rounded,
-                  size: 20,
-                  color: AppTheme.accentRose,
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    '•••••••• \$',
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.outfit(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textMuted,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          Text(
-            canViewFinancials
-                ? subtitle
-                : 'Accès réservé au Super-Administrateur',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: canViewFinancials ? color : AppTheme.accentRose,
-              fontWeight: FontWeight.w600,
-            ),
           ),
         ],
       ),

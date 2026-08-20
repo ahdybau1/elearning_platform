@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/supabase_provider.dart';
 import '../services/supabase_service.dart';
 import '../models/admin_models.dart';
+import '../models/enums.dart';
 
 enum AdminRole {
   superAdmin(
@@ -69,12 +70,14 @@ class AdminUserState {
 
   bool get isSuperAdmin => role == AdminRole.superAdmin;
 
-  bool get canViewFinancials => role == AdminRole.superAdmin;
-
   bool hasPermission(String permKey) {
     if (isSuperAdmin) return true;
     return permissions.contains(permKey);
   }
+
+  bool get canViewFinancials => hasPermission(PermissionKey.viewFinancials.name);
+
+  bool get canViewAiCosts => hasPermission(PermissionKey.viewAiCosts.name);
 
   AdminUserState copyWith({
     String? id,
@@ -94,14 +97,17 @@ class AdminUserState {
     );
   }
 
-  factory AdminUserState.fromAdminUser(AdminUser adminUser) {
+  factory AdminUserState.fromAdminUser(
+    AdminUser adminUser, {
+    List<String> grantedPermissions = const [],
+  }) {
     return AdminUserState(
       id: adminUser.id,
       email: adminUser.email,
       firstName: adminUser.firstName,
       lastName: adminUser.lastName,
       role: AdminRole.fromString(adminUser.role),
-      permissions: List<String>.from(adminUser.scopeJson['permissions'] ?? []),
+      permissions: grantedPermissions,
     );
   }
 }
@@ -147,9 +153,8 @@ class AuthNotifier extends StateNotifier<AsyncValue<AdminUserState?>> {
   // l'échec reste visible.
   Future<void> _resolveAdmin(String authUserId) async {
     try {
-      final adminUser = await SupabaseService(
-        _client,
-      ).getAdminUserByAuthId(authUserId);
+      final service = SupabaseService(_client);
+      final adminUser = await service.getAdminUserByAuthId(authUserId);
       if (adminUser == null || !adminUser.isActive) {
         await _client.auth.signOut();
         state = AsyncValue.error(
@@ -158,7 +163,17 @@ class AuthNotifier extends StateNotifier<AsyncValue<AdminUserState?>> {
         );
         return;
       }
-      state = AsyncValue.data(AdminUserState.fromAdminUser(adminUser));
+      // Les droits fins (voir les finances, les coûts IA...) viennent de admin_permissions,
+      // seule source de vérité pour ce que le super-admin a explicitement accordé à cet admin —
+      // jamais d'un état client codé en dur (voir 03_auth_flow.md).
+      final grantedPermissions = await service.fetchPermissions(adminUser.id);
+      final permissionKeys = grantedPermissions
+          .where((p) => p.granted)
+          .map((p) => p.permissionKey)
+          .toList();
+      state = AsyncValue.data(
+        AdminUserState.fromAdminUser(adminUser, grantedPermissions: permissionKeys),
+      );
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -170,12 +185,6 @@ class AuthNotifier extends StateNotifier<AsyncValue<AdminUserState?>> {
   void dispose() {
     _authSubscription?.cancel();
     super.dispose();
-  }
-
-  void switchRole(AdminRole newRole) {
-    if (state.hasValue && state.value != null) {
-      state = AsyncValue.data(state.value!.copyWith(role: newRole));
-    }
   }
 
   Future<void> signInWithPassword(String email, String password) async {
