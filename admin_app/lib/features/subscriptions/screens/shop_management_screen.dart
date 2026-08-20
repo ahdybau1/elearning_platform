@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/auth/auth_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models/academic_node.dart';
+import '../../../core/models/content_models.dart';
 import '../../../core/models/enums.dart';
 import '../../../core/models/subscription_models.dart';
 import '../../../core/providers/data_providers.dart';
@@ -172,7 +173,9 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Grid of shop documents
+            // Documents classés par dossier de Matière (le filtre Classe ci-dessus s'applique en
+            // amont) — plus la grille plate qui devenait vite illisible dès quelques dizaines de
+            // documents.
             Expanded(
               child: shopDocsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -183,18 +186,34 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                   if (docs.isEmpty) {
                     return _buildEmptyState();
                   }
-
-                  return GridView.builder(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: 1.15,
-                    ),
-                    itemCount: docs.length,
-                    itemBuilder: (context, index) {
-                      final doc = docs[index];
-                      return _buildShopDocCard(doc);
+                  return Consumer(
+                    builder: (context, ref, _) {
+                      final subjectsAsync =
+                          ref.watch(subjectsProvider((countryId: null, includeInactive: true)));
+                      final subjectNames = <String, String>{
+                        for (final s in subjectsAsync.valueOrNull ?? <Subject>[]) s.id: s.name,
+                      };
+                      final bySubject = <String?, List<ShopDocument>>{};
+                      for (final doc in docs) {
+                        bySubject.putIfAbsent(doc.subjectId, () => []).add(doc);
+                      }
+                      final subjectIds = bySubject.keys.toList()
+                        ..sort((a, b) {
+                          if (a == null) return 1;
+                          if (b == null) return -1;
+                          return (subjectNames[a] ?? a).compareTo(subjectNames[b] ?? b);
+                        });
+                      return ListView.builder(
+                        itemCount: subjectIds.length,
+                        itemBuilder: (context, idx) {
+                          final subjectId = subjectIds[idx];
+                          final subjectDocs = bySubject[subjectId]!;
+                          return _buildSubjectFolder(
+                            subjectId == null ? 'Sans matière assignée' : (subjectNames[subjectId] ?? '...'),
+                            subjectDocs,
+                          );
+                        },
+                      );
                     },
                   );
                 },
@@ -225,6 +244,53 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
       }
     }
     return result;
+  }
+
+  Widget _buildSubjectFolder(String subjectName, List<ShopDocument> docs) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBackground,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          key: PageStorageKey('shop-subject-$subjectName'),
+          initiallyExpanded: true,
+          leading: const Icon(Icons.folder_rounded, color: AppTheme.accentEmerald),
+          title: Text(
+            subjectName,
+            style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          trailing: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: AppTheme.accentEmerald.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text('${docs.length}',
+                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.accentEmerald)),
+          ),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          children: [
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 1.15,
+              ),
+              itemCount: docs.length,
+              itemBuilder: (context, index) => _buildShopDocCard(docs[index]),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildEmptyState() {
@@ -550,6 +616,7 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
     final descCtrl = TextEditingController(text: existing?.description ?? '');
     final priceCtrl = TextEditingController(text: existing?.price.toStringAsFixed(0) ?? '500');
     String? selectedClassId = existing?.classNodeId ?? _selectedClassId;
+    String? selectedSubjectId = existing?.subjectId;
     String? documentUrl = existing?.documentUrl;
     String? documentFilename = existing?.documentUrl != null ? existing!.documentUrl.split('/').last : null;
     String? previewUrl = existing?.previewUrl;
@@ -762,7 +829,37 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                         items: classNodes
                             .map((c) => DropdownMenuItem<String?>(value: c.id, child: Text(c.name)))
                             .toList(),
-                        onChanged: (v) => setDlgState(() => selectedClassId = v),
+                        onChanged: (v) => setDlgState(() {
+                          selectedClassId = v;
+                          selectedSubjectId = null;
+                        }),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      if (selectedClassId == null) {
+                        return const SizedBox.shrink();
+                      }
+                      final subjectsAsync = ref.watch(subjectsForClassProvider(selectedClassId!));
+                      final subjects = subjectsAsync.valueOrNull ?? <Subject>[];
+                      return DropdownButtonFormField<String?>(
+                        // ignore: deprecated_member_use
+                        value: subjects.any((s) => s.id == selectedSubjectId) ? selectedSubjectId : null,
+                        dropdownColor: AppTheme.primaryDark,
+                        style: const TextStyle(color: Colors.white),
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Matière (optionnel — pour le classement en dossiers)',
+                          labelStyle: TextStyle(color: AppTheme.textSecondary),
+                          prefixIcon: Icon(Icons.menu_book_rounded, size: 20),
+                        ),
+                        items: [
+                          const DropdownMenuItem<String?>(value: null, child: Text('Sans matière assignée')),
+                          ...subjects.map((s) => DropdownMenuItem<String?>(value: s.id, child: Text(s.name))),
+                        ],
+                        onChanged: (v) => setDlgState(() => selectedSubjectId = v),
                       );
                     },
                   ),
@@ -826,10 +923,13 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                             price: price,
                             documentUrl: url,
                             previewUrl: previewUrl,
+                            clearSubject: selectedSubjectId == null,
+                            subjectId: selectedSubjectId,
                           );
                         } else {
                           await service.createShopDocument(
                             classNodeId: selectedClassId!,
+                            subjectId: selectedSubjectId,
                             title: title,
                             description: descCtrl.text.trim(),
                             price: price,

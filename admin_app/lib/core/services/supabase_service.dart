@@ -2709,6 +2709,8 @@ class SupabaseService {
     String? documentUrl,
     String? previewUrl,
     bool? isActive,
+    bool clearSubject = false,
+    String? subjectId,
   }) async {
     if (!_isValidUuid(id)) return;
     final data = <String, dynamic>{};
@@ -2718,6 +2720,9 @@ class SupabaseService {
     if (documentUrl != null) data['document_url'] = documentUrl;
     if (previewUrl != null) data['preview_url'] = previewUrl;
     if (isActive != null) data['is_active'] = isActive;
+    if (clearSubject || subjectId != null) {
+      data['subject_id'] = _isValidUuid(subjectId) ? subjectId : null;
+    }
     if (data.isEmpty) return;
     await client.from('shop_documents').update(data).eq('id', id);
   }

@@ -703,11 +703,12 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
           onClose: () => Navigator.pop(ctx),
         ),
         content: SizedBox(
-          width: 520,
-          height: 380,
+          width: 600,
+          height: 520,
           child: Consumer(
             builder: (context, ref, _) {
               final papersAsync = ref.watch(examPapersProvider(exam.id));
+              final subjectsAsync = ref.watch(subjectsProvider((countryId: null, includeInactive: true)));
               return papersAsync.when(
                 data: (papers) {
                   if (papers.isEmpty) {
@@ -715,52 +716,100 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
                       child: Text('Aucune épreuve répertoriée.', style: GoogleFonts.inter(color: AppTheme.textMuted)),
                     );
                   }
-                  return ListView.separated(
-                    itemCount: papers.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  final subjectNames = <String, String>{
+                    for (final s in subjectsAsync.valueOrNull ?? []) s.id: s.name,
+                  };
+                  final byYear = <int, List<ExamPaper>>{};
+                  for (final p in papers) {
+                    byYear.putIfAbsent(p.year, () => []).add(p);
+                  }
+                  final orderedYears = byYear.keys.toList()..sort((a, b) => b.compareTo(a));
+
+                  return ListView.builder(
+                    itemCount: orderedYears.length,
                     itemBuilder: (context, idx) {
-                      final paper = papers[idx];
+                      final year = orderedYears[idx];
+                      final yearPapers = byYear[year]!;
+                      final bySubject = <String, List<ExamPaper>>{};
+                      for (final p in yearPapers) {
+                        bySubject.putIfAbsent(p.subjectId, () => []).add(p);
+                      }
+                      final orderedSubjectIds = bySubject.keys.toList()
+                        ..sort((a, b) => (subjectNames[a] ?? a).compareTo(subjectNames[b] ?? b));
+
                       return Container(
-                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 10),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryDark,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: AppTheme.primaryBorder),
                         ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.picture_as_pdf_rounded, color: AppTheme.accentRose, size: 24),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Année ${paper.year}',
-                                      style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                                  Text(
-                                    paper.correctionUrl != null ? 'Sujet & Corrigé' : 'Sujet seul',
-                                    style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted),
+                        child: Theme(
+                          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                          child: ExpansionTile(
+                            key: PageStorageKey('exampaper-year-$year'),
+                            initiallyExpanded: true,
+                            leading: const Icon(Icons.folder_rounded, color: AppTheme.accentCyan, size: 20),
+                            title: Text('Année $year',
+                                style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
+                            trailing: Text('${yearPapers.length}',
+                                style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted)),
+                            childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                            children: [
+                              for (final subjectId in orderedSubjectIds) ...[
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 6),
+                                  child: Text(
+                                    subjectNames[subjectId] ?? '...',
+                                    style: GoogleFonts.inter(
+                                        fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.accentCyan),
                                   ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.visibility_rounded, color: AppTheme.accentCyan, size: 18),
-                              tooltip: 'Aperçu du sujet',
-                              onPressed: () => launchUrl(Uri.parse(paper.documentUrl), webOnlyWindowName: '_blank'),
-                            ),
-                            if (paper.correctionUrl != null)
-                              IconButton(
-                                icon: const Icon(Icons.fact_check_rounded, color: AppTheme.accentEmerald, size: 18),
-                                tooltip: 'Aperçu du corrigé',
-                                onPressed: () => launchUrl(Uri.parse(paper.correctionUrl!), webOnlyWindowName: '_blank'),
-                              ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.accentRose, size: 18),
-                              tooltip: 'Supprimer',
-                              onPressed: () => _showDeletePaperConfirmation(context, exam, paper),
-                            ),
-                          ],
+                                ),
+                                ...bySubject[subjectId]!.map((paper) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.primarySurface,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            const Icon(Icons.picture_as_pdf_rounded, color: AppTheme.accentRose, size: 22),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                paper.correctionUrl != null ? 'Sujet & Corrigé' : 'Sujet seul',
+                                                style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
+                                              ),
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.visibility_rounded, color: AppTheme.accentCyan, size: 18),
+                                              tooltip: 'Aperçu du sujet',
+                                              onPressed: () =>
+                                                  launchUrl(Uri.parse(paper.documentUrl), webOnlyWindowName: '_blank'),
+                                            ),
+                                            if (paper.correctionUrl != null)
+                                              IconButton(
+                                                icon: const Icon(Icons.fact_check_rounded,
+                                                    color: AppTheme.accentEmerald, size: 18),
+                                                tooltip: 'Aperçu du corrigé',
+                                                onPressed: () => launchUrl(Uri.parse(paper.correctionUrl!),
+                                                    webOnlyWindowName: '_blank'),
+                                              ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete_outline_rounded,
+                                                  color: AppTheme.accentRose, size: 18),
+                                              tooltip: 'Supprimer',
+                                              onPressed: () => _showDeletePaperConfirmation(context, exam, paper),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )),
+                              ],
+                            ],
+                          ),
                         ),
                       );
                     },
