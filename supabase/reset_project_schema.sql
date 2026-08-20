@@ -417,6 +417,7 @@ CREATE TABLE establishment_papers (
     establishment_id UUID NOT NULL REFERENCES establishments(id) ON DELETE CASCADE,
     class_node_id UUID NOT NULL REFERENCES academic_nodes(id) ON DELETE CASCADE,
     subject_id UUID NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+    term_id UUID REFERENCES terms(id) ON DELETE SET NULL,
     year INT NOT NULL,
     document_url TEXT NOT NULL,
     correction_url TEXT,
@@ -2297,6 +2298,7 @@ BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE shop_documents;
         ALTER PUBLICATION supabase_realtime ADD TABLE charity_campaigns;
         ALTER PUBLICATION supabase_realtime ADD TABLE school_years;
+        ALTER PUBLICATION supabase_realtime ADD TABLE events;
     END IF;
 END $$;
 

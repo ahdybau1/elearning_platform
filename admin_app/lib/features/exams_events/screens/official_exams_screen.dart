@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/academic_node.dart';
 import '../../../core/models/content_models.dart';
 import '../../../core/models/enums.dart';
@@ -9,6 +10,12 @@ import '../../../core/providers/data_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_dialog_title.dart';
 import '../../content_management/widgets/media_attachment_picker.dart';
+
+/// Fusionne classes et séries dans une seule liste de sélection — un sujet de Bac Série C n'est pas
+/// le même document qu'un sujet de Bac Série D, la série doit donc être sélectionnable ici aussi.
+List<AcademicNode> _mergeClassOptions(List<AcademicNode> classes, List<AcademicNode> series) {
+  return [...classes, ...series]..sort((a, b) => a.name.compareTo(b.name));
+}
 
 class OfficialExamsScreen extends ConsumerStatefulWidget {
   const OfficialExamsScreen({super.key});
@@ -30,7 +37,15 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final classesAsync = ref.watch(nodesByTypeProvider('class'));
+    final classesRawAsync = ref.watch(nodesByTypeProvider('class'));
+    final seriesAsync = ref.watch(nodesByTypeProvider('series'));
+    final classOptions = _mergeClassOptions(
+      classesRawAsync.valueOrNull ?? [],
+      seriesAsync.valueOrNull ?? [],
+    );
+    final classesAsync = classesRawAsync.isLoading || seriesAsync.isLoading
+        ? const AsyncValue<List<AcademicNode>>.loading()
+        : AsyncValue<List<AcademicNode>>.data(classOptions);
     final examsAsync = ref.watch(officialExamsProvider(const {}));
 
     return Padding(
@@ -729,6 +744,17 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
                                 ],
                               ),
                             ),
+                            IconButton(
+                              icon: const Icon(Icons.visibility_rounded, color: AppTheme.accentCyan, size: 18),
+                              tooltip: 'Aperçu du sujet',
+                              onPressed: () => launchUrl(Uri.parse(paper.documentUrl), webOnlyWindowName: '_blank'),
+                            ),
+                            if (paper.correctionUrl != null)
+                              IconButton(
+                                icon: const Icon(Icons.fact_check_rounded, color: AppTheme.accentEmerald, size: 18),
+                                tooltip: 'Aperçu du corrigé',
+                                onPressed: () => launchUrl(Uri.parse(paper.correctionUrl!), webOnlyWindowName: '_blank'),
+                              ),
                             IconButton(
                               icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.accentRose, size: 18),
                               tooltip: 'Supprimer',

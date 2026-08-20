@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/auth/auth_provider.dart';
+import '../../../core/models/academic_node.dart';
 import '../../../core/models/admin_models.dart';
 import '../../../core/models/system_models.dart';
 import '../../../core/providers/data_providers.dart';
@@ -593,16 +594,24 @@ class _OlympiadsMockExamsScreenState extends ConsumerState<OlympiadsMockExamsScr
                   Consumer(
                     builder: (context, ref, _) {
                       final classesAsync = ref.watch(nodesByTypeProvider('class'));
+                      final seriesAsync = ref.watch(nodesByTypeProvider('series'));
+                      if (classesAsync.isLoading || seriesAsync.isLoading) {
+                        return const LinearProgressIndicator();
+                      }
+                      final classOptions = <AcademicNode>[
+                        ...classesAsync.valueOrNull ?? [],
+                        ...seriesAsync.valueOrNull ?? [],
+                      ]..sort((a, b) => a.name.compareTo(b.name));
                       return classesAsync.when(
                         data: (classes) {
-                          selectedClassId ??= classes.isNotEmpty ? classes.first.id : null;
+                          selectedClassId ??= classOptions.isNotEmpty ? classOptions.first.id : null;
                           return DropdownButtonFormField<String>(
                             // ignore: deprecated_member_use
                             value: selectedClassId,
                             dropdownColor: AppTheme.primaryDark,
                             style: const TextStyle(color: Colors.white),
-                            decoration: const InputDecoration(labelText: 'Classe concernée'),
-                            items: classes.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                            decoration: const InputDecoration(labelText: 'Classe / Série concernée'),
+                            items: classOptions.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
                             onChanged: (v) => setModalState(() => selectedClassId = v),
                           );
                         },

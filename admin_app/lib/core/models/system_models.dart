@@ -371,6 +371,7 @@ class EstablishmentPaper {
   final String establishmentId;
   final String classNodeId;
   final String subjectId;
+  final String? termId;
   final int year;
   final String documentUrl;
   final String? correctionUrl;
@@ -381,6 +382,7 @@ class EstablishmentPaper {
     required this.establishmentId,
     required this.classNodeId,
     required this.subjectId,
+    this.termId,
     required this.year,
     required this.documentUrl,
     this.correctionUrl,
@@ -393,6 +395,7 @@ class EstablishmentPaper {
       establishmentId: json['establishment_id'] as String,
       classNodeId: json['class_node_id'] as String,
       subjectId: json['subject_id'] as String,
+      termId: json['term_id'] as String?,
       year: json['year'] as int,
       documentUrl: json['document_url'] as String,
       correctionUrl: json['correction_url'] as String?,

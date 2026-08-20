@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../core/models/academic_node.dart';
 import '../../../core/models/content_models.dart';
 import '../../../core/models/system_models.dart';
 import '../../../core/providers/data_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_dialog_title.dart';
 import '../../content_management/widgets/media_attachment_picker.dart';
+
+/// Fusionne classes et séries dans une seule liste de sélection (une série est un "classe" plus
+/// précise pour les niveaux qui en ont — même logique que Leçons & Cours).
+List<AcademicNode> _mergeClassOptions(List<AcademicNode> classes, List<AcademicNode> series) {
+  return [...classes, ...series]..sort((a, b) => a.name.compareTo(b.name));
+}
 
 class SchoolPapersScreen extends ConsumerStatefulWidget {
   const SchoolPapersScreen({super.key});
@@ -484,13 +492,33 @@ class _SchoolPapersScreenState extends ConsumerState<SchoolPapersScreen> {
                                       children: [
                                         Text('Année ${paper.year}',
                                             style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                                        Text(
-                                          paper.correctionUrl != null ? 'Sujet & Corrigé' : 'Sujet seul',
-                                          style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted),
+                                        Consumer(
+                                          builder: (context, ref, _) {
+                                            final terms = ref.watch(termsProvider(null)).valueOrNull ?? [];
+                                            final term = terms.where((t) => t.id == paper.termId).firstOrNull;
+                                            return Text(
+                                              [
+                                                if (term != null) term.name,
+                                                paper.correctionUrl != null ? 'Sujet & Corrigé' : 'Sujet seul',
+                                              ].join(' • '),
+                                              style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted),
+                                            );
+                                          },
                                         ),
                                       ],
                                     ),
                                   ),
+                                  IconButton(
+                                    icon: const Icon(Icons.visibility_rounded, color: AppTheme.accentCyan, size: 18),
+                                    tooltip: 'Aperçu du sujet',
+                                    onPressed: () => launchUrl(Uri.parse(paper.documentUrl), webOnlyWindowName: '_blank'),
+                                  ),
+                                  if (paper.correctionUrl != null)
+                                    IconButton(
+                                      icon: const Icon(Icons.fact_check_rounded, color: AppTheme.accentEmerald, size: 18),
+                                      tooltip: 'Aperçu du corrigé',
+                                      onPressed: () => launchUrl(Uri.parse(paper.correctionUrl!), webOnlyWindowName: '_blank'),
+                                    ),
                                   IconButton(
                                     icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.accentRose, size: 18),
                                     tooltip: 'Supprimer',
@@ -565,6 +593,7 @@ class _SchoolPapersScreenState extends ConsumerState<SchoolPapersScreen> {
   void _showAddPaperModal(BuildContext context, Establishment est) {
     String? selectedClassId;
     String? selectedSubjectId;
+    String? selectedTermId;
     final yearCtrl = TextEditingController(text: DateTime.now().year.toString());
     List<MediaAsset> documentAssets = [];
     List<MediaAsset> correctionAssets = [];
@@ -592,21 +621,23 @@ class _SchoolPapersScreenState extends ConsumerState<SchoolPapersScreen> {
                   Consumer(
                     builder: (context, ref, _) {
                       final classesAsync = ref.watch(nodesByTypeProvider('class'));
-                      return classesAsync.when(
-                        data: (classes) {
-                          selectedClassId ??= classes.isNotEmpty ? classes.first.id : null;
-                          return DropdownButtonFormField<String>(
-                            // ignore: deprecated_member_use
-                            value: selectedClassId,
-                            dropdownColor: AppTheme.primaryDark,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: const InputDecoration(labelText: 'Classe'),
-                            items: classes.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-                            onChanged: (v) => setModalState(() => selectedClassId = v),
-                          );
-                        },
-                        loading: () => const LinearProgressIndicator(),
-                        error: (err, _) => Text('Erreur: $err', style: GoogleFonts.inter(color: AppTheme.accentRose)),
+                      final seriesAsync = ref.watch(nodesByTypeProvider('series'));
+                      final classOptions = _mergeClassOptions(
+                        classesAsync.valueOrNull ?? [],
+                        seriesAsync.valueOrNull ?? [],
+                      );
+                      if (classesAsync.isLoading || seriesAsync.isLoading) {
+                        return const LinearProgressIndicator();
+                      }
+                      selectedClassId ??= classOptions.isNotEmpty ? classOptions.first.id : null;
+                      return DropdownButtonFormField<String>(
+                        // ignore: deprecated_member_use
+                        value: selectedClassId,
+                        dropdownColor: AppTheme.primaryDark,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(labelText: 'Classe / Série'),
+                        items: classOptions.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                        onChanged: (v) => setModalState(() => selectedClassId = v),
                       );
                     },
                   ),
@@ -625,6 +656,30 @@ class _SchoolPapersScreenState extends ConsumerState<SchoolPapersScreen> {
                             decoration: const InputDecoration(labelText: 'Matière'),
                             items: subjects.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
                             onChanged: (v) => setModalState(() => selectedSubjectId = v),
+                          );
+                        },
+                        loading: () => const LinearProgressIndicator(),
+                        error: (err, _) => Text('Erreur: $err', style: GoogleFonts.inter(color: AppTheme.accentRose)),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final termsAsync = ref.watch(termsProvider(null));
+                      return termsAsync.when(
+                        data: (terms) {
+                          return DropdownButtonFormField<String?>(
+                            // ignore: deprecated_member_use
+                            value: selectedTermId,
+                            dropdownColor: AppTheme.primaryDark,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: const InputDecoration(labelText: 'Trimestre (optionnel)'),
+                            items: [
+                              const DropdownMenuItem<String?>(value: null, child: Text('Non précisé')),
+                              ...terms.map((t) => DropdownMenuItem<String?>(value: t.id, child: Text(t.name))),
+                            ],
+                            onChanged: (v) => setModalState(() => selectedTermId = v),
                           );
                         },
                         loading: () => const LinearProgressIndicator(),
@@ -687,6 +742,7 @@ class _SchoolPapersScreenState extends ConsumerState<SchoolPapersScreen> {
                           establishmentId: est.id,
                           classNodeId: selectedClassId!,
                           subjectId: selectedSubjectId!,
+                          termId: selectedTermId,
                           year: year,
                           documentUrl: documentAssets.first.url,
                           correctionUrl: correctionAssets.isEmpty ? null : correctionAssets.first.url,
