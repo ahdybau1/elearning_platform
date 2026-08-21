@@ -579,6 +579,26 @@ CREATE TABLE notification_templates (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Paramètres globaux (admin + student_app) : branding, contact support, textes légaux, mode
+-- maintenance, version minimale, langues activées (préparation i18n). Ligne unique.
+CREATE TABLE app_settings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    app_name TEXT NOT NULL DEFAULT 'E-Learning',
+    tagline TEXT,
+    support_email TEXT,
+    support_phone TEXT,
+    support_whatsapp_link TEXT,
+    terms_url TEXT,
+    privacy_policy_url TEXT,
+    legal_notice_url TEXT,
+    maintenance_mode BOOLEAN NOT NULL DEFAULT FALSE,
+    maintenance_message TEXT,
+    min_supported_app_version TEXT,
+    enabled_languages TEXT[] NOT NULL DEFAULT ARRAY['fr'],
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_by UUID REFERENCES admin_users(id) ON DELETE SET NULL
+);
+
 CREATE TABLE notification_log (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
@@ -1753,6 +1773,7 @@ ALTER TABLE grade_disputes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_agent_calls ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_content_review ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notification_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notification_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE scheduled_reminders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
@@ -2009,6 +2030,12 @@ CREATE POLICY ai_agent_calls_super_admin_select ON ai_agent_calls FOR SELECT USI
 CREATE POLICY ai_content_review_admin_all ON ai_content_review FOR ALL USING (is_admin_user()) WITH CHECK (is_admin_user());
 
 CREATE POLICY notification_templates_admin_all ON notification_templates FOR ALL USING (is_admin_user()) WITH CHECK (is_admin_user());
+
+-- Aucune donnée sensible (aucun secret) — lecture publique nécessaire pour que student_app
+-- affiche le mode maintenance avant même la connexion. Écriture réservée au super-admin.
+CREATE POLICY app_settings_public_select ON app_settings FOR SELECT USING (true);
+CREATE POLICY app_settings_super_admin_update ON app_settings FOR UPDATE
+    USING (has_admin_role('super_admin')) WITH CHECK (has_admin_role('super_admin'));
 
 CREATE POLICY notification_log_select ON notification_log FOR SELECT USING (owns_profile(profile_id) OR is_admin_user());
 

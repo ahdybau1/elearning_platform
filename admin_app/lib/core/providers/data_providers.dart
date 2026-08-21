@@ -425,6 +425,11 @@ final notificationTemplatesProvider =
   return service.fetchNotificationTemplates();
 });
 
+final appSettingsProvider = FutureProvider<AppSettings>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchAppSettings();
+});
+
 final parentAccountsProvider =
     FutureProvider.family<List<ParentAccount>, String?>((ref, search) async {
   final service = ref.watch(supabaseServiceProvider);

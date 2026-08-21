@@ -304,4 +304,19 @@ class StudentSupabaseService {
       ),
     ];
   }
+
+  // ─── Paramètres Globaux ───────────────────────────────────────
+
+  /// Repli volontairement "hors maintenance" en cas d'erreur (réseau, colonne absente...) : mieux
+  /// vaut laisser l'application fonctionner normalement qu'enfermer tous les élèves derrière un
+  /// écran de maintenance à cause d'un souci de récupération de ce réglage, pas du réglage lui-même.
+  Future<AppSettings> fetchAppSettings() async {
+    try {
+      final rows = await client.from('app_settings').select().limit(1).then((r) => r as List);
+      if (rows.isNotEmpty) {
+        return AppSettings.fromJson(Map<String, dynamic>.from(rows.first));
+      }
+    } catch (_) {}
+    return AppSettings(appName: 'E-Learning');
+  }
 }

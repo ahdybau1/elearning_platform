@@ -3048,6 +3048,48 @@ class SupabaseService {
         .eq('id', id);
   }
 
+  // ─── Paramètres Globaux (app_settings, ligne unique) ───────────
+
+  Future<AppSettings> fetchAppSettings() async {
+    final rows = await client.from('app_settings').select().limit(1).then((r) => r as List);
+    if (rows.isEmpty) {
+      throw Exception('app_settings introuvable — migration 38 non appliquée ?');
+    }
+    return AppSettings.fromJson(Map<String, dynamic>.from(rows.first));
+  }
+
+  Future<void> updateAppSettings(
+    String id, {
+    String? appName,
+    String? tagline,
+    String? supportEmail,
+    String? supportPhone,
+    String? supportWhatsappLink,
+    String? termsUrl,
+    String? privacyPolicyUrl,
+    String? legalNoticeUrl,
+    bool? maintenanceMode,
+    String? maintenanceMessage,
+    String? minSupportedAppVersion,
+    List<String>? enabledLanguages,
+    required String updatedBy,
+  }) async {
+    final data = <String, dynamic>{'updated_at': DateTime.now().toIso8601String(), 'updated_by': updatedBy};
+    if (appName != null) data['app_name'] = appName;
+    if (tagline != null) data['tagline'] = tagline;
+    if (supportEmail != null) data['support_email'] = supportEmail;
+    if (supportPhone != null) data['support_phone'] = supportPhone;
+    if (supportWhatsappLink != null) data['support_whatsapp_link'] = supportWhatsappLink;
+    if (termsUrl != null) data['terms_url'] = termsUrl;
+    if (privacyPolicyUrl != null) data['privacy_policy_url'] = privacyPolicyUrl;
+    if (legalNoticeUrl != null) data['legal_notice_url'] = legalNoticeUrl;
+    if (maintenanceMode != null) data['maintenance_mode'] = maintenanceMode;
+    if (maintenanceMessage != null) data['maintenance_message'] = maintenanceMessage;
+    if (minSupportedAppVersion != null) data['min_supported_app_version'] = minSupportedAppVersion;
+    if (enabledLanguages != null) data['enabled_languages'] = enabledLanguages;
+    await client.from('app_settings').update(data).eq('id', id);
+  }
+
   // ─── Section 2.16 : Comptes Parents ────────────────────────────
 
   Future<void> createParentAccount({

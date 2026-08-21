@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
+import '../../../core/providers/student_providers.dart';
 
 class ParentDashboardScreen extends ConsumerWidget {
   const ParentDashboardScreen({super.key});
@@ -64,11 +65,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                   ),
                   IconButton(
                     icon: const Icon(Icons.settings_outlined, color: StudentTheme.textSecondary),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Paramètres du compte parent.')),
-                      );
-                    },
+                    onPressed: () => _showSupportAndLegalSheet(context, ref),
                   ),
                 ],
               ),
@@ -220,6 +217,80 @@ class ParentDashboardScreen extends ConsumerWidget {
             ],
           ),
           Text(amount, style: GoogleFonts.firaCode(fontSize: 13, fontWeight: FontWeight.bold, color: StudentTheme.accentEmerald)),
+        ],
+      ),
+    );
+  }
+
+  void _showSupportAndLegalSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: StudentTheme.cardDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Consumer(
+        builder: (ctx, ref, _) {
+          final settingsAsync = ref.watch(appSettingsProvider);
+          return Padding(
+            padding: const EdgeInsets.all(24),
+            child: settingsAsync.when(
+              data: (settings) => Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Support & Informations Légales',
+                      style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white)),
+                  const SizedBox(height: 16),
+                  if (settings.supportEmail?.isNotEmpty == true)
+                    _infoRow(Icons.email_outlined, 'Email', settings.supportEmail!),
+                  if (settings.supportPhone?.isNotEmpty == true)
+                    _infoRow(Icons.phone_outlined, 'Téléphone', settings.supportPhone!),
+                  if (settings.supportWhatsappLink?.isNotEmpty == true)
+                    _infoRow(Icons.chat_outlined, 'WhatsApp', settings.supportWhatsappLink!),
+                  if (settings.termsUrl?.isNotEmpty == true)
+                    _infoRow(Icons.description_outlined, 'CGU', settings.termsUrl!),
+                  if (settings.privacyPolicyUrl?.isNotEmpty == true)
+                    _infoRow(Icons.privacy_tip_outlined, 'Confidentialité', settings.privacyPolicyUrl!),
+                  if (settings.legalNoticeUrl?.isNotEmpty == true)
+                    _infoRow(Icons.gavel_outlined, 'Mentions légales', settings.legalNoticeUrl!),
+                  if ((settings.supportEmail?.isEmpty ?? true) &&
+                      (settings.supportPhone?.isEmpty ?? true) &&
+                      (settings.supportWhatsappLink?.isEmpty ?? true) &&
+                      (settings.termsUrl?.isEmpty ?? true) &&
+                      (settings.privacyPolicyUrl?.isEmpty ?? true) &&
+                      (settings.legalNoticeUrl?.isEmpty ?? true))
+                    Text('Aucune information de support renseignée par l\'administration pour le moment.',
+                        style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary)),
+                ],
+              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) =>
+                  Text('Erreur: $err', style: GoogleFonts.inter(color: Colors.redAccent)),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: StudentTheme.accentAmber),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textMuted)),
+                SelectableText(value, style: GoogleFonts.inter(fontSize: 13, color: Colors.white)),
+              ],
+            ),
+          ),
         ],
       ),
     );

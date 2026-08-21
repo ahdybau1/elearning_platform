@@ -6,6 +6,11 @@ final studentSupabaseServiceProvider = Provider<StudentSupabaseService>((ref) {
   return StudentSupabaseService.instance;
 });
 
+final appSettingsProvider = FutureProvider<AppSettings>((ref) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchAppSettings();
+});
+
 final studentSubjectsProvider =
     FutureProvider.family<List<Subject>, String?>((ref, countryId) async {
   final service = ref.watch(studentSupabaseServiceProvider);

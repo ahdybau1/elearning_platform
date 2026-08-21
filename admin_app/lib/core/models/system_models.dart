@@ -437,3 +437,59 @@ class TeacherEstablishmentLink {
     );
   }
 }
+
+class AppSettings {
+  final String id;
+  final String appName;
+  final String? tagline;
+  final String? supportEmail;
+  final String? supportPhone;
+  final String? supportWhatsappLink;
+  final String? termsUrl;
+  final String? privacyPolicyUrl;
+  final String? legalNoticeUrl;
+  final bool maintenanceMode;
+  final String? maintenanceMessage;
+  final String? minSupportedAppVersion;
+  final List<String> enabledLanguages;
+  final DateTime updatedAt;
+
+  AppSettings({
+    required this.id,
+    required this.appName,
+    this.tagline,
+    this.supportEmail,
+    this.supportPhone,
+    this.supportWhatsappLink,
+    this.termsUrl,
+    this.privacyPolicyUrl,
+    this.legalNoticeUrl,
+    this.maintenanceMode = false,
+    this.maintenanceMessage,
+    this.minSupportedAppVersion,
+    this.enabledLanguages = const ['fr'],
+    DateTime? updatedAt,
+  }) : updatedAt = updatedAt ?? DateTime.now();
+
+  factory AppSettings.fromJson(Map<String, dynamic> json) {
+    return AppSettings(
+      id: json['id'] as String,
+      appName: json['app_name'] as String? ?? 'E-Learning',
+      tagline: json['tagline'] as String?,
+      supportEmail: json['support_email'] as String?,
+      supportPhone: json['support_phone'] as String?,
+      supportWhatsappLink: json['support_whatsapp_link'] as String?,
+      termsUrl: json['terms_url'] as String?,
+      privacyPolicyUrl: json['privacy_policy_url'] as String?,
+      legalNoticeUrl: json['legal_notice_url'] as String?,
+      maintenanceMode: (json['maintenance_mode'] as bool?) ?? false,
+      maintenanceMessage: json['maintenance_message'] as String?,
+      minSupportedAppVersion: json['min_supported_app_version'] as String?,
+      enabledLanguages:
+          (json['enabled_languages'] as List?)?.map((e) => e.toString()).toList() ?? const ['fr'],
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : DateTime.now(),
+    );
+  }
+}
