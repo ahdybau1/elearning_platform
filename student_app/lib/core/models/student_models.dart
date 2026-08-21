@@ -344,6 +344,147 @@ class OfficialExam {
   }
 }
 
+class Establishment {
+  final String id;
+  final String name;
+  final String city;
+
+  Establishment({required this.id, required this.name, required this.city});
+
+  factory Establishment.fromJson(Map<String, dynamic> json) {
+    return Establishment(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      city: json['city'] as String,
+    );
+  }
+}
+
+class EstablishmentPaper {
+  final String id;
+  final String establishmentId;
+  final String? establishmentName;
+  final String subjectId;
+  final String? subjectName;
+  final int year;
+  final String documentUrl;
+  final String? correctionUrl;
+
+  EstablishmentPaper({
+    required this.id,
+    required this.establishmentId,
+    this.establishmentName,
+    required this.subjectId,
+    this.subjectName,
+    required this.year,
+    required this.documentUrl,
+    this.correctionUrl,
+  });
+
+  factory EstablishmentPaper.fromJson(Map<String, dynamic> json) {
+    final establishment = json['establishments'] as Map<String, dynamic>?;
+    final subject = json['subjects'] as Map<String, dynamic>?;
+    return EstablishmentPaper(
+      id: json['id'] as String,
+      establishmentId: json['establishment_id'] as String,
+      establishmentName: establishment?['name'] as String?,
+      subjectId: json['subject_id'] as String,
+      subjectName: subject?['name'] as String?,
+      year: (json['year'] as int?) ?? 2026,
+      documentUrl: json['document_url'] as String? ?? '',
+      correctionUrl: json['correction_url'] as String?,
+    );
+  }
+}
+
+class WhatsappCommunity {
+  final String id;
+  final String classNodeId;
+  final String inviteLink;
+  final int memberCountEstimate;
+
+  WhatsappCommunity({
+    required this.id,
+    required this.classNodeId,
+    required this.inviteLink,
+    this.memberCountEstimate = 0,
+  });
+
+  factory WhatsappCommunity.fromJson(Map<String, dynamic> json) {
+    return WhatsappCommunity(
+      id: json['id'] as String,
+      classNodeId: json['class_node_id'] as String,
+      inviteLink: json['invite_link'] as String,
+      memberCountEstimate: (json['member_count_estimate'] as int?) ?? 0,
+    );
+  }
+}
+
+class CharityCampaign {
+  final String id;
+  final String title;
+  final String description;
+  final double targetAmount;
+  final double collectedAmount;
+  final String? imageUrl;
+
+  CharityCampaign({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.targetAmount,
+    required this.collectedAmount,
+    this.imageUrl,
+  });
+
+  double get progressRatio => targetAmount > 0 ? (collectedAmount / targetAmount).clamp(0, 1) : 0;
+
+  factory CharityCampaign.fromJson(Map<String, dynamic> json) {
+    return CharityCampaign(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String,
+      targetAmount: double.parse((json['target_amount'] as num?)?.toString() ?? '0'),
+      collectedAmount: double.parse((json['collected_amount'] as num?)?.toString() ?? '0'),
+      imageUrl: json['image_url'] as String?,
+    );
+  }
+}
+
+class SupportTicket {
+  final String id;
+  final String category; // paiement | technique | contenu | autre
+  final String subject;
+  final String description;
+  final String status; // ouvert | en_cours | repondu | ferme
+  final String? replyMessage;
+  final DateTime createdAt;
+
+  SupportTicket({
+    required this.id,
+    required this.category,
+    required this.subject,
+    required this.description,
+    this.status = 'ouvert',
+    this.replyMessage,
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  factory SupportTicket.fromJson(Map<String, dynamic> json) {
+    return SupportTicket(
+      id: json['id'] as String,
+      category: json['category'] as String? ?? 'autre',
+      subject: json['subject'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      status: json['status'] as String? ?? 'ouvert',
+      replyMessage: json['reply_message'] as String?,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+    );
+  }
+}
+
 class AppSettings {
   final String appName;
   final String? tagline;

@@ -60,3 +60,49 @@ final currentSchoolYearProvider =
   final service = ref.watch(studentSupabaseServiceProvider);
   return service.fetchCurrentSchoolYear(countryId);
 });
+
+final establishmentsProvider = FutureProvider<List<Establishment>>((ref) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchEstablishments();
+});
+
+class EstablishmentPapersQuery {
+  final String classNodeId;
+  final String? establishmentId;
+  const EstablishmentPapersQuery({required this.classNodeId, this.establishmentId});
+
+  @override
+  bool operator ==(Object other) =>
+      other is EstablishmentPapersQuery &&
+      other.classNodeId == classNodeId &&
+      other.establishmentId == establishmentId;
+
+  @override
+  int get hashCode => Object.hash(classNodeId, establishmentId);
+}
+
+final establishmentPapersProvider =
+    FutureProvider.family<List<EstablishmentPaper>, EstablishmentPapersQuery>((ref, query) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchEstablishmentPapers(
+    classNodeId: query.classNodeId,
+    establishmentId: query.establishmentId,
+  );
+});
+
+final whatsappCommunityProvider =
+    FutureProvider.family<WhatsappCommunity?, String>((ref, classNodeId) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchWhatsappCommunity(classNodeId);
+});
+
+final charityCampaignsProvider = FutureProvider<List<CharityCampaign>>((ref) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchCharityCampaigns();
+});
+
+final supportTicketsProvider =
+    FutureProvider.family<List<SupportTicket>, String>((ref, accountId) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchSupportTickets(accountId);
+});

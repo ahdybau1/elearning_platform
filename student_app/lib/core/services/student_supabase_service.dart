@@ -335,6 +335,98 @@ class StudentSupabaseService {
     ];
   }
 
+  // ─── Épreuves par Établissement (§5 du CDC) ───────────────────
+  // Lectures publiques réelles (RLS `establishments_select`/`establishment_papers_select` : USING
+  // (true)) — catalogue ouvert par design, tout élève peut consulter les épreuves de n'importe quel
+  // établissement. Pas de repli sur de fausses données : une liste vide est un état honnête tant
+  // qu'aucun établissement n'a été créé côté administration.
+
+  Future<List<Establishment>> fetchEstablishments() async {
+    final rows = await client
+        .from('establishments')
+        .select()
+        .eq('is_active', true)
+        .order('name')
+        .then((r) => r as List);
+    return rows.map((r) => Establishment.fromJson(Map<String, dynamic>.from(r))).toList();
+  }
+
+  Future<List<EstablishmentPaper>> fetchEstablishmentPapers({
+    required String classNodeId,
+    String? establishmentId,
+  }) async {
+    if (!_isValidUuid(classNodeId)) return [];
+    var query = client
+        .from('establishment_papers')
+        .select('*, establishments(name), subjects(name)')
+        .eq('class_node_id', classNodeId);
+    if (_isValidUuid(establishmentId)) {
+      query = query.eq('establishment_id', establishmentId!);
+    }
+    final rows = await query.order('year', ascending: false).then((r) => r as List);
+    return rows.map((r) => EstablishmentPaper.fromJson(Map<String, dynamic>.from(r))).toList();
+  }
+
+  // ─── Communautés d'Étude WhatsApp (§16 du CDC) ────────────────
+  // RLS `whatsapp_communities_select` gate déjà par classe ET palier d'abonnement
+  // (`current_user_has_feature_access('whatsapp_groups')`) — une liste vide reflète soit l'absence
+  // de communauté pour cette classe, soit un palier insuffisant ; les deux sont honnêtes ici, pas
+  // besoin de les distinguer côté client (le message reste correct dans les deux cas).
+  Future<WhatsappCommunity?> fetchWhatsappCommunity(String classNodeId) async {
+    if (!_isValidUuid(classNodeId)) return null;
+    final row = await client
+        .from('whatsapp_communities')
+        .select()
+        .eq('class_node_id', classNodeId)
+        .eq('is_active', true)
+        .maybeSingle();
+    return row == null ? null : WhatsappCommunity.fromJson(Map<String, dynamic>.from(row));
+  }
+
+  // ─── Soutien / Dons (§12 du CDC) ───────────────────────────────
+  // Le catalogue des causes est public et réel (RLS `charity_campaigns_select`). En revanche
+  // `donations` n'a AUCUNE policy d'insertion cliente (voir reset_project_schema.sql) — un don ne
+  // peut être enregistré que via un futur Edge Function `initiate-donation` payant, qui n'existe
+  // pas encore faute d'agrégateur Mobile Money connecté. Ne jamais simuler un don réussi ici.
+  Future<List<CharityCampaign>> fetchCharityCampaigns() async {
+    final rows = await client
+        .from('charity_campaigns')
+        .select()
+        .eq('is_active', true)
+        .order('created_at', ascending: false)
+        .then((r) => r as List);
+    return rows.map((r) => CharityCampaign.fromJson(Map<String, dynamic>.from(r))).toList();
+  }
+
+  // ─── Messagerie / Tickets Support (§9 du CDC) ─────────────────
+  // RLS réelle (`support_tickets_select`/`support_tickets_insert` : owns_account(account_id)) —
+  // chaque élève ne voit et ne crée que ses propres tickets.
+  Future<List<SupportTicket>> fetchSupportTickets(String accountId) async {
+    if (!_isValidUuid(accountId)) return [];
+    final rows = await client
+        .from('support_tickets')
+        .select()
+        .eq('account_id', accountId)
+        .order('created_at', ascending: false)
+        .then((r) => r as List);
+    return rows.map((r) => SupportTicket.fromJson(Map<String, dynamic>.from(r))).toList();
+  }
+
+  Future<void> createSupportTicket({
+    required String accountId,
+    required String category,
+    required String subject,
+    required String description,
+  }) async {
+    await client.from('support_tickets').insert({
+      'account_id': accountId,
+      'category': category,
+      'subject': subject,
+      'description': description,
+      'requester_type': 'eleve',
+    });
+  }
+
   // ─── Paramètres Globaux ───────────────────────────────────────
 
   /// Repli volontairement "hors maintenance" en cas d'erreur (réseau, colonne absente...) : mieux

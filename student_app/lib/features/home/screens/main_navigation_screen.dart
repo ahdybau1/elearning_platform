@@ -4,18 +4,27 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import 'home_dashboard_screen.dart';
+import '../../profile/screens/student_profile_screen.dart';
+import '../../settings/screens/settings_screen.dart';
+import '../../parent_portal/screens/parent_dashboard_screen.dart';
 import '../../courses/screens/subjects_list_screen.dart';
+import '../../courses/screens/exercises_hub_screen.dart';
 import '../../exams/screens/official_exams_screen.dart';
+import '../../exams/screens/establishment_papers_screen.dart';
 import '../../exams/screens/mock_exam_arena_screen.dart';
 import '../../ai_tutor/screens/ai_tutor_chat_screen.dart';
 import '../../community/screens/class_forum_screen.dart';
+import '../../community/screens/study_communities_screen.dart';
 import '../../subscription/screens/boutique_shop_screen.dart';
+import '../../support/screens/donations_screen.dart';
+import '../../support/screens/support_tickets_screen.dart';
 
 class _NavPage {
   final String title;
   final IconData icon;
   final Widget screen;
-  const _NavPage({required this.title, required this.icon, required this.screen});
+  final bool requiresParentPin;
+  const _NavPage({required this.title, required this.icon, required this.screen, this.requiresParentPin = false});
 }
 
 class _NavModule {
@@ -27,25 +36,41 @@ class _NavModule {
 // Application élève à part entière (projet Flutter distinct de admin_app, jamais compilée ni
 // déployée avec lui) — cette barre latérale reprend seulement le LANGAGE visuel de admin_app
 // (modules dépliables → pages), pour une cohérence de famille de produit, pas un partage de code.
+// Groupes et pages calqués exactement sur l'architecture de navigation du cahier des charges
+// (§20 — docs/cahier_des_charges.md) : Mon espace / Apprentissage / Évaluation / Communauté /
+// Services / Support.
 final List<_NavModule> _studentModules = [
-  _NavModule(title: 'Général', pages: [
+  _NavModule(title: 'Mon espace', pages: [
     _NavPage(title: 'Tableau de Bord', icon: Icons.dashboard_rounded, screen: const HomeDashboardScreen()),
+    _NavPage(title: 'Mon Profil', icon: Icons.person_outline_rounded, screen: const StudentProfileScreen()),
+    _NavPage(title: 'Paramètres', icon: Icons.settings_outlined, screen: const SettingsScreen()),
+    _NavPage(
+      title: 'Espace Parent',
+      icon: Icons.family_restroom_rounded,
+      screen: const ParentDashboardScreen(),
+      requiresParentPin: true,
+    ),
   ]),
-  _NavModule(title: 'Pédagogie', pages: [
+  _NavModule(title: 'Apprentissage', pages: [
     _NavPage(title: 'Mes Matières & Cours', icon: Icons.menu_book_rounded, screen: const SubjectsListScreen()),
-  ]),
-  _NavModule(title: 'Examens & Concours', pages: [
-    _NavPage(title: 'Examens Officiels', icon: Icons.workspace_premium_rounded, screen: const OfficialExamsScreen()),
-    _NavPage(title: 'Concours Blancs', icon: Icons.emoji_events_rounded, screen: const MockExamArenaScreen()),
-  ]),
-  _NavModule(title: 'Assistant IA', pages: [
+    _NavPage(title: 'Exercices', icon: Icons.edit_note_rounded, screen: const ExercisesHubScreen()),
     _NavPage(title: 'Tuteur IA', icon: Icons.auto_awesome_rounded, screen: const AiTutorChatScreen()),
+  ]),
+  _NavModule(title: 'Évaluation', pages: [
+    _NavPage(title: 'Examens Officiels', icon: Icons.workspace_premium_rounded, screen: const OfficialExamsScreen()),
+    _NavPage(title: 'Épreuves par Établissement', icon: Icons.apartment_rounded, screen: const EstablishmentPapersScreen()),
+    _NavPage(title: 'Examens Blancs & Olympiades', icon: Icons.emoji_events_rounded, screen: const MockExamArenaScreen()),
   ]),
   _NavModule(title: 'Communauté', pages: [
     _NavPage(title: 'Forum de Classe', icon: Icons.forum_rounded, screen: const ClassForumScreen()),
+    _NavPage(title: 'Communautés d\'Étude', icon: Icons.groups_rounded, screen: const StudyCommunitiesScreen()),
   ]),
-  _NavModule(title: 'Boutique', pages: [
+  _NavModule(title: 'Services', pages: [
     _NavPage(title: 'Documents à la Carte', icon: Icons.storefront_rounded, screen: const BoutiqueShopScreen()),
+    _NavPage(title: 'Soutien / Dons', icon: Icons.favorite_outline_rounded, screen: const DonationsScreen()),
+  ]),
+  _NavModule(title: 'Support', pages: [
+    _NavPage(title: 'Messagerie & Tickets', icon: Icons.support_agent_rounded, screen: const SupportTicketsScreen()),
   ]),
 ];
 
@@ -169,7 +194,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                                           color: isSelected ? Colors.white : StudentTheme.textSecondary,
                                         ),
                                       ),
-                                      onTap: () => setState(() => _selectedFlatIndex = flatIndex),
+                                      onTap: () => page.requiresParentPin
+                                          ? _showParentPinDialog(flatIndex)
+                                          : setState(() => _selectedFlatIndex = flatIndex),
                                     ),
                                   ),
                                 );
@@ -212,6 +239,69 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 children: pages.map((p) => p.screen).toList(),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  // TODO(Espace Parent réel) : même limite que dans profile_switcher_screen.dart — PIN codé en dur
+  // en attendant le vrai rattachement via `parent_accounts` (§17 du cahier des charges).
+  void _showParentPinDialog(int targetIndex) {
+    final pinCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: StudentTheme.cardDark,
+        title: Row(
+          children: [
+            const Icon(Icons.security_rounded, color: StudentTheme.accentAmber),
+            const SizedBox(width: 10),
+            Text('Code PIN Parent', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Entrez votre code confidentiel à 4 chiffres (défaut : 1234) :',
+              style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: pinCtrl,
+              keyboardType: TextInputType.number,
+              obscureText: true,
+              maxLength: 4,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.firaCode(fontSize: 22, color: Colors.white, letterSpacing: 8),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: StudentTheme.surfaceDark,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Annuler', style: TextStyle(color: StudentTheme.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: StudentTheme.accentAmber),
+            onPressed: () {
+              if (pinCtrl.text == '1234') {
+                Navigator.pop(ctx);
+                setState(() => _selectedFlatIndex = targetIndex);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Code PIN incorrect (Code par défaut : 1234)')),
+                );
+              }
+            },
+            child: const Text('Valider', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
     );
