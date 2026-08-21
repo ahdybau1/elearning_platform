@@ -46,3 +46,17 @@ final studentOfficialExamsProvider =
   final service = ref.watch(studentSupabaseServiceProvider);
   return service.fetchOfficialExams(classNodeId);
 });
+
+/// `null` = nœuds racine (pays). Utilisé par le sélecteur de classe à l'inscription — descend
+/// l'arbre académique réel (voir docs/cahier_des_charges.md §2.1/§2.2), profondeur variable.
+final studentAcademicChildrenProvider =
+    FutureProvider.family<List<StudentAcademicNode>, String?>((ref, parentId) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchChildAcademicNodes(parentId);
+});
+
+final currentSchoolYearProvider =
+    FutureProvider.family<String?, String>((ref, countryId) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchCurrentSchoolYear(countryId);
+});

@@ -273,7 +273,7 @@ class LessonReaderScreen extends ConsumerWidget {
           return profile != null
               ? ForensicWatermarkService.buildWatermarkedContainer(
                   profile: profile,
-                  phoneNumber: authState.account?.phoneNumber ?? '+237 699 00 00 00',
+                  phoneNumber: authState.account?.phone ?? '+237 699 00 00 00',
                   child: readerContent,
                 )
               : readerContent;

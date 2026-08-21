@@ -14,7 +14,11 @@ class HomeDashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(studentAuthProvider);
     final profile = authState.activeProfile;
-    final subjectsAsync = ref.watch(studentSubjectsProvider(profile?.countryId));
+    // Le champ pays direct sur le profil n'existe plus dans le vrai schéma (voir
+    // docs/cahier_des_charges.md §36) — filtrage par pays retiré en attendant la refonte de la
+    // couche de contenu (fetchSubjects interroge une colonne qui n'existe pas réellement, voir
+    // student_supabase_service.dart).
+    final subjectsAsync = ref.watch(studentSubjectsProvider(null));
 
     return Scaffold(
       backgroundColor: StudentTheme.backgroundDark,
@@ -78,30 +82,6 @@ class HomeDashboardScreen extends ConsumerWidget {
                   ),
                   Row(
                     children: [
-                      // Streak badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: StudentTheme.cardDark,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: StudentTheme.borderDark),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 16),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${profile?.streakDays ?? 1}j',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
                       // Switch Profile Button
                       IconButton(
                         icon: const Icon(Icons.swap_horiz_rounded, color: Colors.white, size: 20),
@@ -287,7 +267,7 @@ class HomeDashboardScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Abonnement Actif : Pass ${profile.activeTier.toUpperCase()}',
+                  'Abonnement Actif : Pass ${profile.subscriptionTier.toUpperCase()}',
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,

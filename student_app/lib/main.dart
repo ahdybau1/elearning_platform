@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/theme/student_theme.dart';
 import 'core/widgets/maintenance_gate.dart';
+import 'core/auth/student_auth_provider.dart';
 import 'features/onboarding/screens/onboarding_wizard_screen.dart';
 import 'features/onboarding/screens/profile_switcher_screen.dart';
+import 'features/onboarding/screens/student_login_screen.dart';
 import 'features/home/screens/main_navigation_screen.dart';
 import 'features/courses/screens/chapters_list_screen.dart';
 import 'features/courses/screens/lesson_reader_screen.dart';
@@ -40,6 +42,35 @@ Future<void> main() async {
   );
 }
 
+/// Point d'entrée réel de l'app : bascule entre connexion, inscription et sélecteur de profils
+/// selon l'état réel de la session Supabase Auth — jamais de route de démarrage codée en dur (voir
+/// la même logique côté admin_app, `SupabaseAuthGate` dans admin_app/lib/main.dart).
+class StudentAuthGate extends ConsumerWidget {
+  const StudentAuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(studentAuthProvider);
+
+    if (authState.isLoading) {
+      return const Scaffold(
+        backgroundColor: StudentTheme.backgroundDark,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (!authState.isAuthenticated) {
+      return const StudentLoginScreen();
+    }
+    if (authState.profiles.isEmpty) {
+      // Compte réel mais aucune classe encore choisie (inscription reprise après confirmation
+      // email, ou premier profil jamais créé) — l'assistant d'inscription saute directement à
+      // l'arbre académique puisque le compte existe déjà.
+      return const OnboardingWizardScreen();
+    }
+    return const ProfileSwitcherScreen();
+  }
+}
+
 class StudentElearningApp extends StatelessWidget {
   const StudentElearningApp({super.key});
 
@@ -54,9 +85,11 @@ class StudentElearningApp extends StatelessWidget {
       // qu'un Consumer Riverpod, donc ce point d'accroche standard suffit pour bloquer TOUTES les
       // routes sans exception pendant la maintenance.
       builder: (context, child) => MaintenanceGate(child: child!),
-      initialRoute: '/profiles',
+      home: const StudentAuthGate(),
       onGenerateRoute: (settings) {
         switch (settings.name) {
+          case '/login':
+            return MaterialPageRoute(builder: (_) => const StudentLoginScreen());
           case '/profiles':
             return MaterialPageRoute(builder: (_) => const ProfileSwitcherScreen());
           case '/onboarding':

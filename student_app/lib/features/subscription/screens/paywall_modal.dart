@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
-import '../../../core/auth/student_auth_provider.dart';
 
 class PaywallModal extends ConsumerStatefulWidget {
   const PaywallModal({super.key});
@@ -24,7 +23,6 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
   int _selectedTierIndex = 1; // 0: Découverte, 1: Mensuel, 2: Annuel
   String _selectedOperator = 'Orange Money';
   final TextEditingController _momoPhoneCtrl = TextEditingController(text: '+237 699 12 34 56');
-  bool _isProcessing = false;
 
   final List<Map<String, dynamic>> _tiers = [
     {
@@ -192,41 +190,26 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              onPressed: _isProcessing
-                  ? null
-                  : () async {
-                      setState(() => _isProcessing = true);
-                      await Future.delayed(const Duration(seconds: 2));
-
-                      if (!context.mounted) return;
-
-                      ref.read(studentAuthProvider.notifier).upgradeActiveSubscription(
-                            selectedTier['id'],
-                            selectedTier['days'],
-                          );
-
-                      setState(() => _isProcessing = false);
-                      Navigator.pop(context);
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: StudentTheme.accentEmerald,
-                          content: Text(
-                            'Paiement de ${selectedTier['price']} validé via $_selectedOperator ! Vos cours sont débloqués.',
-                          ),
-                        ),
-                      );
-                    },
-              child: _isProcessing
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
-                    )
-                  : Text(
-                      'Payer ${selectedTier['price']} (${selectedTier['duration']})',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
+              onPressed: () {
+                // Aucun agrégateur Mobile Money réel n'est encore connecté (voir
+                // docs/cahier_des_charges.md §32.1 — Campay/NotchPay/Monetbil, clés API à obtenir
+                // par l'utilisateur). L'ancien flux simulait un succès après 2s et débloquait
+                // l'abonnement localement sans aucune transaction réelle : retiré, remplacé par un
+                // message honnête plutôt que de faire croire à un paiement effectué.
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    backgroundColor: StudentTheme.accentAmber,
+                    content: Text(
+                      'Paiement Mobile Money pas encore disponible : configuration de l\'agrégateur en attente.',
                     ),
+                  ),
+                );
+              },
+              child: Text(
+                'Payer ${selectedTier['price']} (${selectedTier['duration']})',
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
             ),
           ],
         ),

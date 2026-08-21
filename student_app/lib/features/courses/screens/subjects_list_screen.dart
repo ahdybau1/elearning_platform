@@ -11,7 +11,9 @@ class SubjectsListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(studentAuthProvider).activeProfile;
-    final subjectsAsync = ref.watch(studentSubjectsProvider(profile?.countryId));
+    // Filtrage par pays retiré (le profil n'a plus de champ pays direct dans le vrai schéma) — voir
+    // la même note dans home_dashboard_screen.dart.
+    final subjectsAsync = ref.watch(studentSubjectsProvider(null));
 
     return Scaffold(
       backgroundColor: StudentTheme.backgroundDark,

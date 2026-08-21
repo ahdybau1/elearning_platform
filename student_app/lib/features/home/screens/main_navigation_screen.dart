@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
+import '../../../core/auth/student_auth_provider.dart';
 import 'home_dashboard_screen.dart';
 import '../../courses/screens/subjects_list_screen.dart';
 import '../../exams/screens/official_exams_screen.dart';
@@ -179,12 +181,26 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: OutlinedButton.icon(
-                      onPressed: () => Navigator.pushReplacementNamed(context, '/profiles'),
-                      icon: const Icon(Icons.swap_horiz_rounded, size: 16),
-                      label: const Text('Changer de Profil'),
-                      style: OutlinedButton.styleFrom(foregroundColor: StudentTheme.textSecondary),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => Navigator.pushReplacementNamed(context, '/profiles'),
+                            icon: const Icon(Icons.swap_horiz_rounded, size: 16),
+                            label: const Text('Changer de Profil'),
+                            style: OutlinedButton.styleFrom(foregroundColor: StudentTheme.textSecondary),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Consumer(
+                          builder: (context, ref, _) => IconButton(
+                            tooltip: 'Se déconnecter',
+                            icon: const Icon(Icons.logout_rounded, color: StudentTheme.textSecondary, size: 20),
+                            onPressed: () => ref.read(studentAuthProvider.notifier).signOut(),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

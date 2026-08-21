@@ -1,27 +1,36 @@
+// Reflète exactement la table réelle `accounts` (voir docs/cahier_des_charges.md, §36.1) — un
+// compte = une identité unique. Un compte "parent" est un modèle SÉPARÉ (`parent_accounts`, §17),
+// pas un simple booléen ici comme le laissait croire l'ancien modèle 100% fictif.
 class StudentAccount {
   final String id;
-  final String phoneNumber;
-  final String? email;
-  final bool isParentAccount;
-  final String? parentPin;
+  final String authUserId;
+  final String email;
+  final String? phone;
+  final String firstName;
+  final String lastName;
+  final String? photoUrl;
   final DateTime createdAt;
 
   StudentAccount({
     required this.id,
-    required this.phoneNumber,
-    this.email,
-    this.isParentAccount = false,
-    this.parentPin,
+    required this.authUserId,
+    required this.email,
+    this.phone,
+    required this.firstName,
+    required this.lastName,
+    this.photoUrl,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
   factory StudentAccount.fromJson(Map<String, dynamic> json) {
     return StudentAccount(
       id: json['id'] as String,
-      phoneNumber: json['phone_number'] as String? ?? '',
-      email: json['email'] as String?,
-      isParentAccount: json['is_parent_account'] as bool? ?? false,
-      parentPin: json['parent_pin'] as String?,
+      authUserId: json['auth_user_id'] as String? ?? '',
+      email: json['email'] as String,
+      phone: json['phone'] as String?,
+      firstName: json['first_name'] as String? ?? '',
+      lastName: json['last_name'] as String? ?? '',
+      photoUrl: json['photo_url'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
@@ -29,90 +38,79 @@ class StudentAccount {
   }
 }
 
+// Reflète exactement la table réelle `profiles` : un profil = une classe précise + un abonnement
+// propre, rattaché à UN compte (§2.3 du cahier des charges — pas "un enfant différent" comme le
+// laissait croire l'ancien modèle : plusieurs profils suivent plusieurs classes de LA MÊME
+// personne ; le suivi de plusieurs enfants différents passe par l'Espace Parent, §17).
 class StudentProfile {
   final String id;
   final String accountId;
-  final String name;
-  final String? avatarUrl;
   final String classNodeId;
   final String className;
-  final String? schoolName;
-  final String countryId;
-  final String activeTier; // 'gratuit', 'decouverte', 'mensuel', 'annuel'
-  final DateTime? tierExpiresAt;
-  final int totalPoints;
-  final int streakDays;
+  final String status; // 'actif' | 'archive'
+  final String subscriptionTier; // 'gratuit', 'journalier', 'hebdomadaire', 'mensuel', 'annuel'
+  final String schoolYear;
   final DateTime createdAt;
 
   StudentProfile({
     required this.id,
     required this.accountId,
-    required this.name,
-    this.avatarUrl,
     required this.classNodeId,
     required this.className,
-    this.schoolName,
-    required this.countryId,
-    this.activeTier = 'gratuit',
-    this.tierExpiresAt,
-    this.totalPoints = 0,
-    this.streakDays = 1,
+    this.status = 'actif',
+    this.subscriptionTier = 'gratuit',
+    required this.schoolYear,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
+  /// Nom affiché dans le sélecteur de profil — un profil représente une classe suivie, pas une
+  /// personne distincte ; pas de champ "nom" séparé dans le schéma réel.
+  String get name => className;
+
+  bool get hasActiveSubscription => subscriptionTier != 'gratuit';
+
   factory StudentProfile.fromJson(Map<String, dynamic> json) {
+    final classNode = json['academic_nodes'] as Map<String, dynamic>?;
     return StudentProfile(
       id: json['id'] as String,
       accountId: json['account_id'] as String,
-      name: json['name'] as String? ?? 'Élève',
-      avatarUrl: json['avatar_url'] as String?,
       classNodeId: json['class_node_id'] as String? ?? '',
-      className: json['class_name'] as String? ?? 'Classe',
-      schoolName: json['school_name'] as String?,
-      countryId: json['country_id'] as String? ?? '',
-      activeTier: json['active_tier'] as String? ?? 'gratuit',
-      tierExpiresAt: json['tier_expires_at'] != null
-          ? DateTime.parse(json['tier_expires_at'] as String)
-          : null,
-      totalPoints: (json['total_points'] as int?) ?? 150,
-      streakDays: (json['streak_days'] as int?) ?? 3,
+      className: classNode?['name'] as String? ?? 'Classe',
+      status: json['status'] as String? ?? 'actif',
+      subscriptionTier: json['subscription_tier'] as String? ?? 'gratuit',
+      schoolYear: json['school_year'] as String? ?? '',
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
     );
   }
+}
 
-  bool get hasActiveSubscription {
-    if (activeTier == 'gratuit') return false;
-    if (tierExpiresAt == null) return true;
-    return tierExpiresAt!.isAfter(DateTime.now());
-  }
+// Arbre académique générique (pays → section → type d'enseignement → classe → série), profondeur
+// variable selon le pays — voir §2.1/§2.2 du cahier des charges. Utilisé pour la sélection de
+// classe réelle à l'inscription, au lieu des listes fictives codées en dur de l'ancien wizard.
+class StudentAcademicNode {
+  final String id;
+  final String? parentId;
+  final String nodeType; // country | section | education_type | class | series
+  final String name;
+  final String? countryId;
 
-  StudentProfile copyWith({
-    String? name,
-    String? avatarUrl,
-    String? classNodeId,
-    String? className,
-    String? schoolName,
-    String? activeTier,
-    DateTime? tierExpiresAt,
-    int? totalPoints,
-    int? streakDays,
-  }) {
-    return StudentProfile(
-      id: id,
-      accountId: accountId,
-      name: name ?? this.name,
-      avatarUrl: avatarUrl ?? this.avatarUrl,
-      classNodeId: classNodeId ?? this.classNodeId,
-      className: className ?? this.className,
-      schoolName: schoolName ?? this.schoolName,
-      countryId: countryId,
-      activeTier: activeTier ?? this.activeTier,
-      tierExpiresAt: tierExpiresAt ?? this.tierExpiresAt,
-      totalPoints: totalPoints ?? this.totalPoints,
-      streakDays: streakDays ?? this.streakDays,
-      createdAt: createdAt,
+  StudentAcademicNode({
+    required this.id,
+    this.parentId,
+    required this.nodeType,
+    required this.name,
+    this.countryId,
+  });
+
+  factory StudentAcademicNode.fromJson(Map<String, dynamic> json) {
+    return StudentAcademicNode(
+      id: json['id'] as String,
+      parentId: json['parent_id'] as String?,
+      nodeType: json['node_type'] as String,
+      name: json['name'] as String,
+      countryId: json['country_id'] as String?,
     );
   }
 }

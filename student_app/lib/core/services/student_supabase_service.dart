@@ -18,6 +18,36 @@ class StudentSupabaseService {
     return uuidRegex.hasMatch(value.trim());
   }
 
+  // ─── Arbre Académique (inscription réelle) ────────────────────
+  // Hiérarchie plate à profondeur variable (pays → section → type d'enseignement → classe → série,
+  // certains niveaux pouvant être sautés — voir docs/cahier_des_charges.md §2.1/§2.2 et la note
+  // "Generalized node scoping" côté admin_app). Le sélecteur de classe à l'inscription descend
+  // l'arbre récursivement via parent_id sans supposer de profondeur fixe : un nœud sans enfant EST
+  // la classe à laquelle le profil doit être rattaché, quel que soit son node_type.
+
+  Future<List<StudentAcademicNode>> fetchChildAcademicNodes(String? parentId) async {
+    final query = _isValidUuid(parentId)
+        ? client.from('academic_nodes').select().eq('parent_id', parentId!).eq('is_active', true)
+        : client.from('academic_nodes').select().filter('parent_id', 'is', null).eq('is_active', true);
+    final rows = await query.order('display_order').then((rows) => rows as List);
+    return rows
+        .map((r) => StudentAcademicNode.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  /// Année scolaire courante pour un pays donné (voir §23 du cahier des charges) — utilisée comme
+  /// valeur réelle de `profiles.school_year` à la création d'un profil, jamais une valeur inventée.
+  Future<String?> fetchCurrentSchoolYear(String countryId) async {
+    if (!_isValidUuid(countryId)) return null;
+    final row = await client
+        .from('school_years')
+        .select('name')
+        .eq('country_id', countryId)
+        .eq('is_current', true)
+        .maybeSingle();
+    return row?['name'] as String?;
+  }
+
   // ─── Subjects & Academic Structure ───────────────────────────
 
   Future<List<Subject>> fetchSubjects({String? countryId}) async {

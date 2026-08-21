@@ -27,6 +27,12 @@ class ProfileSwitcherScreen extends ConsumerWidget {
               style: GoogleFonts.inter(color: StudentTheme.accentAmber, fontWeight: FontWeight.bold),
             ),
           ),
+          const SizedBox(width: 4),
+          IconButton(
+            tooltip: 'Se déconnecter',
+            icon: const Icon(Icons.logout_rounded, color: StudentTheme.textSecondary, size: 20),
+            onPressed: () => ref.read(studentAuthProvider.notifier).signOut(),
+          ),
           const SizedBox(width: 12),
         ],
       ),
@@ -236,7 +242,10 @@ class ProfileSwitcherScreen extends ConsumerWidget {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: StudentTheme.accentAmber),
             onPressed: () {
-              if (pinCtrl.text == '1234' || pinCtrl.text == ref.read(studentAuthProvider).account?.parentPin) {
+              // TODO(Espace Parent réel) : ce PIN codé en dur est un jalon temporaire. Le vrai
+              // rattachement parent passe par `parent_accounts` (voir docs/cahier_des_charges.md
+              // §17), pas par un simple code sur le compte élève — à refaire dans une passe dédiée.
+              if (pinCtrl.text == '1234') {
                 Navigator.pop(ctx);
                 Navigator.pushNamed(context, '/parent-portal');
               } else {

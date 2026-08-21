@@ -53,11 +53,11 @@ class ParentDashboardScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Compte Parent : ${authState.account?.email ?? 'famille.kamga@gmail.com'}',
+                          'Compte : ${authState.account?.email ?? '...'}',
                           style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
                         ),
                         Text(
-                          'Mobile Money : ${authState.account?.phoneNumber ?? '+237 699 12 34 56'}',
+                          'Mobile Money : ${authState.account?.phone ?? 'Non renseigné'}',
                           style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary),
                         ),
                       ],
@@ -120,7 +120,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                                   style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 15),
                                 ),
                                 Text(
-                                  '${p.className} • ${p.schoolName ?? 'Établissement'}',
+                                  'Année scolaire ${p.schoolYear}',
                                   style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary),
                                 ),
                               ],
@@ -136,7 +136,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            p.hasActiveSubscription ? 'Pass ${p.activeTier.toUpperCase()}' : 'Accès Gratuit',
+                            p.hasActiveSubscription ? 'Pass ${p.subscriptionTier.toUpperCase()}' : 'Accès Gratuit',
                             style: GoogleFonts.inter(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
@@ -146,17 +146,9 @@ class ParentDashboardScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    const Divider(color: StudentTheme.borderDark),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildStatItem('Assiduité', '${p.streakDays} jours consécutifs', Icons.local_fire_department_rounded, Colors.orange),
-                        _buildStatItem('Points XP', '${p.totalPoints} XP', Icons.stars_rounded, StudentTheme.accentAmber),
-                        _buildStatItem('Moyenne Quiz', '16.5 / 20', Icons.analytics_rounded, StudentTheme.accentEmerald),
-                      ],
-                    ),
+                    // La gamification (streak, points XP) et les moyennes de quiz n'ont pas encore
+                    // de table réelle en base (voir docs/cahier_des_charges.md §14) — retiré plutôt
+                    // que d'afficher des chiffres inventés en attendant ce chantier.
                   ],
                 ),
               );
@@ -189,17 +181,6 @@ class ParentDashboardScreen extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 20),
-        const SizedBox(height: 4),
-        Text(value, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
-        Text(label, style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textMuted)),
-      ],
     );
   }
 

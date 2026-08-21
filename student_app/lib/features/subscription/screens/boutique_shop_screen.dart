@@ -117,11 +117,15 @@ class BoutiqueShopScreen extends ConsumerWidget {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     onPressed: () {
+                      // Aucun agrégateur Mobile Money réel n'est encore connecté (voir
+                      // docs/cahier_des_charges.md §32.1) — un faux message de succès local ferait
+                      // croire à un achat réel sans transaction ni téléchargement. On le dit
+                      // honnêtement plutôt que de simuler la réussite.
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: StudentTheme.accentEmerald,
+                        const SnackBar(
+                          backgroundColor: StudentTheme.accentAmber,
                           content: Text(
-                            'Achat de "${doc['title']}" validé. Téléchargement avec Forensic Watermark.',
+                            'Paiement Mobile Money pas encore disponible : configuration de l\'agrégateur en attente.',
                           ),
                         ),
                       );
