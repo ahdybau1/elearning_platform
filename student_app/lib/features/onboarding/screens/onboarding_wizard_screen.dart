@@ -6,11 +6,16 @@ import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/models/student_models.dart';
 
-/// Inscription réelle. Si l'utilisateur n'a pas encore de session (nouveau visiteur), le parcours
-/// commence par la création du compte (email + mot de passe réels, Supabase Auth) puis descend
-/// l'arbre académique réel jusqu'à une classe. Si l'utilisateur est déjà connecté (ajout d'un
-/// profil supplémentaire depuis le sélecteur de profils — voir §2.3 du cahier des charges, 1 compte
-/// peut suivre plusieurs classes), l'étape compte est sautée.
+/// Trois cas possibles au démarrage de l'assistant, selon l'état réel de la session (voir
+/// StudentAuthState.hasSession/isAuthenticated) :
+/// - [fullSignUp] : aucune session — nouveau visiteur, formulaire complet (email + mot de passe).
+/// - [completeProfile] : session Supabase Auth réelle mais aucune ligne `accounts` (ex. un admin
+///   qui teste l'app élève, ou une inscription reprise après confirmation email) — juste
+///   prénom/nom/téléphone, pas de mot de passe à redemander.
+/// - [none] : compte élève déjà complet — ajout d'un profil supplémentaire (§2.3 du cahier des
+///   charges, 1 compte peut suivre plusieurs classes), l'étape "identité" est sautée entièrement.
+enum _AccountStepKind { fullSignUp, completeProfile, none }
+
 class OnboardingWizardScreen extends ConsumerStatefulWidget {
   const OnboardingWizardScreen({super.key});
 
@@ -45,14 +50,19 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     super.dispose();
   }
 
-  bool get _needsAccountStep => !ref.read(studentAuthProvider).isAuthenticated;
+  _AccountStepKind get _accountStepKind {
+    final authState = ref.read(studentAuthProvider);
+    if (!authState.hasSession) return _AccountStepKind.fullSignUp;
+    if (!authState.isAuthenticated) return _AccountStepKind.completeProfile;
+    return _AccountStepKind.none;
+  }
 
   void _goBack() {
     setState(() {
       _errorMessage = null;
       if (_selectedPath.isNotEmpty) {
         _selectedPath.removeLast();
-      } else if (_needsAccountStep) {
+      } else if (_accountStepKind != _AccountStepKind.none) {
         _accountStepDone = false;
       }
     });
@@ -93,8 +103,9 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     }
 
     final notifier = ref.read(studentAuthProvider.notifier);
+    final accountStepKind = _accountStepKind;
 
-    if (_needsAccountStep) {
+    if (accountStepKind == _AccountStepKind.fullSignUp) {
       final signUpError = await notifier.signUp(
         email: _emailCtrl.text.trim(),
         password: _passwordCtrl.text,
@@ -143,6 +154,19 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
         });
         return;
       }
+    } else if (accountStepKind == _AccountStepKind.completeProfile) {
+      final completeError = await notifier.completeProfile(
+        firstName: _firstNameCtrl.text.trim(),
+        lastName: _lastNameCtrl.text.trim(),
+        phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+      );
+      if (completeError != null) {
+        setState(() {
+          _isSubmitting = false;
+          _errorMessage = completeError;
+        });
+        return;
+      }
     }
 
     final addProfileError = await notifier.addProfile(
@@ -163,7 +187,8 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
 
   @override
   Widget build(BuildContext context) {
-    final needsAccount = _needsAccountStep;
+    final accountStepKind = _accountStepKind;
+    final needsAccount = accountStepKind != _AccountStepKind.none;
     final showAccountStep = needsAccount && !_accountStepDone;
     final canGoBack = showAccountStep ? false : (_selectedPath.isNotEmpty || needsAccount);
 
@@ -230,18 +255,23 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
   }
 
   Widget _buildAccountStep() {
+    final isCompleteProfile = _accountStepKind == _AccountStepKind.completeProfile;
+    final sessionEmail = ref.read(studentAuthProvider).sessionEmail;
+
     return Form(
       key: _accountFormKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Bienvenue sur votre Plateforme d\'Excellence',
+            isCompleteProfile ? 'Terminez votre profil élève' : 'Bienvenue sur votre Plateforme d\'Excellence',
             style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
           ),
           const SizedBox(height: 8),
           Text(
-            'Créez votre compte pour commencer.',
+            isCompleteProfile
+                ? 'Vous êtes déjà connecté (${sessionEmail ?? ''}) — plus qu\'une étape avant de choisir votre classe.'
+                : 'Créez votre compte pour commencer.',
             style: GoogleFonts.inter(fontSize: 14, color: StudentTheme.textSecondary),
           ),
           const SizedBox(height: 24),
@@ -252,46 +282,50 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
               Expanded(child: _textField(_lastNameCtrl, 'Nom', validator: _requiredValidator)),
             ],
           ),
-          const SizedBox(height: 16),
-          _textField(_emailCtrl, 'Adresse email', keyboardType: TextInputType.emailAddress,
-              validator: (v) => (v == null || !v.contains('@')) ? 'Adresse email invalide' : null),
+          if (!isCompleteProfile) ...[
+            const SizedBox(height: 16),
+            _textField(_emailCtrl, 'Adresse email', keyboardType: TextInputType.emailAddress,
+                validator: (v) => (v == null || !v.contains('@')) ? 'Adresse email invalide' : null),
+          ],
           const SizedBox(height: 16),
           _textField(_phoneCtrl, 'Numéro de téléphone (Mobile Money)', keyboardType: TextInputType.phone),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _passwordCtrl,
-            obscureText: _obscurePassword,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              labelText: 'Mot de passe',
-              labelStyle: const TextStyle(color: StudentTheme.textSecondary),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                  color: StudentTheme.textSecondary,
+          if (!isCompleteProfile) ...[
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _passwordCtrl,
+              obscureText: _obscurePassword,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Mot de passe',
+                labelStyle: const TextStyle(color: StudentTheme.textSecondary),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    color: StudentTheme.textSecondary,
+                  ),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                 ),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                filled: true,
+                fillColor: StudentTheme.cardDark,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              filled: true,
-              fillColor: StudentTheme.cardDark,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              validator: (v) => (v == null || v.length < 6) ? 'Au moins 6 caractères' : null,
             ),
-            validator: (v) => (v == null || v.length < 6) ? 'Au moins 6 caractères' : null,
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _confirmPasswordCtrl,
-            obscureText: _obscurePassword,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              labelText: 'Confirmer le mot de passe',
-              labelStyle: const TextStyle(color: StudentTheme.textSecondary),
-              filled: true,
-              fillColor: StudentTheme.cardDark,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _confirmPasswordCtrl,
+              obscureText: _obscurePassword,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Confirmer le mot de passe',
+                labelStyle: const TextStyle(color: StudentTheme.textSecondary),
+                filled: true,
+                fillColor: StudentTheme.cardDark,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              validator: (v) => (v != _passwordCtrl.text) ? 'Les mots de passe ne correspondent pas' : null,
             ),
-            validator: (v) => (v != _passwordCtrl.text) ? 'Les mots de passe ne correspondent pas' : null,
-          ),
+          ],
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
@@ -441,9 +475,14 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
           const SizedBox(height: 20),
           const Divider(color: StudentTheme.borderDark),
           const SizedBox(height: 14),
-          if (_needsAccountStep) ...[
+          if (_accountStepKind != _AccountStepKind.none) ...[
             _buildSummaryRow('Élève', '${_firstNameCtrl.text} ${_lastNameCtrl.text}'),
-            _buildSummaryRow('Email', _emailCtrl.text),
+            _buildSummaryRow(
+              'Email',
+              _accountStepKind == _AccountStepKind.completeProfile
+                  ? (ref.read(studentAuthProvider).sessionEmail ?? '')
+                  : _emailCtrl.text,
+            ),
           ],
           _buildSummaryRow('Classe', leaf.name),
           const SizedBox(height: 20),
@@ -463,7 +502,11 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
                     )
                   : Text(
-                      _needsAccountStep ? 'Créer mon compte et commencer' : 'Ajouter ce profil',
+                      switch (_accountStepKind) {
+                        _AccountStepKind.fullSignUp => 'Créer mon compte et commencer',
+                        _AccountStepKind.completeProfile => 'Terminer mon profil et commencer',
+                        _AccountStepKind.none => 'Ajouter ce profil',
+                      },
                       style: GoogleFonts.inter(fontWeight: FontWeight.bold),
                     ),
             ),

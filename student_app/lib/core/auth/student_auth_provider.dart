@@ -10,6 +10,11 @@ class StudentAuthState {
   final StudentProfile? activeProfile;
   final bool isLoading;
   final String? errorMessage;
+  /// Email de la session Supabase Auth active, même si aucune ligne `accounts` n'existe encore pour
+  /// elle (ex. un admin qui se connecte pour la première fois côté élève, ou une inscription
+  /// reprise après confirmation email). Distinct de `account` : une session peut être réelle et
+  /// valide AVANT que le profil élève soit complété — voir [hasSession].
+  final String? sessionEmail;
 
   const StudentAuthState({
     this.account,
@@ -17,9 +22,16 @@ class StudentAuthState {
     this.activeProfile,
     this.isLoading = false,
     this.errorMessage,
+    this.sessionEmail,
   });
 
+  /// Un compte élève (`accounts`) existe pour cette session.
   bool get isAuthenticated => account != null;
+
+  /// Une session Supabase Auth réelle est active, que le profil élève soit complété ou non — c'est
+  /// ce qui doit décider si on montre l'écran de connexion, pas [isAuthenticated] (voir
+  /// [StudentAuthNotifier._loadAccountAndProfiles]).
+  bool get hasSession => sessionEmail != null;
 
   StudentAuthState copyWith({
     StudentAccount? account,
@@ -27,6 +39,7 @@ class StudentAuthState {
     StudentProfile? activeProfile,
     bool? isLoading,
     String? errorMessage,
+    String? sessionEmail,
   }) {
     return StudentAuthState(
       account: account ?? this.account,
@@ -34,6 +47,7 @@ class StudentAuthState {
       activeProfile: activeProfile ?? this.activeProfile,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage,
+      sessionEmail: sessionEmail ?? this.sessionEmail,
     );
   }
 }
@@ -74,8 +88,8 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
   Future<void> _loadAccountAndProfiles() async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      final userId = _client.auth.currentUser?.id;
-      if (userId == null) {
+      final user = _client.auth.currentUser;
+      if (user == null) {
         state = const StudentAuthState(isLoading: false);
         return;
       }
@@ -83,18 +97,17 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
       final accountRow = await _client
           .from('accounts')
           .select()
-          .eq('auth_user_id', userId)
+          .eq('auth_user_id', user.id)
           .maybeSingle();
 
       if (accountRow == null) {
-        // Session Supabase Auth valide mais aucune ligne `accounts` correspondante : inscription
-        // interrompue avant sa fin (ex. l'utilisateur a fermé l'app juste après signUp). Impossible
-        // de deviner prénom/nom/téléphone à sa place — l'inscription doit être reprise.
-        await _client.auth.signOut();
-        state = const StudentAuthState(
-          isLoading: false,
-          errorMessage: 'Inscription incomplète — veuillez recommencer votre inscription.',
-        );
+        // Session Supabase Auth réelle et valide, mais aucune ligne `accounts` correspondante —
+        // ex. un admin (identité dans `admin_users`, pas `accounts`) qui teste l'app élève, ou une
+        // inscription reprise après confirmation email. On NE déconnecte PLUS ici : l'assistant
+        // d'inscription (voir onboarding_wizard_screen.dart) termine le profil sur cette MÊME
+        // session au lieu de faire tout recommencer — l'ancien comportement (signOut immédiat)
+        // faisait croire à un "identifiants invalides" alors que la connexion avait réussi.
+        state = StudentAuthState(isLoading: false, sessionEmail: user.email);
         return;
       }
 
@@ -114,6 +127,7 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
         profiles: profiles,
         activeProfile: active,
         isLoading: false,
+        sessionEmail: user.email,
       );
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
@@ -190,6 +204,33 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
       return e.message;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      return e.toString();
+    }
+  }
+
+  /// Crée la ligne `accounts` manquante pour une session Supabase Auth déjà active (voir
+  /// [StudentAuthState.hasSession]) — utilisé quand quelqu'un se connecte avec des identifiants
+  /// réels qui ne sont liés à aucun compte élève (typiquement un admin qui teste l'app), ou pour
+  /// reprendre une inscription interrompue après confirmation email. Pas de mot de passe à
+  /// redemander : la session prouve déjà l'identité.
+  Future<String?> completeProfile({
+    required String firstName,
+    required String lastName,
+    String? phone,
+  }) async {
+    final user = _client.auth.currentUser;
+    if (user == null || user.email == null) return 'Aucune session active.';
+    try {
+      await _client.from('accounts').insert({
+        'auth_user_id': user.id,
+        'email': user.email,
+        'phone': phone,
+        'first_name': firstName,
+        'last_name': lastName,
+      });
+      await _loadAccountAndProfiles();
+      return null;
+    } catch (e) {
       return e.toString();
     }
   }

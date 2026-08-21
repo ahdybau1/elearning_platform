@@ -58,13 +58,14 @@ class StudentAuthGate extends ConsumerWidget {
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    if (!authState.isAuthenticated) {
+    if (!authState.hasSession) {
       return const StudentLoginScreen();
     }
     if (authState.profiles.isEmpty) {
-      // Compte réel mais aucune classe encore choisie (inscription reprise après confirmation
-      // email, ou premier profil jamais créé) — l'assistant d'inscription saute directement à
-      // l'arbre académique puisque le compte existe déjà.
+      // Session réelle mais profil élève pas encore complété (compte `accounts` manquant, ex. un
+      // admin qui teste l'app) ou aucune classe encore choisie — l'assistant d'inscription adapte
+      // lui-même l'étape à afficher selon ce qui manque réellement (voir
+      // onboarding_wizard_screen.dart, _accountStepKind).
       return const OnboardingWizardScreen();
     }
     return const ProfileSwitcherScreen();
