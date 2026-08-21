@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
+import '../../../core/widgets/student_page_content.dart';
 
 class AiTutorChatScreen extends ConsumerStatefulWidget {
   const AiTutorChatScreen({super.key});
@@ -63,7 +64,7 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
           ],
         ),
       ),
-      body: Column(
+      body: StudentPageContent(child: Column(
         children: [
           // Quick Prompts Horizontal Bar
           Container(
@@ -197,7 +198,7 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
+import '../../../core/widgets/student_page_content.dart';
 
 class MockExamArenaScreen extends StatefulWidget {
   const MockExamArenaScreen({super.key});
@@ -27,7 +28,7 @@ class _MockExamArenaScreenState extends State<MockExamArenaScreen> {
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 17),
         ),
       ),
-      body: SingleChildScrollView(
+      body: StudentPageContent(child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,7 +245,7 @@ class _MockExamArenaScreenState extends State<MockExamArenaScreen> {
             ),
           ],
         ),
-      ),
+      )),
     );
   }
 

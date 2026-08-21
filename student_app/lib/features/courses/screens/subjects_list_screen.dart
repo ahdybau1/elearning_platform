@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
+import '../../../core/widgets/student_page_content.dart';
 
 class SubjectsListScreen extends ConsumerWidget {
   const SubjectsListScreen({super.key});
@@ -22,7 +23,7 @@ class SubjectsListScreen extends ConsumerWidget {
       ),
       body: profile == null
           ? const Center(child: CircularProgressIndicator())
-          : Consumer(builder: (context, ref, _) {
+          : StudentPageContent(child: Consumer(builder: (context, ref, _) {
               final subjectsAsync = ref.watch(studentSubjectsProvider(profile.classNodeId));
               return subjectsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -114,7 +115,7 @@ class SubjectsListScreen extends ConsumerWidget {
                   );
                 },
               );
-            }),
+            })),
     );
   }
 }

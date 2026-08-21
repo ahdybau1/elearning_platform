@@ -5,6 +5,7 @@ import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/models/student_models.dart';
+import '../../../core/widgets/student_page_content.dart';
 
 /// §5 du cahier des charges. Données réelles (establishments/establishment_papers, lecture
 /// publique) — la classe est toujours déduite du profil actif, jamais redemandée (§5, règle de
@@ -32,7 +33,7 @@ class _EstablishmentPapersScreenState extends ConsumerState<EstablishmentPapersS
       ),
       body: profile == null
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
+          : StudentPageContent(child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,7 +100,7 @@ class _EstablishmentPapersScreenState extends ConsumerState<EstablishmentPapersS
                   ),
                 ],
               ),
-            ),
+            )),
     );
   }
 

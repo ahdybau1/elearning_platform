@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/providers/student_providers.dart';
+import '../../../core/widgets/student_page_content.dart';
 
 class ChaptersListScreen extends ConsumerWidget {
   final String subjectId;
@@ -30,7 +31,7 @@ class ChaptersListScreen extends ConsumerWidget {
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
         ),
       ),
-      body: chaptersAsync.when(
+      body: StudentPageContent(child: chaptersAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Erreur: $err', style: const TextStyle(color: Colors.red))),
         data: (chapters) {
@@ -199,7 +200,7 @@ class ChaptersListScreen extends ConsumerWidget {
             },
           );
         },
-      ),
+      )),
     );
   }
 }

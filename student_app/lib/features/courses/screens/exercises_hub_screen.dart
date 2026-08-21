@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
+import '../../../core/widgets/student_page_content.dart';
 
 /// §3.2 du cahier des charges : structure à trois niveaux d'indépendance (liés à une leçon, liés à
 /// un chapitre hors leçon, indépendants). Données de démonstration pour cette passe de conception —
@@ -37,15 +38,17 @@ class ExercisesHubScreen extends ConsumerWidget {
         title: Text('Exercices (${profile?.className ?? ''})',
             style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 17)),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _buildSection(context, 'Liés à une leçon', 'Créés par l\'enseignant et/ou générés par l\'IA', _byLesson, StudentTheme.accentPrimary),
-          const SizedBox(height: 28),
-          _buildSection(context, 'Entraînement de chapitre', 'Synthèse hors leçon précise, approfondissement', _byChapter, StudentTheme.accentIndigo),
-          const SizedBox(height: 28),
-          _buildSection(context, 'Indépendants (type examen)', 'Mélange de chapitres, accessibles depuis cette page générale', _independent, StudentTheme.accentAmber),
-        ],
+      body: StudentPageContent(
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            _buildSection(context, 'Liés à une leçon', 'Créés par l\'enseignant et/ou générés par l\'IA', _byLesson, StudentTheme.accentPrimary),
+            const SizedBox(height: 28),
+            _buildSection(context, 'Entraînement de chapitre', 'Synthèse hors leçon précise, approfondissement', _byChapter, StudentTheme.accentIndigo),
+            const SizedBox(height: 28),
+            _buildSection(context, 'Indépendants (type examen)', 'Mélange de chapitres, accessibles depuis cette page générale', _independent, StudentTheme.accentAmber),
+          ],
+        ),
       ),
     );
   }

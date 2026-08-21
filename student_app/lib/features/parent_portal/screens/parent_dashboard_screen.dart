@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
+import '../../../core/widgets/student_page_content.dart';
 
 class ParentDashboardScreen extends ConsumerWidget {
   const ParentDashboardScreen({super.key});
@@ -24,7 +25,7 @@ class ParentDashboardScreen extends ConsumerWidget {
           ],
         ),
       ),
-      body: SingleChildScrollView(
+      body: StudentPageContent(child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,7 +181,7 @@ class ParentDashboardScreen extends ConsumerWidget {
             ),
           ],
         ),
-      ),
+      )),
     );
   }
 

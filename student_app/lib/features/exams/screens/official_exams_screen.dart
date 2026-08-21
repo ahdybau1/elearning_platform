@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
+import '../../../core/widgets/student_page_content.dart';
 import '../../subscription/screens/paywall_modal.dart';
 
 class OfficialExamsScreen extends ConsumerStatefulWidget {
@@ -41,7 +42,7 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Column(
+      body: StudentPageContent(child: Column(
         children: [
           // Filter Tabs
           Padding(
@@ -182,7 +183,7 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 

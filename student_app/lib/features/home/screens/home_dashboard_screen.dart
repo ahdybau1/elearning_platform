@@ -98,11 +98,14 @@ class HomeDashboardScreen extends ConsumerWidget {
 
           // Main Dashboard Body
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 860),
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                   // Subscription Status / Upgrade Banner
                   if (profile?.hasActiveSubscription != true)
                     _buildSubscriptionBanner(context, ref)
@@ -195,6 +198,8 @@ class HomeDashboardScreen extends ConsumerWidget {
                   // AI Tutor Spotlight Card (Section 8 du CDC)
                   _buildAiTutorSpotlight(context),
                 ],
+                  ),
+                ),
               ),
             ),
           ),

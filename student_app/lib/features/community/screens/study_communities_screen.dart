@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
+import '../../../core/widgets/student_page_content.dart';
 
 /// §16 du cahier des charges. Données réelles (whatsapp_communities), gate déjà appliqué côté RLS
 /// par classe ET palier d'abonnement. Une communauté n'existe qu'à l'initiative de l'admin pays —
@@ -22,7 +23,7 @@ class StudyCommunitiesScreen extends ConsumerWidget {
       ),
       body: profile == null
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
+          : StudentPageContent(child: Padding(
               padding: const EdgeInsets.all(20),
               child: Consumer(
                 builder: (context, ref, _) {
@@ -39,7 +40,7 @@ class StudyCommunitiesScreen extends ConsumerWidget {
                   );
                 },
               ),
-            ),
+            )),
     );
   }
 

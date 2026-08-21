@@ -5,6 +5,7 @@ import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/models/student_models.dart';
+import '../../../core/widgets/student_page_content.dart';
 
 /// §9 du cahier des charges. Entièrement réel : création et lecture passent par `support_tickets`,
 /// déjà protégé par RLS (owns_account) — aucune donnée fictive nécessaire, contrairement aux autres
@@ -36,7 +37,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
       ),
       body: account == null
           ? const Center(child: CircularProgressIndicator())
-          : Consumer(
+          : StudentPageContent(child: Consumer(
               builder: (context, ref, _) {
                 final ticketsAsync = ref.watch(supportTicketsProvider(account.id));
                 return ticketsAsync.when(
@@ -53,7 +54,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                   },
                 );
               },
-            ),
+            )),
     );
   }
 

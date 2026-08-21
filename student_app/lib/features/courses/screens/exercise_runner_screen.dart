@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/providers/student_providers.dart';
+import '../../../core/widgets/student_page_content.dart';
 
 class ExerciseRunnerScreen extends ConsumerStatefulWidget {
   final String chapterId;
@@ -37,7 +38,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16),
         ),
       ),
-      body: exercisesAsync.when(
+      body: StudentPageContent(child: exercisesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Erreur: $err', style: const TextStyle(color: Colors.red))),
         data: (exercises) {
@@ -305,7 +306,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
             ),
           );
         },
-      ),
+      )),
     );
   }
 

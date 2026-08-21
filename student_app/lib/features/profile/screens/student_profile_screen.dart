@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/models/student_models.dart';
+import '../../../core/widgets/student_page_content.dart';
 
 /// Données réelles (compte + profils déjà chargés par studentAuthProvider) — rien à simuler ici,
 /// contrairement aux autres pages ajoutées dans cette même passe qui restent volontairement
@@ -22,7 +23,7 @@ class StudentProfileScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text('Mon Profil', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
       ),
-      body: SingleChildScrollView(
+      body: StudentPageContent(child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,7 +130,7 @@ class StudentProfileScreen extends ConsumerWidget {
             ),
           ],
         ),
-      ),
+      )),
     );
   }
 

@@ -5,6 +5,7 @@ import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/services/forensic_watermark_service.dart';
+import '../../../core/widgets/student_page_content.dart';
 import '../../subscription/screens/paywall_modal.dart';
 
 class LessonReaderScreen extends ConsumerWidget {
@@ -56,7 +57,7 @@ class LessonReaderScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: lessonsAsync.when(
+      body: StudentPageContent(child: lessonsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Erreur: $err', style: const TextStyle(color: Colors.red))),
         data: (lessons) {
@@ -295,7 +296,7 @@ class LessonReaderScreen extends ConsumerWidget {
                 )
               : readerContent;
         },
-      ),
+      )),
     );
   }
 

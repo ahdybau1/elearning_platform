@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
+import '../../../core/widgets/student_page_content.dart';
 
 /// §11 du cahier des charges (Paramètres + Accessibilité). Compte (email/téléphone, changement de
 /// mot de passe, déconnexion) est réel — les autres réglages (notifications, langue, apparence,
@@ -36,7 +37,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       appBar: AppBar(
         title: Text('Paramètres', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
       ),
-      body: ListView(
+      body: StudentPageContent(child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           _sectionTitle('Compte'),
@@ -141,7 +142,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ]),
           const SizedBox(height: 24),
         ],
-      ),
+      )),
     );
   }
 

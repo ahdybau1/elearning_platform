@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
+import '../../../core/widgets/student_page_content.dart';
 import '../../subscription/screens/boutique_shop_screen.dart';
 
 class ClassForumScreen extends ConsumerStatefulWidget {
@@ -42,7 +43,7 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Column(
+      body: StudentPageContent(child: Column(
         children: [
           // Class Isolation Notice
           Container(
@@ -227,7 +228,7 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
+import '../../../core/widgets/student_page_content.dart';
 
 class BoutiqueShopScreen extends ConsumerWidget {
   const BoutiqueShopScreen({super.key});
@@ -46,7 +47,7 @@ class BoutiqueShopScreen extends ConsumerWidget {
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 17),
         ),
       ),
-      body: ListView.separated(
+      body: StudentPageContent(child: ListView.separated(
         padding: const EdgeInsets.all(20),
         itemCount: _documents.length,
         separatorBuilder: (_, __) => const SizedBox(height: 14),
@@ -141,7 +142,7 @@ class BoutiqueShopScreen extends ConsumerWidget {
             ),
           );
         },
-      ),
+      )),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/providers/student_providers.dart';
+import '../../../core/widgets/student_page_content.dart';
 
 /// §12 du cahier des charges. Le catalogue des causes est réel (charity_campaigns, lecture
 /// publique). Les dons eux-mêmes restent bloqués : la table `donations` n'a aucune policy
@@ -30,7 +31,7 @@ class DonationsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text('Soutien & Dons', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
       ),
-      body: ListView(
+      body: StudentPageContent(child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           // Support the app directly
@@ -121,7 +122,7 @@ class DonationsScreen extends ConsumerWidget {
             },
           ),
         ],
-      ),
+      )),
     );
   }
 }
