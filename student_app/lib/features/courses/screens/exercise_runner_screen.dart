@@ -42,7 +42,24 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
         error: (err, _) => Center(child: Text('Erreur: $err', style: const TextStyle(color: Colors.red))),
         data: (exercises) {
           if (exercises.isEmpty) {
-            return const Center(child: Text('Aucun exercice disponible.'));
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.edit_note_rounded, size: 46, color: StudentTheme.textMuted),
+                    const SizedBox(height: 16),
+                    Text('Aucun exercice publié pour ce chapitre',
+                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                    const SizedBox(height: 6),
+                    Text('Revenez bientôt : l\'enseignant prépare encore ce quiz.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary)),
+                  ],
+                ),
+              ),
+            );
           }
 
           final currentEx = exercises[_currentIndex];

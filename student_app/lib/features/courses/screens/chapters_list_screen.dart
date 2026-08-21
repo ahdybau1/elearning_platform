@@ -7,16 +7,20 @@ import '../../../core/providers/student_providers.dart';
 class ChaptersListScreen extends ConsumerWidget {
   final String subjectId;
   final String subjectName;
+  final String classNodeId;
 
   const ChaptersListScreen({
     super.key,
     required this.subjectId,
     required this.subjectName,
+    required this.classNodeId,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final chaptersAsync = ref.watch(studentChaptersProvider(subjectId));
+    final chaptersAsync = ref.watch(
+      studentChaptersProvider(ChaptersQuery(subjectId: subjectId, classNodeId: classNodeId)),
+    );
 
     return Scaffold(
       backgroundColor: StudentTheme.backgroundDark,
@@ -30,6 +34,26 @@ class ChaptersListScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Erreur: $err', style: const TextStyle(color: Colors.red))),
         data: (chapters) {
+          if (chapters.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.auto_stories_outlined, size: 46, color: StudentTheme.textMuted),
+                    const SizedBox(height: 16),
+                    Text('Aucun chapitre publié pour le moment',
+                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                    const SizedBox(height: 6),
+                    Text('Le contenu de $subjectName pour votre classe est en cours de préparation.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary)),
+                  ],
+                ),
+              ),
+            );
+          }
           return ListView.separated(
             padding: const EdgeInsets.all(20),
             itemCount: chapters.length,
@@ -74,7 +98,7 @@ class ChaptersListScreen extends ConsumerWidget {
                               const Icon(Icons.lock_clock_rounded, size: 14, color: StudentTheme.accentAmber),
                               const SizedBox(width: 4),
                               Text(
-                                'Trimestre 2',
+                                chapter.termName ?? 'À venir',
                                 style: GoogleFonts.inter(
                                   fontSize: 11,
                                   color: StudentTheme.accentAmber,
@@ -155,7 +179,13 @@ class ChaptersListScreen extends ConsumerWidget {
                             ),
                             onPressed: () {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Ce chapitre sera débloqué automatiquement au Trimestre 2.')),
+                                SnackBar(
+                                  content: Text(
+                                    chapter.termName != null
+                                        ? 'Ce chapitre sera débloqué automatiquement au ${chapter.termName}.'
+                                        : 'Ce chapitre sera débloqué automatiquement à la date prévue.',
+                                  ),
+                                ),
                               );
                             },
                             icon: const Icon(Icons.lock_outline_rounded, size: 14),

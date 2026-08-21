@@ -115,13 +115,15 @@ class StudentAcademicNode {
   }
 }
 
+// Pas de champ `progressPercent` : aucune table de suivi de progression réelle n'existe encore
+// (§3.5 du cahier des charges — pourcentage de leçons vues par matière). Mieux vaut l'omettre côté
+// UI que d'inventer un pourcentage.
 class Subject {
   final String id;
   final String name;
   final String code;
   final String? iconName;
   final int chaptersCount;
-  final double progressPercent;
 
   Subject({
     required this.id,
@@ -129,8 +131,17 @@ class Subject {
     required this.code,
     this.iconName,
     this.chaptersCount = 0,
-    this.progressPercent = 0.0,
   });
+
+  Subject copyWith({int? chaptersCount}) {
+    return Subject(
+      id: id,
+      name: name,
+      code: code,
+      iconName: iconName,
+      chaptersCount: chaptersCount ?? this.chaptersCount,
+    );
+  }
 
   factory Subject.fromJson(Map<String, dynamic> json) {
     return Subject(
@@ -138,16 +149,21 @@ class Subject {
       name: json['name'] as String,
       code: json['code'] as String? ?? '',
       iconName: json['icon_name'] as String?,
-      chaptersCount: (json['chapters_count'] as int?) ?? 6,
-      progressPercent: double.parse((json['progress_percent'] as num?)?.toString() ?? '0.35'),
+      chaptersCount: (json['chapters_count'] as int?) ?? 0,
     );
   }
 }
 
+// §3.3 du cahier des charges : déblocage progressif par trimestre, cumulatif et invisible (l'élève
+// ne voit jamais le mot « Trimestre » comme niveau de navigation, seulement un statut sur le
+// chapitre). `isUnlocked` est calculé côté client depuis `terms.start_date` — un chapitre sans
+// trimestre assigné (`termId == null`) est traité comme débloqué par défaut (aucune règle de
+// blocage configurée pour lui).
 class Chapter {
   final String id;
   final String subjectId;
   final String? termId;
+  final String? termName;
   final String title;
   final String? introduction;
   final int displayOrder;
@@ -159,6 +175,7 @@ class Chapter {
     required this.id,
     required this.subjectId,
     this.termId,
+    this.termName,
     required this.title,
     this.introduction,
     this.displayOrder = 0,
@@ -167,17 +184,36 @@ class Chapter {
     this.exercisesCount = 0,
   });
 
+  Chapter copyWith({int? lessonsCount, int? exercisesCount}) {
+    return Chapter(
+      id: id,
+      subjectId: subjectId,
+      termId: termId,
+      termName: termName,
+      title: title,
+      introduction: introduction,
+      displayOrder: displayOrder,
+      isUnlocked: isUnlocked,
+      lessonsCount: lessonsCount ?? this.lessonsCount,
+      exercisesCount: exercisesCount ?? this.exercisesCount,
+    );
+  }
+
   factory Chapter.fromJson(Map<String, dynamic> json) {
+    final term = json['terms'] as Map<String, dynamic>?;
+    final startDateStr = term?['start_date'] as String?;
+    final isUnlocked = startDateStr == null || !DateTime.parse(startDateStr).isAfter(DateTime.now());
     return Chapter(
       id: json['id'] as String,
       subjectId: json['subject_id'] as String,
       termId: json['term_id'] as String?,
+      termName: term?['name'] as String?,
       title: json['title'] as String,
       introduction: json['introduction'] as String?,
       displayOrder: (json['display_order'] as int?) ?? 0,
-      isUnlocked: json['is_unlocked'] as bool? ?? true,
-      lessonsCount: (json['lessons_count'] as int?) ?? 3,
-      exercisesCount: (json['exercises_count'] as int?) ?? 8,
+      isUnlocked: isUnlocked,
+      lessonsCount: (json['lessons_count'] as int?) ?? 0,
+      exercisesCount: (json['exercises_count'] as int?) ?? 0,
     );
   }
 }

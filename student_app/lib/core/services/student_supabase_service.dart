@@ -50,187 +50,131 @@ class StudentSupabaseService {
 
   // ─── Subjects & Academic Structure ───────────────────────────
 
-  Future<List<Subject>> fetchSubjects({String? countryId}) async {
-    try {
-      var query = client.from('subjects').select();
-      if (_isValidUuid(countryId)) {
-        query = query.eq('country_id', countryId!);
-      }
-      final rows = await query.order('name').then((rows) => rows as List);
-      if (rows.isNotEmpty) {
-        return (rows)
-            .map((r) => Subject.fromJson(Map<String, dynamic>.from(r)))
-            .toList();
-      }
-    } catch (_) {}
+  /// Matières réellement enseignées dans la classe du profil actif, via `subject_class_links` —
+  /// jamais par pays (§2.4 du cahier des charges : cloisonnement strict, un profil ne voit QUE le
+  /// contenu de sa classe/série). L'ancienne version filtrait par `country_id`, ce qui montrait
+  /// TOUTES les matières du pays y compris celles jamais enseignées dans la classe de l'élève — un
+  /// vrai bug de cloisonnement, pas juste un manque de données. Aucun repli sur de fausses matières
+  /// : une classe sans matière liée doit afficher une liste vide honnête.
+  Future<List<Subject>> fetchSubjects({required String classNodeId}) async {
+    if (!_isValidUuid(classNodeId)) return [];
 
-    // Reference demo subjects
-    return [
-      Subject(id: '00000000-0000-0000-0000-000000000101', name: 'Mathématiques', code: 'MATH', chaptersCount: 8, progressPercent: 0.65),
-      Subject(id: '00000000-0000-0000-0000-000000000102', name: 'Physique - Chimie', code: 'PHYS', chaptersCount: 7, progressPercent: 0.40),
-      Subject(id: '00000000-0000-0000-0000-000000000103', name: 'Sciences de la Vie & Terre', code: 'SVT', chaptersCount: 6, progressPercent: 0.20),
-      Subject(id: '00000000-0000-0000-0000-000000000104', name: 'Français & Littérature', code: 'FRAN', chaptersCount: 5, progressPercent: 0.85),
-      Subject(id: '00000000-0000-0000-0000-000000000105', name: 'Anglais (English Language)', code: 'ANGL', chaptersCount: 6, progressPercent: 0.50),
-      Subject(id: '00000000-0000-0000-0000-000000000106', name: 'Histoire - Géographie', code: 'HIST', chaptersCount: 5, progressPercent: 0.10),
-    ];
+    final linkRows = await client
+        .from('subject_class_links')
+        .select('subjects(*)')
+        .eq('class_node_id', classNodeId)
+        .then((r) => r as List);
+
+    final subjects = linkRows
+        .map((r) => (r as Map<String, dynamic>)['subjects'])
+        .whereType<Map<String, dynamic>>()
+        .map((j) => Subject.fromJson(j))
+        .toList();
+    if (subjects.isEmpty) return [];
+
+    // Nombre réel de chapitres actifs par matière, précisément pour cette classe (un chapitre
+    // appartient à une classe précise, pas à toutes les classes liées à sa matière — voir le
+    // commentaire sur `chapters.class_node_id` dans reset_project_schema.sql).
+    final chapterRows = await client
+        .from('chapters')
+        .select('subject_id')
+        .eq('class_node_id', classNodeId)
+        .eq('is_active', true)
+        .then((r) => r as List);
+    final countsBySubject = <String, int>{};
+    for (final row in chapterRows) {
+      final sid = (row as Map<String, dynamic>)['subject_id'] as String?;
+      if (sid != null) countsBySubject[sid] = (countsBySubject[sid] ?? 0) + 1;
+    }
+
+    final result = subjects.map((s) => s.copyWith(chaptersCount: countsBySubject[s.id] ?? 0)).toList();
+    result.sort((a, b) => a.name.compareTo(b.name));
+    return result;
   }
 
   // ─── Chapters & Déblocage Trimestriel Invisible ───────────────
 
-  Future<List<Chapter>> fetchChapters(String subjectId) async {
-    try {
-      if (_isValidUuid(subjectId)) {
-        final rows = await client
-            .from('chapters')
-            .select()
-            .eq('subject_id', subjectId)
-            .order('display_order')
-            .then((rows) => rows as List);
-        if (rows.isNotEmpty) {
-          return (rows)
-              .map((r) => Chapter.fromJson(Map<String, dynamic>.from(r)))
-              .toList();
-        }
-      }
-    } catch (_) {}
+  /// Chapitres réels d'une matière PRÉCISÉMENT pour la classe du profil actif — filtrer par
+  /// `subject_id` seul (comme l'ancienne version) montrerait aussi les chapitres d'autres classes
+  /// partageant la même matière via `subject_class_links`, un chapitre étant rattaché à une classe
+  /// précise (voir le commentaire sur `chapters.class_node_id` dans reset_project_schema.sql).
+  /// Le déblocage par trimestre (§3.3) est calculé réellement depuis `terms.start_date` dans
+  /// `Chapter.fromJson`, plus de statut fictif toujours "Trimestre 2".
+  Future<List<Chapter>> fetchChapters({required String subjectId, required String classNodeId}) async {
+    if (!_isValidUuid(subjectId) || !_isValidUuid(classNodeId)) return [];
 
-    // Fallback chapters with invisible trimester unlocking logic
-    return [
-      Chapter(
-        id: '00000000-0000-0000-0000-000000000201',
-        subjectId: subjectId,
-        title: 'Chapitre 1 : Nombres Complexes & Trigonométrie',
-        introduction: 'Forme algébrique, trigonométrique et exponentielle. Applications géométriques.',
-        displayOrder: 1,
-        isUnlocked: true,
-        lessonsCount: 4,
-        exercisesCount: 12,
-      ),
-      Chapter(
-        id: '00000000-0000-0000-0000-000000000202',
-        subjectId: subjectId,
-        title: 'Chapitre 2 : Limites & Continuité d\'une Fonction',
-        introduction: 'Théorème des valeurs intermédiaires, asymptotes et branches infinies.',
-        displayOrder: 2,
-        isUnlocked: true,
-        lessonsCount: 3,
-        exercisesCount: 10,
-      ),
-      Chapter(
-        id: '00000000-0000-0000-0000-000000000203',
-        subjectId: subjectId,
-        title: 'Chapitre 3 : Dérivation & Étude de Fonctions',
-        introduction: 'Dérivée d\'une fonction composée, convexité et points d\'inflexion.',
-        displayOrder: 3,
-        isUnlocked: true,
-        lessonsCount: 4,
-        exercisesCount: 14,
-      ),
-      Chapter(
-        id: '00000000-0000-0000-0000-000000000204',
-        subjectId: subjectId,
-        title: 'Chapitre 4 : Fonctions Logarithme & Exponentielle (2e Trimestre)',
-        introduction: 'Propriétés analytiques, croissances comparées et résolutions d\'équations.',
-        displayOrder: 4,
-        isUnlocked: false, // Locked until 2nd trimester (déblocage invisible)
-        lessonsCount: 5,
-        exercisesCount: 15,
-      ),
-    ];
+    final rows = await client
+        .from('chapters')
+        .select('*, terms(name, start_date)')
+        .eq('subject_id', subjectId)
+        .eq('class_node_id', classNodeId)
+        .eq('is_active', true)
+        .order('display_order')
+        .then((r) => r as List);
+
+    final chapters = rows.map((r) => Chapter.fromJson(Map<String, dynamic>.from(r))).toList();
+    if (chapters.isEmpty) return [];
+
+    final chapterIds = chapters.map((c) => c.id).toList();
+    final lessonRows = await client
+        .from('lessons')
+        .select('chapter_id')
+        .inFilter('chapter_id', chapterIds)
+        .eq('is_active', true)
+        .then((r) => r as List);
+    final exerciseRows = await client
+        .from('exercises')
+        .select('chapter_id')
+        .inFilter('chapter_id', chapterIds)
+        .eq('is_active', true)
+        .then((r) => r as List);
+
+    final lessonCounts = <String, int>{};
+    for (final row in lessonRows) {
+      final cid = (row as Map<String, dynamic>)['chapter_id'] as String?;
+      if (cid != null) lessonCounts[cid] = (lessonCounts[cid] ?? 0) + 1;
+    }
+    final exerciseCounts = <String, int>{};
+    for (final row in exerciseRows) {
+      final cid = (row as Map<String, dynamic>)['chapter_id'] as String?;
+      if (cid != null) exerciseCounts[cid] = (exerciseCounts[cid] ?? 0) + 1;
+    }
+
+    return chapters
+        .map((c) => c.copyWith(lessonsCount: lessonCounts[c.id] ?? 0, exercisesCount: exerciseCounts[c.id] ?? 0))
+        .toList();
   }
 
   // ─── Lessons & Content ────────────────────────────────────────
 
+  /// `chapterId` est déjà précisément scopé (un chapitre appartient à une seule classe), donc pas
+  /// de filtre supplémentaire nécessaire ici. Plus de repli sur les 2 leçons fictives "Nombres
+  /// Complexes" codées en dur — une liste vide reflète honnêtement l'absence de contenu publié.
   Future<List<Lesson>> fetchLessons(String chapterId) async {
-    try {
-      if (_isValidUuid(chapterId)) {
-        final rows = await client
-            .from('lessons')
-            .select()
-            .eq('chapter_id', chapterId)
-            .order('display_order')
-            .then((rows) => rows as List);
-        if (rows.isNotEmpty) {
-          return (rows)
-              .map((r) => Lesson.fromJson(Map<String, dynamic>.from(r)))
-              .toList();
-        }
-      }
-    } catch (_) {}
-
-    return [
-      Lesson(
-        id: '00000000-0000-0000-0000-000000000301',
-        chapterId: chapterId,
-        title: 'Leçon 1 : Forme Algébrique et Conjugaison',
-        minSubscriptionTier: 'gratuit',
-        isFree: true,
-        readingTimeMinutes: 12,
-        contentJson: {
-          'body': r"Un nombre complexe z s'écrit sous la forme algébrique z = a + ib où a est la partie réelle et b la partie imaginaire.",
-          'theoreme': r"Théorème Fondamental : Deux nombres complexes sont égaux si et seulement s'ils ont même partie réelle et même partie imaginaire.",
-          'formule': r"\bar{z} = a - ib, |z| = \sqrt{a^2 + b^2}",
-          'piege': r"Attention : \sqrt{a^2 + b^2} ne contient JAMAIS le terme i.",
-        },
-      ),
-      Lesson(
-        id: '00000000-0000-0000-0000-000000000302',
-        chapterId: chapterId,
-        title: 'Leçon 2 : Forme Trigonométrique et Argument',
-        minSubscriptionTier: 'mensuel',
-        isFree: false,
-        readingTimeMinutes: 18,
-        contentJson: {
-          'body': r"Pour tout nombre complexe non nul z, on peut écrire z = r(\cos\theta + i\sin\theta) = r e^{i\theta}.",
-          'theoreme': r"Formule de Moivre : Pour tout entier relatif n, (\cos\theta + i\sin\theta)^n = \cos(n\theta) + i\sin(n\theta).",
-          'formule': r"e^{i\pi} + 1 = 0 (Identité d'Euler)",
-          'methode': r"Pour passer de la forme algébrique à trigonométrique : 1. Calculer le module r. 2. Factoriser par r. 3. Identifier \cos\theta et \sin\theta.",
-        },
-      ),
-    ];
+    if (!_isValidUuid(chapterId)) return [];
+    final rows = await client
+        .from('lessons')
+        .select()
+        .eq('chapter_id', chapterId)
+        .eq('is_active', true)
+        .order('display_order')
+        .then((r) => r as List);
+    return rows.map((r) => Lesson.fromJson(Map<String, dynamic>.from(r))).toList();
   }
 
   // ─── Exercises ────────────────────────────────────────────────
 
+  /// Même principe que fetchLessons : plus de repli sur les 2 exercices fictifs codés en dur.
   Future<List<Exercise>> fetchExercises(String chapterId) async {
-    try {
-      if (_isValidUuid(chapterId)) {
-        final rows = await client
-            .from('exercises')
-            .select()
-            .eq('chapter_id', chapterId)
-            .order('display_order')
-            .then((rows) => rows as List);
-        if (rows.isNotEmpty) {
-          return (rows)
-              .map((r) => Exercise.fromJson(Map<String, dynamic>.from(r)))
-              .toList();
-        }
-      }
-    } catch (_) {}
-
-    return [
-      Exercise(
-        id: '1',
-        chapterId: chapterId,
-        questionText: r"Soit z = 1 + i\sqrt{3}. Quel est le module |z| ?",
-        type: 'qcm',
-        options: ['1', '2', r"\sqrt{3}", '4'],
-        correctIndex: 1,
-        explanation: r"|z| = \sqrt{1^2 + (\sqrt{3})^2} = \sqrt{1 + 3} = \sqrt{4} = 2.",
-        points: 10,
-      ),
-      Exercise(
-        id: '2',
-        chapterId: chapterId,
-        questionText: r"Quel est l'argument principal \theta de z = 1 + i\sqrt{3} ?",
-        type: 'qcm',
-        options: [r"\frac{\pi}{6}", r"\frac{\pi}{4}", r"\frac{\pi}{3}", r"\frac{\pi}{2}"],
-        correctIndex: 2,
-        explanation: r"\cos\theta = 1/2 et \sin\theta = \sqrt{3}/2, donc \theta = \frac{\pi}{3} [2\pi].",
-        points: 15,
-      ),
-    ];
+    if (!_isValidUuid(chapterId)) return [];
+    final rows = await client
+        .from('exercises')
+        .select()
+        .eq('chapter_id', chapterId)
+        .eq('is_active', true)
+        .order('display_order')
+        .then((r) => r as List);
+    return rows.map((r) => Exercise.fromJson(Map<String, dynamic>.from(r))).toList();
   }
 
   // ─── Forum de Classe & Modération ─────────────────────────────

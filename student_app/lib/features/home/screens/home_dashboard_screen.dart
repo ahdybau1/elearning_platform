@@ -14,11 +14,12 @@ class HomeDashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(studentAuthProvider);
     final profile = authState.activeProfile;
-    // Le champ pays direct sur le profil n'existe plus dans le vrai schéma (voir
-    // docs/cahier_des_charges.md §36) — filtrage par pays retiré en attendant la refonte de la
-    // couche de contenu (fetchSubjects interroge une colonne qui n'existe pas réellement, voir
-    // student_supabase_service.dart).
-    final subjectsAsync = ref.watch(studentSubjectsProvider(null));
+    // Matières réellement liées à la classe du profil actif (subject_class_links), jamais par pays
+    // — voir le commentaire de fetchSubjects dans student_supabase_service.dart pour le bug de
+    // cloisonnement que ce filtrage corrige. Chaîne vide tolérée pendant le bref instant où le
+    // profil n'est pas encore chargé : fetchSubjects la traite comme un UUID invalide et renvoie []
+    // sans erreur.
+    final subjectsAsync = ref.watch(studentSubjectsProvider(profile?.classNodeId ?? ''));
 
     return Scaffold(
       backgroundColor: StudentTheme.backgroundDark,
@@ -144,6 +145,28 @@ class HomeDashboardScreen extends ConsumerWidget {
                     loading: () => const Center(child: CircularProgressIndicator()),
                     error: (err, _) => Text('Erreur: $err', style: const TextStyle(color: Colors.red)),
                     data: (subjects) {
+                      if (subjects.isEmpty) {
+                        return Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: StudentTheme.cardDark,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: StudentTheme.borderDark),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.menu_book_outlined, color: StudentTheme.textMuted, size: 22),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Aucune matière programmée pour ${profile?.className ?? 'votre classe'} pour le moment.',
+                                  style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
                       return GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
@@ -156,7 +179,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                         itemCount: subjects.length,
                         itemBuilder: (context, index) {
                           final subject = subjects[index];
-                          return _buildSubjectCard(context, subject);
+                          return _buildSubjectCard(context, subject, profile?.classNodeId ?? '');
                         },
                       );
                     },
@@ -351,13 +374,13 @@ class HomeDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSubjectCard(BuildContext context, Subject subject) {
+  Widget _buildSubjectCard(BuildContext context, Subject subject, String classNodeId) {
     return InkWell(
       onTap: () {
         Navigator.pushNamed(
           context,
           '/chapters',
-          arguments: {'subjectId': subject.id, 'subjectName': subject.name},
+          arguments: {'subjectId': subject.id, 'subjectName': subject.name, 'classNodeId': classNodeId},
         );
       },
       borderRadius: BorderRadius.circular(16),
@@ -383,14 +406,6 @@ class HomeDashboardScreen extends ConsumerWidget {
                   ),
                   child: const Icon(Icons.book_rounded, color: StudentTheme.accentPrimary, size: 20),
                 ),
-                Text(
-                  '${(subject.progressPercent * 100).toInt()}%',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: StudentTheme.accentPrimary,
-                  ),
-                ),
               ],
             ),
             Column(
@@ -408,7 +423,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${subject.chaptersCount} chapitres',
+                  subject.chaptersCount > 0 ? '${subject.chaptersCount} chapitres' : 'Bientôt disponible',
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     color: StudentTheme.textSecondary,

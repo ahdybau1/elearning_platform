@@ -12,15 +12,28 @@ final appSettingsProvider = FutureProvider<AppSettings>((ref) async {
 });
 
 final studentSubjectsProvider =
-    FutureProvider.family<List<Subject>, String?>((ref, countryId) async {
+    FutureProvider.family<List<Subject>, String>((ref, classNodeId) async {
   final service = ref.watch(studentSupabaseServiceProvider);
-  return service.fetchSubjects(countryId: countryId);
+  return service.fetchSubjects(classNodeId: classNodeId);
 });
 
+class ChaptersQuery {
+  final String subjectId;
+  final String classNodeId;
+  const ChaptersQuery({required this.subjectId, required this.classNodeId});
+
+  @override
+  bool operator ==(Object other) =>
+      other is ChaptersQuery && other.subjectId == subjectId && other.classNodeId == classNodeId;
+
+  @override
+  int get hashCode => Object.hash(subjectId, classNodeId);
+}
+
 final studentChaptersProvider =
-    FutureProvider.family<List<Chapter>, String>((ref, subjectId) async {
+    FutureProvider.family<List<Chapter>, ChaptersQuery>((ref, query) async {
   final service = ref.watch(studentSupabaseServiceProvider);
-  return service.fetchChapters(subjectId);
+  return service.fetchChapters(subjectId: query.subjectId, classNodeId: query.classNodeId);
 });
 
 final studentLessonsProvider =

@@ -103,6 +103,7 @@ class StudentElearningApp extends StatelessWidget {
               builder: (_) => ChaptersListScreen(
                 subjectId: args['subjectId'] ?? '',
                 subjectName: args['subjectName'] ?? 'Chapitres',
+                classNodeId: args['classNodeId'] ?? '',
               ),
             );
           case '/lesson-reader':

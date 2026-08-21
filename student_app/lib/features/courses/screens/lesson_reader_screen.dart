@@ -61,7 +61,24 @@ class LessonReaderScreen extends ConsumerWidget {
         error: (err, _) => Center(child: Text('Erreur: $err', style: const TextStyle(color: Colors.red))),
         data: (lessons) {
           if (lessons.isEmpty) {
-            return const Center(child: Text('Aucune leçon disponible pour ce chapitre.'));
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.menu_book_outlined, size: 46, color: StudentTheme.textMuted),
+                    const SizedBox(height: 16),
+                    Text('Aucune leçon publiée pour ce chapitre',
+                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                    const SizedBox(height: 6),
+                    Text('Revenez bientôt : l\'enseignant est en train de préparer ce cours.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary)),
+                  ],
+                ),
+              ),
+            );
           }
 
           final lesson = lessons.first;
