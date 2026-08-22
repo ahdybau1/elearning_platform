@@ -14,11 +14,22 @@ class StudentPageContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        child: child,
-      ),
+    // `Center` + un `ConstrainedBox` limité en largeur SEULE laisse passer une hauteur non bornée
+    // (double.infinity) dès que le contenu déclare une taille intrinsèque nulle sur cet axe — ce
+    // qui casse tout `Expanded`/`Flexible` plus bas dans l'arbre avec une vraie exception Flutter
+    // ("BoxConstraints forces an infinite height"), constatée en direct sur la page Chapitres (plus
+    // aucun contenu ne s'affichait sous la bannière). `LayoutBuilder` fixe explicitement la hauteur
+    // maximale disponible pour que ce cas ne se reproduise sur aucune page utilisant ce wrapper.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: constraints.maxHeight),
+            child: child,
+          ),
+        );
+      },
     );
   }
 }

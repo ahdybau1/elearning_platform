@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
+import '../../../core/theme/subject_visuals.dart';
 import '../../../core/models/student_models.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
@@ -380,61 +381,78 @@ class HomeDashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildSubjectCard(BuildContext context, Subject subject, String classNodeId) {
+    final visual = SubjectVisuals.forSubject(code: subject.code, name: subject.name);
     return InkWell(
       onTap: () {
         Navigator.pushNamed(
           context,
           '/chapters',
-          arguments: {'subjectId': subject.id, 'subjectName': subject.name, 'classNodeId': classNodeId},
+          arguments: {
+            'subjectId': subject.id,
+            'subjectName': subject.name,
+            'subjectCode': subject.code,
+            'classNodeId': classNodeId,
+          },
         );
       },
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(18),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: StudentTheme.cardDark,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: StudentTheme.borderDark),
+          gradient: LinearGradient(colors: visual.gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(color: visual.gradient.last.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 6)),
+          ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Stack(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: StudentTheme.surfaceDark,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.book_rounded, color: StudentTheme.accentPrimary, size: 20),
-                ),
-              ],
+            Positioned(
+              right: -14,
+              bottom: -14,
+              child: SubjectMotif(icon: visual.icon, size: 92),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  subject.name,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(visual.icon, color: Colors.white, size: 20),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subject.chaptersCount > 0 ? '${subject.chaptersCount} chapitres' : 'Bientôt disponible',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: StudentTheme.textSecondary,
+                  const SizedBox(height: 22),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        subject.name,
+                        style: GoogleFonts.outfit(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        subject.chaptersCount > 0 ? '${subject.chaptersCount} chapitres' : 'Bientôt disponible',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white.withValues(alpha: 0.85),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

@@ -104,6 +104,7 @@ class StudentElearningApp extends StatelessWidget {
                 subjectId: args['subjectId'] ?? '',
                 subjectName: args['subjectName'] ?? 'Chapitres',
                 classNodeId: args['classNodeId'] ?? '',
+                subjectCode: args['subjectCode'] as String?,
               ),
             );
           case '/lesson-reader':

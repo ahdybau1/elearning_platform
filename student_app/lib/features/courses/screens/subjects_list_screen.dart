@@ -5,6 +5,7 @@ import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/widgets/student_page_content.dart';
+import '../../../core/theme/subject_visuals.dart';
 
 class SubjectsListScreen extends ConsumerWidget {
   const SubjectsListScreen({super.key});
@@ -56,17 +57,23 @@ class SubjectsListScreen extends ConsumerWidget {
                     separatorBuilder: (_, __) => const SizedBox(height: 14),
                     itemBuilder: (context, index) {
                       final s = subjects[index];
+                      final visual = SubjectVisuals.forSubject(code: s.code, name: s.name);
                       return InkWell(
                         onTap: () {
                           Navigator.pushNamed(
                             context,
                             '/chapters',
-                            arguments: {'subjectId': s.id, 'subjectName': s.name, 'classNodeId': profile.classNodeId},
+                            arguments: {
+                              'subjectId': s.id,
+                              'subjectName': s.name,
+                              'subjectCode': s.code,
+                              'classNodeId': profile.classNodeId,
+                            },
                           );
                         },
                         borderRadius: BorderRadius.circular(16),
                         child: Container(
-                          padding: const EdgeInsets.all(18),
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             color: StudentTheme.cardDark,
                             borderRadius: BorderRadius.circular(16),
@@ -75,12 +82,26 @@ class SubjectsListScreen extends ConsumerWidget {
                           child: Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(12),
+                                width: 56,
+                                height: 56,
+                                clipBehavior: Clip.antiAlias,
                                 decoration: BoxDecoration(
-                                  color: StudentTheme.surfaceDark,
-                                  borderRadius: BorderRadius.circular(12),
+                                  gradient: LinearGradient(
+                                    colors: visual.gradient,
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
+                                  boxShadow: [
+                                    BoxShadow(color: visual.gradient.last.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 3)),
+                                  ],
                                 ),
-                                child: const Icon(Icons.menu_book_rounded, color: StudentTheme.accentPrimary, size: 24),
+                                child: Stack(
+                                  children: [
+                                    Positioned(right: -8, bottom: -8, child: SubjectMotif(icon: visual.icon, size: 42, opacity: 0.22)),
+                                    Center(child: Icon(visual.icon, color: Colors.white, size: 24)),
+                                  ],
+                                ),
                               ),
                               const SizedBox(width: 16),
                               Expanded(
@@ -89,7 +110,7 @@ class SubjectsListScreen extends ConsumerWidget {
                                   children: [
                                     Text(
                                       s.name,
-                                      style: GoogleFonts.inter(
+                                      style: GoogleFonts.outfit(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
                                         color: Colors.white,
@@ -106,7 +127,14 @@ class SubjectsListScreen extends ConsumerWidget {
                                 ),
                               ),
                               const SizedBox(width: 14),
-                              const Icon(Icons.arrow_forward_ios_rounded, color: StudentTheme.textSecondary, size: 16),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: StudentTheme.surfaceDark,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.arrow_forward_ios_rounded, color: StudentTheme.textSecondary, size: 14),
+                              ),
                             ],
                           ),
                         ),
