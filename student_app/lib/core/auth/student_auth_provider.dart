@@ -171,6 +171,8 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
     required String firstName,
     required String lastName,
     String? phone,
+    DateTime? birthDate,
+    String? schoolName,
   }) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
@@ -195,6 +197,8 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
         'phone': phone,
         'first_name': firstName,
         'last_name': lastName,
+        if (birthDate != null) 'birth_date': birthDate.toIso8601String().split('T').first,
+        if (schoolName != null && schoolName.trim().isNotEmpty) 'school_name': schoolName.trim(),
       });
 
       await _loadAccountAndProfiles();
@@ -217,6 +221,8 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
     required String firstName,
     required String lastName,
     String? phone,
+    DateTime? birthDate,
+    String? schoolName,
   }) async {
     final user = _client.auth.currentUser;
     if (user == null || user.email == null) return 'Aucune session active.';
@@ -227,7 +233,24 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
         'phone': phone,
         'first_name': firstName,
         'last_name': lastName,
+        if (birthDate != null) 'birth_date': birthDate.toIso8601String().split('T').first,
+        if (schoolName != null && schoolName.trim().isNotEmpty) 'school_name': schoolName.trim(),
       });
+      await _loadAccountAndProfiles();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  /// Met à jour la photo de profil (§ Photo de profil réelle) — appelée après un upload réussi vers
+  /// le bucket `avatars`. Recharge le compte pour que l'URL soit immédiatement visible partout où
+  /// l'avatar est affiché (barre du haut, Mon Profil, sélecteur de profils).
+  Future<String?> updatePhotoUrl(String photoUrl) async {
+    final account = state.account;
+    if (account == null) return 'Aucun compte connecté.';
+    try {
+      await _client.from('accounts').update({'photo_url': photoUrl}).eq('id', account.id);
       await _loadAccountAndProfiles();
       return null;
     } catch (e) {

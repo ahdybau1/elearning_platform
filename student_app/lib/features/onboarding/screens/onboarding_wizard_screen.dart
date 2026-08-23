@@ -32,6 +32,8 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+  final _schoolNameCtrl = TextEditingController();
+  DateTime? _birthDate;
   bool _obscurePassword = true;
 
   bool _accountStepDone = false;
@@ -47,6 +49,7 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     _firstNameCtrl.dispose();
     _lastNameCtrl.dispose();
     _phoneCtrl.dispose();
+    _schoolNameCtrl.dispose();
     super.dispose();
   }
 
@@ -112,6 +115,8 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
         firstName: _firstNameCtrl.text.trim(),
         lastName: _lastNameCtrl.text.trim(),
         phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+        birthDate: _birthDate,
+        schoolName: _schoolNameCtrl.text.trim().isEmpty ? null : _schoolNameCtrl.text.trim(),
       );
 
       if (signUpError == kSignUpNeedsEmailConfirmation) {
@@ -159,6 +164,8 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
         firstName: _firstNameCtrl.text.trim(),
         lastName: _lastNameCtrl.text.trim(),
         phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+        birthDate: _birthDate,
+        schoolName: _schoolNameCtrl.text.trim().isEmpty ? null : _schoolNameCtrl.text.trim(),
       );
       if (completeError != null) {
         setState(() {
@@ -289,6 +296,38 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
           ],
           const SizedBox(height: 16),
           _textField(_phoneCtrl, 'Numéro de téléphone (Mobile Money)', keyboardType: TextInputType.phone),
+          const SizedBox(height: 16),
+          _textField(_schoolNameCtrl, 'Établissement fréquenté (optionnel)'),
+          const SizedBox(height: 16),
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: DateTime(DateTime.now().year - 15),
+                firstDate: DateTime(DateTime.now().year - 100),
+                lastDate: DateTime.now(),
+                helpText: 'Date de naissance (optionnel)',
+              );
+              if (picked != null) setState(() => _birthDate = picked);
+            },
+            child: InputDecorator(
+              decoration: InputDecoration(
+                labelText: 'Date de naissance (optionnel)',
+                labelStyle: const TextStyle(color: StudentTheme.textSecondary),
+                filled: true,
+                fillColor: StudentTheme.cardDark,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                suffixIcon: const Icon(Icons.cake_outlined, color: StudentTheme.textSecondary),
+              ),
+              child: Text(
+                _birthDate == null
+                    ? 'Pour vous souhaiter votre anniversaire 🎂'
+                    : '${_birthDate!.day.toString().padLeft(2, '0')}/${_birthDate!.month.toString().padLeft(2, '0')}/${_birthDate!.year}',
+                style: TextStyle(color: _birthDate == null ? StudentTheme.textMuted : Colors.white),
+              ),
+            ),
+          ),
           if (!isCompleteProfile) ...[
             const SizedBox(height: 16),
             TextFormField(

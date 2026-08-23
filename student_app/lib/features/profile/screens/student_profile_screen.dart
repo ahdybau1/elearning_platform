@@ -1,6 +1,9 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/models/student_models.dart';
@@ -10,11 +13,50 @@ import '../../../core/widgets/student_screen_header.dart';
 /// Données réelles (compte + profils déjà chargés par studentAuthProvider) — rien à simuler ici,
 /// contrairement aux autres pages ajoutées dans cette même passe qui restent volontairement
 /// factices en attendant leur propre passe de rigueur.
-class StudentProfileScreen extends ConsumerWidget {
+class StudentProfileScreen extends ConsumerStatefulWidget {
   const StudentProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StudentProfileScreen> createState() => _StudentProfileScreenState();
+}
+
+class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
+  bool _isUploadingPhoto = false;
+
+  Future<void> _pickAndUploadPhoto(String accountId) async {
+    final picker = ImagePicker();
+    final XFile? picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 800, imageQuality: 85);
+    if (picked == null) return;
+
+    setState(() => _isUploadingPhoto = true);
+    try {
+      final Uint8List bytes = await picked.readAsBytes();
+      final client = Supabase.instance.client;
+      const path = 'avatar.jpg';
+      final storagePath = '$accountId/$path';
+      await client.storage.from('avatars').uploadBinary(
+            storagePath,
+            bytes,
+            fileOptions: const FileOptions(upsert: true, contentType: 'image/jpeg'),
+          );
+      // Paramètre de cache-busting : sans lui, le navigateur garde l'ancienne image en cache pour
+      // cette même URL après un remplacement, et le changement de photo semble ne rien faire.
+      final publicUrl = '${client.storage.from('avatars').getPublicUrl(storagePath)}?v=${DateTime.now().millisecondsSinceEpoch}';
+      final error = await ref.read(studentAuthProvider.notifier).updatePhotoUrl(publicUrl);
+      if (mounted && error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur : $error')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Échec de l\'envoi de la photo : $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingPhoto = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(studentAuthProvider);
     final account = authState.account;
     final activeProfile = authState.activeProfile;
@@ -36,15 +78,40 @@ class StudentProfileScreen extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  Container(
-                    width: 68,
-                    height: 68,
-                    decoration: const BoxDecoration(shape: BoxShape.circle, gradient: StudentTheme.primaryGradient),
-                    child: Center(
-                      child: Text(
-                        (account?.firstName.isNotEmpty == true) ? account!.firstName[0].toUpperCase() : 'É',
-                        style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
+                  GestureDetector(
+                    onTap: account == null || _isUploadingPhoto ? null : () => _pickAndUploadPhoto(account.id),
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 68,
+                          height: 68,
+                          clipBehavior: Clip.antiAlias,
+                          decoration: const BoxDecoration(shape: BoxShape.circle, gradient: StudentTheme.primaryGradient),
+                          child: _isUploadingPhoto
+                              ? const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : (account?.photoUrl?.isNotEmpty == true)
+                                  ? Image.network(account!.photoUrl!, fit: BoxFit.cover, width: 68, height: 68)
+                                  : Center(
+                                      child: Text(
+                                        (account?.firstName.isNotEmpty == true) ? account!.firstName[0].toUpperCase() : 'É',
+                                        style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
+                                      ),
+                                    ),
+                        ),
+                        Positioned(
+                          right: -2,
+                          bottom: -2,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: StudentTheme.accentPrimary,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: StudentTheme.cardDark, width: 2),
+                            ),
+                            child: const Icon(Icons.camera_alt_rounded, size: 12, color: Colors.black),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 18),
@@ -61,6 +128,17 @@ class StudentProfileScreen extends ConsumerWidget {
                         if (account?.phone?.isNotEmpty == true) ...[
                           const SizedBox(height: 2),
                           Text(account!.phone!, style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary)),
+                        ],
+                        if (account?.schoolName?.isNotEmpty == true) ...[
+                          const SizedBox(height: 2),
+                          Text('🏫 ${account!.schoolName}', style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary)),
+                        ],
+                        if (account?.birthDate != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            '🎂 ${account!.birthDate!.day.toString().padLeft(2, '0')}/${account.birthDate!.month.toString().padLeft(2, '0')}/${account.birthDate!.year}',
+                            style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary),
+                          ),
                         ],
                       ],
                     ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/widgets/student_page_content.dart';
@@ -201,8 +202,9 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
     );
   }
 
-  void _sendMessage(String text) {
+  Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
+    final profile = ref.read(studentAuthProvider).activeProfile;
 
     setState(() {
       _messages.add({'sender': 'user', 'text': text.trim()});
@@ -210,25 +212,36 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
       _isTyping = true;
     });
 
-    // Simulated contextual AI tutor reasoning based on Section 8 (Maïeutique)
-    Future.delayed(const Duration(milliseconds: 1200), () {
-      if (mounted) {
-        String response = 'Pour bien aborder cette notion, commençons par identifier les hypothèses de base : quelles sont les données fournies dans ton énoncé ?';
+    try {
+      final response = await Supabase.instance.client.functions.invoke(
+        'ai-tutor-chat',
+        body: {
+          'message': text.trim(),
+          'class_name': profile?.className,
+          'history': _messages.take(_messages.length - 1).toList(),
+        },
+      );
 
-        if (text.toLowerCase().contains('discriminant') || text.toLowerCase().contains('delta')) {
-          response = r"Pour calculer le discriminant \Delta = b^2 - 4ac, commence par écrire ton équation sous la forme standard ax^2 + bx + c = 0. Quels sont tes coefficients a, b et c ?";
-        } else if (text.toLowerCase().contains('complexe') || text.toLowerCase().contains('module')) {
-          response = r"Rappelle-toi de la définition : pour z = a + ib, le module est |z| = \sqrt{a^2 + b^2}. Attention au piège classique : on ne met jamais i sous la racine carrée !";
-        } else if (text.toLowerCase().contains('valeurs intermédiaires') || text.toLowerCase().contains('tvi')) {
-          response = 'Le Théorème des Valeurs Intermédiaires exige deux conditions majeures : 1. La continuité de la fonction sur [a, b]. 2. La stricte monotonie si l\'on veut l\'unicité de la solution. As-tu vérifié si ta fonction est strictement croissante ou décroissante ?';
-        }
+      if (!mounted) return;
 
-        setState(() {
-          _isTyping = false;
-          _messages.add({'sender': 'ai', 'text': response});
+      final data = response.data;
+      final reply = data is Map ? data['reply'] as String? : null;
+      final error = data is Map ? data['error'] as String? : null;
+
+      setState(() {
+        _isTyping = false;
+        _messages.add({
+          'sender': 'ai',
+          // Jamais de fausse réponse en secours : une panne réelle du fournisseur reste visible.
+          'text': reply ?? error ?? 'Le Tuteur IA est momentanément indisponible, réessayez dans un instant.',
         });
-      }
-    });
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isTyping = false;
+        _messages.add({'sender': 'ai', 'text': 'Le Tuteur IA est momentanément indisponible, réessayez dans un instant.'});
+      });
+    }
   }
-
 }

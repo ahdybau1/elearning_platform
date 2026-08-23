@@ -9,6 +9,8 @@ class StudentAccount {
   final String firstName;
   final String lastName;
   final String? photoUrl;
+  final DateTime? birthDate;
+  final String? schoolName;
   final DateTime createdAt;
 
   StudentAccount({
@@ -19,8 +21,17 @@ class StudentAccount {
     required this.firstName,
     required this.lastName,
     this.photoUrl,
+    this.birthDate,
+    this.schoolName,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
+
+  /// Anniversaire aujourd'hui — jour et mois seuls comparés, l'année n'importe pas.
+  bool get isBirthdayToday {
+    if (birthDate == null) return false;
+    final now = DateTime.now();
+    return now.day == birthDate!.day && now.month == birthDate!.month;
+  }
 
   factory StudentAccount.fromJson(Map<String, dynamic> json) {
     return StudentAccount(
@@ -31,6 +42,8 @@ class StudentAccount {
       firstName: json['first_name'] as String? ?? '',
       lastName: json['last_name'] as String? ?? '',
       photoUrl: json['photo_url'] as String?,
+      birthDate: json['birth_date'] != null ? DateTime.tryParse(json['birth_date'] as String) : null,
+      schoolName: json['school_name'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),

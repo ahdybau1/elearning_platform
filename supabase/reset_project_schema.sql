@@ -80,6 +80,8 @@ CREATE TABLE accounts (
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
     photo_url TEXT,
+    birth_date DATE,
+    school_name TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -2354,6 +2356,28 @@ CREATE POLICY media_admin_update ON storage.objects
 DROP POLICY IF EXISTS media_admin_delete ON storage.objects;
 CREATE POLICY media_admin_delete ON storage.objects
     FOR DELETE USING (bucket_id = 'media' AND is_admin_user());
+
+-- Bucket séparé pour les photos de profil élève : contrairement à `media` (réservé à l'admin),
+-- chaque élève doit pouvoir gérer sa propre photo.
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('avatars', 'avatars', true)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS avatars_public_read ON storage.objects;
+CREATE POLICY avatars_public_read ON storage.objects
+    FOR SELECT USING (bucket_id = 'avatars');
+
+DROP POLICY IF EXISTS avatars_owner_insert ON storage.objects;
+CREATE POLICY avatars_owner_insert ON storage.objects
+    FOR INSERT WITH CHECK (bucket_id = 'avatars' AND owner = auth.uid());
+
+DROP POLICY IF EXISTS avatars_owner_update ON storage.objects;
+CREATE POLICY avatars_owner_update ON storage.objects
+    FOR UPDATE USING (bucket_id = 'avatars' AND owner = auth.uid());
+
+DROP POLICY IF EXISTS avatars_owner_delete ON storage.objects;
+CREATE POLICY avatars_owner_delete ON storage.objects
+    FOR DELETE USING (bucket_id = 'avatars' AND owner = auth.uid());
 
 -- ============================================================================
 -- ÉTAPE MANUELLE REQUISE UNE SEULE FOIS (PAS À CHAQUE EXÉCUTION)

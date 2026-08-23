@@ -35,6 +35,11 @@ class HomeDashboardScreen extends ConsumerWidget {
               subtitle: 'Bienvenue, ${profile?.name ?? 'Élève'} — ${profile?.className ?? ''}',
             ),
             const SizedBox(height: 24),
+                  // Anniversaire (fonctionnalité hors CDC, approuvée explicitement par l'utilisateur)
+                  if (authState.account?.isBirthdayToday == true) ...[
+                    _buildBirthdayBanner(authState.account!.firstName),
+                    const SizedBox(height: 24),
+                  ],
                   // Subscription Status / Upgrade Banner
                   if (profile?.hasActiveSubscription != true)
                     _buildSubscriptionBanner(context, ref)
@@ -188,6 +193,45 @@ class HomeDashboardScreen extends ConsumerWidget {
             child: Text(
               'Voir Offres',
               style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBirthdayBanner(String firstName) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Color(0xFFEC4899), Color(0xFFF59E0B)]),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: const Color(0xFFEC4899).withOpacity(0.35), blurRadius: 18, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+            child: const Text('🎂', style: TextStyle(fontSize: 26)),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Joyeux anniversaire, $firstName ! 🎉',
+                  style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Toute l\'équipe d\'E-Learning National vous souhaite une excellente journée.',
+                  style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withOpacity(0.9)),
+                ),
+              ],
             ),
           ),
         ],
