@@ -54,10 +54,16 @@ final studentForumPostsProvider =
   return service.fetchForumPosts(classNodeId);
 });
 
-final studentOfficialExamsProvider =
-    FutureProvider.family<List<OfficialExam>, String>((ref, classNodeId) async {
+final officialExamForClassProvider =
+    FutureProvider.family<OfficialExam?, String>((ref, classNodeId) async {
   final service = ref.watch(studentSupabaseServiceProvider);
-  return service.fetchOfficialExams(classNodeId);
+  return service.fetchOfficialExamForClass(classNodeId);
+});
+
+final examPapersProvider =
+    FutureProvider.family<List<ExamPaper>, String>((ref, examId) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchExamPapers(examId);
 });
 
 /// `null` = nœuds racine (pays). Utilisé par le sélecteur de classe à l'inscription — descend

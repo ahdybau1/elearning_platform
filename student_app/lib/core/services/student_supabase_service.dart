@@ -238,45 +238,32 @@ class StudentSupabaseService {
     });
   }
 
-  // ─── Examens Officiels & Épreuves d'Établissements ────────────
+  // ─── Examens Officiels Nationaux (§4 du CDC) ───────────────────
+  // `official_exams.class_node_id` porte le cloisonnement réel : une classe qui n'a pas de ligne
+  // ici (ex: 2nde, qui ne compose aucun examen national) n'a tout simplement rien à afficher — ni
+  // fausse donnée de secours, ni examen d'un autre niveau. `maybeSingle` reflète qu'une classe a au
+  // plus UN examen national (BEPC, Probatoire ou Bac, jamais plusieurs).
+  Future<OfficialExam?> fetchOfficialExamForClass(String classNodeId) async {
+    if (!_isValidUuid(classNodeId)) return null;
+    final row = await client
+        .from('official_exams')
+        .select()
+        .eq('class_node_id', classNodeId)
+        .maybeSingle();
+    return row == null ? null : OfficialExam.fromJson(Map<String, dynamic>.from(row));
+  }
 
-  Future<List<OfficialExam>> fetchOfficialExams(String classNodeId) async {
-    try {
-      if (_isValidUuid(classNodeId)) {
-        final rows = await client
-            .from('official_exams')
-            .select()
-            .eq('class_node_id', classNodeId)
-            .order('year', ascending: false)
-            .then((rows) => rows as List);
-        if (rows.isNotEmpty) {
-          return (rows)
-              .map((r) => OfficialExam.fromJson(Map<String, dynamic>.from(r)))
-              .toList();
-        }
-      }
-    } catch (_) {}
-
-    return [
-      OfficialExam(
-        id: '1',
-        title: 'Baccalauréat National C — Session 2025',
-        countryId: '00000000-0000-0000-0000-000000000001',
-        classNodeId: classNodeId,
-        year: 2025,
-        session: 'Normale',
-        examType: 'officiel',
-      ),
-      OfficialExam(
-        id: '2',
-        title: 'Épreuve d\'Excellence — Collège Libermann Douala',
-        countryId: '00000000-0000-0000-0000-000000000001',
-        classNodeId: classNodeId,
-        year: 2026,
-        schoolName: 'Collège Libermann',
-        examType: 'etablissement',
-      ),
-    ];
+  // RLS `exam_papers_select` gate déjà par palier d'abonnement (`current_user_has_feature_access`)
+  // — une liste vide reflète soit l'absence de sujet archivé, soit un palier insuffisant.
+  Future<List<ExamPaper>> fetchExamPapers(String examId) async {
+    if (!_isValidUuid(examId)) return [];
+    final rows = await client
+        .from('exam_papers')
+        .select('*, subjects(name)')
+        .eq('exam_id', examId)
+        .order('year', ascending: false)
+        .then((r) => r as List);
+    return rows.map((r) => ExamPaper.fromJson(Map<String, dynamic>.from(r))).toList();
   }
 
   // ─── Épreuves par Établissement (§5 du CDC) ───────────────────

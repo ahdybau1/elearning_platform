@@ -339,43 +339,67 @@ class ForumPost {
   }
 }
 
+// Reflète la vraie table `official_exams` (§4 du cahier des charges) : UN examen national est
+// rattaché à UNE classe précise (BEPC → 3e, Probatoire → 1ère, Baccalauréat → Terminale, au
+// Cameroun). C'est cette table, et non un champ texte inventé, qui détermine si un profil doit
+// même voir la fonctionnalité — un niveau sans ligne ici n'affiche simplement pas la page.
 class OfficialExam {
   final String id;
-  final String title;
-  final String countryId;
+  final String name;
   final String classNodeId;
-  final int year;
-  final String? session;
-  final String examType; // 'officiel', 'etablissement'
-  final String? schoolName;
-  final String? documentUrl;
-  final String? correctionUrl;
+  final DateTime? examDate;
 
   OfficialExam({
     required this.id,
-    required this.title,
-    required this.countryId,
+    required this.name,
     required this.classNodeId,
-    required this.year,
-    this.session,
-    this.examType = 'officiel',
-    this.schoolName,
-    this.documentUrl,
-    this.correctionUrl,
+    this.examDate,
   });
 
   factory OfficialExam.fromJson(Map<String, dynamic> json) {
     return OfficialExam(
       id: json['id'] as String,
-      title: json['title'] as String,
-      countryId: json['country_id'] as String,
+      name: json['name'] as String,
       classNodeId: json['class_node_id'] as String,
+      examDate: json['exam_date'] != null ? DateTime.tryParse(json['exam_date'] as String) : null,
+    );
+  }
+}
+
+// Reflète la vraie table `exam_papers` — un sujet d'annale précis, rattaché à UN examen (donc
+// transitivement à une seule classe) et une matière.
+class ExamPaper {
+  final String id;
+  final String examId;
+  final String subjectId;
+  final String? subjectName;
+  final int year;
+  final String documentUrl;
+  final String? correctionUrl;
+  final bool isCorrectionUnlocked;
+
+  ExamPaper({
+    required this.id,
+    required this.examId,
+    required this.subjectId,
+    this.subjectName,
+    required this.year,
+    required this.documentUrl,
+    this.correctionUrl,
+    this.isCorrectionUnlocked = false,
+  });
+
+  factory ExamPaper.fromJson(Map<String, dynamic> json) {
+    final subject = json['subjects'] as Map<String, dynamic>?;
+    return ExamPaper(
+      id: json['id'] as String,
+      examId: json['exam_id'] as String,
+      subjectId: json['subject_id'] as String,
+      subjectName: subject?['name'] as String?,
       year: (json['year'] as int?) ?? 2026,
-      session: json['session'] as String?,
-      examType: json['exam_type'] as String? ?? 'officiel',
-      schoolName: json['school_name'] as String?,
-      documentUrl: json['document_url'] as String?,
+      documentUrl: json['document_url'] as String? ?? '',
       correctionUrl: json['correction_url'] as String?,
+      isCorrectionUnlocked: json['is_correction_unlocked'] as bool? ?? false,
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
+import '../../../core/providers/student_providers.dart';
 import 'home_dashboard_screen.dart';
 import '../../profile/screens/student_profile_screen.dart';
 import '../../settings/screens/settings_screen.dart';
@@ -33,65 +34,89 @@ class _NavModule {
   const _NavModule({required this.title, required this.pages});
 }
 
+// Noms de groupe fixes (utilisés pour retenir l'état déplié/replié), indépendants des pages qui
+// peuvent apparaître ou disparaître selon le profil actif (ex : Examens Officiels, §4 du CDC).
+const List<String> _kModuleGroupTitles = [
+  'Mon espace', 'Apprentissage', 'Évaluation', 'Communauté', 'Services', 'Support',
+];
+
 // Application élève à part entière (projet Flutter distinct de admin_app, jamais compilée ni
 // déployée avec lui) — cette barre latérale reprend seulement le LANGAGE visuel de admin_app
 // (modules dépliables → pages), pour une cohérence de famille de produit, pas un partage de code.
 // Groupes et pages calqués exactement sur l'architecture de navigation du cahier des charges
 // (§20 — docs/cahier_des_charges.md) : Mon espace / Apprentissage / Évaluation / Communauté /
 // Services / Support.
-final List<_NavModule> _studentModules = [
-  _NavModule(title: 'Mon espace', pages: [
-    _NavPage(title: 'Tableau de Bord', icon: Icons.dashboard_rounded, screen: const HomeDashboardScreen()),
-    _NavPage(title: 'Mon Profil', icon: Icons.person_outline_rounded, screen: const StudentProfileScreen()),
-    _NavPage(title: 'Paramètres', icon: Icons.settings_outlined, screen: const SettingsScreen()),
-    _NavPage(
-      title: 'Espace Parent',
-      icon: Icons.family_restroom_rounded,
-      screen: const ParentDashboardScreen(),
-      requiresParentPin: true,
-    ),
-  ]),
-  _NavModule(title: 'Apprentissage', pages: [
-    _NavPage(title: 'Mes Matières & Cours', icon: Icons.menu_book_rounded, screen: const SubjectsListScreen()),
-    _NavPage(title: 'Exercices', icon: Icons.edit_note_rounded, screen: const ExercisesHubScreen()),
-    _NavPage(title: 'Tuteur IA', icon: Icons.auto_awesome_rounded, screen: const AiTutorChatScreen()),
-  ]),
-  _NavModule(title: 'Évaluation', pages: [
-    _NavPage(title: 'Examens Officiels', icon: Icons.workspace_premium_rounded, screen: const OfficialExamsScreen()),
-    _NavPage(title: 'Épreuves par Établissement', icon: Icons.apartment_rounded, screen: const EstablishmentPapersScreen()),
-    _NavPage(title: 'Examens Blancs & Olympiades', icon: Icons.emoji_events_rounded, screen: const MockExamArenaScreen()),
-  ]),
-  _NavModule(title: 'Communauté', pages: [
-    _NavPage(title: 'Forum de Classe', icon: Icons.forum_rounded, screen: const ClassForumScreen()),
-    _NavPage(title: 'Communautés d\'Étude', icon: Icons.groups_rounded, screen: const StudyCommunitiesScreen()),
-  ]),
-  _NavModule(title: 'Services', pages: [
-    _NavPage(title: 'Documents à la Carte', icon: Icons.storefront_rounded, screen: const BoutiqueShopScreen()),
-    _NavPage(title: 'Soutien / Dons', icon: Icons.favorite_outline_rounded, screen: const DonationsScreen()),
-  ]),
-  _NavModule(title: 'Support', pages: [
-    _NavPage(title: 'Messagerie & Tickets', icon: Icons.support_agent_rounded, screen: const SupportTicketsScreen()),
-  ]),
-];
-
-class MainNavigationScreen extends StatefulWidget {
+class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
 
   @override
-  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  ConsumerState<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen> {
+class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   int _selectedFlatIndex = 0;
-  final Set<String> _expandedModules = {
-    for (final m in _studentModules) m.title,
-  };
+  final Set<String> _expandedModules = {..._kModuleGroupTitles};
 
-  List<_NavPage> get _flatPages => _studentModules.expand((m) => m.pages).toList();
+  /// §4 du cahier des charges : « Un niveau sans examen officiel n'affiche simplement pas cette
+  /// fonctionnalité. » — un profil dont la classe n'a aucune ligne dans `official_exams` (ex : une
+  /// classe de 2nde, qui ne compose ni BEPC ni Probatoire ni Bac) ne voit tout simplement pas
+  /// l'entrée « Examens Officiels ». Quand l'examen existe, le libellé reprend son nom exact (ex :
+  /// « Anciens Sujets BEPC ») au lieu d'un intitulé générique qui laissait croire à un catalogue
+  /// commun à tous les niveaux.
+  List<_NavModule> _buildModules(String? classNodeId) {
+    final examAsync = classNodeId == null
+        ? null
+        : ref.watch(officialExamForClassProvider(classNodeId));
+    final exam = examAsync?.valueOrNull;
+
+    return [
+      _NavModule(title: 'Mon espace', pages: [
+        _NavPage(title: 'Tableau de Bord', icon: Icons.dashboard_rounded, screen: const HomeDashboardScreen()),
+        _NavPage(title: 'Mon Profil', icon: Icons.person_outline_rounded, screen: const StudentProfileScreen()),
+        _NavPage(title: 'Paramètres', icon: Icons.settings_outlined, screen: const SettingsScreen()),
+        _NavPage(
+          title: 'Espace Parent',
+          icon: Icons.family_restroom_rounded,
+          screen: const ParentDashboardScreen(),
+          requiresParentPin: true,
+        ),
+      ]),
+      _NavModule(title: 'Apprentissage', pages: [
+        _NavPage(title: 'Mes Matières & Cours', icon: Icons.menu_book_rounded, screen: const SubjectsListScreen()),
+        _NavPage(title: 'Exercices', icon: Icons.edit_note_rounded, screen: const ExercisesHubScreen()),
+        _NavPage(title: 'Tuteur IA', icon: Icons.auto_awesome_rounded, screen: const AiTutorChatScreen()),
+      ]),
+      _NavModule(title: 'Évaluation', pages: [
+        if (exam != null)
+          _NavPage(
+            title: 'Anciens Sujets ${exam.name}',
+            icon: Icons.workspace_premium_rounded,
+            screen: const OfficialExamsScreen(),
+          ),
+        _NavPage(title: 'Épreuves par Établissement', icon: Icons.apartment_rounded, screen: const EstablishmentPapersScreen()),
+        _NavPage(title: 'Examens Blancs & Olympiades', icon: Icons.emoji_events_rounded, screen: const MockExamArenaScreen()),
+      ]),
+      _NavModule(title: 'Communauté', pages: [
+        _NavPage(title: 'Forum de Classe', icon: Icons.forum_rounded, screen: const ClassForumScreen()),
+        _NavPage(title: 'Communautés d\'Étude', icon: Icons.groups_rounded, screen: const StudyCommunitiesScreen()),
+      ]),
+      _NavModule(title: 'Services', pages: [
+        _NavPage(title: 'Documents à la Carte', icon: Icons.storefront_rounded, screen: const BoutiqueShopScreen()),
+        _NavPage(title: 'Soutien / Dons', icon: Icons.favorite_outline_rounded, screen: const DonationsScreen()),
+      ]),
+      _NavModule(title: 'Support', pages: [
+        _NavPage(title: 'Messagerie & Tickets', icon: Icons.support_agent_rounded, screen: const SupportTicketsScreen()),
+      ]),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
-    final pages = _flatPages;
+    final classNodeId = ref.watch(studentAuthProvider).activeProfile?.classNodeId;
+    final studentModules = _buildModules(classNodeId);
+    final pages = studentModules.expand((m) => m.pages).toList();
+    if (_selectedFlatIndex >= pages.length) _selectedFlatIndex = 0;
+
     return Scaffold(
       backgroundColor: StudentTheme.backgroundDark,
       body: Row(
@@ -130,7 +155,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   Expanded(
                     child: ListView(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      children: _studentModules.map((module) {
+                      children: studentModules.map((module) {
                         final isExpanded = _expandedModules.contains(module.title);
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,12 +245,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Consumer(
-                          builder: (context, ref, _) => IconButton(
-                            tooltip: 'Se déconnecter',
-                            icon: const Icon(Icons.logout_rounded, color: StudentTheme.textSecondary, size: 20),
-                            onPressed: () => ref.read(studentAuthProvider.notifier).signOut(),
-                          ),
+                        IconButton(
+                          tooltip: 'Se déconnecter',
+                          icon: const Icon(Icons.logout_rounded, color: StudentTheme.textSecondary, size: 20),
+                          onPressed: () => ref.read(studentAuthProvider.notifier).signOut(),
                         ),
                       ],
                     ),

@@ -5,36 +5,99 @@ import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/widgets/student_page_content.dart';
-import '../../subscription/screens/paywall_modal.dart';
+import '../../../core/models/student_models.dart';
 
-class OfficialExamsScreen extends ConsumerStatefulWidget {
+/// §4 du cahier des charges. Cloisonnement réel : un examen national est rattaché à UNE SEULE
+/// classe (BEPC → 3e, Probatoire → 1ère, Baccalauréat → Terminale, au Cameroun) — un profil ne
+/// voit jamais un examen d'un autre niveau, et un niveau sans examen national (ex: 2nde) n'a
+/// simplement pas accès à cette page (voir main_navigation_screen.dart, qui la masque déjà de la
+/// barre latérale dans ce cas). Le titre reprend le nom exact de l'examen du profil actif.
+class OfficialExamsScreen extends ConsumerWidget {
   const OfficialExamsScreen({super.key});
 
   @override
-  ConsumerState<OfficialExamsScreen> createState() =>
-      _OfficialExamsScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(studentAuthProvider).activeProfile;
+
+    if (profile == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final examAsync = ref.watch(officialExamForClassProvider(profile.classNodeId));
+
+    return examAsync.when(
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (err, _) => Scaffold(body: Center(child: Text('Erreur : $err', style: const TextStyle(color: Colors.red)))),
+      data: (exam) {
+        if (exam == null) {
+          return _NoExamScaffold(className: profile.className);
+        }
+        return _ExamPapersView(exam: exam, className: profile.className);
+      },
+    );
+  }
 }
 
-class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
-  int _selectedFilterIndex = 0; // 0: Tous, 1: Examens Nationaux, 2: Collèges d'Excellence
+class _NoExamScaffold extends StatelessWidget {
+  final String className;
+  const _NoExamScaffold({required this.className});
 
   @override
   Widget build(BuildContext context) {
-    final profile = ref.watch(studentAuthProvider).activeProfile;
-    final examsAsync = ref.watch(studentOfficialExamsProvider(profile?.classNodeId ?? ''));
+    return Scaffold(
+      backgroundColor: StudentTheme.backgroundDark,
+      appBar: AppBar(
+        title: Text('Examens Officiels', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.workspace_premium_outlined, size: 46, color: StudentTheme.textMuted),
+              const SizedBox(height: 16),
+              Text('Aucun examen national pour $className',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+              const SizedBox(height: 6),
+              Text(
+                'Ce niveau ne compose aucun examen officiel du pays.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ExamPapersView extends ConsumerStatefulWidget {
+  final OfficialExam exam;
+  final String className;
+  const _ExamPapersView({required this.exam, required this.className});
+
+  @override
+  ConsumerState<_ExamPapersView> createState() => _ExamPapersViewState();
+}
+
+class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
+  bool _groupBySubject = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final papersAsync = ref.watch(examPapersProvider(widget.exam.id));
 
     return Scaffold(
       backgroundColor: StudentTheme.backgroundDark,
       appBar: AppBar(
-        title: Text(
-          'Annales & Épreuves (${profile?.className ?? ''})',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
-        ),
+        title: Text('Anciens Sujets — ${widget.exam.name}',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
         actions: [
           TextButton.icon(
-            style: TextButton.styleFrom(
-              foregroundColor: StudentTheme.accentAmber,
-            ),
+            style: TextButton.styleFrom(foregroundColor: StudentTheme.accentAmber),
             onPressed: () => Navigator.pushNamed(context, '/mock-arena'),
             icon: const Icon(Icons.emoji_events_rounded, size: 18),
             label: const Text('Examens Blancs', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -42,167 +105,150 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: StudentPageContent(child: Column(
-        children: [
-          // Filter Tabs
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            child: Row(
-              children: [
-                _buildFilterChip(0, 'Toutes les épreuves'),
-                const SizedBox(width: 8),
-                _buildFilterChip(1, 'Nationaux (BAC / BEPC)'),
-                const SizedBox(width: 8),
-                _buildFilterChip(2, 'Lycées d\'Excellence'),
-              ],
+      body: StudentPageContent(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+              child: Row(
+                children: [
+                  const Icon(Icons.workspace_premium_rounded, color: StudentTheme.accentIndigo, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text('${widget.exam.name} — ${widget.className}',
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+                  ),
+                  ToggleButtons(
+                    isSelected: [_groupBySubject, !_groupBySubject],
+                    onPressed: (i) => setState(() => _groupBySubject = i == 0),
+                    borderRadius: BorderRadius.circular(8),
+                    selectedColor: Colors.black,
+                    fillColor: StudentTheme.accentPrimary,
+                    color: StudentTheme.textSecondary,
+                    constraints: const BoxConstraints(minHeight: 32, minWidth: 90),
+                    children: const [
+                      Text('Par matière', style: TextStyle(fontSize: 11)),
+                      Text('Par année', style: TextStyle(fontSize: 11)),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-
-          // Exams List
-          Expanded(
-            child: examsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(child: Text('Erreur: $err', style: const TextStyle(color: Colors.red))),
-              data: (exams) {
-                final filtered = exams.where((e) {
-                  if (_selectedFilterIndex == 1) return e.examType == 'officiel';
-                  if (_selectedFilterIndex == 2) return e.examType == 'etablissement';
-                  return true;
-                }).toList();
-
-                return ListView.separated(
-                  padding: const EdgeInsets.all(20),
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
-                  itemBuilder: (context, index) {
-                    final exam = filtered[index];
-                    final isOfficial = exam.examType == 'officiel';
-
-                    return Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: StudentTheme.cardDark,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: StudentTheme.borderDark),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: isOfficial
-                                      ? StudentTheme.accentIndigo.withOpacity(0.15)
-                                      : StudentTheme.accentAmber.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  isOfficial ? 'EXAMEN NATIONAL' : 'ÉPREUVE ÉTABLISSEMENT',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: isOfficial ? StudentTheme.accentIndigo : StudentTheme.accentAmber,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                'Session ${exam.year}',
-                                style: GoogleFonts.firaCode(fontSize: 12, color: Colors.white70),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            exam.title,
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          if (exam.schoolName != null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              exam.schoolName!,
-                              style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary),
-                            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: papersAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, _) => Center(child: Text('Erreur : $err', style: const TextStyle(color: Colors.red))),
+                data: (papers) {
+                  if (papers.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.folder_off_outlined, size: 46, color: StudentTheme.textMuted),
+                            const SizedBox(height: 16),
+                            Text('Aucun sujet archivé pour le moment',
+                                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                            const SizedBox(height: 6),
+                            Text('Les annales de ${widget.exam.name} seront ajoutées progressivement par l\'administration.',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary)),
                           ],
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.white,
-                                    side: const BorderSide(color: StudentTheme.borderDark),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  ),
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Ouverture du sujet avec filigrane de sécurité...')),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.description_outlined, size: 16),
-                                  label: const Text('Consulter Sujet', style: TextStyle(fontSize: 12)),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: StudentTheme.accentEmerald,
-                                    foregroundColor: Colors.black,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  ),
-                                  onPressed: () {
-                                    if (profile?.hasActiveSubscription != true) {
-                                      PaywallModal.show(context);
-                                    } else {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Affichage du corrigé détaillé pas-à-pas.')),
-                                      );
-                                    }
-                                  },
-                                  icon: const Icon(Icons.check_circle_rounded, size: 16),
-                                  label: const Text('Corrigé Détaillé', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                        ),
                       ),
                     );
-                  },
-                );
-              },
+                  }
+
+                  final groups = <String, List<ExamPaper>>{};
+                  for (final p in papers) {
+                    final key = _groupBySubject ? (p.subjectName ?? 'Matière') : p.year.toString();
+                    groups.putIfAbsent(key, () => []).add(p);
+                  }
+
+                  return ListView(
+                    padding: const EdgeInsets.all(20),
+                    children: groups.entries.map((entry) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 22),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(entry.key, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                            const SizedBox(height: 10),
+                            ...entry.value.map((paper) => _buildPaperTile(paper)),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
             ),
-          ),
-        ],
-      )),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildFilterChip(int index, String label) {
-    final isSel = _selectedFilterIndex == index;
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSel,
-      onSelected: (_) => setState(() => _selectedFilterIndex = index),
-      selectedColor: StudentTheme.accentPrimary.withOpacity(0.2),
-      backgroundColor: StudentTheme.cardDark,
-      labelStyle: GoogleFonts.inter(
-        fontSize: 12,
-        color: isSel ? StudentTheme.accentPrimary : StudentTheme.textSecondary,
-        fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+  Widget _buildPaperTile(ExamPaper paper) {
+    final bool correctionUnlocked = paper.isCorrectionUnlocked;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: StudentTheme.cardDark,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: StudentTheme.borderDark),
       ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(color: isSel ? StudentTheme.accentPrimary : StudentTheme.borderDark),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              _groupBySubject ? 'Session ${paper.year}' : (paper.subjectName ?? 'Matière'),
+              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+          ),
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: const BorderSide(color: StudentTheme.borderDark),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () {},
+            icon: const Icon(Icons.description_outlined, size: 15),
+            label: const Text('Sujet', style: TextStyle(fontSize: 12)),
+          ),
+          const SizedBox(width: 8),
+          if (correctionUnlocked)
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: StudentTheme.accentEmerald,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () {},
+              icon: const Icon(Icons.check_circle_rounded, size: 15),
+              label: const Text('Corrigé', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            )
+          else
+            Tooltip(
+              message: 'Le corrigé se débloque après une première tentative',
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: StudentTheme.textMuted,
+                  side: const BorderSide(color: StudentTheme.borderDark),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                onPressed: null,
+                icon: const Icon(Icons.lock_outline_rounded, size: 14),
+                label: const Text('Corrigé', style: TextStyle(fontSize: 12)),
+              ),
+            ),
+        ],
       ),
     );
   }
