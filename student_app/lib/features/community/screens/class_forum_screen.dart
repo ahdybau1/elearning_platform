@@ -5,6 +5,7 @@ import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/widgets/student_page_content.dart';
+import '../../../core/widgets/student_screen_header.dart';
 import '../../subscription/screens/boutique_shop_screen.dart';
 
 class ClassForumScreen extends ConsumerStatefulWidget {
@@ -22,29 +23,28 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
     final profile = ref.watch(studentAuthProvider).activeProfile;
     final postsAsync = ref.watch(studentForumPostsProvider(profile?.classNodeId ?? ''));
 
-    return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
-      appBar: AppBar(
-        title: Text(
-          'Forum de Classe (${profile?.className ?? ''})',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 17),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.shopping_bag_outlined, color: StudentTheme.accentPrimary),
-            tooltip: 'Boutique de documents à la carte',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const BoutiqueShopScreen()),
-              );
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: StudentPageContent(child: Column(
+    return StudentPageContent(child: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+            child: StudentScreenHeader(
+              title: 'Forum de Classe (${profile?.className ?? ''})',
+              trailing: IconButton(
+                icon: const Icon(Icons.shopping_bag_outlined, color: StudentTheme.accentPrimary),
+                tooltip: 'Boutique de documents à la carte',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => Scaffold(
+                      backgroundColor: StudentTheme.backgroundDark,
+                      appBar: AppBar(automaticallyImplyLeading: true),
+                      body: const BoutiqueShopScreen(),
+                    )),
+                  );
+                },
+              ),
+            ),
+          ),
           // Class Isolation Notice
           Container(
             width: double.infinity,
@@ -228,7 +228,7 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
             ),
           ),
         ],
-      )),
+      ),
     );
   }
 }

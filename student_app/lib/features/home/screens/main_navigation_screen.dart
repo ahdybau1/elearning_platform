@@ -40,12 +40,14 @@ const List<String> _kModuleGroupTitles = [
   'Mon espace', 'Apprentissage', 'Évaluation', 'Communauté', 'Services', 'Support',
 ];
 
-// Application élève à part entière (projet Flutter distinct de admin_app, jamais compilée ni
-// déployée avec lui) — cette barre latérale reprend seulement le LANGAGE visuel de admin_app
-// (modules dépliables → pages), pour une cohérence de famille de produit, pas un partage de code.
-// Groupes et pages calqués exactement sur l'architecture de navigation du cahier des charges
-// (§20 — docs/cahier_des_charges.md) : Mon espace / Apprentissage / Évaluation / Communauté /
-// Services / Support.
+/// Application élève à part entière (projet Flutter distinct de admin_app, jamais compilée ni
+/// déployée avec lui) — construction VOLONTAIREMENT calquée sur `main_admin_layout.dart` (même
+/// structure : coquille avec barre latérale + une seule barre du haut partagée, réduction de la
+/// barre, surbrillance du groupe actif, survol des items) pour que les deux applications
+/// « soient faites de la même façon », comme demandé — pas un partage de code, juste la même
+/// discipline de construction. Groupes et pages calqués sur l'architecture de navigation du
+/// cahier des charges (§20) : Mon espace / Apprentissage / Évaluation / Communauté / Services /
+/// Support.
 class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
 
@@ -55,6 +57,7 @@ class MainNavigationScreen extends ConsumerStatefulWidget {
 
 class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   int _selectedFlatIndex = 0;
+  bool _isSidebarCollapsed = false;
   final Set<String> _expandedModules = {..._kModuleGroupTitles};
 
   /// §4 du cahier des charges : « Un niveau sans examen officiel n'affiche simplement pas cette
@@ -110,10 +113,45 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     ];
   }
 
+  // Même logique que `_buildNavTile` de admin_app : fond de sélection porté par un Container
+  // (pas ListTile.selectedTileColor, invisible sous le DecoratedBox de la barre latérale), survol
+  // discret, icône/texte mis en avant quand sélectionné.
+  Widget _buildNavTile({required _NavPage page, required bool isSelected, required VoidCallback onTap}) {
+    return Container(
+      margin: const EdgeInsets.only(left: 20, right: 12, top: 2, bottom: 2),
+      decoration: BoxDecoration(
+        color: isSelected ? StudentTheme.accentPrimary.withValues(alpha: 0.15) : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          dense: true,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          hoverColor: Colors.white.withValues(alpha: 0.05),
+          leading: Icon(page.icon, size: 20,
+              color: isSelected ? StudentTheme.accentPrimary : StudentTheme.textSecondary),
+          title: Text(
+            page.title,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              color: isSelected ? Colors.white : StudentTheme.textSecondary,
+            ),
+          ),
+          onTap: onTap,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final classNodeId = ref.watch(studentAuthProvider).activeProfile?.classNodeId;
-    final studentModules = _buildModules(classNodeId);
+    final authState = ref.watch(studentAuthProvider);
+    final profile = authState.activeProfile;
+    final studentModules = _buildModules(profile?.classNodeId);
     final pages = studentModules.expand((m) => m.pages).toList();
     if (_selectedFlatIndex >= pages.length) _selectedFlatIndex = 0;
 
@@ -121,8 +159,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
       backgroundColor: StudentTheme.backgroundDark,
       body: Row(
           children: [
-            Container(
-              width: 260,
+            // Sidebar Left Navigation — mêmes dimensions/transition que main_admin_layout.dart
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: _isSidebarCollapsed ? 80 : 260,
               decoration: BoxDecoration(
                 color: StudentTheme.surfaceDark,
                 border: const Border(right: BorderSide(color: StudentTheme.borderDark)),
@@ -145,9 +185,14 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                           ),
                           child: const Icon(Icons.school_rounded, color: Colors.white, size: 20),
                         ),
-                        const SizedBox(width: 12),
-                        Text('E-Learning National',
-                            style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                        if (!_isSidebarCollapsed) ...[
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text('E-Learning National',
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -157,6 +202,27 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       children: studentModules.map((module) {
                         final isExpanded = _expandedModules.contains(module.title);
+                        final isModuleActive = module.pages.contains(pages.isEmpty ? null : pages[_selectedFlatIndex]);
+
+                        if (_isSidebarCollapsed) {
+                          // Barre réduite en rail d'icônes : accès direct, pas de groupes (le nom
+                          // du groupe est de toute façon invisible ici) — même comportement que
+                          // main_admin_layout.dart.
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: module.pages.map((page) {
+                              final flatIndex = pages.indexOf(page);
+                              return _buildNavTile(
+                                page: page,
+                                isSelected: flatIndex == _selectedFlatIndex,
+                                onTap: () => page.requiresParentPin
+                                    ? _showParentPinDialog(flatIndex)
+                                    : setState(() => _selectedFlatIndex = flatIndex),
+                              );
+                            }).toList(),
+                          );
+                        }
+
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -169,7 +235,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                                 }
                               }),
                               child: Padding(
-                                padding: const EdgeInsets.fromLTRB(20, 10, 16, 10),
+                                padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
                                 child: Row(
                                   children: [
                                     Expanded(
@@ -178,7 +244,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                                         style: GoogleFonts.inter(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
-                                          color: StudentTheme.textMuted,
+                                          color: isModuleActive ? StudentTheme.accentPrimary : StudentTheme.textMuted,
                                           letterSpacing: 1.0,
                                         ),
                                       ),
@@ -186,7 +252,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                                     Icon(
                                       isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_right_rounded,
                                       size: 18,
-                                      color: StudentTheme.textMuted,
+                                      color: isModuleActive ? StudentTheme.accentPrimary : StudentTheme.textMuted,
                                     ),
                                   ],
                                 ),
@@ -195,35 +261,12 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                             if (isExpanded)
                               ...module.pages.map((page) {
                                 final flatIndex = pages.indexOf(page);
-                                final isSelected = flatIndex == _selectedFlatIndex;
-                                return Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: isSelected ? StudentTheme.accentPrimary.withValues(alpha: 0.15) : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    borderRadius: BorderRadius.circular(10),
-                                    clipBehavior: Clip.antiAlias,
-                                    child: ListTile(
-                                      dense: true,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                      leading: Icon(page.icon, size: 20,
-                                          color: isSelected ? StudentTheme.accentPrimary : StudentTheme.textSecondary),
-                                      title: Text(
-                                        page.title,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 13,
-                                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                          color: isSelected ? Colors.white : StudentTheme.textSecondary,
-                                        ),
-                                      ),
-                                      onTap: () => page.requiresParentPin
-                                          ? _showParentPinDialog(flatIndex)
-                                          : setState(() => _selectedFlatIndex = flatIndex),
-                                    ),
-                                  ),
+                                return _buildNavTile(
+                                  page: page,
+                                  isSelected: flatIndex == _selectedFlatIndex,
+                                  onTap: () => page.requiresParentPin
+                                      ? _showParentPinDialog(flatIndex)
+                                      : setState(() => _selectedFlatIndex = flatIndex),
                                 );
                               }),
                             const SizedBox(height: 4),
@@ -232,34 +275,106 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                       }).toList(),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () => Navigator.pushReplacementNamed(context, '/profiles'),
-                            icon: const Icon(Icons.swap_horiz_rounded, size: 16),
-                            label: const Text('Changer de Profil'),
-                            style: OutlinedButton.styleFrom(foregroundColor: StudentTheme.textSecondary),
+                  // Réduire la barre — même emplacement/style que main_admin_layout.dart.
+                  InkWell(
+                    onTap: () => setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: const BoxDecoration(border: Border(top: BorderSide(color: StudentTheme.borderDark))),
+                      child: Row(
+                        mainAxisAlignment: _isSidebarCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
+                        children: [
+                          Icon(
+                            _isSidebarCollapsed ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
+                            color: StudentTheme.textMuted,
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          tooltip: 'Se déconnecter',
-                          icon: const Icon(Icons.logout_rounded, color: StudentTheme.textSecondary, size: 20),
-                          onPressed: () => ref.read(studentAuthProvider.notifier).signOut(),
-                        ),
-                      ],
+                          if (!_isSidebarCollapsed) ...[
+                            const SizedBox(width: 12),
+                            Text('Réduire la barre', style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textMuted)),
+                          ],
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
+
+            // Espace de travail principal : une seule barre du haut partagée (contexte + profil),
+            // puis le contenu de la page sans AppBar individuelle — même structure que
+            // main_admin_layout.dart.
             Expanded(
-              child: IndexedStack(
-                index: _selectedFlatIndex,
-                children: pages.map((p) => p.screen).toList(),
+              child: Column(
+                children: [
+                  Container(
+                    height: 70,
+                    padding: const EdgeInsets.symmetric(horizontal: 28),
+                    decoration: const BoxDecoration(
+                      color: StudentTheme.surfaceDark,
+                      border: Border(bottom: BorderSide(color: StudentTheme.borderDark, width: 1)),
+                    ),
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'Espace Élève (${profile?.className ?? '...'})',
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white70),
+                          ),
+                        ),
+                        const Spacer(),
+                        OutlinedButton.icon(
+                          onPressed: () => Navigator.pushReplacementNamed(context, '/profiles'),
+                          icon: const Icon(Icons.swap_horiz_rounded, size: 16),
+                          label: const Text('Changer de Profil'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: StudentTheme.textSecondary,
+                            side: const BorderSide(color: StudentTheme.borderDark),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        IconButton(
+                          tooltip: 'Se déconnecter',
+                          icon: const Icon(Icons.logout_rounded, color: StudentTheme.textSecondary, size: 20),
+                          onPressed: () => ref.read(studentAuthProvider.notifier).signOut(),
+                        ),
+                        const SizedBox(width: 12),
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: StudentTheme.accentPrimary,
+                          child: Text(
+                            (authState.account?.firstName.isNotEmpty == true)
+                                ? authState.account!.firstName[0].toUpperCase()
+                                : 'É',
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.black),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${authState.account?.firstName ?? ''} ${authState.account?.lastName ?? ''}'.trim(),
+                              style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                            Text('Élève', style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textMuted)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Container(
+                      color: StudentTheme.backgroundDark,
+                      child: IndexedStack(
+                        index: _selectedFlatIndex,
+                        children: pages.map((p) => p.screen).toList(),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
         ],

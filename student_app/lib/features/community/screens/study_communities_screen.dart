@@ -5,6 +5,7 @@ import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/widgets/student_page_content.dart';
+import '../../../core/widgets/student_screen_header.dart';
 
 /// §16 du cahier des charges. Données réelles (whatsapp_communities), gate déjà appliqué côté RLS
 /// par classe ET palier d'abonnement. Une communauté n'existe qu'à l'initiative de l'admin pays —
@@ -16,32 +17,33 @@ class StudyCommunitiesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(studentAuthProvider).activeProfile;
 
-    return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
-      appBar: AppBar(
-        title: Text('Communautés d\'Étude', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 17)),
-      ),
-      body: profile == null
-          ? const Center(child: CircularProgressIndicator())
-          : StudentPageContent(child: Padding(
+    return profile == null
+        ? const Center(child: CircularProgressIndicator())
+        : StudentPageContent(child: Padding(
               padding: const EdgeInsets.all(20),
-              child: Consumer(
-                builder: (context, ref, _) {
-                  final communityAsync = ref.watch(whatsappCommunityProvider(profile.classNodeId));
-                  return communityAsync.when(
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (err, _) => Text('Erreur : $err', style: const TextStyle(color: Colors.red)),
-                    data: (community) {
-                      if (community == null) {
-                        return _emptyState(profile.className);
-                      }
-                      return _buildCommunityCard(context, community.inviteLink, community.memberCountEstimate, profile.className);
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const StudentScreenHeader(title: 'Communautés d\'Étude'),
+                  const SizedBox(height: 20),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final communityAsync = ref.watch(whatsappCommunityProvider(profile.classNodeId));
+                      return communityAsync.when(
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (err, _) => Text('Erreur : $err', style: const TextStyle(color: Colors.red)),
+                        data: (community) {
+                          if (community == null) {
+                            return _emptyState(profile.className);
+                          }
+                          return _buildCommunityCard(context, community.inviteLink, community.memberCountEstimate, profile.className);
+                        },
+                      );
                     },
-                  );
-                },
+                  ),
+                ],
               ),
-            )),
-    );
+            ));
   }
 
   Widget _emptyState(String className) {

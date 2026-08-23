@@ -5,6 +5,7 @@ import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/widgets/student_page_content.dart';
+import '../../../core/widgets/student_screen_header.dart';
 
 class ParentDashboardScreen extends ConsumerWidget {
   const ParentDashboardScreen({super.key});
@@ -14,22 +15,16 @@ class ParentDashboardScreen extends ConsumerWidget {
     final authState = ref.watch(studentAuthProvider);
     final profiles = authState.profiles;
 
-    return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
-      appBar: AppBar(
-        title: Row(
-          children: const [
-            Icon(Icons.family_restroom_rounded, color: StudentTheme.accentAmber),
-            SizedBox(width: 10),
-            Text('Espace Parent & Suivi Scolaire', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-          ],
-        ),
-      ),
-      body: StudentPageContent(child: SingleChildScrollView(
+    return StudentPageContent(child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const StudentScreenHeader(
+              title: 'Espace Parent & Suivi Scolaire',
+              subtitle: 'Suivi individuel, abonnement et communication avec l\'administration.',
+            ),
+            const SizedBox(height: 20),
             // Parent Account Info Banner
             Container(
               padding: const EdgeInsets.all(18),
@@ -181,7 +176,7 @@ class ParentDashboardScreen extends ConsumerWidget {
             ),
           ],
         ),
-      )),
+      ),
     );
   }
 

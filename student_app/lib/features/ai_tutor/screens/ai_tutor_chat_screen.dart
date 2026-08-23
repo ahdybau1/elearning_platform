@@ -34,38 +34,37 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
   Widget build(BuildContext context) {
     final profile = ref.watch(studentAuthProvider).activeProfile;
 
-    return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: StudentTheme.accentCyan.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.auto_awesome_rounded, color: StudentTheme.accentCyan, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return StudentPageContent(child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+            child: Row(
               children: [
-                Text(
-                  'Tuteur IA Contextualisé',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: StudentTheme.accentCyan.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.auto_awesome_rounded, color: StudentTheme.accentCyan, size: 20),
                 ),
-                Text(
-                  'Programme ${profile?.className ?? ''} • Maïeutique Pédagogique',
-                  style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.accentCyan),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tuteur IA Contextualisé',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
+                    ),
+                    Text(
+                      'Programme ${profile?.className ?? ''} • Maïeutique Pédagogique',
+                      style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.accentCyan),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-      ),
-      body: StudentPageContent(child: Column(
-        children: [
+          ),
           // Quick Prompts Horizontal Bar
           Container(
             height: 48,
@@ -198,7 +197,7 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
             ),
           ),
         ],
-      )),
+      ),
     );
   }
 

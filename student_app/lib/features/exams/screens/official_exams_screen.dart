@@ -5,6 +5,7 @@ import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/widgets/student_page_content.dart';
+import '../../../core/widgets/student_screen_header.dart';
 import '../../../core/models/student_models.dart';
 
 /// §4 du cahier des charges. Cloisonnement réel : un examen national est rattaché à UNE SEULE
@@ -20,14 +21,14 @@ class OfficialExamsScreen extends ConsumerWidget {
     final profile = ref.watch(studentAuthProvider).activeProfile;
 
     if (profile == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Center(child: CircularProgressIndicator());
     }
 
     final examAsync = ref.watch(officialExamForClassProvider(profile.classNodeId));
 
     return examAsync.when(
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (err, _) => Scaffold(body: Center(child: Text('Erreur : $err', style: const TextStyle(color: Colors.red)))),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => Center(child: Text('Erreur : $err', style: const TextStyle(color: Colors.red))),
       data: (exam) {
         if (exam == null) {
           return _NoExamScaffold(className: profile.className);
@@ -44,31 +45,37 @@ class _NoExamScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
-      appBar: AppBar(
-        title: Text('Examens Officiels', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.workspace_premium_outlined, size: 46, color: StudentTheme.textMuted),
-              const SizedBox(height: 16),
-              Text('Aucun examen national pour $className',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
-              const SizedBox(height: 6),
-              Text(
-                'Ce niveau ne compose aucun examen officiel du pays.',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary),
-              ),
-            ],
+    return StudentPageContent(
+      child: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 20, 20, 4),
+            child: StudentScreenHeader(title: 'Examens Officiels'),
           ),
-        ),
+          Expanded(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.workspace_premium_outlined, size: 46, color: StudentTheme.textMuted),
+                    const SizedBox(height: 16),
+                    Text('Aucun examen national pour $className',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Ce niveau ne compose aucun examen officiel du pays.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -90,26 +97,23 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
   Widget build(BuildContext context) {
     final papersAsync = ref.watch(examPapersProvider(widget.exam.id));
 
-    return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
-      appBar: AppBar(
-        title: Text('Anciens Sujets — ${widget.exam.name}',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
-        actions: [
-          TextButton.icon(
-            style: TextButton.styleFrom(foregroundColor: StudentTheme.accentAmber),
-            onPressed: () => Navigator.pushNamed(context, '/mock-arena'),
-            icon: const Icon(Icons.emoji_events_rounded, size: 18),
-            label: const Text('Examens Blancs', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: StudentPageContent(
+    return StudentPageContent(
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+              child: StudentScreenHeader(
+                title: 'Anciens Sujets — ${widget.exam.name}',
+                trailing: TextButton.icon(
+                  style: TextButton.styleFrom(foregroundColor: StudentTheme.accentAmber),
+                  onPressed: () => Navigator.pushNamed(context, '/mock-arena'),
+                  icon: const Icon(Icons.emoji_events_rounded, size: 18),
+                  label: const Text('Examens Blancs', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
               child: Row(
                 children: [
                   const Icon(Icons.workspace_premium_rounded, color: StudentTheme.accentIndigo, size: 18),
@@ -188,7 +192,6 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
             ),
           ],
         ),
-      ),
     );
   }
 

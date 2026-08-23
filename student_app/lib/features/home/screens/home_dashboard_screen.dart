@@ -6,6 +6,8 @@ import '../../../core/theme/subject_visuals.dart';
 import '../../../core/models/student_models.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
+import '../../../core/widgets/student_page_content.dart';
+import '../../../core/widgets/student_screen_header.dart';
 import '../../subscription/screens/paywall_modal.dart';
 
 class HomeDashboardScreen extends ConsumerWidget {
@@ -22,91 +24,17 @@ class HomeDashboardScreen extends ConsumerWidget {
     // sans erreur.
     final subjectsAsync = ref.watch(studentSubjectsProvider(profile?.classNodeId ?? ''));
 
-    return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
-      body: CustomScrollView(
-        slivers: [
-          // Header App Bar with Profile Switcher
-          SliverAppBar(
-            floating: true,
-            pinned: true,
-            expandedHeight: 80,
-            backgroundColor: StudentTheme.surfaceDark.withOpacity(0.9),
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              title: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: StudentTheme.primaryGradient,
-                        ),
-                        child: Center(
-                          child: Text(
-                            profile?.name.isNotEmpty == true ? profile!.name[0].toUpperCase() : 'E',
-                            style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            profile?.name ?? 'Élève',
-                            style: GoogleFonts.outfit(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Text(
-                            profile?.className ?? 'Classe',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              color: StudentTheme.accentPrimary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      // Switch Profile Button
-                      IconButton(
-                        icon: const Icon(Icons.swap_horiz_rounded, color: Colors.white, size: 20),
-                        tooltip: 'Changer de profil',
-                        onPressed: () => Navigator.pushReplacementNamed(context, '/profiles'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+    return StudentPageContent(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            StudentScreenHeader(
+              title: 'Tableau de Bord',
+              subtitle: 'Bienvenue, ${profile?.name ?? 'Élève'} — ${profile?.className ?? ''}',
             ),
-          ),
-
-          // Main Dashboard Body
-          SliverToBoxAdapter(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 860),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+            const SizedBox(height: 24),
                   // Subscription Status / Upgrade Banner
                   if (profile?.hasActiveSubscription != true)
                     _buildSubscriptionBanner(context, ref)
@@ -198,13 +126,8 @@ class HomeDashboardScreen extends ConsumerWidget {
 
                   // AI Tutor Spotlight Card (Section 8 du CDC)
                   _buildAiTutorSpotlight(context),
-                ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

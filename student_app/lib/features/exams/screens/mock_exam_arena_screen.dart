@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/widgets/student_page_content.dart';
+import '../../../core/widgets/student_screen_header.dart';
 
 class MockExamArenaScreen extends StatefulWidget {
   const MockExamArenaScreen({super.key});
@@ -20,19 +21,13 @@ class _MockExamArenaScreenState extends State<MockExamArenaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
-      appBar: AppBar(
-        title: Text(
-          'Arène des Examens Blancs & Olympiades',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 17),
-        ),
-      ),
-      body: StudentPageContent(child: SingleChildScrollView(
+    return StudentPageContent(child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const StudentScreenHeader(title: 'Examens Blancs & Olympiades'),
+            const SizedBox(height: 24),
             // Active Olympiade Banner
             Container(
               padding: const EdgeInsets.all(20),
@@ -245,7 +240,7 @@ class _MockExamArenaScreenState extends State<MockExamArenaScreen> {
             ),
           ],
         ),
-      )),
+      ),
     );
   }
 

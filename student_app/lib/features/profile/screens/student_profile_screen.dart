@@ -5,6 +5,7 @@ import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/models/student_models.dart';
 import '../../../core/widgets/student_page_content.dart';
+import '../../../core/widgets/student_screen_header.dart';
 
 /// Données réelles (compte + profils déjà chargés par studentAuthProvider) — rien à simuler ici,
 /// contrairement aux autres pages ajoutées dans cette même passe qui restent volontairement
@@ -18,16 +19,13 @@ class StudentProfileScreen extends ConsumerWidget {
     final account = authState.account;
     final activeProfile = authState.activeProfile;
 
-    return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
-      appBar: AppBar(
-        title: Text('Mon Profil', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
-      ),
-      body: StudentPageContent(child: SingleChildScrollView(
+    return StudentPageContent(child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const StudentScreenHeader(title: 'Mon Profil'),
+            const SizedBox(height: 20),
             // Identity card
             Container(
               padding: const EdgeInsets.all(22),
@@ -130,7 +128,7 @@ class StudentProfileScreen extends ConsumerWidget {
             ),
           ],
         ),
-      )),
+      ),
     );
   }
 

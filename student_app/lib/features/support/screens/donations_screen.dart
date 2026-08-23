@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/widgets/student_page_content.dart';
+import '../../../core/widgets/student_screen_header.dart';
 
 /// §12 du cahier des charges. Le catalogue des causes est réel (charity_campaigns, lecture
 /// publique). Les dons eux-mêmes restent bloqués : la table `donations` n'a aucune policy
@@ -26,14 +27,11 @@ class DonationsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final campaignsAsync = ref.watch(charityCampaignsProvider);
 
-    return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
-      appBar: AppBar(
-        title: Text('Soutien & Dons', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
-      ),
-      body: StudentPageContent(child: ListView(
+    return StudentPageContent(child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          const StudentScreenHeader(title: 'Soutien & Dons'),
+          const SizedBox(height: 24),
           // Support the app directly
           Container(
             padding: const EdgeInsets.all(20),
@@ -122,7 +120,7 @@ class DonationsScreen extends ConsumerWidget {
             },
           ),
         ],
-      )),
+      ),
     );
   }
 }

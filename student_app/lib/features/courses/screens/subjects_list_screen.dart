@@ -5,6 +5,7 @@ import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/widgets/student_page_content.dart';
+import '../../../core/widgets/student_screen_header.dart';
 import '../../../core/theme/subject_visuals.dart';
 
 class SubjectsListScreen extends ConsumerWidget {
@@ -14,17 +15,15 @@ class SubjectsListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(studentAuthProvider).activeProfile;
 
-    return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
-      appBar: AppBar(
-        title: Text(
-          'Cours & Matières (${profile?.className ?? ''})',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
-        ),
-      ),
-      body: profile == null
-          ? const Center(child: CircularProgressIndicator())
-          : StudentPageContent(child: Consumer(builder: (context, ref, _) {
+    return profile == null
+        ? const Center(child: CircularProgressIndicator())
+        : StudentPageContent(child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+                child: StudentScreenHeader(title: 'Cours & Matières (${profile.className})'),
+              ),
+              Expanded(child: Consumer(builder: (context, ref, _) {
               final subjectsAsync = ref.watch(studentSubjectsProvider(profile.classNodeId));
               return subjectsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -143,7 +142,8 @@ class SubjectsListScreen extends ConsumerWidget {
                   );
                 },
               );
-            })),
-    );
+              })),
+            ],
+          ));
   }
 }

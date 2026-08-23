@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/widgets/student_page_content.dart';
+import '../../../core/widgets/student_screen_header.dart';
 
 /// §11 du cahier des charges (Paramètres + Accessibilité). Compte (email/téléphone, changement de
 /// mot de passe, déconnexion) est réel — les autres réglages (notifications, langue, apparence,
@@ -32,14 +33,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final authState = ref.watch(studentAuthProvider);
     final account = authState.account;
 
-    return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
-      appBar: AppBar(
-        title: Text('Paramètres', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
-      ),
-      body: StudentPageContent(child: ListView(
+    return StudentPageContent(child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          const StudentScreenHeader(title: 'Paramètres'),
+          const SizedBox(height: 20),
           _sectionTitle('Compte'),
           _buildCard([
             _infoRow('Email', account?.email ?? '—'),
@@ -142,7 +140,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ]),
           const SizedBox(height: 24),
         ],
-      )),
+      ),
     );
   }
 

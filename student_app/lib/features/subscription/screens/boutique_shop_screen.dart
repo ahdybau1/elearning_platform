@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/widgets/student_page_content.dart';
+import '../../../core/widgets/student_screen_header.dart';
 
 class BoutiqueShopScreen extends ConsumerWidget {
   const BoutiqueShopScreen({super.key});
@@ -39,21 +40,21 @@ class BoutiqueShopScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(studentAuthProvider).activeProfile;
 
-    return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
-      appBar: AppBar(
-        title: Text(
-          'Boutique de Fiches & Livrets (${profile?.className ?? ''})',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 17),
-        ),
-      ),
-      body: StudentPageContent(child: ListView.separated(
+    return StudentPageContent(child: ListView.separated(
         padding: const EdgeInsets.all(20),
-        itemCount: _documents.length,
+        itemCount: _documents.length + 1,
         separatorBuilder: (_, __) => const SizedBox(height: 14),
         itemBuilder: (context, index) {
-          final doc = _documents[index];
+          if (index == 0) {
+            return StudentScreenHeader(title: 'Boutique de Fiches & Livrets (${profile?.className ?? ''})');
+          }
+          final doc = _documents[index - 1];
+          return _buildDocCard(context, doc);
+        },
+      ));
+  }
 
+  Widget _buildDocCard(BuildContext context, Map<String, dynamic> doc) {
           return Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
@@ -141,8 +142,5 @@ class BoutiqueShopScreen extends ConsumerWidget {
               ],
             ),
           );
-        },
-      )),
-    );
   }
 }

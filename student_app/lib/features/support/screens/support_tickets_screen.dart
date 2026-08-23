@@ -6,6 +6,7 @@ import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/models/student_models.dart';
 import '../../../core/widgets/student_page_content.dart';
+import '../../../core/widgets/student_screen_header.dart';
 
 /// §9 du cahier des charges. Entièrement réel : création et lecture passent par `support_tickets`,
 /// déjà protégé par RLS (owns_account) — aucune donnée fictive nécessaire, contrairement aux autres
@@ -22,40 +23,43 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
   Widget build(BuildContext context) {
     final account = ref.watch(studentAuthProvider).account;
 
-    return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
-      appBar: AppBar(
-        title: Text('Messagerie & Support', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
-        actions: [
-          if (account != null)
-            IconButton(
-              tooltip: 'Nouveau ticket',
-              icon: const Icon(Icons.add_circle_outline_rounded, color: StudentTheme.accentPrimary),
-              onPressed: () => _showNewTicketDialog(context, account.id),
-            ),
-        ],
-      ),
-      body: account == null
-          ? const Center(child: CircularProgressIndicator())
-          : StudentPageContent(child: Consumer(
-              builder: (context, ref, _) {
-                final ticketsAsync = ref.watch(supportTicketsProvider(account.id));
-                return ticketsAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (err, _) => Center(child: Text('Erreur : $err', style: const TextStyle(color: Colors.red))),
-                  data: (tickets) {
-                    if (tickets.isEmpty) return _emptyState(context, account.id);
-                    return ListView.separated(
-                      padding: const EdgeInsets.all(20),
-                      itemCount: tickets.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) => _buildTicketCard(tickets[index]),
-                    );
-                  },
-                );
-              },
-            )),
-    );
+    return account == null
+        ? const Center(child: CircularProgressIndicator())
+        : StudentPageContent(child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+                  child: StudentScreenHeader(
+                    title: 'Messagerie & Support',
+                    trailing: IconButton(
+                      tooltip: 'Nouveau ticket',
+                      icon: const Icon(Icons.add_circle_outline_rounded, color: StudentTheme.accentPrimary),
+                      onPressed: () => _showNewTicketDialog(context, account.id),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Consumer(
+                    builder: (context, ref, _) {
+                      final ticketsAsync = ref.watch(supportTicketsProvider(account.id));
+                      return ticketsAsync.when(
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (err, _) => Center(child: Text('Erreur : $err', style: const TextStyle(color: Colors.red))),
+                        data: (tickets) {
+                          if (tickets.isEmpty) return _emptyState(context, account.id);
+                          return ListView.separated(
+                            padding: const EdgeInsets.all(20),
+                            itemCount: tickets.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 12),
+                            itemBuilder: (context, index) => _buildTicketCard(tickets[index]),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ));
   }
 
   Widget _emptyState(BuildContext context, String accountId) {

@@ -6,6 +6,7 @@ import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/models/student_models.dart';
 import '../../../core/widgets/student_page_content.dart';
+import '../../../core/widgets/student_screen_header.dart';
 
 /// §5 du cahier des charges. Données réelles (establishments/establishment_papers, lecture
 /// publique) — la classe est toujours déduite du profil actif, jamais redemandée (§5, règle de
@@ -26,18 +27,15 @@ class _EstablishmentPapersScreenState extends ConsumerState<EstablishmentPapersS
     final profile = ref.watch(studentAuthProvider).activeProfile;
     final establishmentsAsync = ref.watch(establishmentsProvider);
 
-    return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
-      appBar: AppBar(
-        title: Text('Épreuves par Établissement', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 17)),
-      ),
-      body: profile == null
-          ? const Center(child: CircularProgressIndicator())
-          : StudentPageContent(child: Padding(
+    return profile == null
+        ? const Center(child: CircularProgressIndicator())
+        : StudentPageContent(child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const StudentScreenHeader(title: 'Épreuves par Établissement'),
+                  const SizedBox(height: 20),
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -100,8 +98,7 @@ class _EstablishmentPapersScreenState extends ConsumerState<EstablishmentPapersS
                   ),
                 ],
               ),
-            )),
-    );
+            ));
   }
 
   Widget _filterChip(String label, bool selected, VoidCallback onTap) {
