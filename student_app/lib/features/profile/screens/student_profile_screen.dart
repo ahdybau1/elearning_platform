@@ -228,6 +228,11 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
               ),
             ),
 
+            if (activeProfile != null) ...[
+              const SizedBox(height: 20),
+              _buildParentInviteCard(activeProfile.id),
+            ],
+
             const SizedBox(height: 28),
             Text(
               'Mes Classes Suivies',
@@ -321,6 +326,59 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// §17 du cahier des charges : le parent crée son propre compte (auto-inscription, voir
+  /// student_login_screen.dart) et prouve son lien à cet enfant avec ce code plutôt qu'en partageant
+  /// un mot de passe ou en attendant une validation admin — voir migration 44.
+  Widget _buildParentInviteCard(String profileId) {
+    final codeAsync = ref.watch(parentLinkCodeProvider(profileId));
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.colors.border),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.family_restroom_rounded, color: context.colors.accentAmber, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Inviter un parent',
+                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Donnez ce code à votre parent — il l\'utilisera en s\'inscrivant à son propre compte pour suivre votre scolarité (valable 24h).',
+                  style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          codeAsync.when(
+            loading: () => const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+            error: (err, _) => Icon(Icons.error_outline_rounded, color: context.colors.accentRose),
+            data: (code) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: context.colors.accentAmber.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                code,
+                style: GoogleFonts.firaCode(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 2, color: context.colors.accentAmber),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

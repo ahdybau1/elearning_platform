@@ -119,6 +119,43 @@ class StudentSupabaseService {
     });
   }
 
+  /// §17 : code de liaison éphémère (24h) — l'élève le génère et le communique lui-même à son
+  /// parent, qui le saisit à son inscription pour prouver le lien sans partager de mot de passe ni
+  /// attendre une validation admin (voir migration 44, fonction redeem_parent_link_code). Réutilise
+  /// un code déjà actif s'il en existe un plutôt que d'en empiler des inutilisés.
+  Future<String> fetchOrCreateParentLinkCode(String profileId) async {
+    final existing = await client
+        .from('parent_link_codes')
+        .select('code, expires_at')
+        .eq('profile_id', profileId)
+        .filter('used_at', 'is', null)
+        .gt('expires_at', DateTime.now().toIso8601String())
+        .order('created_at', ascending: false)
+        .limit(1)
+        .maybeSingle();
+    if (existing != null) return existing['code'] as String;
+
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sans caractères ambigus (0/O, 1/I/l)
+    final random = _randomCode(chars);
+    await client.from('parent_link_codes').insert({
+      'code': random,
+      'profile_id': profileId,
+      'expires_at': DateTime.now().add(const Duration(hours: 24)).toIso8601String(),
+    });
+    return random;
+  }
+
+  String _randomCode(String alphabet) {
+    final now = DateTime.now().microsecondsSinceEpoch;
+    final buffer = StringBuffer();
+    var seed = now;
+    for (var i = 0; i < 6; i++) {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      buffer.write(alphabet[seed % alphabet.length]);
+    }
+    return buffer.toString();
+  }
+
   /// §11.1 : demande réelle de droit à l'oubli (export/suppression), distincte d'un ticket support
   /// générique — voir migration 41. Le traitement effectif reste une décision admin manuelle.
   Future<String?> createDataRequest(String accountId, String requestType) async {

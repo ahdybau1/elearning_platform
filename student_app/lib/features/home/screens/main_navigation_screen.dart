@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/auth/parent_auth_provider.dart';
+import '../../../core/auth/parent_space_navigation.dart';
 import '../../../core/providers/student_providers.dart';
 import 'home_dashboard_screen.dart';
 import '../../profile/screens/student_profile_screen.dart';
@@ -397,109 +398,12 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     }
     await showDialog(
       context: context,
-      builder: (ctx) => _ParentLoginDialogContent(
+      builder: (ctx) => ParentAuthDialog(
         onSuccess: () {
           Navigator.pop(ctx);
           setState(() => _selectedFlatIndex = targetIndex);
         },
       ),
-    );
-  }
-}
-
-class _ParentLoginDialogContent extends ConsumerStatefulWidget {
-  const _ParentLoginDialogContent({required this.onSuccess});
-  final VoidCallback onSuccess;
-
-  @override
-  ConsumerState<_ParentLoginDialogContent> createState() => _ParentLoginDialogContentState();
-}
-
-class _ParentLoginDialogContentState extends ConsumerState<_ParentLoginDialogContent> {
-  final _emailCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-  bool _isSubmitting = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: context.colors.card,
-      title: Row(
-        children: [
-          Icon(Icons.family_restroom_rounded, color: context.colors.accentAmber),
-          const SizedBox(width: 10),
-          Text('Espace Parent', style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
-        ],
-      ),
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Connectez-vous avec le compte parent créé par l\'administration.',
-              style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _emailCtrl,
-              keyboardType: TextInputType.emailAddress,
-              style: TextStyle(color: context.colors.textPrimary),
-              decoration: InputDecoration(
-                labelText: 'Email',
-                labelStyle: TextStyle(color: context.colors.textSecondary),
-                filled: true,
-                fillColor: context.colors.surface,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              validator: (v) => (v == null || !v.contains('@')) ? 'Email invalide' : null,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _passwordCtrl,
-              obscureText: true,
-              style: TextStyle(color: context.colors.textPrimary),
-              decoration: InputDecoration(
-                labelText: 'Mot de passe',
-                labelStyle: TextStyle(color: context.colors.textSecondary),
-                filled: true,
-                fillColor: context.colors.surface,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              validator: (v) => (v == null || v.isEmpty) ? 'Mot de passe requis' : null,
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.pop(context),
-          child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentAmber),
-          onPressed: _isSubmitting
-              ? null
-              : () async {
-                  if (!_formKey.currentState!.validate()) return;
-                  setState(() => _isSubmitting = true);
-                  final error = await ref.read(parentAuthProvider.notifier).login(_emailCtrl.text.trim(), _passwordCtrl.text);
-                  if (error != null) {
-                    setState(() => _isSubmitting = false);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
-                    }
-                    return;
-                  }
-                  widget.onSuccess();
-                },
-          child: _isSubmitting
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-              : const Text('Se connecter', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-        ),
-      ],
     );
   }
 }

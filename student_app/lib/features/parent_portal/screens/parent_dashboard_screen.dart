@@ -137,13 +137,23 @@ class ParentDashboardScreen extends ConsumerWidget {
 
             const SizedBox(height: 24),
 
-            Text(
-              'Suivi Individuel des Enfants',
-              style: GoogleFonts.outfit(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: context.colors.textPrimary,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Suivi Individuel des Enfants',
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: context.colors.textPrimary,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => _showLinkChildDialog(context, ref),
+                  icon: Icon(Icons.add_link_rounded, size: 16, color: context.colors.accentPrimary),
+                  label: Text('Lier un enfant', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: context.colors.accentPrimary)),
+                ),
+              ],
             ),
             const SizedBox(height: 14),
 
@@ -165,7 +175,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Aucun profil élève n\'est encore lié à ce compte parent. Contactez l\'administration pour établir le rattachement.',
+                        'Aucun profil élève n\'est encore lié à ce compte parent. Demandez un code de liaison à votre enfant (Mon Profil) ou contactez l\'administration.',
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           color: context.colors.textSecondary,
@@ -512,6 +522,69 @@ class ParentDashboardScreen extends ConsumerWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLinkChildDialog(BuildContext context, WidgetRef ref) {
+    final codeCtrl = TextEditingController();
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: context.colors.card,
+          title: Text('Lier un enfant', style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Demandez à votre enfant le code affiché dans son application, section Mon Profil « Inviter un parent ».',
+                style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: codeCtrl,
+                textCapitalization: TextCapitalization.characters,
+                style: GoogleFonts.firaCode(fontSize: 18, letterSpacing: 2, color: context.colors.textPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Code de liaison',
+                  labelStyle: TextStyle(color: context.colors.textSecondary),
+                  filled: true,
+                  fillColor: context.colors.surface,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+              child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentPrimary),
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      if (codeCtrl.text.trim().isEmpty) return;
+                      setDialogState(() => isSubmitting = true);
+                      final error = await ref.read(parentAuthProvider.notifier).redeemLinkCode(codeCtrl.text);
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(error ?? 'Enfant lié avec succès.')),
+                        );
+                      }
+                    },
+              child: isSubmitting
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                  : const Text('Lier', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
             ),
           ],
         ),

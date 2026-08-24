@@ -60,6 +60,12 @@ final archivedProfilesProvider =
   return service.fetchArchivedProfiles(accountId);
 });
 
+final parentLinkCodeProvider =
+    FutureProvider.family<String, String>((ref, profileId) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchOrCreateParentLinkCode(profileId);
+});
+
 final currentTermInfoProvider =
     FutureProvider.family<TermInfo?, String>((ref, classNodeId) async {
   final service = ref.watch(studentSupabaseServiceProvider);
