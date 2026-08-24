@@ -3,15 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/student_theme.dart';
+import '../../../core/models/student_models.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../core/widgets/student_screen_header.dart';
 
-/// §11 du cahier des charges (Paramètres + Accessibilité). Compte (email/téléphone, changement de
-/// mot de passe, déconnexion) est réel — les autres réglages (notifications, langue, apparence,
-/// stockage hors-ligne, accessibilité) n'ont pas encore de table de préférences persistée côté
-/// serveur : ils restent visuellement complets mais explicitement marqués "Bientôt disponible"
-/// plutôt que de prétendre enregistrer un choix qui ne persistera nulle part.
+/// §11 du cahier des charges (Paramètres + Accessibilité). Tout ce qui peut réellement persister le
+/// fait désormais via `account_settings` (migration 40) — voir studentAuthProvider.updateSettings.
+/// Trois points restent honnêtement marqués "à venir" plutôt que simulés : la traduction anglaise
+/// (aucune infrastructure i18n dans l'app), le téléchargement hors-ligne (aucun moteur de cache de
+/// leçons n'existe encore) et les sous-titres vidéo (aucun lecteur vidéo à qui les appliquer) — voir
+/// l'addendum daté dans docs/cahier_des_charges.md pour le détail de ce périmètre.
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -20,18 +22,18 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  bool _notifAbonnement = true;
-  bool _notifForum = true;
-  bool _notifRevision = true;
-  bool _profilVisibleForum = true;
-  double _fontScale = 1.0;
-  bool _highContrast = false;
-  bool _subtitles = true;
-
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(studentAuthProvider);
     final account = authState.account;
+    final settings = authState.settings ?? const AccountSettings();
+
+    Future<void> update(Map<String, dynamic> partial) async {
+      final error = await ref.read(studentAuthProvider.notifier).updateSettings(partial);
+      if (error != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur : $error')));
+      }
+    }
 
     return StudentPageContent(child: ListView(
         padding: const EdgeInsets.all(20),
@@ -42,7 +44,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _buildCard([
             _infoRow('Email', account?.email ?? '—'),
             Divider(color: context.colors.border, height: 24),
-            _infoRow('Téléphone', account?.phone ?? 'Non renseigné'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(child: _infoRow('Téléphone', account?.phone ?? 'Non renseigné')),
+                IconButton(
+                  tooltip: 'Modifier',
+                  icon: Icon(Icons.edit_outlined, size: 16, color: context.colors.textMuted),
+                  onPressed: () => _showEditPhoneDialog(context, account?.phone ?? ''),
+                ),
+              ],
+            ),
             Divider(color: context.colors.border, height: 24),
             _actionRow(
               icon: Icons.lock_outline_rounded,
@@ -54,11 +66,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 24),
           _sectionTitle('Notifications'),
           _buildCard([
-            _switchRow('Échéances d\'abonnement', 'Rappels J-3, J-1 et expiration', _notifAbonnement, (v) => setState(() => _notifAbonnement = v)),
+            _switchRow('Échéances d\'abonnement', 'Rappels J-3, J-1 et expiration', settings.notifSubscription,
+                (v) => update({'notif_subscription': v})),
             Divider(color: context.colors.border, height: 24),
-            _switchRow('Activité du forum', 'Réponses à vos messages', _notifForum, (v) => setState(() => _notifForum = v)),
+            _switchRow('Activité du forum', 'Réponses à vos messages', settings.notifForum,
+                (v) => update({'notif_forum': v})),
             Divider(color: context.colors.border, height: 24),
-            _switchRow('Révision intelligente', 'Rappels de révision espacée', _notifRevision, (v) => setState(() => _notifRevision = v)),
+            _switchRow('Révision intelligente', 'Rappels de révision espacée', settings.notifRevision,
+                (v) => update({'notif_revision': v})),
           ]),
 
           const SizedBox(height: 24),
@@ -69,8 +84,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Wrap(
               spacing: 8,
               children: [
-                _langChip('Français', selected: true),
-                _langChip('English', selected: false, comingSoon: true),
+                _chip('Français', selected: true, onSelected: () {}),
+                _chip('English', selected: false, comingSoon: true, onSelected: () {}),
               ],
             ),
             const SizedBox(height: 20),
@@ -79,9 +94,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Wrap(
               spacing: 8,
               children: [
-                _langChip('Sombre', selected: true),
-                _langChip('Clair', selected: false, comingSoon: true),
-                _langChip('Automatique', selected: false, comingSoon: true),
+                _chip('Sombre', selected: settings.themeMode == 'dark', onSelected: () => update({'theme_mode': 'dark'})),
+                _chip('Clair', selected: settings.themeMode == 'light', onSelected: () => update({'theme_mode': 'light'})),
+                _chip('Automatique', selected: settings.themeMode == 'system', onSelected: () => update({'theme_mode': 'system'})),
               ],
             ),
           ]),
@@ -89,15 +104,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 24),
           _sectionTitle('Confidentialité & Stockage'),
           _buildCard([
-            _switchRow('Profil visible sur le forum', 'Les autres élèves de votre classe voient votre nom', _profilVisibleForum, (v) => setState(() => _profilVisibleForum = v)),
+            _switchRow('Profil visible sur le forum', 'Les autres élèves de votre classe voient votre nom',
+                settings.forumProfileVisible, (v) => update({'forum_profile_visible': v})),
             Divider(color: context.colors.border, height: 24),
-            _infoRow('Stockage hors-ligne utilisé', '0 Mo'),
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: null,
-              icon: const Icon(Icons.delete_sweep_outlined, size: 16),
-              label: const Text('Vider le cache (bientôt disponible)'),
-              style: OutlinedButton.styleFrom(foregroundColor: context.colors.textMuted, side: BorderSide(color: context.colors.border)),
+            Row(
+              children: [
+                Icon(Icons.cloud_off_outlined, size: 18, color: context.colors.textMuted),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Aucun contenu téléchargé pour l\'instant — le téléchargement hors-ligne des leçons arrive dans une prochaine mise à jour.',
+                    style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
+                  ),
+                ),
+              ],
             ),
           ]),
 
@@ -106,22 +126,46 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _buildCard([
             Text('Taille du texte', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textPrimary)),
             Slider(
-              value: _fontScale,
+              value: settings.fontScale,
               min: 0.85,
               max: 1.3,
               divisions: 3,
               activeColor: context.colors.accentPrimary,
-              label: '${(_fontScale * 100).round()}%',
-              onChanged: (v) => setState(() => _fontScale = v),
+              label: '${(settings.fontScale * 100).round()}%',
+              onChanged: (v) => update({'font_scale': v}),
             ),
             Divider(color: context.colors.border, height: 8),
             const SizedBox(height: 12),
-            _switchRow('Contraste élevé', 'Distinct du mode sombre', _highContrast, (v) => setState(() => _highContrast = v)),
+            _switchRow('Contraste élevé', 'Distinct du mode sombre — s\'applique au thème clair et sombre',
+                settings.highContrast, (v) => update({'high_contrast': v})),
             Divider(color: context.colors.border, height: 24),
-            _switchRow('Sous-titres vidéo', 'Sur tout contenu vidéo de cours', _subtitles, (v) => setState(() => _subtitles = v)),
+            _switchRow('Sous-titres vidéo', 'Sur tout contenu vidéo de cours (arrive avec le lecteur vidéo)',
+                settings.subtitlesEnabled, (v) => update({'subtitles_enabled': v})),
           ]),
 
           const SizedBox(height: 32),
+          _sectionTitle('Vos données'),
+          _buildCard([
+            Text(
+              'Droit à l\'oubli : demandez une copie de vos données ou leur suppression définitive. Le traitement est effectué manuellement par l\'administration.',
+              style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _submitDataRequest(context, 'export'),
+                    icon: const Icon(Icons.download_outlined, size: 16),
+                    label: const Text('Exporter mes données'),
+                    style: OutlinedButton.styleFrom(foregroundColor: context.colors.textPrimary, side: BorderSide(color: context.colors.border)),
+                  ),
+                ),
+              ],
+            ),
+          ]),
+
+          const SizedBox(height: 24),
           _sectionTitle('Zone sensible'),
           _buildCard([
             _actionRow(
@@ -140,6 +184,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ]),
           const SizedBox(height: 24),
         ],
+      ),
+    );
+  }
+
+  Future<void> _submitDataRequest(BuildContext context, String requestType) async {
+    final error = await ref.read(studentAuthProvider.notifier).createDataRequest(requestType);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(error != null
+            ? 'Erreur : $error'
+            : requestType == 'export'
+                ? 'Demande d\'export enregistrée — l\'administration vous contactera.'
+                : 'Demande de suppression enregistrée — l\'administration vous contactera.'),
       ),
     );
   }
@@ -206,16 +264,65 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _langChip(String label, {required bool selected, bool comingSoon = false}) {
+  Widget _chip(String label, {required bool selected, bool comingSoon = false, required VoidCallback onSelected}) {
     return ChoiceChip(
       label: Text(comingSoon ? '$label (bientôt)' : label),
       selected: selected,
-      onSelected: comingSoon ? null : (_) {},
+      onSelected: comingSoon ? null : (_) => onSelected(),
       selectedColor: context.colors.accentPrimary.withOpacity(0.2),
       backgroundColor: context.colors.surface,
       labelStyle: GoogleFonts.inter(
         fontSize: 12,
-        color: selected ? context.colors.accentPrimary : (comingSoon ? context.colors.textMuted : Colors.white),
+        color: selected ? context.colors.accentPrimary : (comingSoon ? context.colors.textMuted : context.colors.textPrimary),
+      ),
+    );
+  }
+
+  void _showEditPhoneDialog(BuildContext context, String currentPhone) {
+    final phoneCtrl = TextEditingController(text: currentPhone);
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: context.colors.card,
+          title: Text('Modifier le téléphone', style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
+          content: TextField(
+            controller: phoneCtrl,
+            keyboardType: TextInputType.phone,
+            style: TextStyle(color: context.colors.textPrimary),
+            decoration: InputDecoration(
+              labelText: 'Numéro de téléphone',
+              labelStyle: TextStyle(color: context.colors.textSecondary),
+              filled: true,
+              fillColor: context.colors.surface,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+              child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentPrimary),
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      setDialogState(() => isSubmitting = true);
+                      final error = await ref.read(studentAuthProvider.notifier).updatePhone(phoneCtrl.text.trim());
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (context.mounted && error != null) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur : $error')));
+                      }
+                    },
+              child: isSubmitting
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                  : const Text('Valider', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -299,21 +406,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ),
         content: Text(
-          'La suppression définitive de compte (droit à l\'oubli, §11 du cahier des charges) doit être traitée manuellement par l\'administration pour des raisons de sécurité. Ouvrez un ticket de support (catégorie « Autre ») pour en faire la demande — nous vous répondrons rapidement.',
+          'La suppression définitive de compte (droit à l\'oubli, §11 du cahier des charges) est traitée manuellement par l\'administration pour des raisons de sécurité. Confirmez pour enregistrer votre demande — nous vous répondrons rapidement.',
           style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Fermer', style: TextStyle(color: context.colors.textSecondary)),
+            child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentRose),
             onPressed: () {
               Navigator.pop(ctx);
-              Navigator.pushNamed(context, '/support');
+              _submitDataRequest(context, 'deletion');
             },
-            child: const Text('Ouvrir un ticket', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('Confirmer la demande', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),

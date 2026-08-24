@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/theme/student_theme.dart';
+import 'core/models/student_models.dart';
 import 'core/widgets/maintenance_gate.dart';
 import 'core/auth/student_auth_provider.dart';
 import 'features/onboarding/screens/onboarding_wizard_screen.dart';
@@ -72,20 +73,34 @@ class StudentAuthGate extends ConsumerWidget {
   }
 }
 
-class StudentElearningApp extends StatelessWidget {
+class StudentElearningApp extends ConsumerWidget {
   const StudentElearningApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // §11.1/§11.2 : thème réellement piloté par les préférences du compte (clair/sombre/automatique
+    // × contraste élevé) — `null` tant que non chargées (avant connexion, ou compte pas encore créé)
+    // retombe sur le sombre historique, jamais un flash de thème incorrect.
+    final settings = ref.watch(studentAuthProvider).settings ?? const AccountSettings();
+    final theme = StudentTheme.resolve(
+      mode: settings.themeMode,
+      highContrast: settings.highContrast,
+      platformBrightness: MediaQuery.platformBrightnessOf(context),
+    );
+
     return MaterialApp(
       title: 'E-Learning National Élève',
       debugShowCheckedModeBanner: false,
-      theme: StudentTheme.darkTheme,
+      theme: theme,
       // `builder` reçoit déjà le Navigator construit par onGenerateRoute ci-dessous : contrairement
       // à SelectionArea (qui exige un ancêtre Overlay), MaintenanceGate n'a besoin de rien de plus
       // qu'un Consumer Riverpod, donc ce point d'accroche standard suffit pour bloquer TOUTES les
-      // routes sans exception pendant la maintenance.
-      builder: (context, child) => MaintenanceGate(child: child!),
+      // routes sans exception pendant la maintenance. La taille de police (§11.2) est appliquée ici
+      // globalement via un TextScaler, indépendamment des couleurs du thème.
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(settings.fontScale)),
+        child: MaintenanceGate(child: child!),
+      ),
       home: const StudentAuthGate(),
       onGenerateRoute: (settings) {
         switch (settings.name) {

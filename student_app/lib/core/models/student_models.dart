@@ -51,6 +51,66 @@ class StudentAccount {
   }
 }
 
+// Reflète exactement la table réelle `account_settings` (§11.1 du cahier des charges — Paramètres).
+// La langue d'interface n'a volontairement pas de champ ici : elle reste fixée à 'fr' tant qu'aucune
+// traduction anglaise réelle n'existe (voir settings_screen.dart).
+class AccountSettings {
+  final bool notifSubscription;
+  final bool notifForum;
+  final bool notifRevision;
+  final String themeMode; // 'light' | 'dark' | 'system'
+  final bool highContrast;
+  final double fontScale;
+  final bool subtitlesEnabled;
+  final bool forumProfileVisible;
+
+  const AccountSettings({
+    this.notifSubscription = true,
+    this.notifForum = true,
+    this.notifRevision = true,
+    this.themeMode = 'dark',
+    this.highContrast = false,
+    this.fontScale = 1.0,
+    this.subtitlesEnabled = true,
+    this.forumProfileVisible = true,
+  });
+
+  factory AccountSettings.fromJson(Map<String, dynamic> json) {
+    return AccountSettings(
+      notifSubscription: json['notif_subscription'] as bool? ?? true,
+      notifForum: json['notif_forum'] as bool? ?? true,
+      notifRevision: json['notif_revision'] as bool? ?? true,
+      themeMode: json['theme_mode'] as String? ?? 'dark',
+      highContrast: json['high_contrast'] as bool? ?? false,
+      fontScale: (json['font_scale'] as num?)?.toDouble() ?? 1.0,
+      subtitlesEnabled: json['subtitles_enabled'] as bool? ?? true,
+      forumProfileVisible: json['forum_profile_visible'] as bool? ?? true,
+    );
+  }
+
+  AccountSettings copyWith({
+    bool? notifSubscription,
+    bool? notifForum,
+    bool? notifRevision,
+    String? themeMode,
+    bool? highContrast,
+    double? fontScale,
+    bool? subtitlesEnabled,
+    bool? forumProfileVisible,
+  }) {
+    return AccountSettings(
+      notifSubscription: notifSubscription ?? this.notifSubscription,
+      notifForum: notifForum ?? this.notifForum,
+      notifRevision: notifRevision ?? this.notifRevision,
+      themeMode: themeMode ?? this.themeMode,
+      highContrast: highContrast ?? this.highContrast,
+      fontScale: fontScale ?? this.fontScale,
+      subtitlesEnabled: subtitlesEnabled ?? this.subtitlesEnabled,
+      forumProfileVisible: forumProfileVisible ?? this.forumProfileVisible,
+    );
+  }
+}
+
 // Reflète exactement la table réelle `profiles` : un profil = une classe précise + un abonnement
 // propre, rattaché à UN compte (§2.3 du cahier des charges — pas "un enfant différent" comme le
 // laissait croire l'ancien modèle : plusieurs profils suivent plusieurs classes de LA MÊME

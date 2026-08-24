@@ -97,6 +97,40 @@ class StudentSupabaseService {
     );
   }
 
+  /// §11.1 du cahier des charges : préférences réelles (notifications, apparence, accessibilité,
+  /// confidentialité forum), une ligne par compte. `upsert` : la ligne n'existe pas forcément
+  /// encore pour un compte déjà créé avant cette table (voir migration 40).
+  Future<AccountSettings> fetchAccountSettings(String accountId) async {
+    if (!_isValidUuid(accountId)) return const AccountSettings();
+    final row = await client.from('account_settings').select().eq('account_id', accountId).maybeSingle();
+    if (row == null) {
+      await client.from('account_settings').upsert({'account_id': accountId});
+      return const AccountSettings();
+    }
+    return AccountSettings.fromJson(Map<String, dynamic>.from(row));
+  }
+
+  Future<void> upsertAccountSettings(String accountId, Map<String, dynamic> partial) async {
+    if (!_isValidUuid(accountId)) return;
+    await client.from('account_settings').upsert({
+      'account_id': accountId,
+      ...partial,
+      'updated_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// §11.1 : demande réelle de droit à l'oubli (export/suppression), distincte d'un ticket support
+  /// générique — voir migration 41. Le traitement effectif reste une décision admin manuelle.
+  Future<String?> createDataRequest(String accountId, String requestType) async {
+    if (!_isValidUuid(accountId)) return 'Compte invalide';
+    try {
+      await client.from('data_requests').insert({'account_id': accountId, 'request_type': requestType});
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
   /// §2.5 du cahier des charges : profils archivés, consultables séparément (jamais mêlés à la
   /// liste active utilisée par le sélecteur de profils/la barre latérale).
   Future<List<StudentProfile>> fetchArchivedProfiles(String accountId) async {

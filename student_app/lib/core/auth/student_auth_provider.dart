@@ -15,6 +15,9 @@ class StudentAuthState {
   /// reprise après confirmation email). Distinct de `account` : une session peut être réelle et
   /// valide AVANT que le profil élève soit complété — voir [hasSession].
   final String? sessionEmail;
+  /// §11.1 : préférences réelles du compte (thème, notifications, accessibilité...). `null` tant
+  /// que non chargées — voir [StudentAuthNotifier._loadAccountAndProfiles].
+  final AccountSettings? settings;
 
   const StudentAuthState({
     this.account,
@@ -23,6 +26,7 @@ class StudentAuthState {
     this.isLoading = false,
     this.errorMessage,
     this.sessionEmail,
+    this.settings,
   });
 
   /// Un compte élève (`accounts`) existe pour cette session.
@@ -40,6 +44,7 @@ class StudentAuthState {
     bool? isLoading,
     String? errorMessage,
     String? sessionEmail,
+    AccountSettings? settings,
   }) {
     return StudentAuthState(
       account: account ?? this.account,
@@ -48,6 +53,7 @@ class StudentAuthState {
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage,
       sessionEmail: sessionEmail ?? this.sessionEmail,
+      settings: settings ?? this.settings,
     );
   }
 }
@@ -113,6 +119,7 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
 
       final account = StudentAccount.fromJson(Map<String, dynamic>.from(accountRow));
       final profiles = await _fetchProfiles(account.id);
+      final settings = await _fetchSettings(account.id);
 
       final prefs = await SharedPreferences.getInstance();
       final savedProfileId = prefs.getString(_activeProfilePrefKey);
@@ -128,9 +135,75 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
         activeProfile: active,
         isLoading: false,
         sessionEmail: user.email,
+        settings: settings,
       );
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
+    }
+  }
+
+  Future<AccountSettings> _fetchSettings(String accountId) async {
+    final row = await _client.from('account_settings').select().eq('account_id', accountId).maybeSingle();
+    if (row == null) {
+      // Compte créé avant l'existence de cette table (migration 40) — ligne par défaut créée à la
+      // volée plutôt que de forcer une migration de données rétroactive.
+      await _client.from('account_settings').upsert({'account_id': accountId});
+      return const AccountSettings();
+    }
+    return AccountSettings.fromJson(Map<String, dynamic>.from(row));
+  }
+
+  /// Mise à jour optimiste : écrit en base puis reflète localement sans recharger tout le compte.
+  Future<String?> updateSettings(Map<String, dynamic> partial) async {
+    final account = state.account;
+    if (account == null) return 'Aucun compte connecté.';
+    final previous = state.settings ?? const AccountSettings();
+    try {
+      await _client.from('account_settings').upsert({
+        'account_id': account.id,
+        ...partial,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+      state = state.copyWith(
+        settings: AccountSettings(
+          notifSubscription: partial['notif_subscription'] as bool? ?? previous.notifSubscription,
+          notifForum: partial['notif_forum'] as bool? ?? previous.notifForum,
+          notifRevision: partial['notif_revision'] as bool? ?? previous.notifRevision,
+          themeMode: partial['theme_mode'] as String? ?? previous.themeMode,
+          highContrast: partial['high_contrast'] as bool? ?? previous.highContrast,
+          fontScale: (partial['font_scale'] as num?)?.toDouble() ?? previous.fontScale,
+          subtitlesEnabled: partial['subtitles_enabled'] as bool? ?? previous.subtitlesEnabled,
+          forumProfileVisible: partial['forum_profile_visible'] as bool? ?? previous.forumProfileVisible,
+        ),
+      );
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String?> updatePhone(String phone) async {
+    final account = state.account;
+    if (account == null) return 'Aucun compte connecté.';
+    try {
+      await _client.from('accounts').update({'phone': phone}).eq('id', account.id);
+      await _loadAccountAndProfiles();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  /// §11.1 : demande réelle de droit à l'oubli (export/suppression) — voir migration 41. Le
+  /// traitement effectif reste une décision admin manuelle (comme refund_requests).
+  Future<String?> createDataRequest(String requestType) async {
+    final account = state.account;
+    if (account == null) return 'Aucun compte connecté.';
+    try {
+      await _client.from('data_requests').insert({'account_id': account.id, 'request_type': requestType});
+      return null;
+    } catch (e) {
+      return e.toString();
     }
   }
 
