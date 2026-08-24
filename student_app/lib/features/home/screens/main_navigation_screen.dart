@@ -325,7 +325,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                             'Espace Élève (${profile?.className ?? '...'})',
                             overflow: TextOverflow.ellipsis,
                             maxLines: 1,
-                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white70),
+                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: context.colors.textSecondary),
                           ),
                         ),
                         const Spacer(),
@@ -362,7 +362,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                           children: [
                             Text(
                               '${authState.account?.firstName ?? ''} ${authState.account?.lastName ?? ''}'.trim(),
-                              style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                              style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
                             ),
                             Text('Élève', style: GoogleFonts.inter(fontSize: 11, color: context.colors.textMuted)),
                           ],

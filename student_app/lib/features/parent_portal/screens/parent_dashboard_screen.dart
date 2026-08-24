@@ -29,12 +29,19 @@ class ParentDashboardScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.family_restroom_rounded, size: 46, color: context.colors.textMuted),
+                Icon(
+                  Icons.family_restroom_rounded,
+                  size: 46,
+                  color: context.colors.textMuted,
+                ),
                 const SizedBox(height: 16),
                 Text(
                   parentState.errorMessage ?? 'Aucune session parent active.',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(fontSize: 14, color: context.colors.textSecondary),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: context.colors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -46,14 +53,16 @@ class ParentDashboardScreen extends ConsumerWidget {
     final parent = parentState.account!;
     final transactionsAsync = ref.watch(parentTransactionsProvider);
 
-    return StudentPageContent(child: SingleChildScrollView(
+    return StudentPageContent(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             StudentScreenHeader(
               title: 'Espace Parent & Suivi Scolaire',
-              subtitle: 'Bienvenue, ${parent.firstName} — suivi individuel et communication avec l\'administration.',
+              subtitle:
+                  'Bienvenue, ${parent.firstName} — suivi individuel et communication avec l\'administration.',
             ),
             const SizedBox(height: 20),
             // Parent Account Info Banner
@@ -69,10 +78,14 @@ class ParentDashboardScreen extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: context.colors.accentAmber.withOpacity(0.15),
+                      color: context.colors.accentAmber.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.verified_user_rounded, color: context.colors.accentAmber, size: 24),
+                    child: Icon(
+                      Icons.verified_user_rounded,
+                      color: context.colors.accentAmber,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -81,23 +94,38 @@ class ParentDashboardScreen extends ConsumerWidget {
                       children: [
                         Text(
                           '${parent.firstName} ${parent.lastName} • ${parent.email}',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: context.colors.textPrimary, fontSize: 14),
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                            color: context.colors.textPrimary,
+                            fontSize: 14,
+                          ),
                         ),
                         Text(
-                          parent.phone.isNotEmpty ? parent.phone : 'Téléphone non renseigné',
-                          style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
+                          parent.phone.isNotEmpty
+                              ? parent.phone
+                              : 'Téléphone non renseigné',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: context.colors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
                     tooltip: 'Support & informations légales',
-                    icon: Icon(Icons.settings_outlined, color: context.colors.textSecondary),
+                    icon: Icon(
+                      Icons.settings_outlined,
+                      color: context.colors.textSecondary,
+                    ),
                     onPressed: () => _showSupportAndLegalSheet(context, ref),
                   ),
                   IconButton(
                     tooltip: 'Se déconnecter (Espace Parent)',
-                    icon: Icon(Icons.logout_rounded, color: context.colors.textSecondary),
+                    icon: Icon(
+                      Icons.logout_rounded,
+                      color: context.colors.textSecondary,
+                    ),
                     onPressed: () async {
                       await ref.read(parentAuthProvider.notifier).signOut();
                       if (context.mounted) Navigator.pop(context);
@@ -111,7 +139,11 @@ class ParentDashboardScreen extends ConsumerWidget {
 
             Text(
               'Suivi Individuel des Enfants',
-              style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: context.colors.textPrimary,
+              ),
             ),
             const SizedBox(height: 14),
 
@@ -125,12 +157,19 @@ class ParentDashboardScreen extends ConsumerWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline_rounded, color: context.colors.textMuted, size: 20),
+                    Icon(
+                      Icons.info_outline_rounded,
+                      color: context.colors.textMuted,
+                      size: 20,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Aucun profil élève n\'est encore lié à ce compte parent. Contactez l\'administration pour établir le rattachement.',
-                        style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: context.colors.textSecondary,
+                        ),
                       ),
                     ),
                   ],
@@ -163,8 +202,13 @@ class ParentDashboardScreen extends ConsumerWidget {
                                 ),
                                 child: Center(
                                   child: Text(
-                                    child.displayName.isNotEmpty ? child.displayName[0].toUpperCase() : '?',
-                                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white),
+                                    child.displayName.isNotEmpty
+                                        ? child.displayName[0].toUpperCase()
+                                        : '?',
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -174,30 +218,48 @@ class ParentDashboardScreen extends ConsumerWidget {
                                 children: [
                                   Text(
                                     child.displayName,
-                                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: context.colors.textPrimary, fontSize: 15),
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.bold,
+                                      color: context.colors.textPrimary,
+                                      fontSize: 15,
+                                    ),
                                   ),
                                   Text(
                                     '${child.className} • Année ${child.schoolYear}',
-                                    style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: context.colors.textSecondary,
+                                    ),
                                   ),
                                 ],
                               ),
                             ],
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: child.hasActiveSubscription
-                                  ? context.colors.accentEmerald.withOpacity(0.15)
-                                  : context.colors.accentRose.withOpacity(0.15),
+                                  ? context.colors.accentEmerald.withValues(
+                                      alpha: 0.15,
+                                    )
+                                  : context.colors.accentRose.withValues(
+                                      alpha: 0.15,
+                                    ),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              child.hasActiveSubscription ? 'Pass ${child.subscriptionTier.toUpperCase()}' : 'Accès Gratuit',
+                              child.hasActiveSubscription
+                                  ? 'Pass ${child.subscriptionTier.toUpperCase()}'
+                                  : 'Accès Gratuit',
                               style: GoogleFonts.inter(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: child.hasActiveSubscription ? context.colors.accentEmerald : context.colors.accentRose,
+                                color: child.hasActiveSubscription
+                                    ? context.colors.accentEmerald
+                                    : context.colors.accentRose,
                               ),
                             ),
                           ),
@@ -217,7 +279,11 @@ class ParentDashboardScreen extends ConsumerWidget {
             // Receipts / Payment History Section
             Text(
               'Historique & Reçus de Paiement',
-              style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: context.colors.textPrimary,
+              ),
             ),
             const SizedBox(height: 12),
 
@@ -229,13 +295,25 @@ class ParentDashboardScreen extends ConsumerWidget {
                 border: Border.all(color: context.colors.border),
               ),
               child: transactionsAsync.when(
-                loading: () => const Padding(padding: EdgeInsets.all(8), child: Center(child: CircularProgressIndicator())),
-                error: (err, _) => Text('Erreur : $err', style: GoogleFonts.inter(fontSize: 12, color: context.colors.accentRose)),
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (err, _) => Text(
+                  'Erreur : $err',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: context.colors.accentRose,
+                  ),
+                ),
                 data: (transactions) {
                   if (transactions.isEmpty) {
                     return Text(
                       'Aucun paiement enregistré pour le moment.',
-                      style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: context.colors.textSecondary,
+                      ),
                     );
                   }
                   return Column(
@@ -258,8 +336,13 @@ class ParentDashboardScreen extends ConsumerWidget {
               style: OutlinedButton.styleFrom(
                 foregroundColor: context.colors.accentPrimary,
                 side: BorderSide(color: context.colors.accentPrimary),
-                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                  horizontal: 20,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
@@ -269,7 +352,8 @@ class ParentDashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildPaymentHistoryRow(BuildContext context, ParentTransaction tx) {
-    final dateStr = '${tx.createdAt.day.toString().padLeft(2, '0')}/${tx.createdAt.month.toString().padLeft(2, '0')}/${tx.createdAt.year}';
+    final dateStr =
+        '${tx.createdAt.day.toString().padLeft(2, '0')}/${tx.createdAt.month.toString().padLeft(2, '0')}/${tx.createdAt.year}';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -278,10 +362,24 @@ class ParentDashboardScreen extends ConsumerWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('$dateStr • ${tx.operator}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+              Text(
+                '$dateStr • ${tx.operator}',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: context.colors.textPrimary,
+                ),
+              ),
             ],
           ),
-          Text('${tx.amount.toStringAsFixed(0)} FCFA', style: GoogleFonts.firaCode(fontSize: 13, fontWeight: FontWeight.bold, color: context.colors.accentEmerald)),
+          Text(
+            '${tx.amount.toStringAsFixed(0)} FCFA',
+            style: GoogleFonts.firaCode(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: context.colors.accentEmerald,
+            ),
+          ),
         ],
       ),
     );
@@ -298,7 +396,13 @@ class ParentDashboardScreen extends ConsumerWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: context.colors.card,
-          title: Text('Contacter l\'administration', style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
+          title: Text(
+            'Contacter l\'administration',
+            style: GoogleFonts.outfit(
+              color: context.colors.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -307,14 +411,26 @@ class ParentDashboardScreen extends ConsumerWidget {
                 Wrap(
                   spacing: 8,
                   children: [
-                    for (final c in ['paiement', 'technique', 'contenu', 'autre'])
+                    for (final c in [
+                      'paiement',
+                      'technique',
+                      'contenu',
+                      'autre',
+                    ])
                       ChoiceChip(
                         label: Text(c),
                         selected: category == c,
                         onSelected: (_) => setDialogState(() => category = c),
-                        selectedColor: context.colors.accentPrimary.withOpacity(0.2),
+                        selectedColor: context.colors.accentPrimary.withValues(
+                          alpha: 0.2,
+                        ),
                         backgroundColor: context.colors.surface,
-                        labelStyle: TextStyle(color: category == c ? context.colors.accentPrimary : context.colors.textPrimary, fontSize: 12),
+                        labelStyle: TextStyle(
+                          color: category == c
+                              ? context.colors.accentPrimary
+                              : context.colors.textPrimary,
+                          fontSize: 12,
+                        ),
                       ),
                   ],
                 ),
@@ -327,7 +443,9 @@ class ParentDashboardScreen extends ConsumerWidget {
                     labelStyle: TextStyle(color: context.colors.textSecondary),
                     filled: true,
                     fillColor: context.colors.surface,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -340,7 +458,9 @@ class ParentDashboardScreen extends ConsumerWidget {
                     labelStyle: TextStyle(color: context.colors.textSecondary),
                     filled: true,
                     fillColor: context.colors.surface,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ],
@@ -349,16 +469,25 @@ class ParentDashboardScreen extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
-              child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
+              child: Text(
+                'Annuler',
+                style: TextStyle(color: context.colors.textSecondary),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentPrimary),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.colors.accentPrimary,
+              ),
               onPressed: isSubmitting
                   ? null
                   : () async {
-                      if (subjectCtrl.text.trim().isEmpty || descCtrl.text.trim().isEmpty) return;
+                      if (subjectCtrl.text.trim().isEmpty ||
+                          descCtrl.text.trim().isEmpty)
+                        return;
                       setDialogState(() => isSubmitting = true);
-                      final error = await ref.read(parentAuthProvider.notifier).createSupportTicket(
+                      final error = await ref
+                          .read(parentAuthProvider.notifier)
+                          .createSupportTicket(
                             category: category,
                             subject: subjectCtrl.text.trim(),
                             description: descCtrl.text.trim(),
@@ -366,11 +495,23 @@ class ParentDashboardScreen extends ConsumerWidget {
                       if (ctx.mounted) Navigator.pop(ctx);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(error != null ? 'Erreur : $error' : 'Ticket envoyé — l\'administration vous répondra.')),
+                          SnackBar(
+                            content: Text(
+                              error != null
+                                  ? 'Erreur : $error'
+                                  : 'Ticket envoyé — l\'administration vous répondra.',
+                            ),
+                          ),
                         );
                       }
                     },
-              child: const Text('Envoyer', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Envoyer',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ),
@@ -395,34 +536,77 @@ class ParentDashboardScreen extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Support & Informations Légales',
-                      style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+                  Text(
+                    'Support & Informations Légales',
+                    style: GoogleFonts.outfit(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: context.colors.textPrimary,
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   if (settings.supportEmail?.isNotEmpty == true)
-                    _infoRow(context, Icons.email_outlined, 'Email', settings.supportEmail!),
+                    _infoRow(
+                      context,
+                      Icons.email_outlined,
+                      'Email',
+                      settings.supportEmail!,
+                    ),
                   if (settings.supportPhone?.isNotEmpty == true)
-                    _infoRow(context, Icons.phone_outlined, 'Téléphone', settings.supportPhone!),
+                    _infoRow(
+                      context,
+                      Icons.phone_outlined,
+                      'Téléphone',
+                      settings.supportPhone!,
+                    ),
                   if (settings.supportWhatsappLink?.isNotEmpty == true)
-                    _infoRow(context, Icons.chat_outlined, 'WhatsApp', settings.supportWhatsappLink!),
+                    _infoRow(
+                      context,
+                      Icons.chat_outlined,
+                      'WhatsApp',
+                      settings.supportWhatsappLink!,
+                    ),
                   if (settings.termsUrl?.isNotEmpty == true)
-                    _infoRow(context, Icons.description_outlined, 'CGU', settings.termsUrl!),
+                    _infoRow(
+                      context,
+                      Icons.description_outlined,
+                      'CGU',
+                      settings.termsUrl!,
+                    ),
                   if (settings.privacyPolicyUrl?.isNotEmpty == true)
-                    _infoRow(context, Icons.privacy_tip_outlined, 'Confidentialité', settings.privacyPolicyUrl!),
+                    _infoRow(
+                      context,
+                      Icons.privacy_tip_outlined,
+                      'Confidentialité',
+                      settings.privacyPolicyUrl!,
+                    ),
                   if (settings.legalNoticeUrl?.isNotEmpty == true)
-                    _infoRow(context, Icons.gavel_outlined, 'Mentions légales', settings.legalNoticeUrl!),
+                    _infoRow(
+                      context,
+                      Icons.gavel_outlined,
+                      'Mentions légales',
+                      settings.legalNoticeUrl!,
+                    ),
                   if ((settings.supportEmail?.isEmpty ?? true) &&
                       (settings.supportPhone?.isEmpty ?? true) &&
                       (settings.supportWhatsappLink?.isEmpty ?? true) &&
                       (settings.termsUrl?.isEmpty ?? true) &&
                       (settings.privacyPolicyUrl?.isEmpty ?? true) &&
                       (settings.legalNoticeUrl?.isEmpty ?? true))
-                    Text('Aucune information de support renseignée par l\'administration pour le moment.',
-                        style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary)),
+                    Text(
+                      'Aucune information de support renseignée par l\'administration pour le moment.',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: context.colors.textSecondary,
+                      ),
+                    ),
                 ],
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) =>
-                  Text('Erreur: $err', style: GoogleFonts.inter(color: Colors.redAccent)),
+              error: (err, _) => Text(
+                'Erreur: $err',
+                style: GoogleFonts.inter(color: Colors.redAccent),
+              ),
             ),
           );
         },
@@ -430,7 +614,12 @@ class ParentDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _infoRow(BuildContext context, IconData icon, String label, String value) {
+  Widget _infoRow(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String value,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -442,8 +631,20 @@ class ParentDashboardScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: GoogleFonts.inter(fontSize: 11, color: context.colors.textMuted)),
-                SelectableText(value, style: GoogleFonts.inter(fontSize: 13, color: context.colors.textPrimary)),
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: context.colors.textMuted,
+                  ),
+                ),
+                SelectableText(
+                  value,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: context.colors.textPrimary,
+                  ),
+                ),
               ],
             ),
           ),

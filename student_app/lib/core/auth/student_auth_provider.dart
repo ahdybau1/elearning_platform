@@ -182,6 +182,31 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
     }
   }
 
+  /// Édition des informations d'identité depuis « Mon Profil » (prénom, nom, établissement, date de
+  /// naissance) — l'email et le mot de passe restent gérés séparément (Paramètres §11.1 : email non
+  /// auto-éditable sans re-vérification, mot de passe via Supabase Auth).
+  Future<String?> updateProfileInfo({
+    required String firstName,
+    required String lastName,
+    String? schoolName,
+    DateTime? birthDate,
+  }) async {
+    final account = state.account;
+    if (account == null) return 'Aucun compte connecté.';
+    try {
+      await _client.from('accounts').update({
+        'first_name': firstName,
+        'last_name': lastName,
+        'school_name': (schoolName == null || schoolName.trim().isEmpty) ? null : schoolName.trim(),
+        'birth_date': birthDate?.toIso8601String().split('T').first,
+      }).eq('id', account.id);
+      await _loadAccountAndProfiles();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
   Future<String?> updatePhone(String phone) async {
     final account = state.account;
     if (account == null) return 'Aucun compte connecté.';

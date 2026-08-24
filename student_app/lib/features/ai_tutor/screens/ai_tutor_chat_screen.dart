@@ -95,7 +95,7 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                   backgroundColor: context.colors.card,
                   labelStyle: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.white70,
+                    color: context.colors.textSecondary,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
