@@ -29,19 +29,19 @@ class ParentDashboardScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: StudentTheme.cardDark,
+                color: context.colors.card,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: StudentTheme.borderDark),
+                border: Border.all(color: context.colors.border),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: StudentTheme.accentAmber.withOpacity(0.15),
+                      color: context.colors.accentAmber.withOpacity(0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.verified_user_rounded, color: StudentTheme.accentAmber, size: 24),
+                    child: Icon(Icons.verified_user_rounded, color: context.colors.accentAmber, size: 24),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -54,13 +54,13 @@ class ParentDashboardScreen extends ConsumerWidget {
                         ),
                         Text(
                           'Mobile Money : ${authState.account?.phone ?? 'Non renseigné'}',
-                          style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary),
+                          style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.settings_outlined, color: StudentTheme.textSecondary),
+                    icon: Icon(Icons.settings_outlined, color: context.colors.textSecondary),
                     onPressed: () => _showSupportAndLegalSheet(context, ref),
                   ),
                 ],
@@ -71,7 +71,7 @@ class ParentDashboardScreen extends ConsumerWidget {
 
             Text(
               'Suivi Individuel des Enfants',
-              style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+              style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
             ),
             const SizedBox(height: 14),
 
@@ -81,9 +81,9 @@ class ParentDashboardScreen extends ConsumerWidget {
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: StudentTheme.cardDark,
+                  color: context.colors.card,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: StudentTheme.borderDark),
+                  border: Border.all(color: context.colors.border),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,7 +117,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                                 ),
                                 Text(
                                   'Année scolaire ${p.schoolYear}',
-                                  style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary),
+                                  style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
                                 ),
                               ],
                             ),
@@ -127,8 +127,8 @@ class ParentDashboardScreen extends ConsumerWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: p.hasActiveSubscription
-                                ? StudentTheme.accentEmerald.withOpacity(0.15)
-                                : StudentTheme.accentRose.withOpacity(0.15),
+                                ? context.colors.accentEmerald.withOpacity(0.15)
+                                : context.colors.accentRose.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -136,7 +136,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                             style: GoogleFonts.inter(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: p.hasActiveSubscription ? StudentTheme.accentEmerald : StudentTheme.accentRose,
+                              color: p.hasActiveSubscription ? context.colors.accentEmerald : context.colors.accentRose,
                             ),
                           ),
                         ),
@@ -162,15 +162,15 @@ class ParentDashboardScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: StudentTheme.cardDark,
+                color: context.colors.card,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: StudentTheme.borderDark),
+                border: Border.all(color: context.colors.border),
               ),
               child: Column(
                 children: [
-                  _buildPaymentHistoryRow('Pass Mensuel Junior (Terminale C)', '3 500 FCFA', '12 Août 2026', 'Orange Money'),
-                  const Divider(color: StudentTheme.borderDark),
-                  _buildPaymentHistoryRow('Formulaire Maths (Boutique)', '500 FCFA', '05 Août 2026', 'MTN MoMo'),
+                  _buildPaymentHistoryRow(context, 'Pass Mensuel Junior (Terminale C)', '3 500 FCFA', '12 Août 2026', 'Orange Money'),
+                  Divider(color: context.colors.border),
+                  _buildPaymentHistoryRow(context, 'Formulaire Maths (Boutique)', '500 FCFA', '05 Août 2026', 'MTN MoMo'),
                 ],
               ),
             ),
@@ -180,7 +180,7 @@ class ParentDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildPaymentHistoryRow(String title, String amount, String date, String method) {
+  Widget _buildPaymentHistoryRow(BuildContext context, String title, String amount, String date, String method) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -189,11 +189,11 @@ class ParentDashboardScreen extends ConsumerWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
-              Text('$date • $method', style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textMuted)),
+              Text(title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+              Text('$date • $method', style: GoogleFonts.inter(fontSize: 11, color: context.colors.textMuted)),
             ],
           ),
-          Text(amount, style: GoogleFonts.firaCode(fontSize: 13, fontWeight: FontWeight.bold, color: StudentTheme.accentEmerald)),
+          Text(amount, style: GoogleFonts.firaCode(fontSize: 13, fontWeight: FontWeight.bold, color: context.colors.accentEmerald)),
         ],
       ),
     );
@@ -202,7 +202,7 @@ class ParentDashboardScreen extends ConsumerWidget {
   void _showSupportAndLegalSheet(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: StudentTheme.cardDark,
+      backgroundColor: context.colors.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -217,20 +217,20 @@ class ParentDashboardScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Support & Informations Légales',
-                      style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white)),
+                      style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
                   const SizedBox(height: 16),
                   if (settings.supportEmail?.isNotEmpty == true)
-                    _infoRow(Icons.email_outlined, 'Email', settings.supportEmail!),
+                    _infoRow(context, Icons.email_outlined, 'Email', settings.supportEmail!),
                   if (settings.supportPhone?.isNotEmpty == true)
-                    _infoRow(Icons.phone_outlined, 'Téléphone', settings.supportPhone!),
+                    _infoRow(context, Icons.phone_outlined, 'Téléphone', settings.supportPhone!),
                   if (settings.supportWhatsappLink?.isNotEmpty == true)
-                    _infoRow(Icons.chat_outlined, 'WhatsApp', settings.supportWhatsappLink!),
+                    _infoRow(context, Icons.chat_outlined, 'WhatsApp', settings.supportWhatsappLink!),
                   if (settings.termsUrl?.isNotEmpty == true)
-                    _infoRow(Icons.description_outlined, 'CGU', settings.termsUrl!),
+                    _infoRow(context, Icons.description_outlined, 'CGU', settings.termsUrl!),
                   if (settings.privacyPolicyUrl?.isNotEmpty == true)
-                    _infoRow(Icons.privacy_tip_outlined, 'Confidentialité', settings.privacyPolicyUrl!),
+                    _infoRow(context, Icons.privacy_tip_outlined, 'Confidentialité', settings.privacyPolicyUrl!),
                   if (settings.legalNoticeUrl?.isNotEmpty == true)
-                    _infoRow(Icons.gavel_outlined, 'Mentions légales', settings.legalNoticeUrl!),
+                    _infoRow(context, Icons.gavel_outlined, 'Mentions légales', settings.legalNoticeUrl!),
                   if ((settings.supportEmail?.isEmpty ?? true) &&
                       (settings.supportPhone?.isEmpty ?? true) &&
                       (settings.supportWhatsappLink?.isEmpty ?? true) &&
@@ -238,7 +238,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                       (settings.privacyPolicyUrl?.isEmpty ?? true) &&
                       (settings.legalNoticeUrl?.isEmpty ?? true))
                     Text('Aucune information de support renseignée par l\'administration pour le moment.',
-                        style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary)),
+                        style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary)),
                 ],
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -251,19 +251,19 @@ class ParentDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _infoRow(IconData icon, String label, String value) {
+  Widget _infoRow(BuildContext context, IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: StudentTheme.accentAmber),
+          Icon(icon, size: 18, color: context.colors.accentAmber),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textMuted)),
+                Text(label, style: GoogleFonts.inter(fontSize: 11, color: context.colors.textMuted)),
                 SelectableText(value, style: GoogleFonts.inter(fontSize: 13, color: Colors.white)),
               ],
             ),

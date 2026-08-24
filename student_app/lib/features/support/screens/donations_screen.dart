@@ -16,8 +16,8 @@ class DonationsScreen extends ConsumerWidget {
 
   void _showUnavailable(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        backgroundColor: StudentTheme.accentAmber,
+      SnackBar(
+        backgroundColor: context.colors.accentAmber,
         content: Text('Les dons Mobile Money ne sont pas encore disponibles : agrégateur de paiement en attente de configuration.'),
       ),
     );
@@ -38,7 +38,7 @@ class DonationsScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               gradient: StudentTheme.purpleGradient,
               borderRadius: BorderRadius.circular(18),
-              boxShadow: [BoxShadow(color: StudentTheme.accentPurple.withOpacity(0.3), blurRadius: 16)],
+              boxShadow: [BoxShadow(color: context.colors.accentPurple.withOpacity(0.3), blurRadius: 16)],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,7 +67,7 @@ class DonationsScreen extends ConsumerWidget {
           ),
 
           const SizedBox(height: 28),
-          Text('Soutenir une Œuvre Caritative', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text('Soutenir une Œuvre Caritative', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
           const SizedBox(height: 14),
 
           campaignsAsync.when(
@@ -75,7 +75,7 @@ class DonationsScreen extends ConsumerWidget {
             error: (err, _) => Text('Erreur : $err', style: const TextStyle(color: Colors.red)),
             data: (campaigns) {
               if (campaigns.isEmpty) {
-                return Text('Aucune campagne active pour le moment.', style: GoogleFonts.inter(color: StudentTheme.textSecondary));
+                return Text('Aucune campagne active pour le moment.', style: GoogleFonts.inter(color: context.colors.textSecondary));
               }
               return Column(
                 children: campaigns.map((c) {
@@ -83,24 +83,24 @@ class DonationsScreen extends ConsumerWidget {
                     margin: const EdgeInsets.only(bottom: 14),
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: StudentTheme.cardDark,
+                      color: context.colors.card,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: StudentTheme.borderDark),
+                      border: Border.all(color: context.colors.border),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(c.title, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                        Text(c.title, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
                         const SizedBox(height: 4),
-                        Text(c.description, style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
+                        Text(c.description, style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
                         const SizedBox(height: 14),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(6),
                           child: LinearProgressIndicator(
                             value: c.progressRatio.toDouble(),
                             minHeight: 8,
-                            backgroundColor: StudentTheme.surfaceDark,
-                            valueColor: const AlwaysStoppedAnimation(StudentTheme.accentEmerald),
+                            backgroundColor: context.colors.surface,
+                            valueColor: AlwaysStoppedAnimation(context.colors.accentEmerald),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -108,7 +108,7 @@ class DonationsScreen extends ConsumerWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('${c.collectedAmount.toStringAsFixed(0)} / ${c.targetAmount.toStringAsFixed(0)} FCFA',
-                                style: GoogleFonts.firaCode(fontSize: 11, color: StudentTheme.textMuted)),
+                                style: GoogleFonts.firaCode(fontSize: 11, color: context.colors.textMuted)),
                             TextButton(onPressed: () => _showUnavailable(context), child: const Text('Faire un don')),
                           ],
                         ),

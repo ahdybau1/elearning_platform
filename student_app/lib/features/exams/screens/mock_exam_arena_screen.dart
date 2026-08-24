@@ -81,7 +81,7 @@ class _MockExamArenaScreenState extends State<MockExamArenaScreen> {
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
+                      backgroundColor: context.colors.textPrimary,
                       foregroundColor: Colors.black,
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -104,19 +104,19 @@ class _MockExamArenaScreenState extends State<MockExamArenaScreen> {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: StudentTheme.cardDark,
+                color: context.colors.card,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: StudentTheme.borderDark),
+                border: Border.all(color: context.colors.border),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: StudentTheme.accentRose.withOpacity(0.15),
+                      color: context.colors.accentRose.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.gavel_rounded, color: StudentTheme.accentRose, size: 24),
+                    child: Icon(Icons.gavel_rounded, color: context.colors.accentRose, size: 24),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -133,16 +133,16 @@ class _MockExamArenaScreenState extends State<MockExamArenaScreen> {
                         ),
                         Text(
                           'Une erreur sur votre correction ? Déclenchez une 2nde relecture impartiale garantie.',
-                          style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textSecondary),
+                          style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary),
                         ),
                       ],
                     ),
                   ),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: StudentTheme.surfaceDark,
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: StudentTheme.borderDark),
+                      backgroundColor: context.colors.surface,
+                      foregroundColor: context.colors.textPrimary,
+                      side: BorderSide(color: context.colors.border),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
@@ -158,7 +158,7 @@ class _MockExamArenaScreenState extends State<MockExamArenaScreen> {
             // Leaderboard Section
             Text(
               'Classement National en Direct',
-              style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+              style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
             ),
             const SizedBox(height: 14),
 
@@ -174,10 +174,10 @@ class _MockExamArenaScreenState extends State<MockExamArenaScreen> {
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: StudentTheme.cardDark,
+                    color: context.colors.card,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isTop3 ? StudentTheme.accentAmber.withOpacity(0.4) : StudentTheme.borderDark,
+                      color: isTop3 ? context.colors.accentAmber.withOpacity(0.4) : context.colors.border,
                     ),
                   ),
                   child: Row(
@@ -187,7 +187,7 @@ class _MockExamArenaScreenState extends State<MockExamArenaScreen> {
                         height: 32,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: isTop3 ? StudentTheme.accentAmber : StudentTheme.surfaceDark,
+                          color: isTop3 ? context.colors.accentAmber : context.colors.surface,
                         ),
                         child: Center(
                           child: Text(
@@ -195,7 +195,7 @@ class _MockExamArenaScreenState extends State<MockExamArenaScreen> {
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: isTop3 ? Colors.black : Colors.white,
+                              color: isTop3 ? Colors.black : context.colors.textPrimary,
                             ),
                           ),
                         ),
@@ -207,11 +207,11 @@ class _MockExamArenaScreenState extends State<MockExamArenaScreen> {
                           children: [
                             Text(
                               item['name'],
-                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
                             ),
                             Text(
                               item['school'],
-                              style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textSecondary),
+                              style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary),
                             ),
                           ],
                         ),
@@ -224,12 +224,12 @@ class _MockExamArenaScreenState extends State<MockExamArenaScreen> {
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: StudentTheme.accentEmerald,
+                              color: context.colors.accentEmerald,
                             ),
                           ),
                           Text(
                             item['time'],
-                            style: GoogleFonts.firaCode(fontSize: 11, color: StudentTheme.textMuted),
+                            style: GoogleFonts.firaCode(fontSize: 11, color: context.colors.textMuted),
                           ),
                         ],
                       ),
@@ -249,10 +249,10 @@ class _MockExamArenaScreenState extends State<MockExamArenaScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: StudentTheme.cardDark,
+        backgroundColor: context.colors.card,
         title: Row(
-          children: const [
-            Icon(Icons.gavel_rounded, color: StudentTheme.accentRose),
+          children: [
+            Icon(Icons.gavel_rounded, color: context.colors.accentRose),
             SizedBox(width: 10),
             Text('Demande de 2e Correcteur', style: TextStyle(color: Colors.white, fontSize: 16)),
           ],
@@ -263,7 +263,7 @@ class _MockExamArenaScreenState extends State<MockExamArenaScreen> {
           children: [
             Text(
               'Règle du CDC (Section 11) : Votre copie sera transmise à un examinateur neutre indépendant sans communication de la 1ère note pour garantir l\'équité.',
-              style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary),
+              style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
             ),
             const SizedBox(height: 14),
             TextField(
@@ -272,9 +272,9 @@ class _MockExamArenaScreenState extends State<MockExamArenaScreen> {
               style: const TextStyle(color: Colors.white, fontSize: 13),
               decoration: InputDecoration(
                 hintText: 'Précisez l\'exercice ou la question contestée...',
-                hintStyle: const TextStyle(color: StudentTheme.textMuted),
+                hintStyle: TextStyle(color: context.colors.textMuted),
                 filled: true,
-                fillColor: StudentTheme.surfaceDark,
+                fillColor: context.colors.surface,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
@@ -283,15 +283,15 @@ class _MockExamArenaScreenState extends State<MockExamArenaScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler', style: TextStyle(color: StudentTheme.textSecondary)),
+            child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: StudentTheme.accentRose),
+            style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentRose),
             onPressed: () {
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  backgroundColor: StudentTheme.accentEmerald,
+                SnackBar(
+                  backgroundColor: context.colors.accentEmerald,
                   content: Text('Demande de réclamation enregistrée. Attente de la 2nde notation.'),
                 ),
               );

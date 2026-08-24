@@ -58,9 +58,9 @@ class BoutiqueShopScreen extends ConsumerWidget {
           return Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: StudentTheme.cardDark,
+              color: context.colors.card,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: StudentTheme.borderDark),
+              border: Border.all(color: context.colors.border),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,7 +71,7 @@ class BoutiqueShopScreen extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: StudentTheme.accentIndigo.withOpacity(0.15),
+                        color: context.colors.accentIndigo.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -79,7 +79,7 @@ class BoutiqueShopScreen extends ConsumerWidget {
                         style: GoogleFonts.inter(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: StudentTheme.accentIndigo,
+                          color: context.colors.accentIndigo,
                         ),
                       ),
                     ),
@@ -88,7 +88,7 @@ class BoutiqueShopScreen extends ConsumerWidget {
                       style: GoogleFonts.outfit(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: StudentTheme.accentEmerald,
+                        color: context.colors.accentEmerald,
                       ),
                     ),
                   ],
@@ -105,16 +105,16 @@ class BoutiqueShopScreen extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(
                   'Par ${doc['author']} • ${doc['downloads']} téléchargements',
-                  style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary),
+                  style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: StudentTheme.surfaceDark,
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: StudentTheme.borderDark),
+                      backgroundColor: context.colors.surface,
+                      foregroundColor: context.colors.textPrimary,
+                      side: BorderSide(color: context.colors.border),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
@@ -124,15 +124,15 @@ class BoutiqueShopScreen extends ConsumerWidget {
                       // croire à un achat réel sans transaction ni téléchargement. On le dit
                       // honnêtement plutôt que de simuler la réussite.
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          backgroundColor: StudentTheme.accentAmber,
+                        SnackBar(
+                          backgroundColor: context.colors.accentAmber,
                           content: Text(
                             'Paiement Mobile Money pas encore disponible : configuration de l\'agrégateur en attente.',
                           ),
                         ),
                       );
                     },
-                    icon: const Icon(Icons.shopping_cart_checkout_rounded, size: 16, color: StudentTheme.accentPrimary),
+                    icon: Icon(Icons.shopping_cart_checkout_rounded, size: 16, color: context.colors.accentPrimary),
                     label: Text(
                       'Acheter pour ${doc['price']} (Mobile Money)',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),

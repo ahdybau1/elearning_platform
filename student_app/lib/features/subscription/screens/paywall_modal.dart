@@ -56,8 +56,8 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
     final selectedTier = _tiers[_selectedTierIndex];
 
     return Container(
-      decoration: const BoxDecoration(
-        color: StudentTheme.cardDark,
+      decoration: BoxDecoration(
+        color: context.colors.card,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: const EdgeInsets.all(24),
@@ -71,7 +71,7 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: StudentTheme.borderDark,
+                  color: context.colors.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -83,14 +83,14 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
               style: GoogleFonts.outfit(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: context.colors.textPrimary,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 4),
             Text(
               'Paiement Mobile Money 100% sécurisé et activation instantanée.',
-              style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary),
+              style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
@@ -103,10 +103,10 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
-                  color: isSel ? StudentTheme.surfaceDark : Colors.transparent,
+                  color: isSel ? context.colors.surface : Colors.transparent,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: isSel ? StudentTheme.accentPrimary : StudentTheme.borderDark,
+                    color: isSel ? context.colors.accentPrimary : context.colors.border,
                     width: isSel ? 2 : 1,
                   ),
                 ),
@@ -115,12 +115,12 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
                     tier['name'],
                     style: GoogleFonts.inter(
                       fontWeight: FontWeight.bold,
-                      color: isSel ? StudentTheme.accentPrimary : Colors.white,
+                      color: isSel ? context.colors.accentPrimary : context.colors.textPrimary,
                     ),
                   ),
                   subtitle: Text(
                     (tier['features'] as List).join(' • '),
-                    style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textSecondary),
+                    style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -142,7 +142,7 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
             // Operator Selection
             Text(
               'Moyen de paiement Mobile Money :',
-              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
             ),
             const SizedBox(height: 10),
             Wrap(
@@ -153,10 +153,10 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
                   label: Text(op),
                   selected: isSel,
                   onSelected: (_) => setState(() => _selectedOperator = op),
-                  selectedColor: StudentTheme.accentPrimary.withOpacity(0.2),
-                  backgroundColor: StudentTheme.surfaceDark,
+                  selectedColor: context.colors.accentPrimary.withOpacity(0.2),
+                  backgroundColor: context.colors.surface,
                   labelStyle: GoogleFonts.inter(
-                    color: isSel ? StudentTheme.accentPrimary : Colors.white,
+                    color: isSel ? context.colors.accentPrimary : Colors.white,
                     fontSize: 12,
                     fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
                   ),
@@ -173,9 +173,9 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 labelText: 'Numéro de compte pour le prélèvement',
-                labelStyle: const TextStyle(color: StudentTheme.textSecondary),
+                labelStyle: TextStyle(color: context.colors.textSecondary),
                 filled: true,
-                fillColor: StudentTheme.surfaceDark,
+                fillColor: context.colors.surface,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
@@ -185,7 +185,7 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
             // Pay Button
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: StudentTheme.accentPrimary,
+                backgroundColor: context.colors.accentPrimary,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -198,8 +198,8 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
                 // message honnête plutôt que de faire croire à un paiement effectué.
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    backgroundColor: StudentTheme.accentAmber,
+                  SnackBar(
+                    backgroundColor: context.colors.accentAmber,
                     content: Text(
                       'Paiement Mobile Money pas encore disponible : configuration de l\'agrégateur en attente.',
                     ),

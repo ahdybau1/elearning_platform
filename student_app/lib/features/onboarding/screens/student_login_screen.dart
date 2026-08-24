@@ -50,7 +50,7 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
+      backgroundColor: context.colors.background,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -65,8 +65,8 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                       width: 64,
                       height: 64,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [StudentTheme.accentPrimary, StudentTheme.accentIndigo],
+                        gradient: LinearGradient(
+                          colors: [context.colors.accentPrimary, context.colors.accentIndigo],
                         ),
                         borderRadius: BorderRadius.circular(18),
                       ),
@@ -80,14 +80,14 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                     style: GoogleFonts.outfit(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: context.colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'Connectez-vous pour retrouver vos cours, exercices et annales.',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary),
+                    style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
                   ),
                   const SizedBox(height: 32),
 
@@ -99,13 +99,13 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                         TextFormField(
                           controller: _emailCtrl,
                           keyboardType: TextInputType.emailAddress,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: context.colors.textPrimary),
                           decoration: InputDecoration(
                             labelText: 'Adresse email',
-                            labelStyle: const TextStyle(color: StudentTheme.textSecondary),
-                            prefixIcon: const Icon(Icons.email_outlined, color: StudentTheme.textSecondary),
+                            labelStyle: TextStyle(color: context.colors.textSecondary),
+                            prefixIcon: Icon(Icons.email_outlined, color: context.colors.textSecondary),
                             filled: true,
-                            fillColor: StudentTheme.cardDark,
+                            fillColor: context.colors.card,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           validator: (v) => (v == null || !v.contains('@'))
@@ -116,20 +116,20 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                         TextFormField(
                           controller: _passwordCtrl,
                           obscureText: _obscurePassword,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: context.colors.textPrimary),
                           decoration: InputDecoration(
                             labelText: 'Mot de passe',
-                            labelStyle: const TextStyle(color: StudentTheme.textSecondary),
-                            prefixIcon: const Icon(Icons.lock_outline_rounded, color: StudentTheme.textSecondary),
+                            labelStyle: TextStyle(color: context.colors.textSecondary),
+                            prefixIcon: Icon(Icons.lock_outline_rounded, color: context.colors.textSecondary),
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                                color: StudentTheme.textSecondary,
+                                color: context.colors.textSecondary,
                               ),
                               onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                             ),
                             filled: true,
-                            fillColor: StudentTheme.cardDark,
+                            fillColor: context.colors.card,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           validator: (v) =>
@@ -141,18 +141,18 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: StudentTheme.accentRose.withOpacity(0.12),
+                              color: context.colors.accentRose.withOpacity(0.12),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: StudentTheme.accentRose.withOpacity(0.4)),
+                              border: Border.all(color: context.colors.accentRose.withOpacity(0.4)),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.error_outline_rounded, color: StudentTheme.accentRose, size: 18),
+                                Icon(Icons.error_outline_rounded, color: context.colors.accentRose, size: 18),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     _errorMessage!,
-                                    style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.accentRose),
+                                    style: GoogleFonts.inter(fontSize: 12, color: context.colors.accentRose),
                                   ),
                                 ),
                               ],
@@ -163,7 +163,7 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                         ElevatedButton(
                           onPressed: _isSubmitting ? null : _submit,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: StudentTheme.accentPrimary,
+                            backgroundColor: context.colors.accentPrimary,
                             foregroundColor: Colors.black,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -189,7 +189,7 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                     children: [
                       Text(
                         'Pas encore de compte ?',
-                        style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary),
+                        style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
                       ),
                       TextButton(
                         onPressed: () => Navigator.pushNamed(context, '/onboarding'),
@@ -198,7 +198,7 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                           style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
-                            color: StudentTheme.accentPrimary,
+                            color: context.colors.accentPrimary,
                           ),
                         ),
                       ),

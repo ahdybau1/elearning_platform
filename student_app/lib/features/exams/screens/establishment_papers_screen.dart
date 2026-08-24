@@ -39,13 +39,13 @@ class _EstablishmentPapersScreenState extends ConsumerState<EstablishmentPapersS
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: StudentTheme.cardDark,
+                      color: context.colors.card,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: StudentTheme.borderDark),
+                      border: Border.all(color: context.colors.border),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.school_outlined, color: StudentTheme.accentPrimary, size: 18),
+                        Icon(Icons.school_outlined, color: context.colors.accentPrimary, size: 18),
                         const SizedBox(width: 10),
                         Text('Épreuves filtrées pour : ${profile.className}',
                             style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
@@ -106,9 +106,9 @@ class _EstablishmentPapersScreenState extends ConsumerState<EstablishmentPapersS
       label: Text(label, style: GoogleFonts.inter(fontSize: 12)),
       selected: selected,
       onSelected: (_) => onTap(),
-      selectedColor: StudentTheme.accentPrimary.withOpacity(0.2),
-      backgroundColor: StudentTheme.cardDark,
-      labelStyle: TextStyle(color: selected ? StudentTheme.accentPrimary : Colors.white),
+      selectedColor: context.colors.accentPrimary.withOpacity(0.2),
+      backgroundColor: context.colors.card,
+      labelStyle: TextStyle(color: selected ? context.colors.accentPrimary : context.colors.textPrimary),
     );
   }
 
@@ -119,7 +119,7 @@ class _EstablishmentPapersScreenState extends ConsumerState<EstablishmentPapersS
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.folder_off_outlined, size: 42, color: StudentTheme.textMuted),
+            Icon(Icons.folder_off_outlined, size: 42, color: context.colors.textMuted),
             const SizedBox(height: 14),
             Text('Aucune épreuve disponible pour le moment',
                 textAlign: TextAlign.center,
@@ -127,7 +127,7 @@ class _EstablishmentPapersScreenState extends ConsumerState<EstablishmentPapersS
             const SizedBox(height: 6),
             Text('Les établissements et enseignants n\'ont pas encore publié d\'épreuve pour votre classe.',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary)),
+                style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary)),
           ],
         ),
       ),
@@ -138,9 +138,9 @@ class _EstablishmentPapersScreenState extends ConsumerState<EstablishmentPapersS
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: StudentTheme.cardDark,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: StudentTheme.borderDark),
+        border: Border.all(color: context.colors.border),
       ),
       child: Row(
         children: [
@@ -149,8 +149,8 @@ class _EstablishmentPapersScreenState extends ConsumerState<EstablishmentPapersS
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('${paper.subjectName ?? 'Matière'} — ${paper.year}',
-                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                Text(paper.establishmentName ?? '', style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textSecondary)),
+                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+                Text(paper.establishmentName ?? '', style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary)),
               ],
             ),
           ),

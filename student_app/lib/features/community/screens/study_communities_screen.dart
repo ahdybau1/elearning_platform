@@ -34,7 +34,7 @@ class StudyCommunitiesScreen extends ConsumerWidget {
                         error: (err, _) => Text('Erreur : $err', style: const TextStyle(color: Colors.red)),
                         data: (community) {
                           if (community == null) {
-                            return _emptyState(profile.className);
+                            return _emptyState(context, profile.className);
                           }
                           return _buildCommunityCard(context, community.inviteLink, community.memberCountEstimate, profile.className);
                         },
@@ -46,23 +46,23 @@ class StudyCommunitiesScreen extends ConsumerWidget {
             ));
   }
 
-  Widget _emptyState(String className) {
+  Widget _emptyState(BuildContext context, String className) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.groups_outlined, size: 46, color: StudentTheme.textMuted),
+            Icon(Icons.groups_outlined, size: 46, color: context.colors.textMuted),
             const SizedBox(height: 16),
             Text('Aucune communauté active pour $className',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
             const SizedBox(height: 6),
             Text(
               'Soit l\'administration n\'a pas encore créé de groupe pour votre classe, soit votre palier d\'abonnement actuel n\'y donne pas accès.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary),
+              style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
             ),
           ],
         ),

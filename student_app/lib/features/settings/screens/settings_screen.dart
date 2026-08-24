@@ -41,9 +41,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _sectionTitle('Compte'),
           _buildCard([
             _infoRow('Email', account?.email ?? '—'),
-            const Divider(color: StudentTheme.borderDark, height: 24),
+            Divider(color: context.colors.border, height: 24),
             _infoRow('Téléphone', account?.phone ?? 'Non renseigné'),
-            const Divider(color: StudentTheme.borderDark, height: 24),
+            Divider(color: context.colors.border, height: 24),
             _actionRow(
               icon: Icons.lock_outline_rounded,
               label: 'Changer le mot de passe',
@@ -55,16 +55,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _sectionTitle('Notifications'),
           _buildCard([
             _switchRow('Échéances d\'abonnement', 'Rappels J-3, J-1 et expiration', _notifAbonnement, (v) => setState(() => _notifAbonnement = v)),
-            const Divider(color: StudentTheme.borderDark, height: 24),
+            Divider(color: context.colors.border, height: 24),
             _switchRow('Activité du forum', 'Réponses à vos messages', _notifForum, (v) => setState(() => _notifForum = v)),
-            const Divider(color: StudentTheme.borderDark, height: 24),
+            Divider(color: context.colors.border, height: 24),
             _switchRow('Révision intelligente', 'Rappels de révision espacée', _notifRevision, (v) => setState(() => _notifRevision = v)),
           ]),
 
           const SizedBox(height: 24),
           _sectionTitle('Langue & Apparence'),
           _buildCard([
-            Text('Langue de l\'interface', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+            Text('Langue de l\'interface', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textPrimary)),
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,
@@ -74,7 +74,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
             ),
             const SizedBox(height: 20),
-            Text('Apparence', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+            Text('Apparence', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textPrimary)),
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,
@@ -90,34 +90,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _sectionTitle('Confidentialité & Stockage'),
           _buildCard([
             _switchRow('Profil visible sur le forum', 'Les autres élèves de votre classe voient votre nom', _profilVisibleForum, (v) => setState(() => _profilVisibleForum = v)),
-            const Divider(color: StudentTheme.borderDark, height: 24),
+            Divider(color: context.colors.border, height: 24),
             _infoRow('Stockage hors-ligne utilisé', '0 Mo'),
             const SizedBox(height: 10),
             OutlinedButton.icon(
               onPressed: null,
               icon: const Icon(Icons.delete_sweep_outlined, size: 16),
               label: const Text('Vider le cache (bientôt disponible)'),
-              style: OutlinedButton.styleFrom(foregroundColor: StudentTheme.textMuted, side: const BorderSide(color: StudentTheme.borderDark)),
+              style: OutlinedButton.styleFrom(foregroundColor: context.colors.textMuted, side: BorderSide(color: context.colors.border)),
             ),
           ]),
 
           const SizedBox(height: 24),
           _sectionTitle('Accessibilité'),
           _buildCard([
-            Text('Taille du texte', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+            Text('Taille du texte', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textPrimary)),
             Slider(
               value: _fontScale,
               min: 0.85,
               max: 1.3,
               divisions: 3,
-              activeColor: StudentTheme.accentPrimary,
+              activeColor: context.colors.accentPrimary,
               label: '${(_fontScale * 100).round()}%',
               onChanged: (v) => setState(() => _fontScale = v),
             ),
-            const Divider(color: StudentTheme.borderDark, height: 8),
+            Divider(color: context.colors.border, height: 8),
             const SizedBox(height: 12),
             _switchRow('Contraste élevé', 'Distinct du mode sombre', _highContrast, (v) => setState(() => _highContrast = v)),
-            const Divider(color: StudentTheme.borderDark, height: 24),
+            Divider(color: context.colors.border, height: 24),
             _switchRow('Sous-titres vidéo', 'Sur tout contenu vidéo de cours', _subtitles, (v) => setState(() => _subtitles = v)),
           ]),
 
@@ -127,14 +127,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _actionRow(
               icon: Icons.logout_rounded,
               label: 'Se déconnecter',
-              color: StudentTheme.textSecondary,
+              color: context.colors.textSecondary,
               onTap: () => ref.read(studentAuthProvider.notifier).signOut(),
             ),
-            const Divider(color: StudentTheme.borderDark, height: 24),
+            Divider(color: context.colors.border, height: 24),
             _actionRow(
               icon: Icons.delete_forever_outlined,
               label: 'Supprimer mon compte',
-              color: StudentTheme.accentRose,
+              color: context.colors.accentRose,
               onTap: () => _showDeleteAccountDialog(context),
             ),
           ]),
@@ -146,7 +146,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Widget _sectionTitle(String title) => Padding(
         padding: const EdgeInsets.only(bottom: 10),
-        child: Text(title, style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: StudentTheme.textSecondary)),
+        child: Text(title, style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textSecondary)),
       );
 
   Widget _buildCard(List<Widget> children) {
@@ -154,9 +154,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: StudentTheme.cardDark,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: StudentTheme.borderDark),
+        border: Border.all(color: context.colors.border),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
     );
@@ -166,8 +166,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary)),
-        Text(value, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+        Text(label, style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary)),
+        Text(value, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textPrimary)),
       ],
     );
   }
@@ -179,27 +179,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
-              Text(subtitle, style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textSecondary)),
+              Text(title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textPrimary)),
+              Text(subtitle, style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary)),
             ],
           ),
         ),
-        Switch(value: value, onChanged: onChanged, activeThumbColor: StudentTheme.accentPrimary),
+        Switch(value: value, onChanged: onChanged, activeThumbColor: context.colors.accentPrimary),
       ],
     );
   }
 
-  Widget _actionRow({required IconData icon, required String label, required VoidCallback onTap, Color color = Colors.white}) {
+  Widget _actionRow({required IconData icon, required String label, required VoidCallback onTap, Color? color}) {
+    final resolvedColor = color ?? context.colors.textPrimary;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: color),
+          Icon(icon, size: 18, color: resolvedColor),
           const SizedBox(width: 12),
-          Text(label, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: color)),
+          Text(label, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: resolvedColor)),
           const Spacer(),
-          Icon(Icons.chevron_right_rounded, size: 18, color: StudentTheme.textMuted),
+          Icon(Icons.chevron_right_rounded, size: 18, color: context.colors.textMuted),
         ],
       ),
     );
@@ -210,11 +211,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       label: Text(comingSoon ? '$label (bientôt)' : label),
       selected: selected,
       onSelected: comingSoon ? null : (_) {},
-      selectedColor: StudentTheme.accentPrimary.withOpacity(0.2),
-      backgroundColor: StudentTheme.surfaceDark,
+      selectedColor: context.colors.accentPrimary.withOpacity(0.2),
+      backgroundColor: context.colors.surface,
       labelStyle: GoogleFonts.inter(
         fontSize: 12,
-        color: selected ? StudentTheme.accentPrimary : (comingSoon ? StudentTheme.textMuted : Colors.white),
+        color: selected ? context.colors.accentPrimary : (comingSoon ? context.colors.textMuted : Colors.white),
       ),
     );
   }
@@ -228,19 +229,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: StudentTheme.cardDark,
-          title: Text('Changer le mot de passe', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+          backgroundColor: context.colors.card,
+          title: Text('Changer le mot de passe', style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
           content: Form(
             key: formKey,
             child: TextFormField(
               controller: newPasswordCtrl,
               obscureText: true,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.colors.textPrimary),
               decoration: InputDecoration(
                 labelText: 'Nouveau mot de passe',
-                labelStyle: const TextStyle(color: StudentTheme.textSecondary),
+                labelStyle: TextStyle(color: context.colors.textSecondary),
                 filled: true,
-                fillColor: StudentTheme.surfaceDark,
+                fillColor: context.colors.surface,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
               validator: (v) => (v == null || v.length < 6) ? 'Au moins 6 caractères' : null,
@@ -249,10 +250,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           actions: [
             TextButton(
               onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
-              child: const Text('Annuler', style: TextStyle(color: StudentTheme.textSecondary)),
+              child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: StudentTheme.accentPrimary),
+              style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentPrimary),
               onPressed: isSubmitting
                   ? null
                   : () async {
@@ -265,7 +266,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         if (ctx.mounted) Navigator.pop(ctx);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(backgroundColor: StudentTheme.accentEmerald, content: Text('Mot de passe mis à jour.')),
+                            SnackBar(backgroundColor: context.colors.accentEmerald, content: Text('Mot de passe mis à jour.')),
                           );
                         }
                       } on AuthException catch (e) {
@@ -289,25 +290,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: StudentTheme.cardDark,
+        backgroundColor: context.colors.card,
         title: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded, color: StudentTheme.accentRose),
+            Icon(Icons.warning_amber_rounded, color: context.colors.accentRose),
             const SizedBox(width: 10),
-            Text('Supprimer mon compte', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+            Text('Supprimer mon compte', style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
           ],
         ),
         content: Text(
           'La suppression définitive de compte (droit à l\'oubli, §11 du cahier des charges) doit être traitée manuellement par l\'administration pour des raisons de sécurité. Ouvrez un ticket de support (catégorie « Autre ») pour en faire la demande — nous vous répondrons rapidement.',
-          style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary),
+          style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Fermer', style: TextStyle(color: StudentTheme.textSecondary)),
+            child: Text('Fermer', style: TextStyle(color: context.colors.textSecondary)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: StudentTheme.accentRose),
+            style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentRose),
             onPressed: () {
               Navigator.pop(ctx);
               Navigator.pushNamed(context, '/support');

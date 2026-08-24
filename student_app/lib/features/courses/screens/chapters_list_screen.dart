@@ -29,11 +29,11 @@ class ChaptersListScreen extends ConsumerWidget {
     final visual = SubjectVisuals.forSubject(code: subjectCode, name: subjectName);
 
     return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
         title: Text(
           subjectName,
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: context.colors.textPrimary, fontSize: 18),
         ),
       ),
       body: StudentPageContent(
@@ -56,14 +56,14 @@ class ChaptersListScreen extends ConsumerWidget {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.auto_stories_outlined, size: 46, color: StudentTheme.textMuted),
+                            Icon(Icons.auto_stories_outlined, size: 46, color: context.colors.textMuted),
                             const SizedBox(height: 16),
                             Text('Aucun chapitre publié pour le moment',
-                                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
                             const SizedBox(height: 6),
                             Text('Le contenu de $subjectName pour votre classe est en cours de préparation.',
                                 textAlign: TextAlign.center,
-                                style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary)),
+                                style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary)),
                           ],
                         ),
                       ),
@@ -140,10 +140,10 @@ class ChaptersListScreen extends ConsumerWidget {
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: isUnlocked ? StudentTheme.cardDark : StudentTheme.surfaceDark.withValues(alpha: 0.5),
+        color: isUnlocked ? context.colors.card : context.colors.surface.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isUnlocked ? StudentTheme.borderDark : StudentTheme.borderDark.withValues(alpha: 0.4),
+          color: isUnlocked ? context.colors.border : context.colors.border.withValues(alpha: 0.4),
         ),
       ),
       child: IntrinsicHeight(
@@ -156,7 +156,7 @@ class ChaptersListScreen extends ConsumerWidget {
               gradient: isUnlocked
                   ? LinearGradient(colors: visual.gradient, begin: Alignment.topCenter, end: Alignment.bottomCenter)
                   : null,
-              color: isUnlocked ? null : StudentTheme.borderDark,
+              color: isUnlocked ? null : context.colors.border,
             ),
           ),
           Expanded(
@@ -186,13 +186,13 @@ class ChaptersListScreen extends ConsumerWidget {
                       if (!isUnlocked)
                         Row(
                           children: [
-                            const Icon(Icons.lock_clock_rounded, size: 14, color: StudentTheme.accentAmber),
+                            Icon(Icons.lock_clock_rounded, size: 14, color: context.colors.accentAmber),
                             const SizedBox(width: 4),
                             Text(
                               chapter.termName ?? 'À venir',
                               style: GoogleFonts.inter(
                                 fontSize: 11,
-                                color: StudentTheme.accentAmber,
+                                color: context.colors.accentAmber,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -201,13 +201,13 @@ class ChaptersListScreen extends ConsumerWidget {
                       else
                         Row(
                           children: [
-                            const Icon(Icons.check_circle_outline_rounded, size: 14, color: StudentTheme.accentEmerald),
+                            Icon(Icons.check_circle_outline_rounded, size: 14, color: context.colors.accentEmerald),
                             const SizedBox(width: 4),
                             Text(
                               'Disponible',
                               style: GoogleFonts.inter(
                                 fontSize: 11,
-                                color: StudentTheme.accentEmerald,
+                                color: context.colors.accentEmerald,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -221,7 +221,7 @@ class ChaptersListScreen extends ConsumerWidget {
                     style: GoogleFonts.outfit(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: isUnlocked ? Colors.white : StudentTheme.textSecondary,
+                      color: isUnlocked ? context.colors.textPrimary : context.colors.textSecondary,
                     ),
                   ),
                   if (chapter.introduction != null) ...[
@@ -230,7 +230,7 @@ class ChaptersListScreen extends ConsumerWidget {
                       chapter.introduction!,
                       style: GoogleFonts.inter(
                         fontSize: 13,
-                        color: StudentTheme.textSecondary,
+                        color: context.colors.textSecondary,
                         height: 1.3,
                       ),
                     ),
@@ -241,7 +241,7 @@ class ChaptersListScreen extends ConsumerWidget {
                     children: [
                       Text(
                         '${chapter.lessonsCount} leçons • ${chapter.exercisesCount} exercices',
-                        style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textMuted),
+                        style: GoogleFonts.inter(fontSize: 12, color: context.colors.textMuted),
                       ),
                       if (isUnlocked)
                         ElevatedButton.icon(
@@ -264,8 +264,8 @@ class ChaptersListScreen extends ConsumerWidget {
                       else
                         OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: StudentTheme.textSecondary,
-                            side: const BorderSide(color: StudentTheme.borderDark),
+                            foregroundColor: context.colors.textSecondary,
+                            side: BorderSide(color: context.colors.border),
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           ),
                           onPressed: () {

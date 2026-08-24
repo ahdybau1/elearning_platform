@@ -30,13 +30,13 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
             child: StudentScreenHeader(
               title: 'Forum de Classe (${profile?.className ?? ''})',
               trailing: IconButton(
-                icon: const Icon(Icons.shopping_bag_outlined, color: StudentTheme.accentPrimary),
+                icon: Icon(Icons.shopping_bag_outlined, color: context.colors.accentPrimary),
                 tooltip: 'Boutique de documents à la carte',
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => Scaffold(
-                      backgroundColor: StudentTheme.backgroundDark,
+                      backgroundColor: context.colors.background,
                       appBar: AppBar(automaticallyImplyLeading: true),
                       body: const BoutiqueShopScreen(),
                     )),
@@ -49,15 +49,15 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            color: StudentTheme.surfaceDark,
+            color: context.colors.surface,
             child: Row(
               children: [
-                const Icon(Icons.shield_outlined, size: 16, color: StudentTheme.accentPrimary),
+                Icon(Icons.shield_outlined, size: 16, color: context.colors.accentPrimary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Espace cloisonné : seuls les élèves de ${profile?.className ?? 'votre classe'} ont accès à ce fil.',
-                    style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textSecondary),
+                    style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary),
                   ),
                 ),
               ],
@@ -80,9 +80,9 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
                     return Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: StudentTheme.cardDark,
+                        color: context.colors.card,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: StudentTheme.borderDark),
+                        border: Border.all(color: context.colors.border),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,7 +118,7 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
                                     ),
                                     Text(
                                       'Il y a quelques heures',
-                                      style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textMuted),
+                                      style: GoogleFonts.inter(fontSize: 11, color: context.colors.textMuted),
                                     ),
                                   ],
                                 ),
@@ -126,17 +126,17 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: StudentTheme.surfaceDark,
+                                  color: context.colors.surface,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
-                                child: const Text('Élève', style: TextStyle(fontSize: 10, color: StudentTheme.textSecondary)),
+                                child: Text('Élève', style: TextStyle(fontSize: 10, color: context.colors.textSecondary)),
                               ),
                             ],
                           ),
                           const SizedBox(height: 12),
                           Text(
                             post.content,
-                            style: GoogleFonts.inter(fontSize: 14, color: Colors.white, height: 1.4),
+                            style: GoogleFonts.inter(fontSize: 14, color: context.colors.textPrimary, height: 1.4),
                           ),
                           const SizedBox(height: 14),
                           Row(
@@ -145,16 +145,16 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
                               Row(
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.thumb_up_alt_outlined, size: 16, color: StudentTheme.textSecondary),
+                                    icon: Icon(Icons.thumb_up_alt_outlined, size: 16, color: context.colors.textSecondary),
                                     onPressed: () {},
                                   ),
-                                  Text('${post.likesCount}', style: const TextStyle(fontSize: 12, color: StudentTheme.textSecondary)),
+                                  Text('${post.likesCount}', style: TextStyle(fontSize: 12, color: context.colors.textSecondary)),
                                   const SizedBox(width: 16),
                                   IconButton(
-                                    icon: const Icon(Icons.mode_comment_outlined, size: 16, color: StudentTheme.textSecondary),
+                                    icon: Icon(Icons.mode_comment_outlined, size: 16, color: context.colors.textSecondary),
                                     onPressed: () {},
                                   ),
-                                  Text('${post.repliesCount} réponses', style: const TextStyle(fontSize: 12, color: StudentTheme.textSecondary)),
+                                  Text('${post.repliesCount} réponses', style: TextStyle(fontSize: 12, color: context.colors.textSecondary)),
                                 ],
                               ),
                               TextButton(
@@ -163,7 +163,7 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
                                     const SnackBar(content: Text('Ouverture du fil de discussion...')),
                                   );
                                 },
-                                child: const Text('Répondre', style: TextStyle(color: StudentTheme.accentPrimary, fontSize: 12)),
+                                child: Text('Répondre', style: TextStyle(color: context.colors.accentPrimary, fontSize: 12)),
                               ),
                             ],
                           ),
@@ -179,32 +179,32 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
           // Bottom New Post Bar
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: StudentTheme.surfaceDark,
-              border: Border(top: BorderSide(color: StudentTheme.borderDark)),
+            decoration: BoxDecoration(
+              color: context.colors.surface,
+              border: Border(top: BorderSide(color: context.colors.border)),
             ),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _postCtrl,
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
                     decoration: InputDecoration(
                       hintText: 'Poser une question à la classe...',
-                      hintStyle: GoogleFonts.inter(color: StudentTheme.textMuted, fontSize: 13),
+                      hintStyle: GoogleFonts.inter(color: context.colors.textMuted, fontSize: 13),
                       filled: true,
-                      fillColor: StudentTheme.cardDark,
+                      fillColor: context.colors.card,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
-                        borderSide: const BorderSide(color: StudentTheme.borderDark),
+                        borderSide: BorderSide(color: context.colors.border),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 10),
                 IconButton(
-                  icon: const Icon(Icons.send_rounded, color: StudentTheme.accentPrimary),
+                  icon: Icon(Icons.send_rounded, color: context.colors.accentPrimary),
                   onPressed: () {
                     if (_postCtrl.text.trim().isNotEmpty && profile != null) {
                       ref.read(studentSupabaseServiceProvider).createForumPost(
@@ -216,8 +216,8 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
                       _postCtrl.clear();
                       ref.invalidate(studentForumPostsProvider(profile.classNodeId));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          backgroundColor: StudentTheme.accentEmerald,
+                        SnackBar(
+                          backgroundColor: context.colors.accentEmerald,
                           content: Text('Votre message a été publié après modération IA automatique.'),
                         ),
                       );

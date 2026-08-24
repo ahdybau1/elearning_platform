@@ -12,25 +12,25 @@ class ProfileSwitcherScreen extends ConsumerWidget {
     final authState = ref.watch(studentAuthProvider);
 
     return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
         title: Text(
           'E-Learning National',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: context.colors.textPrimary),
         ),
         actions: [
           TextButton.icon(
             onPressed: () => _showParentPinDialog(context, ref),
-            icon: const Icon(Icons.lock_outline_rounded, color: StudentTheme.accentAmber, size: 18),
+            icon: Icon(Icons.lock_outline_rounded, color: context.colors.accentAmber, size: 18),
             label: Text(
               'Espace Parent',
-              style: GoogleFonts.inter(color: StudentTheme.accentAmber, fontWeight: FontWeight.bold),
+              style: GoogleFonts.inter(color: context.colors.accentAmber, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(width: 4),
           IconButton(
             tooltip: 'Se déconnecter',
-            icon: const Icon(Icons.logout_rounded, color: StudentTheme.textSecondary, size: 20),
+            icon: Icon(Icons.logout_rounded, color: context.colors.textSecondary, size: 20),
             onPressed: () => ref.read(studentAuthProvider.notifier).signOut(),
           ),
           const SizedBox(width: 12),
@@ -53,7 +53,7 @@ class ProfileSwitcherScreen extends ConsumerWidget {
               const SizedBox(height: 8),
               Text(
                 'Modèle 1 Profil = 1 Classe pour un suivi individuel sans confusion.',
-                style: GoogleFonts.inter(fontSize: 14, color: StudentTheme.textSecondary),
+                style: GoogleFonts.inter(fontSize: 14, color: context.colors.textSecondary),
               ),
               const SizedBox(height: 40),
 
@@ -77,16 +77,16 @@ class ProfileSwitcherScreen extends ConsumerWidget {
                         width: 170,
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: StudentTheme.cardDark,
+                          color: context.colors.card,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: isActive ? StudentTheme.accentPrimary : StudentTheme.borderDark,
+                            color: isActive ? context.colors.accentPrimary : context.colors.border,
                             width: isActive ? 2 : 1,
                           ),
                           boxShadow: isActive
                               ? [
                                   BoxShadow(
-                                    color: StudentTheme.accentPrimary.withOpacity(0.2),
+                                    color: context.colors.accentPrimary.withOpacity(0.2),
                                     blurRadius: 16,
                                     offset: const Offset(0, 4),
                                   ),
@@ -130,14 +130,14 @@ class ProfileSwitcherScreen extends ConsumerWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                color: StudentTheme.surfaceDark,
+                                color: context.colors.surface,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
                                 profile.className,
                                 style: GoogleFonts.inter(
                                   fontSize: 11,
-                                  color: StudentTheme.accentPrimary,
+                                  color: context.colors.accentPrimary,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -156,9 +156,9 @@ class ProfileSwitcherScreen extends ConsumerWidget {
                       width: 170,
                       height: 195,
                       decoration: BoxDecoration(
-                        color: StudentTheme.surfaceDark.withOpacity(0.5),
+                        color: context.colors.surface.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: StudentTheme.borderDark, style: BorderStyle.solid),
+                        border: Border.all(color: context.colors.border, style: BorderStyle.solid),
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -166,11 +166,11 @@ class ProfileSwitcherScreen extends ConsumerWidget {
                           Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: StudentTheme.cardDark,
+                              color: context.colors.card,
                               shape: BoxShape.circle,
-                              border: Border.all(color: StudentTheme.borderDark),
+                              border: Border.all(color: context.colors.border),
                             ),
-                            child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+                            child: Icon(Icons.add_rounded, color: context.colors.textPrimary, size: 28),
                           ),
                           const SizedBox(height: 12),
                           Text(
@@ -178,7 +178,7 @@ class ProfileSwitcherScreen extends ConsumerWidget {
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: StudentTheme.textSecondary,
+                              color: context.colors.textSecondary,
                             ),
                           ),
                         ],
@@ -199,14 +199,14 @@ class ProfileSwitcherScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: StudentTheme.cardDark,
+        backgroundColor: context.colors.card,
         title: Row(
           children: [
-            const Icon(Icons.security_rounded, color: StudentTheme.accentAmber),
+            Icon(Icons.security_rounded, color: context.colors.accentAmber),
             const SizedBox(width: 10),
             Text(
               'Code PIN Parent',
-              style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
+              style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -216,7 +216,7 @@ class ProfileSwitcherScreen extends ConsumerWidget {
           children: [
             Text(
               'Entrez votre code confidentiel à 4 chiffres (défaut: 1234) :',
-              style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary),
+              style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -225,10 +225,10 @@ class ProfileSwitcherScreen extends ConsumerWidget {
               obscureText: true,
               maxLength: 4,
               textAlign: TextAlign.center,
-              style: GoogleFonts.firaCode(fontSize: 22, color: Colors.white, letterSpacing: 8),
+              style: GoogleFonts.firaCode(fontSize: 22, color: context.colors.textPrimary, letterSpacing: 8),
               decoration: InputDecoration(
                 filled: true,
-                fillColor: StudentTheme.surfaceDark,
+                fillColor: context.colors.surface,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
@@ -237,10 +237,10 @@ class ProfileSwitcherScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler', style: TextStyle(color: StudentTheme.textSecondary)),
+            child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: StudentTheme.accentAmber),
+            style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentAmber),
             onPressed: () {
               // TODO(Espace Parent réel) : ce PIN codé en dur est un jalon temporaire. Le vrai
               // rattachement parent passe par `parent_accounts` (voir docs/cahier_des_charges.md

@@ -33,7 +33,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                     title: 'Messagerie & Support',
                     trailing: IconButton(
                       tooltip: 'Nouveau ticket',
-                      icon: const Icon(Icons.add_circle_outline_rounded, color: StudentTheme.accentPrimary),
+                      icon: Icon(Icons.add_circle_outline_rounded, color: context.colors.accentPrimary),
                       onPressed: () => _showNewTicketDialog(context, account.id),
                     ),
                   ),
@@ -69,15 +69,15 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.support_agent_rounded, size: 46, color: StudentTheme.textMuted),
+            Icon(Icons.support_agent_rounded, size: 46, color: context.colors.textMuted),
             const SizedBox(height: 16),
-            Text('Aucun ticket pour le moment', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+            Text('Aucun ticket pour le moment', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
             const SizedBox(height: 6),
             Text('Une question, un problème de paiement ou un bug ? Contactez l\'administration.',
-                textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary)),
+                textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary)),
             const SizedBox(height: 20),
             ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: StudentTheme.accentPrimary, foregroundColor: Colors.black),
+              style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentPrimary, foregroundColor: Colors.black),
               onPressed: () => _showNewTicketDialog(context, accountId),
               icon: const Icon(Icons.add_rounded),
               label: const Text('Créer un ticket', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -90,10 +90,10 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
 
   Widget _buildTicketCard(SupportTicket ticket) {
     final statusColor = switch (ticket.status) {
-      'ouvert' => StudentTheme.accentAmber,
-      'en_cours' => StudentTheme.accentIndigo,
-      'repondu' => StudentTheme.accentEmerald,
-      _ => StudentTheme.textMuted,
+      'ouvert' => context.colors.accentAmber,
+      'en_cours' => context.colors.accentIndigo,
+      'repondu' => context.colors.accentEmerald,
+      _ => context.colors.textMuted,
     };
     final statusLabel = switch (ticket.status) {
       'ouvert' => 'Ouvert',
@@ -105,9 +105,9 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: StudentTheme.cardDark,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: StudentTheme.borderDark),
+        border: Border.all(color: context.colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -116,7 +116,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(ticket.subject, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                child: Text(ticket.subject, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -126,16 +126,16 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
             ],
           ),
           const SizedBox(height: 6),
-          Text(ticket.description, style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
+          Text(ticket.description, style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
           if (ticket.replyMessage?.isNotEmpty == true) ...[
             const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: StudentTheme.surfaceDark, borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(color: context.colors.surface, borderRadius: BorderRadius.circular(8)),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.support_agent_rounded, size: 14, color: StudentTheme.accentEmerald),
+                  Icon(Icons.support_agent_rounded, size: 14, color: context.colors.accentEmerald),
                   const SizedBox(width: 8),
                   Expanded(child: Text(ticket.replyMessage!, style: GoogleFonts.inter(fontSize: 12, color: Colors.white))),
                 ],
@@ -143,7 +143,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
             ),
           ],
           const SizedBox(height: 8),
-          Text(_categoryLabel(ticket.category), style: GoogleFonts.inter(fontSize: 10, color: StudentTheme.textMuted)),
+          Text(_categoryLabel(ticket.category), style: GoogleFonts.inter(fontSize: 10, color: context.colors.textMuted)),
         ],
       ),
     );
@@ -167,8 +167,8 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: StudentTheme.cardDark,
-          title: Text('Nouveau Ticket', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+          backgroundColor: context.colors.card,
+          title: Text('Nouveau Ticket', style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
           content: Form(
             key: formKey,
             child: SingleChildScrollView(
@@ -188,12 +188,12 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: subjectCtrl,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: context.colors.textPrimary),
                     decoration: InputDecoration(
                       labelText: 'Objet',
-                      labelStyle: const TextStyle(color: StudentTheme.textSecondary),
+                      labelStyle: TextStyle(color: context.colors.textSecondary),
                       filled: true,
-                      fillColor: StudentTheme.surfaceDark,
+                      fillColor: context.colors.surface,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     validator: (v) => (v == null || v.trim().isEmpty) ? 'Champ requis' : null,
@@ -202,12 +202,12 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                   TextFormField(
                     controller: descriptionCtrl,
                     maxLines: 4,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: context.colors.textPrimary),
                     decoration: InputDecoration(
                       labelText: 'Description',
-                      labelStyle: const TextStyle(color: StudentTheme.textSecondary),
+                      labelStyle: TextStyle(color: context.colors.textSecondary),
                       filled: true,
-                      fillColor: StudentTheme.surfaceDark,
+                      fillColor: context.colors.surface,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     validator: (v) => (v == null || v.trim().isEmpty) ? 'Champ requis' : null,
@@ -219,10 +219,10 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
           actions: [
             TextButton(
               onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
-              child: const Text('Annuler', style: TextStyle(color: StudentTheme.textSecondary)),
+              child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: StudentTheme.accentPrimary),
+              style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentPrimary),
               onPressed: isSubmitting
                   ? null
                   : () async {
@@ -260,9 +260,9 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
       label: Text(label, style: GoogleFonts.inter(fontSize: 12)),
       selected: isSel,
       onSelected: (_) => onSelected(value),
-      selectedColor: StudentTheme.accentPrimary.withOpacity(0.2),
-      backgroundColor: StudentTheme.surfaceDark,
-      labelStyle: TextStyle(color: isSel ? StudentTheme.accentPrimary : Colors.white),
+      selectedColor: context.colors.accentPrimary.withOpacity(0.2),
+      backgroundColor: context.colors.surface,
+      labelStyle: TextStyle(color: isSel ? context.colors.accentPrimary : context.colors.textPrimary),
     );
   }
 }

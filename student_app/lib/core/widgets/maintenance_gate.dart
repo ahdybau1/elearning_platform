@@ -34,14 +34,14 @@ class _MaintenanceScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
+      backgroundColor: context.colors.background,
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.build_circle_rounded, size: 72, color: StudentTheme.accentAmber),
+              Icon(Icons.build_circle_rounded, size: 72, color: context.colors.accentAmber),
               const SizedBox(height: 24),
               Text(
                 'Application en Maintenance',
@@ -54,7 +54,7 @@ class _MaintenanceScreen extends StatelessWidget {
                     ? 'L\'application est momentanément indisponible. Merci de réessayer un peu plus tard.'
                     : message!,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(fontSize: 14, color: StudentTheme.textSecondary, height: 1.5),
+                style: GoogleFonts.inter(fontSize: 14, color: context.colors.textSecondary, height: 1.5),
               ),
             ],
           ),

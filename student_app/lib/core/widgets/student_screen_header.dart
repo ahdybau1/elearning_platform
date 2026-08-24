@@ -25,7 +25,7 @@ class StudentScreenHeader extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
               ),
               if (subtitle != null) ...[
                 const SizedBox(height: 4),
@@ -33,7 +33,7 @@ class StudentScreenHeader extends StatelessWidget {
                   subtitle!,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary),
+                  style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
                 ),
               ],
             ],

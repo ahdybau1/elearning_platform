@@ -39,11 +39,11 @@ class ExercisesHubScreen extends ConsumerWidget {
           children: [
             StudentScreenHeader(title: 'Exercices (${profile?.className ?? ''})'),
             const SizedBox(height: 24),
-            _buildSection(context, 'Liés à une leçon', 'Créés par l\'enseignant et/ou générés par l\'IA', _byLesson, StudentTheme.accentPrimary),
+            _buildSection(context, 'Liés à une leçon', 'Créés par l\'enseignant et/ou générés par l\'IA', _byLesson, context.colors.accentPrimary),
             const SizedBox(height: 28),
-            _buildSection(context, 'Entraînement de chapitre', 'Synthèse hors leçon précise, approfondissement', _byChapter, StudentTheme.accentIndigo),
+            _buildSection(context, 'Entraînement de chapitre', 'Synthèse hors leçon précise, approfondissement', _byChapter, context.colors.accentIndigo),
             const SizedBox(height: 28),
-            _buildSection(context, 'Indépendants (type examen)', 'Mélange de chapitres, accessibles depuis cette page générale', _independent, StudentTheme.accentAmber),
+            _buildSection(context, 'Indépendants (type examen)', 'Mélange de chapitres, accessibles depuis cette page générale', _independent, context.colors.accentAmber),
           ],
         ),
     );
@@ -53,17 +53,17 @@ class ExercisesHubScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+        Text(title, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
         const SizedBox(height: 2),
-        Text(subtitle, style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary)),
+        Text(subtitle, style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary)),
         const SizedBox(height: 14),
         ...items.map((item) => Container(
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                color: StudentTheme.cardDark,
+                color: context.colors.card,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: StudentTheme.borderDark),
+                border: Border.all(color: context.colors.border),
               ),
               child: Row(
                 children: [
@@ -77,9 +77,9 @@ class ExercisesHubScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(item['title'] as String, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                        Text(item['title'] as String, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
                         Text('${item['subject']} • ${item['count']} exercices • ${item['difficulty']}',
-                            style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textSecondary)),
+                            style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary)),
                       ],
                     ),
                   ),

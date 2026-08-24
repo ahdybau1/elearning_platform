@@ -25,27 +25,27 @@ class LessonReaderScreen extends ConsumerWidget {
     final lessonsAsync = ref.watch(studentLessonsProvider(chapterId));
 
     return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
         title: Text(
           chapterTitle,
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: context.colors.textPrimary, fontSize: 16),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.download_for_offline_rounded, color: StudentTheme.accentEmerald),
+            icon: Icon(Icons.download_for_offline_rounded, color: context.colors.accentEmerald),
             tooltip: 'Télécharger pour le mode Hors-Ligne (Data-Saver)',
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  backgroundColor: StudentTheme.accentEmerald,
+                SnackBar(
+                  backgroundColor: context.colors.accentEmerald,
                   content: Text('Leçon enregistrée en mode Hors-Ligne avec Forensic Watermark.'),
                 ),
               );
             },
           ),
           IconButton(
-            icon: const Icon(Icons.quiz_rounded, color: StudentTheme.accentPrimary),
+            icon: Icon(Icons.quiz_rounded, color: context.colors.accentPrimary),
             tooltip: 'Passer aux exercices',
             onPressed: () {
               Navigator.pushNamed(
@@ -68,14 +68,14 @@ class LessonReaderScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.menu_book_outlined, size: 46, color: StudentTheme.textMuted),
+                    Icon(Icons.menu_book_outlined, size: 46, color: context.colors.textMuted),
                     const SizedBox(height: 16),
                     Text('Aucune leçon publiée pour ce chapitre',
-                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
                     const SizedBox(height: 6),
                     Text('Revenez bientôt : l\'enseignant est en train de préparer ce cours.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary)),
+                        style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary)),
                   ],
                 ),
               ),
@@ -100,23 +100,23 @@ class LessonReaderScreen extends ConsumerWidget {
                         style: GoogleFonts.outfit(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: context.colors.textPrimary,
                         ),
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: StudentTheme.surfaceDark,
+                        color: context.colors.surface,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.timer_outlined, size: 14, color: StudentTheme.textSecondary),
+                          Icon(Icons.timer_outlined, size: 14, color: context.colors.textSecondary),
                           const SizedBox(width: 4),
                           Text(
                             '${lesson.readingTimeMinutes} min',
-                            style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary),
+                            style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
                           ),
                         ],
                       ),
@@ -130,7 +130,7 @@ class LessonReaderScreen extends ConsumerWidget {
                   lesson.contentJson['body'] ?? 'Contenu pédagogique officiel conforme au programme.',
                   style: GoogleFonts.inter(
                     fontSize: 15,
-                    color: Colors.white,
+                    color: context.colors.textPrimary,
                     height: 1.6,
                   ),
                 ),
@@ -138,25 +138,25 @@ class LessonReaderScreen extends ConsumerWidget {
 
                 // 1. Bloc Théorème Majeur (Section 16.0)
                 if (lesson.contentJson['theoreme'] != null)
-                  _buildTheoremeCard(lesson.contentJson['theoreme']),
+                  _buildTheoremeCard(context, lesson.contentJson['theoreme']),
 
                 const SizedBox(height: 20),
 
                 // 2. Bloc Formules Clés (LaTeX)
                 if (lesson.contentJson['formule'] != null)
-                  _buildFormulaCard(lesson.contentJson['formule']),
+                  _buildFormulaCard(context, lesson.contentJson['formule']),
 
                 const SizedBox(height: 20),
 
                 // 3. Bloc Piège & Erreur Fréquente aux Examens
                 if (lesson.contentJson['piege'] != null)
-                  _buildTrapCard(lesson.contentJson['piege']),
+                  _buildTrapCard(context, lesson.contentJson['piege']),
 
                 const SizedBox(height: 20),
 
                 // 4. Bloc Méthode de Résolution
                 if (lesson.contentJson['methode'] != null)
-                  _buildMethodCard(lesson.contentJson['methode']),
+                  _buildMethodCard(context, lesson.contentJson['methode']),
 
                 const SizedBox(height: 32),
 
@@ -165,9 +165,9 @@ class LessonReaderScreen extends ConsumerWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: StudentTheme.cardDark,
+                    color: context.colors.card,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: StudentTheme.borderDark),
+                    border: Border.all(color: context.colors.border),
                   ),
                   child: Column(
                     children: [
@@ -176,19 +176,19 @@ class LessonReaderScreen extends ConsumerWidget {
                         style: GoogleFonts.outfit(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: context.colors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Testez votre compréhension avec le quiz interactif de ce chapitre.',
-                        style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary),
+                        style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: StudentTheme.accentPrimary,
+                          backgroundColor: context.colors.accentPrimary,
                           foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -229,12 +229,12 @@ class LessonReaderScreen extends ConsumerWidget {
                         constraints: const BoxConstraints(maxWidth: 420),
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: StudentTheme.cardDark,
+                          color: context.colors.card,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: StudentTheme.accentPrimary.withOpacity(0.5)),
+                          border: Border.all(color: context.colors.accentPrimary.withOpacity(0.5)),
                           boxShadow: [
                             BoxShadow(
-                              color: StudentTheme.accentPrimary.withOpacity(0.2),
+                              color: context.colors.accentPrimary.withOpacity(0.2),
                               blurRadius: 24,
                             ),
                           ],
@@ -245,10 +245,10 @@ class LessonReaderScreen extends ConsumerWidget {
                             Container(
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
-                                color: StudentTheme.accentPrimary.withOpacity(0.15),
+                                color: context.colors.accentPrimary.withOpacity(0.15),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.lock_rounded, color: StudentTheme.accentPrimary, size: 32),
+                              child: Icon(Icons.lock_rounded, color: context.colors.accentPrimary, size: 32),
                             ),
                             const SizedBox(height: 16),
                             Text(
@@ -263,13 +263,13 @@ class LessonReaderScreen extends ConsumerWidget {
                             const SizedBox(height: 8),
                             Text(
                               'Cette leçon complète, ses formules détaillées et ses corrigés d\'examens nécessitent un Pass Mensuel ou Annuel.',
-                              style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary),
+                              style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 20),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: StudentTheme.accentPrimary,
+                                backgroundColor: context.colors.accentPrimary,
                                 foregroundColor: Colors.black,
                                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -300,27 +300,27 @@ class LessonReaderScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTheoremeCard(String text) {
+  Widget _buildTheoremeCard(BuildContext context, String text) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: const Color(0xFF132338),
         borderRadius: BorderRadius.circular(14),
-        border: const Border(left: BorderSide(color: StudentTheme.accentPrimary, width: 4)),
+        border: Border(left: BorderSide(color: context.colors.accentPrimary, width: 4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.verified_rounded, color: StudentTheme.accentPrimary, size: 18),
+              Icon(Icons.verified_rounded, color: context.colors.accentPrimary, size: 18),
               const SizedBox(width: 8),
               Text(
                 'Théorème Majeur & Définition',
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: StudentTheme.accentPrimary,
+                  color: context.colors.accentPrimary,
                 ),
               ),
             ],
@@ -335,27 +335,27 @@ class LessonReaderScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFormulaCard(String text) {
+  Widget _buildFormulaCard(BuildContext context, String text) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: StudentTheme.cardDark,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: StudentTheme.borderDark),
+        border: Border.all(color: context.colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.functions_rounded, color: StudentTheme.accentEmerald, size: 18),
+              Icon(Icons.functions_rounded, color: context.colors.accentEmerald, size: 18),
               const SizedBox(width: 8),
               Text(
                 'Formules & Propriétés Clés (LaTeX)',
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: StudentTheme.accentEmerald,
+                  color: context.colors.accentEmerald,
                 ),
               ),
             ],
@@ -365,12 +365,12 @@ class LessonReaderScreen extends ConsumerWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             decoration: BoxDecoration(
-              color: StudentTheme.surfaceDark,
+              color: context.colors.surface,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               text,
-              style: GoogleFonts.firaCode(fontSize: 15, color: Colors.white, fontWeight: FontWeight.w600),
+              style: GoogleFonts.firaCode(fontSize: 15, color: context.colors.textPrimary, fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
           ),
@@ -379,27 +379,27 @@ class LessonReaderScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTrapCard(String text) {
+  Widget _buildTrapCard(BuildContext context, String text) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: const Color(0xFF2C161E),
         borderRadius: BorderRadius.circular(14),
-        border: const Border(left: BorderSide(color: StudentTheme.accentRose, width: 4)),
+        border: Border(left: BorderSide(color: context.colors.accentRose, width: 4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, color: StudentTheme.accentRose, size: 18),
+              Icon(Icons.warning_amber_rounded, color: context.colors.accentRose, size: 18),
               const SizedBox(width: 8),
               Text(
                 'Piège Classique d\'Examen',
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: StudentTheme.accentRose,
+                  color: context.colors.accentRose,
                 ),
               ),
             ],
@@ -414,27 +414,27 @@ class LessonReaderScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMethodCard(String text) {
+  Widget _buildMethodCard(BuildContext context, String text) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: StudentTheme.cardDark,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(14),
-        border: const Border(left: BorderSide(color: StudentTheme.accentAmber, width: 4)),
+        border: Border(left: BorderSide(color: context.colors.accentAmber, width: 4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.lightbulb_outline_rounded, color: StudentTheme.accentAmber, size: 18),
+              Icon(Icons.lightbulb_outline_rounded, color: context.colors.accentAmber, size: 18),
               const SizedBox(width: 8),
               Text(
                 'Méthode & Savoir-Faire',
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: StudentTheme.accentAmber,
+                  color: context.colors.accentAmber,
                 ),
               ),
             ],

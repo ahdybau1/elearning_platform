@@ -120,7 +120,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     return Container(
       margin: const EdgeInsets.only(left: 20, right: 12, top: 2, bottom: 2),
       decoration: BoxDecoration(
-        color: isSelected ? StudentTheme.accentPrimary.withValues(alpha: 0.15) : Colors.transparent,
+        color: isSelected ? context.colors.accentPrimary.withValues(alpha: 0.15) : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Material(
@@ -132,13 +132,13 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           hoverColor: Colors.white.withValues(alpha: 0.05),
           leading: Icon(page.icon, size: 20,
-              color: isSelected ? StudentTheme.accentPrimary : StudentTheme.textSecondary),
+              color: isSelected ? context.colors.accentPrimary : context.colors.textSecondary),
           title: Text(
             page.title,
             style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              color: isSelected ? Colors.white : StudentTheme.textSecondary,
+              color: isSelected ? context.colors.textPrimary : context.colors.textSecondary,
             ),
           ),
           onTap: onTap,
@@ -156,7 +156,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     if (_selectedFlatIndex >= pages.length) _selectedFlatIndex = 0;
 
     return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
+      backgroundColor: context.colors.background,
       body: Row(
           children: [
             // Sidebar Left Navigation — mêmes dimensions/transition que main_admin_layout.dart
@@ -164,8 +164,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
               duration: const Duration(milliseconds: 200),
               width: _isSidebarCollapsed ? 80 : 260,
               decoration: BoxDecoration(
-                color: StudentTheme.surfaceDark,
-                border: const Border(right: BorderSide(color: StudentTheme.borderDark)),
+                color: context.colors.surface,
+                border: Border(right: BorderSide(color: context.colors.border)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,8 +178,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [StudentTheme.accentPrimary, StudentTheme.accentIndigo],
+                            gradient: LinearGradient(
+                              colors: [context.colors.accentPrimary, context.colors.accentIndigo],
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -190,13 +190,13 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                           Expanded(
                             child: Text('E-Learning National',
                                 overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                                style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
                           ),
                         ],
                       ],
                     ),
                   ),
-                  const Divider(height: 1, color: StudentTheme.borderDark),
+                  Divider(height: 1, color: context.colors.border),
                   Expanded(
                     child: ListView(
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -244,7 +244,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                                         style: GoogleFonts.inter(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
-                                          color: isModuleActive ? StudentTheme.accentPrimary : StudentTheme.textMuted,
+                                          color: isModuleActive ? context.colors.accentPrimary : context.colors.textMuted,
                                           letterSpacing: 1.0,
                                         ),
                                       ),
@@ -252,7 +252,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                                     Icon(
                                       isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_right_rounded,
                                       size: 18,
-                                      color: isModuleActive ? StudentTheme.accentPrimary : StudentTheme.textMuted,
+                                      color: isModuleActive ? context.colors.accentPrimary : context.colors.textMuted,
                                     ),
                                   ],
                                 ),
@@ -280,17 +280,17 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                     onTap: () => setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
                     child: Container(
                       padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(border: Border(top: BorderSide(color: StudentTheme.borderDark))),
+                      decoration: BoxDecoration(border: Border(top: BorderSide(color: context.colors.border))),
                       child: Row(
                         mainAxisAlignment: _isSidebarCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
                         children: [
                           Icon(
                             _isSidebarCollapsed ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
-                            color: StudentTheme.textMuted,
+                            color: context.colors.textMuted,
                           ),
                           if (!_isSidebarCollapsed) ...[
                             const SizedBox(width: 12),
-                            Text('Réduire la barre', style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textMuted)),
+                            Text('Réduire la barre', style: GoogleFonts.inter(fontSize: 12, color: context.colors.textMuted)),
                           ],
                         ],
                       ),
@@ -309,9 +309,9 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                   Container(
                     height: 70,
                     padding: const EdgeInsets.symmetric(horizontal: 28),
-                    decoration: const BoxDecoration(
-                      color: StudentTheme.surfaceDark,
-                      border: Border(bottom: BorderSide(color: StudentTheme.borderDark, width: 1)),
+                    decoration: BoxDecoration(
+                      color: context.colors.surface,
+                      border: Border(bottom: BorderSide(color: context.colors.border, width: 1)),
                     ),
                     child: Row(
                       children: [
@@ -329,20 +329,20 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                           icon: const Icon(Icons.swap_horiz_rounded, size: 16),
                           label: const Text('Changer de Profil'),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: StudentTheme.textSecondary,
-                            side: const BorderSide(color: StudentTheme.borderDark),
+                            foregroundColor: context.colors.textSecondary,
+                            side: BorderSide(color: context.colors.border),
                           ),
                         ),
                         const SizedBox(width: 12),
                         IconButton(
                           tooltip: 'Se déconnecter',
-                          icon: const Icon(Icons.logout_rounded, color: StudentTheme.textSecondary, size: 20),
+                          icon: Icon(Icons.logout_rounded, color: context.colors.textSecondary, size: 20),
                           onPressed: () => ref.read(studentAuthProvider.notifier).signOut(),
                         ),
                         const SizedBox(width: 12),
                         CircleAvatar(
                           radius: 18,
-                          backgroundColor: StudentTheme.accentPrimary,
+                          backgroundColor: context.colors.accentPrimary,
                           child: Text(
                             (authState.account?.firstName.isNotEmpty == true)
                                 ? authState.account!.firstName[0].toUpperCase()
@@ -359,7 +359,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                               '${authState.account?.firstName ?? ''} ${authState.account?.lastName ?? ''}'.trim(),
                               style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
                             ),
-                            Text('Élève', style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textMuted)),
+                            Text('Élève', style: GoogleFonts.inter(fontSize: 11, color: context.colors.textMuted)),
                           ],
                         ),
                       ],
@@ -367,7 +367,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                   ),
                   Expanded(
                     child: Container(
-                      color: StudentTheme.backgroundDark,
+                      color: context.colors.background,
                       child: IndexedStack(
                         index: _selectedFlatIndex,
                         children: pages.map((p) => p.screen).toList(),
@@ -389,12 +389,12 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: StudentTheme.cardDark,
+        backgroundColor: context.colors.card,
         title: Row(
           children: [
-            const Icon(Icons.security_rounded, color: StudentTheme.accentAmber),
+            Icon(Icons.security_rounded, color: context.colors.accentAmber),
             const SizedBox(width: 10),
-            Text('Code PIN Parent', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+            Text('Code PIN Parent', style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
           ],
         ),
         content: Column(
@@ -403,7 +403,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
           children: [
             Text(
               'Entrez votre code confidentiel à 4 chiffres (défaut : 1234) :',
-              style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary),
+              style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -412,10 +412,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
               obscureText: true,
               maxLength: 4,
               textAlign: TextAlign.center,
-              style: GoogleFonts.firaCode(fontSize: 22, color: Colors.white, letterSpacing: 8),
+              style: GoogleFonts.firaCode(fontSize: 22, color: context.colors.textPrimary, letterSpacing: 8),
               decoration: InputDecoration(
                 filled: true,
-                fillColor: StudentTheme.surfaceDark,
+                fillColor: context.colors.surface,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
@@ -424,10 +424,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler', style: TextStyle(color: StudentTheme.textSecondary)),
+            child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: StudentTheme.accentAmber),
+            style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentAmber),
             onPressed: () {
               if (pinCtrl.text == '1234') {
                 Navigator.pop(ctx);

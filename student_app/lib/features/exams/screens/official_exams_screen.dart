@@ -59,16 +59,16 @@ class _NoExamScaffold extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.workspace_premium_outlined, size: 46, color: StudentTheme.textMuted),
+                    Icon(Icons.workspace_premium_outlined, size: 46, color: context.colors.textMuted),
                     const SizedBox(height: 16),
                     Text('Aucun examen national pour $className',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
                     const SizedBox(height: 6),
                     Text(
                       'Ce niveau ne compose aucun examen officiel du pays.',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary),
+                      style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
                     ),
                   ],
                 ),
@@ -105,7 +105,7 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
               child: StudentScreenHeader(
                 title: 'Anciens Sujets — ${widget.exam.name}',
                 trailing: TextButton.icon(
-                  style: TextButton.styleFrom(foregroundColor: StudentTheme.accentAmber),
+                  style: TextButton.styleFrom(foregroundColor: context.colors.accentAmber),
                   onPressed: () => Navigator.pushNamed(context, '/mock-arena'),
                   icon: const Icon(Icons.emoji_events_rounded, size: 18),
                   label: const Text('Examens Blancs', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -116,7 +116,7 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
               child: Row(
                 children: [
-                  const Icon(Icons.workspace_premium_rounded, color: StudentTheme.accentIndigo, size: 18),
+                  Icon(Icons.workspace_premium_rounded, color: context.colors.accentIndigo, size: 18),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text('${widget.exam.name} — ${widget.className}',
@@ -127,8 +127,8 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
                     onPressed: (i) => setState(() => _groupBySubject = i == 0),
                     borderRadius: BorderRadius.circular(8),
                     selectedColor: Colors.black,
-                    fillColor: StudentTheme.accentPrimary,
-                    color: StudentTheme.textSecondary,
+                    fillColor: context.colors.accentPrimary,
+                    color: context.colors.textSecondary,
                     constraints: const BoxConstraints(minHeight: 32, minWidth: 90),
                     children: const [
                       Text('Par matière', style: TextStyle(fontSize: 11)),
@@ -151,14 +151,14 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.folder_off_outlined, size: 46, color: StudentTheme.textMuted),
+                            Icon(Icons.folder_off_outlined, size: 46, color: context.colors.textMuted),
                             const SizedBox(height: 16),
                             Text('Aucun sujet archivé pour le moment',
-                                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
                             const SizedBox(height: 6),
                             Text('Les annales de ${widget.exam.name} seront ajoutées progressivement par l\'administration.',
                                 textAlign: TextAlign.center,
-                                style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary)),
+                                style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary)),
                           ],
                         ),
                       ),
@@ -179,7 +179,7 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(entry.key, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                            Text(entry.key, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
                             const SizedBox(height: 10),
                             ...entry.value.map((paper) => _buildPaperTile(paper)),
                           ],
@@ -201,22 +201,22 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: StudentTheme.cardDark,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: StudentTheme.borderDark),
+        border: Border.all(color: context.colors.border),
       ),
       child: Row(
         children: [
           Expanded(
             child: Text(
               _groupBySubject ? 'Session ${paper.year}' : (paper.subjectName ?? 'Matière'),
-              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
             ),
           ),
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
-              side: const BorderSide(color: StudentTheme.borderDark),
+              foregroundColor: context.colors.textPrimary,
+              side: BorderSide(color: context.colors.border),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
@@ -228,7 +228,7 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
           if (correctionUnlocked)
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: StudentTheme.accentEmerald,
+                backgroundColor: context.colors.accentEmerald,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -242,8 +242,8 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
               message: 'Le corrigé se débloque après une première tentative',
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: StudentTheme.textMuted,
-                  side: const BorderSide(color: StudentTheme.borderDark),
+                  foregroundColor: context.colors.textMuted,
+                  side: BorderSide(color: context.colors.border),
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
                 onPressed: null,

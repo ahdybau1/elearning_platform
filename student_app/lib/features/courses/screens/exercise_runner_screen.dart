@@ -31,11 +31,11 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
     final exercisesAsync = ref.watch(studentExercisesProvider(widget.chapterId));
 
     return Scaffold(
-      backgroundColor: StudentTheme.backgroundDark,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
         title: Text(
           'Quiz — ${widget.chapterTitle}',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: context.colors.textPrimary, fontSize: 16),
         ),
       ),
       body: StudentPageContent(child: exercisesAsync.when(
@@ -49,14 +49,14 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.edit_note_rounded, size: 46, color: StudentTheme.textMuted),
+                    Icon(Icons.edit_note_rounded, size: 46, color: context.colors.textMuted),
                     const SizedBox(height: 16),
                     Text('Aucun exercice publié pour ce chapitre',
-                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
                     const SizedBox(height: 6),
                     Text('Revenez bientôt : l\'enseignant prépare encore ce quiz.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary)),
+                        style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary)),
                   ],
                 ),
               ),
@@ -80,18 +80,18 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: StudentTheme.accentPrimary,
+                        color: context.colors.accentPrimary,
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: StudentTheme.surfaceDark,
+                        color: context.colors.surface,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.stars_rounded, color: StudentTheme.accentAmber, size: 16),
+                          Icon(Icons.stars_rounded, color: context.colors.accentAmber, size: 16),
                           const SizedBox(width: 4),
                           Text(
                             '+${currentEx.points} XP',
@@ -107,8 +107,8 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: progress,
-                    backgroundColor: StudentTheme.surfaceDark,
-                    valueColor: const AlwaysStoppedAnimation<Color>(StudentTheme.accentPrimary),
+                    backgroundColor: context.colors.surface,
+                    valueColor: AlwaysStoppedAnimation<Color>(context.colors.accentPrimary),
                     minHeight: 6,
                   ),
                 ),
@@ -119,16 +119,16 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: StudentTheme.cardDark,
+                    color: context.colors.card,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: StudentTheme.borderDark),
+                    border: Border.all(color: context.colors.border),
                   ),
                   child: Text(
                     currentEx.questionText,
                     style: GoogleFonts.inter(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: context.colors.textPrimary,
                       height: 1.4,
                     ),
                   ),
@@ -144,20 +144,20 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                       final option = currentEx.options[optIdx];
                       final isSelected = _selectedOptionIndex == optIdx;
 
-                      Color borderColor = StudentTheme.borderDark;
-                      Color bgColor = StudentTheme.cardDark;
+                      Color borderColor = context.colors.border;
+                      Color bgColor = context.colors.card;
 
                       if (_isAnswerValidated) {
                         if (optIdx == currentEx.correctIndex) {
-                          borderColor = StudentTheme.accentEmerald;
-                          bgColor = StudentTheme.accentEmerald.withOpacity(0.15);
+                          borderColor = context.colors.accentEmerald;
+                          bgColor = context.colors.accentEmerald.withOpacity(0.15);
                         } else if (isSelected) {
-                          borderColor = StudentTheme.accentRose;
-                          bgColor = StudentTheme.accentRose.withOpacity(0.15);
+                          borderColor = context.colors.accentRose;
+                          bgColor = context.colors.accentRose.withOpacity(0.15);
                         }
                       } else if (isSelected) {
-                        borderColor = StudentTheme.accentPrimary;
-                        bgColor = StudentTheme.accentPrimary.withOpacity(0.1);
+                        borderColor = context.colors.accentPrimary;
+                        bgColor = context.colors.accentPrimary.withOpacity(0.1);
                       }
 
                       return InkWell(
@@ -179,14 +179,14 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                                 height: 28,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: isSelected ? StudentTheme.accentPrimary : StudentTheme.surfaceDark,
+                                  color: isSelected ? context.colors.accentPrimary : context.colors.surface,
                                 ),
                                 child: Center(
                                   child: Text(
                                     String.fromCharCode(65 + optIdx), // A, B, C, D
                                     style: GoogleFonts.inter(
                                       fontWeight: FontWeight.bold,
-                                      color: isSelected ? Colors.black : Colors.white,
+                                      color: isSelected ? Colors.black : context.colors.textPrimary,
                                     ),
                                   ),
                                 ),
@@ -197,7 +197,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                                   option,
                                   style: GoogleFonts.inter(
                                     fontSize: 15,
-                                    color: Colors.white,
+                                    color: context.colors.textPrimary,
                                   ),
                                 ),
                               ),
@@ -221,8 +221,8 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: _selectedOptionIndex == currentEx.correctIndex
-                            ? StudentTheme.accentEmerald
-                            : StudentTheme.accentRose,
+                            ? context.colors.accentEmerald
+                            : context.colors.accentRose,
                       ),
                     ),
                     child: Column(
@@ -235,8 +235,8 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                                   ? Icons.check_circle_rounded
                                   : Icons.cancel_rounded,
                               color: _selectedOptionIndex == currentEx.correctIndex
-                                  ? StudentTheme.accentEmerald
-                                  : StudentTheme.accentRose,
+                                  ? context.colors.accentEmerald
+                                  : context.colors.accentRose,
                               size: 18,
                             ),
                             const SizedBox(width: 8),
@@ -246,7 +246,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                                   : 'Réponse Incorrecte',
                               style: GoogleFonts.inter(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                color: context.colors.textPrimary,
                               ),
                             ),
                           ],
@@ -267,7 +267,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: StudentTheme.accentPrimary,
+                      backgroundColor: context.colors.accentPrimary,
                       foregroundColor: Colors.black,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -315,7 +315,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        backgroundColor: StudentTheme.cardDark,
+        backgroundColor: context.colors.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -323,10 +323,10 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: StudentTheme.accentEmerald.withOpacity(0.15),
+                color: context.colors.accentEmerald.withOpacity(0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.emoji_events_rounded, color: StudentTheme.accentEmerald, size: 48),
+              child: Icon(Icons.emoji_events_rounded, color: context.colors.accentEmerald, size: 48),
             ),
             const SizedBox(height: 18),
             Text(
@@ -341,13 +341,13 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
             const SizedBox(height: 8),
             Text(
               'Vous avez gagné +$_totalScore XP sur ce chapitre.',
-              style: GoogleFonts.inter(fontSize: 14, color: StudentTheme.textSecondary),
+              style: GoogleFonts.inter(fontSize: 14, color: context.colors.textSecondary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: StudentTheme.accentPrimary,
+                backgroundColor: context.colors.accentPrimary,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

@@ -44,7 +44,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                   if (profile?.hasActiveSubscription != true)
                     _buildSubscriptionBanner(context, ref)
                   else
-                    _buildActivePassCard(profile!),
+                    _buildActivePassCard(context, profile!),
 
                   const SizedBox(height: 24),
 
@@ -54,7 +54,7 @@ class HomeDashboardScreen extends ConsumerWidget {
 
                   // Temporal Unlocking & Trimester Tracker (§2.7/§3.3 — dates réelles, plus de
                   // "Trimestre 1" ni de 65% codés en dur)
-                  if (profile != null) _buildTrimesterStatusCard(ref, profile.classNodeId),
+                  if (profile != null) _buildTrimesterStatusCard(context, ref, profile.classNodeId),
 
                   const SizedBox(height: 28),
 
@@ -67,14 +67,14 @@ class HomeDashboardScreen extends ConsumerWidget {
                         style: GoogleFonts.outfit(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: context.colors.textPrimary,
                         ),
                       ),
                       Text(
                         'Programme Officiel',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: StudentTheme.accentPrimary,
+                          color: context.colors.accentPrimary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -91,18 +91,18 @@ class HomeDashboardScreen extends ConsumerWidget {
                         return Container(
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
-                            color: StudentTheme.cardDark,
+                            color: context.colors.card,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: StudentTheme.borderDark),
+                            border: Border.all(color: context.colors.border),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.menu_book_outlined, color: StudentTheme.textMuted, size: 22),
+                              Icon(Icons.menu_book_outlined, color: context.colors.textMuted, size: 22),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
                                   'Aucune matière programmée pour ${profile?.className ?? 'votre classe'} pour le moment.',
-                                  style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary),
+                                  style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
                                 ),
                               ),
                             ],
@@ -150,7 +150,7 @@ class HomeDashboardScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: StudentTheme.accentPurple.withOpacity(0.3),
+            color: context.colors.accentPurple.withOpacity(0.3),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -176,7 +176,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: context.colors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -189,7 +189,7 @@ class HomeDashboardScreen extends ConsumerWidget {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
+              backgroundColor: context.colors.textPrimary,
               foregroundColor: Colors.black,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -244,23 +244,23 @@ class HomeDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildActivePassCard(StudentProfile profile) {
+  Widget _buildActivePassCard(BuildContext context, StudentProfile profile) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: StudentTheme.cardDark,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: StudentTheme.accentEmerald.withOpacity(0.4)),
+        border: Border.all(color: context.colors.accentEmerald.withOpacity(0.4)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: StudentTheme.accentEmerald.withOpacity(0.15),
+              color: context.colors.accentEmerald.withOpacity(0.15),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.verified_rounded, color: StudentTheme.accentEmerald, size: 22),
+            child: Icon(Icons.verified_rounded, color: context.colors.accentEmerald, size: 22),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -277,7 +277,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                 ),
                 Text(
                   'Accès complet aux fiches de cours, LaTeX & annales',
-                  style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textSecondary),
+                  style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary),
                 ),
               ],
             ),
@@ -287,7 +287,7 @@ class HomeDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTrimesterStatusCard(WidgetRef ref, String classNodeId) {
+  Widget _buildTrimesterStatusCard(BuildContext context, WidgetRef ref, String classNodeId) {
     final termAsync = ref.watch(currentTermInfoProvider(classNodeId));
 
     return termAsync.when(
@@ -304,9 +304,9 @@ class HomeDashboardScreen extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: StudentTheme.cardDark,
+              color: context.colors.card,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: StudentTheme.borderDark),
+              border: Border.all(color: context.colors.border),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -316,7 +316,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.calendar_today_rounded, size: 16, color: StudentTheme.accentPrimary),
+                        Icon(Icons.calendar_today_rounded, size: 16, color: context.colors.accentPrimary),
                         const SizedBox(width: 8),
                         Text(
                           term.isBetweenTerms ? '${term.termName} (Terminé)' : '${term.termName} (En Cours)',
@@ -328,12 +328,12 @@ class HomeDashboardScreen extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: StudentTheme.accentEmerald.withOpacity(0.15),
+                          color: context.colors.accentEmerald.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           'ANNÉE ${term.schoolYearName}',
-                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: StudentTheme.accentEmerald),
+                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: context.colors.accentEmerald),
                         ),
                       ),
                   ],
@@ -343,15 +343,15 @@ class HomeDashboardScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(
                     value: term.progressRatio,
-                    backgroundColor: StudentTheme.surfaceDark,
-                    valueColor: const AlwaysStoppedAnimation<Color>(StudentTheme.accentPrimary),
+                    backgroundColor: context.colors.surface,
+                    valueColor: AlwaysStoppedAnimation<Color>(context.colors.accentPrimary),
                     minHeight: 8,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Le contenu déjà couvert reste toujours accessible ; le trimestre suivant se débloque automatiquement à sa date.',
-                  style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textSecondary),
+                  style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary),
                 ),
               ],
             ),
@@ -546,19 +546,19 @@ class HomeDashboardScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: StudentTheme.cardDark,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: StudentTheme.accentCyan.withOpacity(0.4)),
+        border: Border.all(color: context.colors.accentCyan.withOpacity(0.4)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: StudentTheme.accentCyan.withOpacity(0.15),
+              color: context.colors.accentCyan.withOpacity(0.15),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(Icons.auto_awesome_rounded, color: StudentTheme.accentCyan, size: 24),
+            child: Icon(Icons.auto_awesome_rounded, color: context.colors.accentCyan, size: 24),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -575,13 +575,13 @@ class HomeDashboardScreen extends ConsumerWidget {
                 ),
                 Text(
                   'L\'Assistant IA vous guide pas-à-pas sans donner la solution directement.',
-                  style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textSecondary),
+                  style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary),
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: Icon(Icons.arrow_forward_rounded, color: StudentTheme.accentCyan),
+            icon: Icon(Icons.arrow_forward_rounded, color: context.colors.accentCyan),
             onPressed: () => Navigator.pushNamed(context, '/ai-tutor'),
           ),
         ],

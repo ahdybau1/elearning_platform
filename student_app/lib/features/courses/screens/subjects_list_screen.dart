@@ -36,15 +36,15 @@ class SubjectsListScreen extends ConsumerWidget {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.menu_book_outlined, size: 46, color: StudentTheme.textMuted),
+                            Icon(Icons.menu_book_outlined, size: 46, color: context.colors.textMuted),
                             const SizedBox(height: 16),
                             Text('Aucune matière programmée pour ${profile.className}',
                                 textAlign: TextAlign.center,
-                                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
                             const SizedBox(height: 6),
                             Text('L\'administration n\'a pas encore associé de matière à cette classe.',
                                 textAlign: TextAlign.center,
-                                style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary)),
+                                style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary)),
                           ],
                         ),
                       ),
@@ -74,9 +74,9 @@ class SubjectsListScreen extends ConsumerWidget {
                         child: Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: StudentTheme.cardDark,
+                            color: context.colors.card,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: StudentTheme.borderDark),
+                            border: Border.all(color: context.colors.border),
                           ),
                           child: Row(
                             children: [
@@ -112,7 +112,7 @@ class SubjectsListScreen extends ConsumerWidget {
                                       style: GoogleFonts.outfit(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.white,
+                                        color: context.colors.textPrimary,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -120,7 +120,7 @@ class SubjectsListScreen extends ConsumerWidget {
                                       s.chaptersCount > 0
                                           ? '${s.chaptersCount} chapitres au programme'
                                           : 'Chapitres en cours de publication',
-                                      style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary),
+                                      style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
                                     ),
                                   ],
                                 ),
@@ -129,10 +129,10 @@ class SubjectsListScreen extends ConsumerWidget {
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: StudentTheme.surfaceDark,
+                                  color: context.colors.surface,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.arrow_forward_ios_rounded, color: StudentTheme.textSecondary, size: 14),
+                                child: Icon(Icons.arrow_forward_ios_rounded, color: context.colors.textSecondary, size: 14),
                               ),
                             ],
                           ),

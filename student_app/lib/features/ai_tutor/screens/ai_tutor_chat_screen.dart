@@ -44,10 +44,10 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: StudentTheme.accentCyan.withOpacity(0.15),
+                    color: context.colors.accentCyan.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.auto_awesome_rounded, color: StudentTheme.accentCyan, size: 20),
+                  child: Icon(Icons.auto_awesome_rounded, color: context.colors.accentCyan, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Column(
@@ -59,7 +59,7 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                     ),
                     Text(
                       'Programme ${profile?.className ?? ''} • Maïeutique Pédagogique',
-                      style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.accentCyan),
+                      style: GoogleFonts.inter(fontSize: 11, color: context.colors.accentCyan),
                     ),
                   ],
                 ),
@@ -79,11 +79,11 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                 final prompt = _quickPrompts[index];
                 return ActionChip(
                   label: Text(prompt),
-                  backgroundColor: StudentTheme.cardDark,
+                  backgroundColor: context.colors.card,
                   labelStyle: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
-                    side: const BorderSide(color: StudentTheme.borderDark),
+                    side: BorderSide(color: context.colors.border),
                   ),
                   onPressed: () => _sendMessage(prompt.replaceFirst(RegExp(r'^[^\s]+\s'), '')),
                 );
@@ -111,10 +111,10 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                         height: 32,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: StudentTheme.accentCyan.withOpacity(0.2),
-                          border: Border.all(color: StudentTheme.accentCyan),
+                          color: context.colors.accentCyan.withOpacity(0.2),
+                          border: Border.all(color: context.colors.accentCyan),
                         ),
-                        child: const Icon(Icons.auto_awesome_rounded, color: StudentTheme.accentCyan, size: 16),
+                        child: Icon(Icons.auto_awesome_rounded, color: context.colors.accentCyan, size: 16),
                       ),
                       const SizedBox(width: 10),
                     ],
@@ -122,15 +122,15 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: isAi ? StudentTheme.cardDark : StudentTheme.accentIndigo,
+                          color: isAi ? context.colors.card : context.colors.accentIndigo,
                           borderRadius: BorderRadius.circular(16),
-                          border: isAi ? Border.all(color: StudentTheme.borderDark) : null,
+                          border: isAi ? Border.all(color: context.colors.border) : null,
                         ),
                         child: Text(
                           msg['text'] ?? '',
                           style: GoogleFonts.inter(
                             fontSize: 14,
-                            color: Colors.white,
+                            color: context.colors.textPrimary,
                             height: 1.5,
                           ),
                         ),
@@ -148,15 +148,15 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Row(
                 children: [
-                  const SizedBox(
+                  SizedBox(
                     width: 14,
                     height: 14,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: StudentTheme.accentCyan),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: context.colors.accentCyan),
                   ),
                   const SizedBox(width: 10),
                   Text(
                     'Le Tuteur IA réfléchit...',
-                    style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary),
+                    style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
                   ),
                 ],
               ),
@@ -165,25 +165,25 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
           // Message Input Field
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: StudentTheme.surfaceDark,
-              border: Border(top: BorderSide(color: StudentTheme.borderDark)),
+            decoration: BoxDecoration(
+              color: context.colors.surface,
+              border: Border(top: BorderSide(color: context.colors.border)),
             ),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _msgCtrl,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: context.colors.textPrimary),
                     decoration: InputDecoration(
                       hintText: 'Pose ta question sur le cours ou un exercice...',
-                      hintStyle: GoogleFonts.inter(color: StudentTheme.textMuted, fontSize: 14),
+                      hintStyle: GoogleFonts.inter(color: context.colors.textMuted, fontSize: 14),
                       filled: true,
-                      fillColor: StudentTheme.cardDark,
+                      fillColor: context.colors.card,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
-                        borderSide: const BorderSide(color: StudentTheme.borderDark),
+                        borderSide: BorderSide(color: context.colors.border),
                       ),
                     ),
                     onSubmitted: (text) => _sendMessage(text),
@@ -191,7 +191,7 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                 ),
                 const SizedBox(width: 10),
                 IconButton(
-                  icon: const Icon(Icons.send_rounded, color: StudentTheme.accentPrimary),
+                  icon: Icon(Icons.send_rounded, color: context.colors.accentPrimary),
                   onPressed: () => _sendMessage(_msgCtrl.text),
                 ),
               ],

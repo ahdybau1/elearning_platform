@@ -73,9 +73,9 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
             Container(
               padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
-                color: StudentTheme.cardDark,
+                color: context.colors.card,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: StudentTheme.borderDark),
+                border: Border.all(color: context.colors.border),
               ),
               child: Row(
                 children: [
@@ -105,9 +105,9 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: StudentTheme.accentPrimary,
+                              color: context.colors.accentPrimary,
                               shape: BoxShape.circle,
-                              border: Border.all(color: StudentTheme.cardDark, width: 2),
+                              border: Border.all(color: context.colors.card, width: 2),
                             ),
                             child: const Icon(Icons.camera_alt_rounded, size: 12, color: Colors.black),
                           ),
@@ -125,20 +125,20 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                           style: GoogleFonts.outfit(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
                         ),
                         const SizedBox(height: 4),
-                        Text(account?.email ?? '', style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary)),
+                        Text(account?.email ?? '', style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary)),
                         if (account?.phone?.isNotEmpty == true) ...[
                           const SizedBox(height: 2),
-                          Text(account!.phone!, style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary)),
+                          Text(account!.phone!, style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary)),
                         ],
                         if (account?.schoolName?.isNotEmpty == true) ...[
                           const SizedBox(height: 2),
-                          Text('🏫 ${account!.schoolName}', style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary)),
+                          Text('🏫 ${account!.schoolName}', style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary)),
                         ],
                         if (account?.birthDate != null) ...[
                           const SizedBox(height: 2),
                           Text(
                             '🎂 ${account!.birthDate!.day.toString().padLeft(2, '0')}/${account.birthDate!.month.toString().padLeft(2, '0')}/${account.birthDate!.year}',
-                            style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary),
+                            style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
                           ),
                         ],
                       ],
@@ -146,7 +146,7 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                   ),
                   IconButton(
                     tooltip: 'Modifier mes informations (bientôt disponible)',
-                    icon: const Icon(Icons.edit_outlined, color: StudentTheme.textMuted),
+                    icon: Icon(Icons.edit_outlined, color: context.colors.textMuted),
                     onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('La modification du profil arrive bientôt.')),
                     ),
@@ -156,11 +156,11 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
             ),
 
             const SizedBox(height: 28),
-            Text('Mes Classes Suivies', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+            Text('Mes Classes Suivies', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
             const SizedBox(height: 4),
             Text(
               'Modèle 1 profil = 1 classe = 1 abonnement (§2.3 du cahier des charges).',
-              style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary),
+              style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
             ),
             const SizedBox(height: 14),
 
@@ -176,8 +176,8 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
               icon: const Icon(Icons.add_rounded, size: 18),
               label: const Text('Ajouter une classe'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: StudentTheme.accentPrimary,
-                side: const BorderSide(color: StudentTheme.accentPrimary),
+                foregroundColor: context.colors.accentPrimary,
+                side: BorderSide(color: context.colors.accentPrimary),
                 padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -192,22 +192,22 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: StudentTheme.cardDark.withOpacity(0.6),
+                color: context.colors.card.withOpacity(0.6),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: StudentTheme.borderDark),
+                border: Border.all(color: context.colors.border),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.military_tech_outlined, color: StudentTheme.textMuted, size: 22),
+                  Icon(Icons.military_tech_outlined, color: context.colors.textMuted, size: 22),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Badges, séries de régularité & points',
-                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
+                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
                         Text('Gamification (§14 du cahier des charges) — bientôt disponible.',
-                            style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textSecondary)),
+                            style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary)),
                       ],
                     ),
                   ),
@@ -224,21 +224,21 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: StudentTheme.cardDark,
-        title: Text('Archiver ce profil ?', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: context.colors.card,
+        title: Text('Archiver ce profil ?', style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
         content: Text(
           '${p.name} (${p.className}) sera masqué mais pourra être réactivé à tout moment. Aucune donnée n\'est supprimée (§2.5 du cahier des charges).',
-          style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary),
+          style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler', style: TextStyle(color: StudentTheme.textSecondary)),
+            child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Archiver', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text('Archiver', style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -275,20 +275,20 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Profils archivés', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+            Text('Profils archivés', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
             const SizedBox(height: 4),
             Text(
               'Masqués mais conservés — réactivables à tout moment (§2.5 du cahier des charges).',
-              style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary),
+              style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
             ),
             const SizedBox(height: 14),
             ...archived.map((p) => Container(
                   margin: const EdgeInsets.only(bottom: 10),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
-                    color: StudentTheme.cardDark.withOpacity(0.5),
+                    color: context.colors.card.withOpacity(0.5),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: StudentTheme.borderDark),
+                    border: Border.all(color: context.colors.border),
                   ),
                   child: Row(
                     children: [
@@ -296,15 +296,15 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(p.className, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: StudentTheme.textSecondary)),
-                            Text('Année ${p.schoolYear}', style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textMuted)),
+                            Text(p.className, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: context.colors.textSecondary)),
+                            Text('Année ${p.schoolYear}', style: GoogleFonts.inter(fontSize: 11, color: context.colors.textMuted)),
                           ],
                         ),
                       ),
                       TextButton.icon(
                         onPressed: () => _reactivate(p),
-                        icon: const Icon(Icons.restore_rounded, size: 16, color: StudentTheme.accentPrimary),
-                        label: Text('Réactiver', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: StudentTheme.accentPrimary)),
+                        icon: Icon(Icons.restore_rounded, size: 16, color: context.colors.accentPrimary),
+                        label: Text('Réactiver', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: context.colors.accentPrimary)),
                       ),
                     ],
                   ),
@@ -320,19 +320,19 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: StudentTheme.cardDark,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: isActive ? StudentTheme.accentPrimary.withOpacity(0.6) : StudentTheme.borderDark),
+        border: Border.all(color: isActive ? context.colors.accentPrimary.withOpacity(0.6) : context.colors.border),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
-              color: StudentTheme.accentIndigo.withOpacity(0.15),
+              color: context.colors.accentIndigo.withOpacity(0.15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.school_outlined, color: StudentTheme.accentIndigo, size: 20),
+            child: Icon(Icons.school_outlined, color: context.colors.accentIndigo, size: 20),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -346,33 +346,33 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: StudentTheme.accentPrimary.withOpacity(0.15), borderRadius: BorderRadius.circular(4)),
-                        child: Text('Actif', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: StudentTheme.accentPrimary)),
+                        decoration: BoxDecoration(color: context.colors.accentPrimary.withOpacity(0.15), borderRadius: BorderRadius.circular(4)),
+                        child: Text('Actif', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: context.colors.accentPrimary)),
                       ),
                     ],
                   ],
                 ),
-                Text('Année ${p.schoolYear}', style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textSecondary)),
+                Text('Année ${p.schoolYear}', style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary)),
               ],
             ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: p.hasActiveSubscription ? StudentTheme.accentEmerald.withOpacity(0.15) : StudentTheme.surfaceDark,
+              color: p.hasActiveSubscription ? context.colors.accentEmerald.withOpacity(0.15) : context.colors.surface,
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
               p.hasActiveSubscription ? 'Pass ${p.subscriptionTier.toUpperCase()}' : 'Gratuit',
               style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold,
-                  color: p.hasActiveSubscription ? StudentTheme.accentEmerald : StudentTheme.textSecondary),
+                  color: p.hasActiveSubscription ? context.colors.accentEmerald : context.colors.textSecondary),
             ),
           ),
           if (canArchive) ...[
             const SizedBox(width: 4),
             IconButton(
               tooltip: 'Archiver ce profil',
-              icon: const Icon(Icons.archive_outlined, size: 18, color: StudentTheme.textMuted),
+              icon: Icon(Icons.archive_outlined, size: 18, color: context.colors.textMuted),
               onPressed: () => _confirmArchive(p),
             ),
           ],
