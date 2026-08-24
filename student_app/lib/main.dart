@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/theme/student_theme.dart';
 import 'core/models/student_models.dart';
+import 'core/config/supabase_config.dart';
 import 'core/widgets/maintenance_gate.dart';
 import 'core/auth/student_auth_provider.dart';
 import 'features/onboarding/screens/onboarding_wizard_screen.dart';
@@ -17,22 +18,12 @@ import 'features/ai_tutor/screens/ai_tutor_chat_screen.dart';
 import 'features/exams/screens/mock_exam_arena_screen.dart';
 import 'features/parent_portal/screens/parent_dashboard_screen.dart';
 
-// Anon key publique par design (protégée par RLS, pas par le secret) — déjà exposée telle quelle
-// dans admin_app/lib/main.dart ; reprise ici comme repli si .env est absent au premier lancement.
-const _fallbackSupabaseUrl = 'https://kdprnavvgzhnygovfyuw.supabase.co';
-const _fallbackSupabaseAnonKey =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcHJuYXZ2Z3pobnlnb3ZmeXV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0MDA0NDIsImV4cCI6MjEwMTk3NjQ0Mn0.Xei_VR0_umG0QDwfGs2GpQ2qDLG3o_tJX7WgU7T9ZXA';
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
 
-  final supabaseUrl = (dotenv.env['SUPABASE_URL']?.trim().isNotEmpty == true)
-      ? dotenv.env['SUPABASE_URL']!
-      : _fallbackSupabaseUrl;
-  final supabaseAnonKey = (dotenv.env['SUPABASE_ANON_KEY']?.trim().isNotEmpty == true)
-      ? dotenv.env['SUPABASE_ANON_KEY']!
-      : _fallbackSupabaseAnonKey;
+  final supabaseUrl = resolvedSupabaseUrl();
+  final supabaseAnonKey = resolvedSupabaseAnonKey();
 
   await Supabase.initialize(url: supabaseUrl, publishableKey: supabaseAnonKey);
 

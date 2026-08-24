@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
+import '../../../core/auth/parent_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import 'home_dashboard_screen.dart';
 import '../../profile/screens/student_profile_screen.dart';
@@ -150,6 +151,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(studentAuthProvider);
+    // Amorce la restauration de session parent dès l'affichage de la coquille principale (voir
+    // ParentAuthNotifier._init) — sans ça, le premier clic sur « Espace Parent » de la session
+    // pourrait redemander une connexion alors qu'une session valide était en cours de restauration.
+    ref.watch(parentAuthProvider);
     final profile = authState.activeProfile;
     final studentModules = _buildModules(profile?.classNodeId);
     final pages = studentModules.expand((m) => m.pages).toList();
@@ -216,7 +221,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                                 page: page,
                                 isSelected: flatIndex == _selectedFlatIndex,
                                 onTap: () => page.requiresParentPin
-                                    ? _showParentPinDialog(flatIndex)
+                                    ? _openParentPage(flatIndex)
                                     : setState(() => _selectedFlatIndex = flatIndex),
                               );
                             }).toList(),
@@ -265,7 +270,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                                   page: page,
                                   isSelected: flatIndex == _selectedFlatIndex,
                                   onTap: () => page.requiresParentPin
-                                      ? _showParentPinDialog(flatIndex)
+                                      ? _openParentPage(flatIndex)
                                       : setState(() => _selectedFlatIndex = flatIndex),
                                 );
                               }),
@@ -382,66 +387,119 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     );
   }
 
-  // TODO(Espace Parent réel) : même limite que dans profile_switcher_screen.dart — PIN codé en dur
-  // en attendant le vrai rattachement via `parent_accounts` (§17 du cahier des charges).
-  void _showParentPinDialog(int targetIndex) {
-    final pinCtrl = TextEditingController();
-    showDialog(
+  /// §17 du cahier des charges : vraie session parent (parent_accounts, distincte du compte élève)
+  /// — si déjà connecté (session restaurée automatiquement au démarrage), on bascule directement
+  /// sans redemander quoi que ce soit ; sinon un vrai formulaire email + mot de passe.
+  Future<void> _openParentPage(int targetIndex) async {
+    if (ref.read(parentAuthProvider).isAuthenticated) {
+      setState(() => _selectedFlatIndex = targetIndex);
+      return;
+    }
+    await showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: context.colors.card,
-        title: Row(
-          children: [
-            Icon(Icons.security_rounded, color: context.colors.accentAmber),
-            const SizedBox(width: 10),
-            Text('Code PIN Parent', style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Column(
+      builder: (ctx) => _ParentLoginDialogContent(
+        onSuccess: () {
+          Navigator.pop(ctx);
+          setState(() => _selectedFlatIndex = targetIndex);
+        },
+      ),
+    );
+  }
+}
+
+class _ParentLoginDialogContent extends ConsumerStatefulWidget {
+  const _ParentLoginDialogContent({required this.onSuccess});
+  final VoidCallback onSuccess;
+
+  @override
+  ConsumerState<_ParentLoginDialogContent> createState() => _ParentLoginDialogContentState();
+}
+
+class _ParentLoginDialogContentState extends ConsumerState<_ParentLoginDialogContent> {
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  bool _isSubmitting = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: context.colors.card,
+      title: Row(
+        children: [
+          Icon(Icons.family_restroom_rounded, color: context.colors.accentAmber),
+          const SizedBox(width: 10),
+          Text('Espace Parent', style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
+        ],
+      ),
+      content: Form(
+        key: _formKey,
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Entrez votre code confidentiel à 4 chiffres (défaut : 1234) :',
-              style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
+              'Connectez-vous avec le compte parent créé par l\'administration.',
+              style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: pinCtrl,
-              keyboardType: TextInputType.number,
-              obscureText: true,
-              maxLength: 4,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.firaCode(fontSize: 22, color: context.colors.textPrimary, letterSpacing: 8),
+            TextFormField(
+              controller: _emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              style: TextStyle(color: context.colors.textPrimary),
               decoration: InputDecoration(
+                labelText: 'Email',
+                labelStyle: TextStyle(color: context.colors.textSecondary),
                 filled: true,
                 fillColor: context.colors.surface,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
+              validator: (v) => (v == null || !v.contains('@')) ? 'Email invalide' : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _passwordCtrl,
+              obscureText: true,
+              style: TextStyle(color: context.colors.textPrimary),
+              decoration: InputDecoration(
+                labelText: 'Mot de passe',
+                labelStyle: TextStyle(color: context.colors.textSecondary),
+                filled: true,
+                fillColor: context.colors.surface,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              validator: (v) => (v == null || v.isEmpty) ? 'Mot de passe requis' : null,
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentAmber),
-            onPressed: () {
-              if (pinCtrl.text == '1234') {
-                Navigator.pop(ctx);
-                setState(() => _selectedFlatIndex = targetIndex);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Code PIN incorrect (Code par défaut : 1234)')),
-                );
-              }
-            },
-            child: const Text('Valider', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-          ),
-        ],
       ),
+      actions: [
+        TextButton(
+          onPressed: _isSubmitting ? null : () => Navigator.pop(context),
+          child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentAmber),
+          onPressed: _isSubmitting
+              ? null
+              : () async {
+                  if (!_formKey.currentState!.validate()) return;
+                  setState(() => _isSubmitting = true);
+                  final error = await ref.read(parentAuthProvider.notifier).login(_emailCtrl.text.trim(), _passwordCtrl.text);
+                  if (error != null) {
+                    setState(() => _isSubmitting = false);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+                    }
+                    return;
+                  }
+                  widget.onSuccess();
+                },
+          child: _isSubmitting
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+              : const Text('Se connecter', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        ),
+      ],
     );
   }
 }

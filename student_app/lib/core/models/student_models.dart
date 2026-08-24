@@ -111,6 +111,107 @@ class AccountSettings {
   }
 }
 
+// Reflète exactement la table réelle `parent_accounts` (§17 du cahier des charges — identité PROPRE
+// du parent, créée séparément du compte élève par un administrateur, jamais un simple PIN).
+class ParentAccount {
+  final String id;
+  final String email;
+  final String phone;
+  final String firstName;
+  final String lastName;
+  final bool isActive;
+
+  ParentAccount({
+    required this.id,
+    required this.email,
+    required this.phone,
+    required this.firstName,
+    required this.lastName,
+    this.isActive = true,
+  });
+
+  factory ParentAccount.fromJson(Map<String, dynamic> json) {
+    return ParentAccount(
+      id: json['id'] as String,
+      email: json['email'] as String,
+      phone: json['phone'] as String? ?? '',
+      firstName: json['first_name'] as String? ?? '',
+      lastName: json['last_name'] as String? ?? '',
+      isActive: json['is_active'] as bool? ?? true,
+    );
+  }
+}
+
+// Un enfant lié (via `parent_profile_links`) tel que vu depuis l'Espace Parent — combine l'identité
+// réelle de l'élève (`accounts`) et son profil (`profiles`/`academic_nodes`), jamais les données du
+// compte du PARENT lui-même (bug de l'ancien Espace Parent qui affichait `authState.account`, celui
+// de l'élève actuellement connecté, faute d'un vrai lien parent).
+class LinkedChildProfile {
+  final String profileId;
+  final String childFirstName;
+  final String childLastName;
+  final String className;
+  final String schoolYear;
+  final String subscriptionTier;
+  final String status;
+
+  LinkedChildProfile({
+    required this.profileId,
+    required this.childFirstName,
+    required this.childLastName,
+    required this.className,
+    required this.schoolYear,
+    required this.subscriptionTier,
+    required this.status,
+  });
+
+  String get displayName => '$childFirstName $childLastName'.trim().isEmpty ? className : '$childFirstName $childLastName'.trim();
+  bool get hasActiveSubscription => subscriptionTier != 'gratuit';
+
+  factory LinkedChildProfile.fromJson(Map<String, dynamic> json) {
+    final profile = json['profiles'] as Map<String, dynamic>? ?? json;
+    final account = profile['accounts'] as Map<String, dynamic>?;
+    final classNode = profile['academic_nodes'] as Map<String, dynamic>?;
+    return LinkedChildProfile(
+      profileId: profile['id'] as String,
+      childFirstName: account?['first_name'] as String? ?? '',
+      childLastName: account?['last_name'] as String? ?? '',
+      className: classNode?['name'] as String? ?? 'Classe',
+      schoolYear: profile['school_year'] as String? ?? '',
+      subscriptionTier: profile['subscription_tier'] as String? ?? 'gratuit',
+      status: profile['status'] as String? ?? 'actif',
+    );
+  }
+}
+
+// Reflète exactement la ligne réelle `transactions`, filtrée aux profils liés au parent (§17 :
+// « Gestion de l'abonnement et des paiements »).
+class ParentTransaction {
+  final String id;
+  final double amount;
+  final String operator;
+  final String status;
+  final DateTime createdAt;
+
+  ParentTransaction({
+    required this.id,
+    required this.amount,
+    required this.operator,
+    required this.status,
+    required this.createdAt,
+  });
+
+  factory ParentTransaction.fromJson(Map<String, dynamic> json) {
+    return ParentTransaction(
+      id: json['id'] as String,
+      amount: (json['amount'] as num).toDouble(),
+      operator: json['operator'] as String? ?? '',
+      status: json['status'] as String? ?? 'pending',
+      createdAt: DateTime.parse(json['created_at'] as String),
+    );
+  }
+}
+
 // Reflète exactement la table réelle `profiles` : un profil = une classe précise + un abonnement
 // propre, rattaché à UN compte (§2.3 du cahier des charges — pas "un enfant différent" comme le
 // laissait croire l'ancien modèle : plusieurs profils suivent plusieurs classes de LA MÊME

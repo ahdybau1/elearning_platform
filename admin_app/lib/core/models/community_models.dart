@@ -134,7 +134,8 @@ class WhatsappCommunity {
 
 class SupportTicket {
   final String id;
-  final String accountId;
+  final String? accountId;
+  final String? parentAccountId;
   final String category;
   final String subject;
   final String description;
@@ -146,7 +147,8 @@ class SupportTicket {
 
   SupportTicket({
     required this.id,
-    required this.accountId,
+    this.accountId,
+    this.parentAccountId,
     required this.category,
     required this.subject,
     required this.description,
@@ -161,7 +163,8 @@ class SupportTicket {
   factory SupportTicket.fromJson(Map<String, dynamic> json) {
     return SupportTicket(
       id: json['id'] as String,
-      accountId: json['account_id'] as String,
+      accountId: json['account_id'] as String?,
+      parentAccountId: json['parent_account_id'] as String?,
       category: json['category'] as String,
       subject: json['subject'] as String,
       description: json['description'] as String,

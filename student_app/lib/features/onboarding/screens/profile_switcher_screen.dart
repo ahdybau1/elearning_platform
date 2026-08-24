@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
+import '../../../core/auth/parent_auth_provider.dart';
+import '../../../core/auth/parent_space_navigation.dart';
 
 class ProfileSwitcherScreen extends ConsumerWidget {
   const ProfileSwitcherScreen({super.key});
@@ -10,6 +12,9 @@ class ProfileSwitcherScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(studentAuthProvider);
+    // Amorce la restauration de session parent dès cet écran (voir ParentAuthNotifier._init et le
+    // même commentaire dans main_navigation_screen.dart).
+    ref.watch(parentAuthProvider);
 
     return Scaffold(
       backgroundColor: context.colors.background,
@@ -20,7 +25,7 @@ class ProfileSwitcherScreen extends ConsumerWidget {
         ),
         actions: [
           TextButton.icon(
-            onPressed: () => _showParentPinDialog(context, ref),
+            onPressed: () => openParentSpace(context, ref),
             icon: Icon(Icons.lock_outline_rounded, color: context.colors.accentAmber, size: 18),
             label: Text(
               'Espace Parent',
@@ -194,70 +199,4 @@ class ProfileSwitcherScreen extends ConsumerWidget {
     );
   }
 
-  void _showParentPinDialog(BuildContext context, WidgetRef ref) {
-    final pinCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: context.colors.card,
-        title: Row(
-          children: [
-            Icon(Icons.security_rounded, color: context.colors.accentAmber),
-            const SizedBox(width: 10),
-            Text(
-              'Code PIN Parent',
-              style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Entrez votre code confidentiel à 4 chiffres (défaut: 1234) :',
-              style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: pinCtrl,
-              keyboardType: TextInputType.number,
-              obscureText: true,
-              maxLength: 4,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.firaCode(fontSize: 22, color: context.colors.textPrimary, letterSpacing: 8),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: context.colors.surface,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentAmber),
-            onPressed: () {
-              // TODO(Espace Parent réel) : ce PIN codé en dur est un jalon temporaire. Le vrai
-              // rattachement parent passe par `parent_accounts` (voir docs/cahier_des_charges.md
-              // §17), pas par un simple code sur le compte élève — à refaire dans une passe dédiée.
-              if (pinCtrl.text == '1234') {
-                Navigator.pop(ctx);
-                Navigator.pushNamed(context, '/parent-portal');
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Code PIN incorrect (Code par défaut: 1234)')),
-                );
-              }
-            },
-            child: const Text('Valider', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
 }

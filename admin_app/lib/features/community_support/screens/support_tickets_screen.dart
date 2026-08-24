@@ -48,6 +48,11 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
       for (final account in accountsAsync.valueOrNull ?? <Account>[])
         account.id: '${account.firstName} ${account.lastName}',
     };
+    final parentAccountsAsync = ref.watch(parentAccountsProvider(null));
+    final parentAccountNames = <String, String>{
+      for (final parent in parentAccountsAsync.valueOrNull ?? <ParentAccount>[])
+        parent.id: '${parent.firstName} ${parent.lastName} (parent)',
+    };
 
     return Padding(
       padding: const EdgeInsets.all(28),
@@ -139,7 +144,9 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                     final tick = tickets[idx];
                     final isParent = tick.requesterType == 'parent';
                     final isResolved = tick.status == 'ferme';
-                    final requesterName = accountNames[tick.accountId] ?? 'Compte inconnu';
+                    final requesterName = tick.accountId != null
+                        ? (accountNames[tick.accountId] ?? 'Compte inconnu')
+                        : (parentAccountNames[tick.parentAccountId] ?? 'Compte parent inconnu');
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 16),
