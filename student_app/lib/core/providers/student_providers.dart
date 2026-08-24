@@ -54,6 +54,18 @@ final studentForumPostsProvider =
   return service.fetchForumPosts(classNodeId);
 });
 
+final archivedProfilesProvider =
+    FutureProvider.family<List<StudentProfile>, String>((ref, accountId) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchArchivedProfiles(accountId);
+});
+
+final currentTermInfoProvider =
+    FutureProvider.family<TermInfo?, String>((ref, classNodeId) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchCurrentTermInfo(classNodeId);
+});
+
 final officialExamForClassProvider =
     FutureProvider.family<OfficialExam?, String>((ref, classNodeId) async {
   final service = ref.watch(studentSupabaseServiceProvider);

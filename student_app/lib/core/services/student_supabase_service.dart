@@ -48,6 +48,69 @@ class StudentSupabaseService {
     return row?['name'] as String?;
   }
 
+  /// §2.7/§3.3 du cahier des charges : trimestre réellement en cours (et sa progression) déduits
+  /// des vraies dates de `terms`, jamais un texte/pourcentage codé en dur. `class_node_id` permet
+  /// de résoudre le pays via `academic_nodes.country_id` (colonne déjà dénormalisée sur chaque
+  /// nœud) sans avoir à faire remonter l'appelant jusqu'à la racine de l'arbre lui-même.
+  Future<TermInfo?> fetchCurrentTermInfo(String classNodeId) async {
+    if (!_isValidUuid(classNodeId)) return null;
+    final nodeRow = await client.from('academic_nodes').select('country_id').eq('id', classNodeId).maybeSingle();
+    final countryId = nodeRow?['country_id'] as String?;
+    if (countryId == null) return null;
+
+    final schoolYearName = await fetchCurrentSchoolYear(countryId);
+
+    final rows = await client
+        .from('terms')
+        .select('name, start_date, end_date')
+        .eq('country_id', countryId)
+        .eq('is_active', true)
+        .order('start_date')
+        .then((r) => r as List);
+    if (rows.isEmpty) return null;
+
+    final today = DateTime.now();
+    Map<String, dynamic>? current;
+    Map<String, dynamic>? lastStarted;
+    for (final r in rows) {
+      final start = DateTime.parse(r['start_date'] as String);
+      final end = DateTime.parse(r['end_date'] as String);
+      if (!today.isBefore(start)) lastStarted = Map<String, dynamic>.from(r);
+      if (!today.isBefore(start) && !today.isAfter(end)) current = Map<String, dynamic>.from(r);
+    }
+    // Comportement cumulatif (§3.3) : entre deux trimestres, le dernier déjà commencé reste la
+    // référence affichée (rien ne redevient invisible), plutôt que de ne rien afficher du tout.
+    final active = current ?? lastStarted;
+    if (active == null) return null;
+
+    final start = DateTime.parse(active['start_date'] as String);
+    final end = DateTime.parse(active['end_date'] as String);
+    final totalDays = end.difference(start).inDays;
+    final elapsedDays = today.difference(start).inDays;
+    final ratio = totalDays <= 0 ? 1.0 : (elapsedDays / totalDays).clamp(0.0, 1.0);
+
+    return TermInfo(
+      termName: active['name'] as String,
+      schoolYearName: schoolYearName,
+      progressRatio: ratio,
+      isBetweenTerms: current == null,
+    );
+  }
+
+  /// §2.5 du cahier des charges : profils archivés, consultables séparément (jamais mêlés à la
+  /// liste active utilisée par le sélecteur de profils/la barre latérale).
+  Future<List<StudentProfile>> fetchArchivedProfiles(String accountId) async {
+    if (!_isValidUuid(accountId)) return [];
+    final rows = await client
+        .from('profiles')
+        .select('*, academic_nodes(name)')
+        .eq('account_id', accountId)
+        .eq('status', 'archive')
+        .order('created_at')
+        .then((r) => r as List);
+    return rows.map((r) => StudentProfile.fromJson(Map<String, dynamic>.from(r))).toList();
+  }
+
   // ─── Subjects & Academic Structure ───────────────────────────
 
   /// Matières réellement enseignées dans la classe du profil actif, via `subject_class_links` —

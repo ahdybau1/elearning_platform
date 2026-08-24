@@ -48,8 +48,13 @@ class HomeDashboardScreen extends ConsumerWidget {
 
                   const SizedBox(height: 24),
 
-                  // Temporal Unlocking & Trimester Tracker (Invisible unlocking concept)
-                  _buildTrimesterStatusCard(),
+                  // §2.7 : compte à rebours vers l'examen officiel du profil actif — n'apparaît
+                  // que si la classe compose réellement un examen national (§4).
+                  if (profile != null) _buildExamCountdownBanner(ref, profile.classNodeId),
+
+                  // Temporal Unlocking & Trimester Tracker (§2.7/§3.3 — dates réelles, plus de
+                  // "Trimestre 1" ni de 65% codés en dur)
+                  if (profile != null) _buildTrimesterStatusCard(ref, profile.classNodeId),
 
                   const SizedBox(height: 28),
 
@@ -282,68 +287,121 @@ class HomeDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTrimesterStatusCard() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: StudentTheme.cardDark,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: StudentTheme.borderDark),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.calendar_today_rounded, size: 16, color: StudentTheme.accentPrimary),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Trimestre 1 (En Cours)',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+  Widget _buildTrimesterStatusCard(WidgetRef ref, String classNodeId) {
+    final termAsync = ref.watch(currentTermInfoProvider(classNodeId));
+
+    return termAsync.when(
+      loading: () => const SizedBox(height: 80, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
+      error: (err, _) => const SizedBox.shrink(),
+      data: (term) {
+        if (term == null) {
+          // Aucun trimestre configuré par l'admin pour ce pays — état honnête, pas de bandeau
+          // inventé plutôt qu'une fausse progression.
+          return const SizedBox.shrink();
+        }
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 28),
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: StudentTheme.cardDark,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: StudentTheme.borderDark),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today_rounded, size: 16, color: StudentTheme.accentPrimary),
+                        const SizedBox(width: 8),
+                        Text(
+                          term.isBetweenTerms ? '${term.termName} (Terminé)' : '${term.termName} (En Cours)',
+                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: StudentTheme.accentEmerald.withOpacity(0.15),
+                    if (term.schoolYearName != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: StudentTheme.accentEmerald.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'ANNÉE ${term.schoolYearName}',
+                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: StudentTheme.accentEmerald),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ClipRRect(
                   borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  'DÉBLOQUÉ',
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: StudentTheme.accentEmerald,
+                  child: LinearProgressIndicator(
+                    value: term.progressRatio,
+                    backgroundColor: StudentTheme.surfaceDark,
+                    valueColor: const AlwaysStoppedAnimation<Color>(StudentTheme.accentPrimary),
+                    minHeight: 8,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: const LinearProgressIndicator(
-              value: 0.65,
-              backgroundColor: StudentTheme.surfaceDark,
-              valueColor: AlwaysStoppedAnimation<Color>(StudentTheme.accentPrimary),
-              minHeight: 8,
+                const SizedBox(height: 8),
+                Text(
+                  'Le contenu déjà couvert reste toujours accessible ; le trimestre suivant se débloque automatiquement à sa date.',
+                  style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textSecondary),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Déblocage automatique du Trimestre 2 le 1er Décembre (invisible & fluide).',
-            style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textSecondary),
+        );
+      },
+    );
+  }
+
+  Widget _buildExamCountdownBanner(WidgetRef ref, String classNodeId) {
+    final examAsync = ref.watch(officialExamForClassProvider(classNodeId));
+
+    return examAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (err, _) => const SizedBox.shrink(),
+      data: (exam) {
+        if (exam == null || exam.examDate == null) return const SizedBox.shrink();
+        final daysLeft = exam.examDate!.difference(DateTime.now()).inDays;
+        if (daysLeft < 0) return const SizedBox.shrink();
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFF0EA5E9), Color(0xFF6366F1)]),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [BoxShadow(color: const Color(0xFF0EA5E9).withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 4))],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                  child: const Icon(Icons.hourglass_top_rounded, color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    daysLeft == 0
+                        ? "C'est aujourd'hui ! Bonne chance pour le ${exam.name} 🍀"
+                        : 'Plus que $daysLeft jour${daysLeft > 1 ? 's' : ''} avant le ${exam.name} !',
+                    style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

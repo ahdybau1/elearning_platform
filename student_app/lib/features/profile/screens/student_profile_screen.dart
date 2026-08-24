@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/models/student_models.dart';
+import '../../../core/providers/student_providers.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../core/widgets/student_screen_header.dart';
 
@@ -163,7 +164,11 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
             ),
             const SizedBox(height: 14),
 
-            ...authState.profiles.map((p) => _buildProfileTile(p, isActive: p.id == activeProfile?.id)),
+            ...authState.profiles.map((p) => _buildProfileTile(
+                  p,
+                  isActive: p.id == activeProfile?.id,
+                  canArchive: authState.profiles.length > 1,
+                )),
 
             const SizedBox(height: 8),
             OutlinedButton.icon(
@@ -177,6 +182,11 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
+
+            if (account != null) ...[
+              const SizedBox(height: 28),
+              _buildArchivedProfilesSection(account.id),
+            ],
 
             const SizedBox(height: 28),
             Container(
@@ -210,7 +220,102 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
     );
   }
 
-  Widget _buildProfileTile(StudentProfile p, {required bool isActive}) {
+  Future<void> _confirmArchive(StudentProfile p) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: StudentTheme.cardDark,
+        title: Text('Archiver ce profil ?', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text(
+          '${p.name} (${p.className}) sera masqué mais pourra être réactivé à tout moment. Aucune donnée n\'est supprimée (§2.5 du cahier des charges).',
+          style: GoogleFonts.inter(fontSize: 13, color: StudentTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Annuler', style: TextStyle(color: StudentTheme.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Archiver', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final error = await ref.read(studentAuthProvider.notifier).archiveProfile(p.id);
+    if (!mounted) return;
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur : $error')));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profil archivé.')));
+    }
+  }
+
+  Future<void> _reactivate(StudentProfile p) async {
+    final error = await ref.read(studentAuthProvider.notifier).reactivateProfile(p.id);
+    if (!mounted) return;
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur : $error')));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profil réactivé.')));
+      ref.invalidate(archivedProfilesProvider);
+    }
+  }
+
+  Widget _buildArchivedProfilesSection(String accountId) {
+    final archivedAsync = ref.watch(archivedProfilesProvider(accountId));
+
+    return archivedAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (err, _) => const SizedBox.shrink(),
+      data: (archived) {
+        if (archived.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Profils archivés', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+            const SizedBox(height: 4),
+            Text(
+              'Masqués mais conservés — réactivables à tout moment (§2.5 du cahier des charges).',
+              style: GoogleFonts.inter(fontSize: 12, color: StudentTheme.textSecondary),
+            ),
+            const SizedBox(height: 14),
+            ...archived.map((p) => Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: StudentTheme.cardDark.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: StudentTheme.borderDark),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(p.className, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: StudentTheme.textSecondary)),
+                            Text('Année ${p.schoolYear}', style: GoogleFonts.inter(fontSize: 11, color: StudentTheme.textMuted)),
+                          ],
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => _reactivate(p),
+                        icon: const Icon(Icons.restore_rounded, size: 16, color: StudentTheme.accentPrimary),
+                        label: Text('Réactiver', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: StudentTheme.accentPrimary)),
+                      ),
+                    ],
+                  ),
+                )),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileTile(StudentProfile p, {required bool isActive, required bool canArchive}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -263,6 +368,14 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                   color: p.hasActiveSubscription ? StudentTheme.accentEmerald : StudentTheme.textSecondary),
             ),
           ),
+          if (canArchive) ...[
+            const SizedBox(width: 4),
+            IconButton(
+              tooltip: 'Archiver ce profil',
+              icon: const Icon(Icons.archive_outlined, size: 18, color: StudentTheme.textMuted),
+              onPressed: () => _confirmArchive(p),
+            ),
+          ],
         ],
       ),
     );

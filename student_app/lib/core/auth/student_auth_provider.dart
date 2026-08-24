@@ -258,6 +258,32 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
     }
   }
 
+  /// §2.5 du cahier des charges : « Suppression côté utilisateur = archivage... Réactivation
+  /// possible. » Jamais une vraie suppression de données déclenchée par l'élève lui-même.
+  Future<String?> archiveProfile(String profileId) async {
+    try {
+      await _client.from('profiles').update({'status': 'archive'}).eq('id', profileId);
+      if (state.activeProfile?.id == profileId) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_activeProfilePrefKey);
+      }
+      await _loadAccountAndProfiles();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String?> reactivateProfile(String profileId) async {
+    try {
+      await _client.from('profiles').update({'status': 'actif'}).eq('id', profileId);
+      await _loadAccountAndProfiles();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
   Future<void> signOut() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_activeProfilePrefKey);

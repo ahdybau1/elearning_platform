@@ -128,6 +128,23 @@ class StudentAcademicNode {
   }
 }
 
+// §2.7 et §3.3 du cahier des charges : contexte temporel réel (trimestre en cours, année scolaire,
+// déblocage progressif basé sur la vraie date), calculé côté service à partir des vraies tables
+// `terms`/`school_years` — remplace l'ancien bandeau codé en dur ("Trimestre 1", 65% fixe).
+class TermInfo {
+  final String termName;
+  final String? schoolYearName;
+  final double progressRatio;
+  final bool isBetweenTerms;
+
+  TermInfo({
+    required this.termName,
+    this.schoolYearName,
+    required this.progressRatio,
+    this.isBetweenTerms = false,
+  });
+}
+
 // Pas de champ `progressPercent` : aucune table de suivi de progression réelle n'existe encore
 // (§3.5 du cahier des charges — pourcentage de leçons vues par matière). Mieux vaut l'omettre côté
 // UI que d'inventer un pourcentage.
