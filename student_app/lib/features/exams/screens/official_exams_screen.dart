@@ -120,7 +120,7 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text('${widget.exam.name} — ${widget.className}',
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: context.colors.textPrimary)),
                   ),
                   ToggleButtons(
                     isSelected: [_groupBySubject, !_groupBySubject],

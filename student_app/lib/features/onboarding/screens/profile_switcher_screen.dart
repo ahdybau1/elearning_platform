@@ -21,21 +21,35 @@ class ProfileSwitcherScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           'E-Learning National',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            color: context.colors.textPrimary,
+          ),
         ),
         actions: [
           TextButton.icon(
             onPressed: () => openParentSpace(context, ref),
-            icon: Icon(Icons.lock_outline_rounded, color: context.colors.accentAmber, size: 18),
+            icon: Icon(
+              Icons.lock_outline_rounded,
+              color: context.colors.accentAmber,
+              size: 18,
+            ),
             label: Text(
               'Espace Parent',
-              style: GoogleFonts.inter(color: context.colors.accentAmber, fontWeight: FontWeight.bold),
+              style: GoogleFonts.inter(
+                color: context.colors.accentAmber,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           const SizedBox(width: 4),
           IconButton(
             tooltip: 'Se déconnecter',
-            icon: Icon(Icons.logout_rounded, color: context.colors.textSecondary, size: 20),
+            icon: Icon(
+              Icons.logout_rounded,
+              color: context.colors.textSecondary,
+              size: 20,
+            ),
             onPressed: () => ref.read(studentAuthProvider.notifier).signOut(),
           ),
           const SizedBox(width: 12),
@@ -52,13 +66,16 @@ class ProfileSwitcherScreen extends ConsumerWidget {
                 style: GoogleFonts.outfit(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: context.colors.textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Modèle 1 Profil = 1 Classe pour un suivi individuel sans confusion.',
-                style: GoogleFonts.inter(fontSize: 14, color: context.colors.textSecondary),
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: context.colors.textSecondary,
+                ),
               ),
               const SizedBox(height: 40),
 
@@ -72,7 +89,9 @@ class ProfileSwitcherScreen extends ConsumerWidget {
                     final isActive = profile.id == authState.activeProfile?.id;
                     return InkWell(
                       onTap: () async {
-                        await ref.read(studentAuthProvider.notifier).selectProfile(profile);
+                        await ref
+                            .read(studentAuthProvider.notifier)
+                            .selectProfile(profile);
                         if (context.mounted) {
                           Navigator.pushReplacementNamed(context, '/home');
                         }
@@ -85,13 +104,16 @@ class ProfileSwitcherScreen extends ConsumerWidget {
                           color: context.colors.card,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: isActive ? context.colors.accentPrimary : context.colors.border,
+                            color: isActive
+                                ? context.colors.accentPrimary
+                                : context.colors.border,
                             width: isActive ? 2 : 1,
                           ),
                           boxShadow: isActive
                               ? [
                                   BoxShadow(
-                                    color: context.colors.accentPrimary.withOpacity(0.2),
+                                    color: context.colors.accentPrimary
+                                        .withValues(alpha: 0.2),
                                     blurRadius: 16,
                                     offset: const Offset(0, 4),
                                   ),
@@ -106,11 +128,16 @@ class ProfileSwitcherScreen extends ConsumerWidget {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 gradient: StudentTheme.primaryGradient,
-                                border: Border.all(color: Colors.white.withOpacity(0.2), width: 2),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  width: 2,
+                                ),
                               ),
                               child: Center(
                                 child: Text(
-                                  profile.name.isNotEmpty ? profile.name[0].toUpperCase() : 'E',
+                                  profile.name.isNotEmpty
+                                      ? profile.name[0].toUpperCase()
+                                      : 'E',
                                   style: GoogleFonts.outfit(
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,
@@ -125,7 +152,7 @@ class ProfileSwitcherScreen extends ConsumerWidget {
                               style: GoogleFonts.inter(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                color: context.colors.textPrimary,
                               ),
                               textAlign: TextAlign.center,
                               maxLines: 1,
@@ -133,7 +160,10 @@ class ProfileSwitcherScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 4),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: context.colors.surface,
                                 borderRadius: BorderRadius.circular(6),
@@ -161,9 +191,12 @@ class ProfileSwitcherScreen extends ConsumerWidget {
                       width: 170,
                       height: 195,
                       decoration: BoxDecoration(
-                        color: context.colors.surface.withOpacity(0.5),
+                        color: context.colors.surface.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: context.colors.border, style: BorderStyle.solid),
+                        border: Border.all(
+                          color: context.colors.border,
+                          style: BorderStyle.solid,
+                        ),
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -175,7 +208,11 @@ class ProfileSwitcherScreen extends ConsumerWidget {
                               shape: BoxShape.circle,
                               border: Border.all(color: context.colors.border),
                             ),
-                            child: Icon(Icons.add_rounded, color: context.colors.textPrimary, size: 28),
+                            child: Icon(
+                              Icons.add_rounded,
+                              color: context.colors.textPrimary,
+                              size: 28,
+                            ),
                           ),
                           const SizedBox(height: 12),
                           Text(
@@ -198,5 +235,4 @@ class ProfileSwitcherScreen extends ConsumerWidget {
       ),
     );
   }
-
 }

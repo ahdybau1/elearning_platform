@@ -22,7 +22,9 @@ class PaywallModal extends ConsumerStatefulWidget {
 class _PaywallModalState extends ConsumerState<PaywallModal> {
   int _selectedTierIndex = 1; // 0: Découverte, 1: Mensuel, 2: Annuel
   String _selectedOperator = 'Orange Money';
-  final TextEditingController _momoPhoneCtrl = TextEditingController(text: '+237 699 12 34 56');
+  final TextEditingController _momoPhoneCtrl = TextEditingController(
+    text: '+237 699 12 34 56',
+  );
 
   final List<Map<String, dynamic>> _tiers = [
     {
@@ -31,7 +33,11 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
       'duration': '7 Jours',
       'price': '1 000 FCFA',
       'days': 7,
-      'features': ['Accès au 1er Trimestre', 'Quiz interactifs', 'Support IA basique'],
+      'features': [
+        'Accès au 1er Trimestre',
+        'Quiz interactifs',
+        'Support IA basique',
+      ],
     },
     {
       'id': 'mensuel',
@@ -39,7 +45,12 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
       'duration': '30 Jours',
       'price': '3 500 FCFA',
       'days': 30,
-      'features': ['Tout le programme débloqué', 'Annales & Corrigés d\'examens', 'Tuteur IA illimité', 'Mode Hors-Ligne Data-Saver'],
+      'features': [
+        'Tout le programme débloqué',
+        'Annales & Corrigés d\'examens',
+        'Tuteur IA illimité',
+        'Mode Hors-Ligne Data-Saver',
+      ],
     },
     {
       'id': 'annuel',
@@ -47,7 +58,12 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
       'duration': 'Année scolaire',
       'price': '25 000 FCFA',
       'days': 365,
-      'features': ['Accès complet 365 jours', 'Olympiades & Examens blancs', 'Garantie 2e correcteur', 'Remise de 40% sur la boutique'],
+      'features': [
+        'Accès complet 365 jours',
+        'Olympiades & Examens blancs',
+        'Garantie 2e correcteur',
+        'Remise de 40% sur la boutique',
+      ],
     },
   ];
 
@@ -90,7 +106,10 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
             const SizedBox(height: 4),
             Text(
               'Paiement Mobile Money 100% sécurisé et activation instantanée.',
-              style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: context.colors.textSecondary,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
@@ -106,7 +125,9 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
                   color: isSel ? context.colors.surface : Colors.transparent,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: isSel ? context.colors.accentPrimary : context.colors.border,
+                    color: isSel
+                        ? context.colors.accentPrimary
+                        : context.colors.border,
                     width: isSel ? 2 : 1,
                   ),
                 ),
@@ -115,12 +136,17 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
                     tier['name'],
                     style: GoogleFonts.inter(
                       fontWeight: FontWeight.bold,
-                      color: isSel ? context.colors.accentPrimary : context.colors.textPrimary,
+                      color: isSel
+                          ? context.colors.accentPrimary
+                          : context.colors.textPrimary,
                     ),
                   ),
                   subtitle: Text(
                     (tier['features'] as List).join(' • '),
-                    style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary),
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: context.colors.textSecondary,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -129,7 +155,7 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
                     style: GoogleFonts.outfit(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: context.colors.textPrimary,
                     ),
                   ),
                   onTap: () => setState(() => _selectedTierIndex = index),
@@ -142,21 +168,29 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
             // Operator Selection
             Text(
               'Moyen de paiement Mobile Money :',
-              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: context.colors.textPrimary,
+              ),
             ),
             const SizedBox(height: 10),
             Wrap(
               spacing: 10,
-              children: ['Orange Money', 'MTN MoMo', 'Wave', 'Moov Money'].map((op) {
+              children: ['Orange Money', 'MTN MoMo', 'Wave', 'Moov Money'].map((
+                op,
+              ) {
                 final isSel = _selectedOperator == op;
                 return ChoiceChip(
                   label: Text(op),
                   selected: isSel,
                   onSelected: (_) => setState(() => _selectedOperator = op),
-                  selectedColor: context.colors.accentPrimary.withOpacity(0.2),
+                  selectedColor: context.colors.accentPrimary.withValues(
+                    alpha: 0.2,
+                  ),
                   backgroundColor: context.colors.surface,
                   labelStyle: GoogleFonts.inter(
-                    color: isSel ? context.colors.accentPrimary : Colors.white,
+                    color: isSel ? context.colors.accentPrimary : context.colors.textPrimary,
                     fontSize: 12,
                     fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
                   ),
@@ -170,13 +204,15 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
             TextField(
               controller: _momoPhoneCtrl,
               keyboardType: TextInputType.phone,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.colors.textPrimary),
               decoration: InputDecoration(
                 labelText: 'Numéro de compte pour le prélèvement',
                 labelStyle: TextStyle(color: context.colors.textSecondary),
                 filled: true,
                 fillColor: context.colors.surface,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
 
@@ -188,7 +224,9 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
                 backgroundColor: context.colors.accentPrimary,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               onPressed: () {
                 // Aucun agrégateur Mobile Money réel n'est encore connecté (voir
@@ -208,7 +246,10 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
               },
               child: Text(
                 'Payer ${selectedTier['price']} (${selectedTier['duration']})',
-                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
               ),
             ),
           ],

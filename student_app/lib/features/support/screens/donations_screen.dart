@@ -18,7 +18,9 @@ class DonationsScreen extends ConsumerWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: context.colors.accentAmber,
-        content: Text('Les dons Mobile Money ne sont pas encore disponibles : agrégateur de paiement en attente de configuration.'),
+        content: Text(
+          'Les dons Mobile Money ne sont pas encore disponibles : agrégateur de paiement en attente de configuration.',
+        ),
       ),
     );
   }
@@ -27,7 +29,8 @@ class DonationsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final campaignsAsync = ref.watch(charityCampaignsProvider);
 
-    return StudentPageContent(child: ListView(
+    return StudentPageContent(
+      child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           const StudentScreenHeader(title: 'Soutien & Dons'),
@@ -38,44 +41,89 @@ class DonationsScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               gradient: StudentTheme.purpleGradient,
               borderRadius: BorderRadius.circular(18),
-              boxShadow: [BoxShadow(color: context.colors.accentPurple.withOpacity(0.3), blurRadius: 16)],
+              boxShadow: [
+                BoxShadow(
+                  color: context.colors.accentPurple.withValues(alpha: 0.3),
+                  blurRadius: 16,
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.favorite_rounded, color: Colors.white, size: 28),
+                const Icon(
+                  Icons.favorite_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
                 const SizedBox(height: 12),
-                Text('Soutenir l\'Application', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                Text(
+                  'Soutenir l\'Application',
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Text(
                   'Un don libre, à tout moment, pour aider à maintenir la plateforme gratuite pour le plus grand nombre.',
-                  style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withOpacity(0.9)),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                   onPressed: () => _showUnavailable(context),
-                  child: const Text('Faire un don libre', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    'Faire un don libre',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             ),
           ),
 
           const SizedBox(height: 28),
-          Text('Soutenir une Œuvre Caritative', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+          Text(
+            'Soutenir une Œuvre Caritative',
+            style: GoogleFonts.outfit(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: context.colors.textPrimary,
+            ),
+          ),
           const SizedBox(height: 14),
 
           campaignsAsync.when(
-            loading: () => const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator())),
-            error: (err, _) => Text('Erreur : $err', style: const TextStyle(color: Colors.red)),
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: CircularProgressIndicator(),
+              ),
+            ),
+            error: (err, _) => Text(
+              'Erreur : $err',
+              style: const TextStyle(color: Colors.red),
+            ),
             data: (campaigns) {
               if (campaigns.isEmpty) {
-                return Text('Aucune campagne active pour le moment.', style: GoogleFonts.inter(color: context.colors.textSecondary));
+                return Text(
+                  'Aucune campagne active pour le moment.',
+                  style: GoogleFonts.inter(color: context.colors.textSecondary),
+                );
               }
               return Column(
                 children: campaigns.map((c) {
@@ -90,9 +138,24 @@ class DonationsScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(c.title, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+                        Text(
+                          c.title,
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: context.colors.textPrimary,
+                          ),
+                        ),
                         const SizedBox(height: 4),
-                        Text(c.description, style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
+                        Text(
+                          c.description,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: context.colors.textSecondary,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         const SizedBox(height: 14),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(6),
@@ -100,16 +163,26 @@ class DonationsScreen extends ConsumerWidget {
                             value: c.progressRatio.toDouble(),
                             minHeight: 8,
                             backgroundColor: context.colors.surface,
-                            valueColor: AlwaysStoppedAnimation(context.colors.accentEmerald),
+                            valueColor: AlwaysStoppedAnimation(
+                              context.colors.accentEmerald,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 8),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('${c.collectedAmount.toStringAsFixed(0)} / ${c.targetAmount.toStringAsFixed(0)} FCFA',
-                                style: GoogleFonts.firaCode(fontSize: 11, color: context.colors.textMuted)),
-                            TextButton(onPressed: () => _showUnavailable(context), child: const Text('Faire un don')),
+                            Text(
+                              '${c.collectedAmount.toStringAsFixed(0)} / ${c.targetAmount.toStringAsFixed(0)} FCFA',
+                              style: GoogleFonts.firaCode(
+                                fontSize: 11,
+                                color: context.colors.textMuted,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => _showUnavailable(context),
+                              child: const Text('Faire un don'),
+                            ),
                           ],
                         ),
                       ],

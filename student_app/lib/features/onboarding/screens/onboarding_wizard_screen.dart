@@ -24,7 +24,8 @@ class OnboardingWizardScreen extends ConsumerStatefulWidget {
       _OnboardingWizardScreenState();
 }
 
-class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen> {
+class _OnboardingWizardScreenState
+    extends ConsumerState<OnboardingWizardScreen> {
   final _accountFormKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
@@ -116,7 +117,9 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
         lastName: _lastNameCtrl.text.trim(),
         phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
         birthDate: _birthDate,
-        schoolName: _schoolNameCtrl.text.trim().isEmpty ? null : _schoolNameCtrl.text.trim(),
+        schoolName: _schoolNameCtrl.text.trim().isEmpty
+            ? null
+            : _schoolNameCtrl.text.trim(),
       );
 
       if (signUpError == kSignUpNeedsEmailConfirmation) {
@@ -128,21 +131,40 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
             backgroundColor: context.colors.card,
             title: Row(
               children: [
-                Icon(Icons.mark_email_read_rounded, color: context.colors.accentPrimary),
+                Icon(
+                  Icons.mark_email_read_rounded,
+                  color: context.colors.accentPrimary,
+                ),
                 const SizedBox(width: 10),
-                Text('Confirmez votre email',
-                    style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+                Text(
+                  'Confirmez votre email',
+                  style: GoogleFonts.outfit(
+                    color: context.colors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
             content: Text(
               'Un email de confirmation a été envoyé à ${_emailCtrl.text.trim()}. Une fois confirmé, revenez vous connecter pour terminer votre inscription (le choix de votre classe sera repris automatiquement).',
-              style: GoogleFonts.inter(color: context.colors.textSecondary, fontSize: 13),
+              style: GoogleFonts.inter(
+                color: context.colors.textSecondary,
+                fontSize: 13,
+              ),
             ),
             actions: [
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentPrimary),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.colors.accentPrimary,
+                ),
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Compris', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Compris',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
@@ -165,7 +187,9 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
         lastName: _lastNameCtrl.text.trim(),
         phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
         birthDate: _birthDate,
-        schoolName: _schoolNameCtrl.text.trim().isEmpty ? null : _schoolNameCtrl.text.trim(),
+        schoolName: _schoolNameCtrl.text.trim().isEmpty
+            ? null
+            : _schoolNameCtrl.text.trim(),
       );
       if (completeError != null) {
         setState(() {
@@ -197,7 +221,9 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     final accountStepKind = _accountStepKind;
     final needsAccount = accountStepKind != _AccountStepKind.none;
     final showAccountStep = needsAccount && !_accountStepDone;
-    final canGoBack = showAccountStep ? false : (_selectedPath.isNotEmpty || needsAccount);
+    final canGoBack = showAccountStep
+        ? false
+        : (_selectedPath.isNotEmpty || needsAccount);
 
     return Scaffold(
       backgroundColor: context.colors.background,
@@ -214,8 +240,17 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(
                       onPressed: _isSubmitting ? null : _goBack,
-                      icon: Icon(Icons.arrow_back_rounded, color: context.colors.textSecondary, size: 18),
-                      label: Text('Précédent', style: GoogleFonts.inter(color: context.colors.textSecondary)),
+                      icon: Icon(
+                        Icons.arrow_back_rounded,
+                        color: context.colors.textSecondary,
+                        size: 18,
+                      ),
+                      label: Text(
+                        'Précédent',
+                        style: GoogleFonts.inter(
+                          color: context.colors.textSecondary,
+                        ),
+                      ),
                     ),
                   ),
                 if (_selectedPath.isNotEmpty) ...[
@@ -223,18 +258,28 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
                     spacing: 6,
                     runSpacing: 6,
                     children: _selectedPath
-                        .map((n) => Chip(
-                              label: Text(n.name, style: GoogleFonts.inter(fontSize: 11, color: context.colors.textPrimary)),
-                              backgroundColor: context.colors.surface,
-                              side: BorderSide(color: context.colors.border),
-                            ))
+                        .map(
+                          (n) => Chip(
+                            label: Text(
+                              n.name,
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: context.colors.textPrimary,
+                              ),
+                            ),
+                            backgroundColor: context.colors.surface,
+                            side: BorderSide(color: context.colors.border),
+                          ),
+                        )
                         .toList(),
                   ),
                   const SizedBox(height: 12),
                 ],
                 Expanded(
                   child: SingleChildScrollView(
-                    child: showAccountStep ? _buildAccountStep() : _buildTreeOrSummaryStep(),
+                    child: showAccountStep
+                        ? _buildAccountStep()
+                        : _buildTreeOrSummaryStep(),
                   ),
                 ),
                 if (_errorMessage != null)
@@ -243,13 +288,22 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: context.colors.accentRose.withOpacity(0.12),
+                        color: context.colors.accentRose.withValues(
+                          alpha: 0.12,
+                        ),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: context.colors.accentRose.withOpacity(0.4)),
+                        border: Border.all(
+                          color: context.colors.accentRose.withValues(
+                            alpha: 0.4,
+                          ),
+                        ),
                       ),
                       child: Text(
                         _errorMessage!,
-                        style: GoogleFonts.inter(fontSize: 12, color: context.colors.accentRose),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: context.colors.accentRose,
+                        ),
                       ),
                     ),
                   ),
@@ -262,7 +316,8 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
   }
 
   Widget _buildAccountStep() {
-    final isCompleteProfile = _accountStepKind == _AccountStepKind.completeProfile;
+    final isCompleteProfile =
+        _accountStepKind == _AccountStepKind.completeProfile;
     final sessionEmail = ref.read(studentAuthProvider).sessionEmail;
 
     return Form(
@@ -271,31 +326,62 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            isCompleteProfile ? 'Terminez votre profil élève' : 'Bienvenue sur votre Plateforme d\'Excellence',
-            style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
+            isCompleteProfile
+                ? 'Terminez votre profil élève'
+                : 'Bienvenue sur votre Plateforme d\'Excellence',
+            style: GoogleFonts.outfit(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: context.colors.textPrimary,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             isCompleteProfile
                 ? 'Vous êtes déjà connecté (${sessionEmail ?? ''}) — plus qu\'une étape avant de choisir votre classe.'
                 : 'Créez votre compte pour commencer.',
-            style: GoogleFonts.inter(fontSize: 14, color: context.colors.textSecondary),
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: context.colors.textSecondary,
+            ),
           ),
           const SizedBox(height: 24),
           Row(
             children: [
-              Expanded(child: _textField(_firstNameCtrl, 'Prénom', validator: _requiredValidator)),
+              Expanded(
+                child: _textField(
+                  _firstNameCtrl,
+                  'Prénom',
+                  validator: _requiredValidator,
+                ),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: _textField(_lastNameCtrl, 'Nom', validator: _requiredValidator)),
+              Expanded(
+                child: _textField(
+                  _lastNameCtrl,
+                  'Nom',
+                  validator: _requiredValidator,
+                ),
+              ),
             ],
           ),
           if (!isCompleteProfile) ...[
             const SizedBox(height: 16),
-            _textField(_emailCtrl, 'Adresse email', keyboardType: TextInputType.emailAddress,
-                validator: (v) => (v == null || !v.contains('@')) ? 'Adresse email invalide' : null),
+            _textField(
+              _emailCtrl,
+              'Adresse email',
+              keyboardType: TextInputType.emailAddress,
+              validator: (v) => (v == null || !v.contains('@'))
+                  ? 'Adresse email invalide'
+                  : null,
+            ),
           ],
           const SizedBox(height: 16),
-          _textField(_phoneCtrl, 'Numéro de téléphone (Mobile Money)', keyboardType: TextInputType.phone),
+          _textField(
+            _phoneCtrl,
+            'Numéro de téléphone (Mobile Money)',
+            keyboardType: TextInputType.phone,
+          ),
           const SizedBox(height: 16),
           _textField(_schoolNameCtrl, 'Établissement fréquenté (optionnel)'),
           const SizedBox(height: 16),
@@ -317,14 +403,23 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
                 labelStyle: TextStyle(color: context.colors.textSecondary),
                 filled: true,
                 fillColor: context.colors.card,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                suffixIcon: Icon(Icons.cake_outlined, color: context.colors.textSecondary),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                suffixIcon: Icon(
+                  Icons.cake_outlined,
+                  color: context.colors.textSecondary,
+                ),
               ),
               child: Text(
                 _birthDate == null
                     ? 'Pour vous souhaiter votre anniversaire 🎂'
                     : '${_birthDate!.day.toString().padLeft(2, '0')}/${_birthDate!.month.toString().padLeft(2, '0')}/${_birthDate!.year}',
-                style: TextStyle(color: _birthDate == null ? context.colors.textMuted : context.colors.textPrimary),
+                style: TextStyle(
+                  color: _birthDate == null
+                      ? context.colors.textMuted
+                      : context.colors.textPrimary,
+                ),
               ),
             ),
           ),
@@ -339,16 +434,22 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
                 labelStyle: TextStyle(color: context.colors.textSecondary),
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    _obscurePassword
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
                     color: context.colors.textSecondary,
                   ),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                 ),
                 filled: true,
                 fillColor: context.colors.card,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              validator: (v) => (v == null || v.length < 6) ? 'Au moins 6 caractères' : null,
+              validator: (v) =>
+                  (v == null || v.length < 6) ? 'Au moins 6 caractères' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -360,9 +461,13 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
                 labelStyle: TextStyle(color: context.colors.textSecondary),
                 filled: true,
                 fillColor: context.colors.card,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              validator: (v) => (v != _passwordCtrl.text) ? 'Les mots de passe ne correspondent pas' : null,
+              validator: (v) => (v != _passwordCtrl.text)
+                  ? 'Les mots de passe ne correspondent pas'
+                  : null,
             ),
           ],
           const SizedBox(height: 24),
@@ -373,10 +478,15 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
                 backgroundColor: context.colors.accentPrimary,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               onPressed: _submitAccountStep,
-              child: Text('Continuer', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+              child: Text(
+                'Continuer',
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ],
@@ -384,14 +494,19 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     );
   }
 
-  String? _requiredValidator(String? v) => (v == null || v.trim().isEmpty) ? 'Champ requis' : null;
+  String? _requiredValidator(String? v) =>
+      (v == null || v.trim().isEmpty) ? 'Champ requis' : null;
 
-  Widget _textField(TextEditingController ctrl, String label,
-      {TextInputType? keyboardType, String? Function(String?)? validator}) {
+  Widget _textField(
+    TextEditingController ctrl,
+    String label, {
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
     return TextFormField(
       controller: ctrl,
       keyboardType: keyboardType,
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: context.colors.textPrimary),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: context.colors.textSecondary),
@@ -408,11 +523,14 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     final childrenAsync = ref.watch(studentAcademicChildrenProvider(parentId));
 
     return childrenAsync.when(
-      loading: () => const Center(child: Padding(
-        padding: EdgeInsets.all(40),
-        child: CircularProgressIndicator(),
-      )),
-      error: (err, _) => Text('Erreur : $err', style: const TextStyle(color: Colors.red)),
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40),
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (err, _) =>
+          Text('Erreur : $err', style: const TextStyle(color: Colors.red)),
       data: (children) {
         if (children.isEmpty) {
           if (_selectedPath.isEmpty) {
@@ -429,15 +547,27 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
   }
 
   Widget _buildNodePicker(List<StudentAcademicNode> children) {
-    final title = _selectedPath.isEmpty ? 'Votre Pays' : 'Sélectionnez : ${_nodeTypeLabel(children.first.nodeType)}';
+    final title = _selectedPath.isEmpty
+        ? 'Votre Pays'
+        : 'Sélectionnez : ${_nodeTypeLabel(children.first.nodeType)}';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+        Text(
+          title,
+          style: GoogleFonts.outfit(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: context.colors.textPrimary,
+          ),
+        ),
         const SizedBox(height: 8),
         Text(
           'Le programme, les cours et les annales seront calibrés sur votre choix.',
-          style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            color: context.colors.textSecondary,
+          ),
         ),
         const SizedBox(height: 20),
         ...children.map((node) {
@@ -449,8 +579,17 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
                 side: BorderSide(color: context.colors.border),
               ),
               tileColor: context.colors.card,
-              leading: Icon(Icons.chevron_right_rounded, color: context.colors.accentPrimary),
-              title: Text(node.name, style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white)),
+              leading: Icon(
+                Icons.chevron_right_rounded,
+                color: context.colors.accentPrimary,
+              ),
+              title: Text(
+                node.name,
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  color: context.colors.textPrimary,
+                ),
+              ),
               onTap: () => setState(() => _selectedPath.add(node)),
             ),
           );
@@ -492,20 +631,35 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: context.colors.accentEmerald.withOpacity(0.15),
+                  color: context.colors.accentEmerald.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.rocket_launch_rounded, color: context.colors.accentEmerald, size: 28),
+                child: Icon(
+                  Icons.rocket_launch_rounded,
+                  color: context.colors.accentEmerald,
+                  size: 28,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Prêt à Exceller !',
-                        style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                    Text('Votre espace de révision personnalisé est prêt.',
-                        style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary)),
+                    Text(
+                      'Prêt à Exceller !',
+                      style: GoogleFonts.outfit(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: context.colors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Votre espace de révision personnalisé est prêt.',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: context.colors.textSecondary,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -515,7 +669,10 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
           Divider(color: context.colors.border),
           const SizedBox(height: 14),
           if (_accountStepKind != _AccountStepKind.none) ...[
-            _buildSummaryRow('Élève', '${_firstNameCtrl.text} ${_lastNameCtrl.text}'),
+            _buildSummaryRow(
+              'Élève',
+              '${_firstNameCtrl.text} ${_lastNameCtrl.text}',
+            ),
             _buildSummaryRow(
               'Email',
               _accountStepKind == _AccountStepKind.completeProfile
@@ -532,22 +689,27 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
                 backgroundColor: context.colors.accentPrimary,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               onPressed: _isSubmitting ? null : () => _submitFinal(leaf),
               child: _isSubmitting
                   ? const SizedBox(
-                      width: 20, height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.black,
+                      ),
                     )
-                  : Text(
-                      switch (_accountStepKind) {
-                        _AccountStepKind.fullSignUp => 'Créer mon compte et commencer',
-                        _AccountStepKind.completeProfile => 'Terminer mon profil et commencer',
-                        _AccountStepKind.none => 'Ajouter ce profil',
-                      },
-                      style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                    ),
+                  : Text(switch (_accountStepKind) {
+                      _AccountStepKind.fullSignUp =>
+                        'Créer mon compte et commencer',
+                      _AccountStepKind.completeProfile =>
+                        'Terminer mon profil et commencer',
+                      _AccountStepKind.none => 'Ajouter ce profil',
+                    }, style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -561,11 +723,23 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: GoogleFonts.inter(color: context.colors.textSecondary, fontSize: 13)),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              color: context.colors.textSecondary,
+              fontSize: 13,
+            ),
+          ),
           Flexible(
-            child: Text(value,
-                textAlign: TextAlign.right,
-                style: GoogleFonts.inter(color: context.colors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: GoogleFonts.inter(
+                color: context.colors.textPrimary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
           ),
         ],
       ),

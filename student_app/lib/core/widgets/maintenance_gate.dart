@@ -46,7 +46,7 @@ class _MaintenanceScreen extends StatelessWidget {
               Text(
                 'Application en Maintenance',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
               ),
               const SizedBox(height: 12),
               Text(
