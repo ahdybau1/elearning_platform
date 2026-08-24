@@ -1537,3 +1537,57 @@ Dans le forum de la classe de 3e (matière : mathématiques), un élève publie 
 ### 45.3 Pourquoi le message est masqué avant la revue humaine, pas après
 
 Sur un forum destiné à des mineurs, laisser un contenu potentiellement insultant visible en attendant qu'un modérateur humain le traite (ce qui peut prendre plusieurs heures) expose davantage d'élèves au contenu problématique. Le masquage immédiat dès qu'un score de risque élevé est détecté, réversible si le modérateur juge finalement le signalement infondé, est le compromis qui protège le plus efficacement sans reposer uniquement sur la rapidité humaine.
+
+---
+
+## Addendum — Implémentation réelle du module « Mon espace » (2026-08-24)
+
+Passe de mise en conformité du groupe de navigation « Mon espace » (§20 : Accueil, Profil, Paramètres,
+Espace parent) côté `student_app`. Documenté ici conformément à la règle de ce fichier (« ne pas modifier
+sans raison explicite de le faire évoluer avec le projet réel ») — ce qui suit est un compte-rendu de ce qui
+a été construit, pas une modification de la spécification elle-même.
+
+### Paramètres (§11.1) — préférences réellement persistées
+
+Nouvelle table `account_settings` (1 ligne par compte, migration `40_account_settings.sql`) : notifications
+(abonnement/forum/révision), thème (`theme_mode` clair/sombre/automatique + `high_contrast` — deux axes
+indépendants), taille de police, visibilité forum, sous-titres. `settings_screen.dart` lit/écrit cette table
+via `StudentAuthNotifier.updateSettings`, plus de `setState` local perdu à la fermeture de l'app.
+
+Droit à l'oubli : nouvelle table `data_requests` (migration `41_data_requests.sql`, `request_type`
+export/deletion) — demande réellement tracée et distincte d'un ticket support générique ; le traitement
+effectif reste une action admin manuelle (même logique que `refund_requests`).
+
+### Système de thème (§11.2 — contraste élevé « distinct du mode sombre »)
+
+`StudentColors` (`ThemeExtension`) avec 4 variantes (sombre, sombre contraste élevé, clair, clair contraste
+élevé), résolues par `StudentTheme.resolve()` à partir des préférences ci-dessus. Les 461 références
+directes à `StudentTheme.xDark` codées en dur ont été remplacées par `context.colors.x` sur les 26 écrans
+concernés pour que le changement de thème ait un effet réel partout, pas seulement en théorie.
+
+### Espace parent (§17) — vraie identité séparée
+
+Remplace l'ancien PIN codé en dur (`1234` sur la session élève elle-même) par une vraie authentification
+`parent_accounts` : session Supabase Auth **dédiée** (`parentSupabaseClient`, distincte de
+`Supabase.instance.client`), avec sa propre persistance locale, pour que parent et élève restent connectés
+simultanément sur le même appareil — condition du « sans réauthentification constante » exigé par le §17.
+Nouvelles policies RLS (migration `42_parent_access_rls.sql`, fonction `is_linked_parent_of_profile`) pour
+que le parent authentifié voie réellement les profils/abonnements/transactions des enfants liés
+(`parent_profile_links`), avec vérification de `parent_accounts.is_active`. `support_tickets` distingue
+désormais réellement élève/parent (`parent_account_id`, migration `43_support_tickets_parent_identity.sql`).
+
+Création du compte parent reste **admin-only** (déjà fonctionnel côté `admin_app`, Edge Function
+`admin-create-parent-account`) — pas d'auto-inscription parent depuis `student_app`, cohérent avec le
+traitement des comptes enseignant et pour éviter un lien non vérifié à un profil mineur.
+
+### Points explicitement différés (hors périmètre de cette passe)
+
+- **Traduction anglaise de l'interface** : aucune infrastructure i18n dans l'app (toutes les chaînes sont en
+  français en dur) ; construire une vraie traduction demande un chantier à part entière. Le sélecteur reste
+  visible mais marqué « à venir ».
+- **Téléchargement hors-ligne des leçons** et **sous-titres vidéo** : aucun moteur de cache ni lecteur vidéo
+  n'existe encore dans `student_app` (voir Phase 2 de la roadmap, §22). Paramètres reflète cet état
+  honnêtement plutôt que de simuler une valeur.
+- **Navigation complète « en tant que » l'élève** depuis l'Espace parent (cours/forum/IA, pas seulement la
+  lecture de la progression/abonnement) : nécessiterait d'étendre les RLS de presque toutes les tables de
+  contenu pédagogique — chantier dédié distinct.
