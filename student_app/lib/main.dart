@@ -7,9 +7,11 @@ import 'core/models/student_models.dart';
 import 'core/config/supabase_config.dart';
 import 'core/widgets/maintenance_gate.dart';
 import 'core/auth/student_auth_provider.dart';
+import 'core/auth/device_accounts_service.dart';
 import 'features/onboarding/screens/onboarding_wizard_screen.dart';
 import 'features/onboarding/screens/profile_switcher_screen.dart';
 import 'features/onboarding/screens/student_login_screen.dart';
+import 'features/onboarding/screens/device_account_selector_screen.dart';
 import 'features/home/screens/main_navigation_screen.dart';
 import 'features/courses/screens/chapters_list_screen.dart';
 import 'features/courses/screens/lesson_reader_screen.dart';
@@ -51,7 +53,24 @@ class StudentAuthGate extends ConsumerWidget {
       );
     }
     if (!authState.hasSession) {
-      return const StudentLoginScreen();
+      // Un compte déjà connu sur CET appareil (déjà réellement authentifié par email + mot de passe
+      // au moins une fois) permet le déverrouillage rapide par code personnel plutôt que de resaisir
+      // le mot de passe à chaque fois — voir DeviceAccountsService pour la garantie de sécurité
+      // exacte (le code ne vaut que pour le compte sélectionné, jamais pour en retrouver un autre).
+      return FutureBuilder<List<DeviceKnownAccount>>(
+        future: deviceAccountsService.listKnown(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Scaffold(
+              backgroundColor: StudentTheme.backgroundDark,
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          return snapshot.data!.isEmpty
+              ? const StudentLoginScreen()
+              : const DeviceAccountSelectorScreen();
+        },
+      );
     }
     if (authState.profiles.isEmpty) {
       // Session réelle mais profil élève pas encore complété (compte `accounts` manquant, ex. un

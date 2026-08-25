@@ -33,10 +33,9 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
       _errorMessage = null;
     });
 
-    final error = await ref.read(studentAuthProvider.notifier).signIn(
-          email: _emailCtrl.text.trim(),
-          password: _passwordCtrl.text,
-        );
+    final error = await ref
+        .read(studentAuthProvider.notifier)
+        .signIn(email: _emailCtrl.text.trim(), password: _passwordCtrl.text);
 
     if (!mounted) return;
     setState(() => _isSubmitting = false);
@@ -66,11 +65,18 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                       height: 64,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [context.colors.accentPrimary, context.colors.accentIndigo],
+                          colors: [
+                            context.colors.accentPrimary,
+                            context.colors.accentIndigo,
+                          ],
                         ),
                         borderRadius: BorderRadius.circular(18),
                       ),
-                      child: const Icon(Icons.school_rounded, color: Colors.white, size: 34),
+                      child: const Icon(
+                        Icons.school_rounded,
+                        color: Colors.white,
+                        size: 34,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -87,7 +93,10 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                   Text(
                     'Connectez-vous pour retrouver vos cours, exercices et annales.',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: context.colors.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 32),
 
@@ -102,11 +111,18 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                           style: TextStyle(color: context.colors.textPrimary),
                           decoration: InputDecoration(
                             labelText: 'Adresse email',
-                            labelStyle: TextStyle(color: context.colors.textSecondary),
-                            prefixIcon: Icon(Icons.email_outlined, color: context.colors.textSecondary),
+                            labelStyle: TextStyle(
+                              color: context.colors.textSecondary,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.email_outlined,
+                              color: context.colors.textSecondary,
+                            ),
                             filled: true,
                             fillColor: context.colors.card,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           validator: (v) => (v == null || !v.contains('@'))
                               ? 'Adresse email invalide'
@@ -119,21 +135,33 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                           style: TextStyle(color: context.colors.textPrimary),
                           decoration: InputDecoration(
                             labelText: 'Mot de passe',
-                            labelStyle: TextStyle(color: context.colors.textSecondary),
-                            prefixIcon: Icon(Icons.lock_outline_rounded, color: context.colors.textSecondary),
+                            labelStyle: TextStyle(
+                              color: context.colors.textSecondary,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.lock_outline_rounded,
+                              color: context.colors.textSecondary,
+                            ),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                _obscurePassword
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
                                 color: context.colors.textSecondary,
                               ),
-                              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                              onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
                             ),
                             filled: true,
                             fillColor: context.colors.card,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
-                          validator: (v) =>
-                              (v == null || v.isEmpty) ? 'Mot de passe requis' : null,
+                          validator: (v) => (v == null || v.isEmpty)
+                              ? 'Mot de passe requis'
+                              : null,
                           onFieldSubmitted: (_) => _submit(),
                         ),
                         if (_errorMessage != null) ...[
@@ -141,18 +169,31 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: context.colors.accentRose.withOpacity(0.12),
+                              color: context.colors.accentRose.withValues(
+                                alpha: 0.12,
+                              ),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: context.colors.accentRose.withOpacity(0.4)),
+                              border: Border.all(
+                                color: context.colors.accentRose.withValues(
+                                  alpha: 0.4,
+                                ),
+                              ),
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.error_outline_rounded, color: context.colors.accentRose, size: 18),
+                                Icon(
+                                  Icons.error_outline_rounded,
+                                  color: context.colors.accentRose,
+                                  size: 18,
+                                ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     _errorMessage!,
-                                    style: GoogleFonts.inter(fontSize: 12, color: context.colors.accentRose),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: context.colors.accentRose,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -166,17 +207,25 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                             backgroundColor: context.colors.accentPrimary,
                             foregroundColor: Colors.black,
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           child: _isSubmitting
                               ? const SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.black,
+                                  ),
                                 )
                               : Text(
                                   'Se connecter',
-                                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
                                 ),
                         ),
                       ],
@@ -189,10 +238,14 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                     children: [
                       Text(
                         'Pas encore de compte ?',
-                        style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: context.colors.textSecondary,
+                        ),
                       ),
                       TextButton(
-                        onPressed: () => Navigator.pushNamed(context, '/onboarding'),
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/onboarding'),
                         child: Text(
                           'Créer un compte',
                           style: GoogleFonts.inter(

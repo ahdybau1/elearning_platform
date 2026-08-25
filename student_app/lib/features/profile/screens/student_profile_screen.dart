@@ -233,6 +233,11 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
               _buildParentInviteCard(activeProfile.id),
             ],
 
+            if (account != null) ...[
+              const SizedBox(height: 20),
+              _buildLoginCodeCard(account),
+            ],
+
             const SizedBox(height: 28),
             Text(
               'Mes Classes Suivies',
@@ -379,6 +384,158 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// §7.3/§7.4 : « Sécurité → Mon code » — définit/change le code personnel utilisé pour le
+  /// déverrouillage rapide (voir device_accounts_service.dart et login_code_entry_screen.dart). La
+  /// carte n'indique jamais si un code est déjà défini ou lequel (le hash ne quitte jamais la base,
+  /// voir migration 45) : seule l'action « Définir/Changer mon code » est proposée.
+  Widget _buildLoginCodeCard(StudentAccount account) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.colors.border),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.pin_outlined, color: context.colors.accentIndigo, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Sécurité — Mon code',
+                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Code personnel à 6 chiffres pour vous reconnecter rapidement sur cet appareil.',
+                  style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          OutlinedButton(
+            onPressed: () => _showSetLoginCodeDialog(),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: context.colors.accentIndigo,
+              side: BorderSide(color: context.colors.accentIndigo),
+            ),
+            child: const Text('Définir / Changer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showSetLoginCodeDialog() async {
+    final codeCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+    bool isSubmitting = false;
+    String? errorMessage;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: context.colors.card,
+          title: Text(
+            'Définir mon code personnel',
+            style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Ce code vous appartient exclusivement — ne le partagez jamais.',
+                style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: codeCtrl,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                style: TextStyle(color: context.colors.textPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Nouveau code (6 chiffres)',
+                  labelStyle: TextStyle(color: context.colors.textSecondary),
+                  filled: true,
+                  fillColor: context.colors.surface,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              TextField(
+                controller: confirmCtrl,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                style: TextStyle(color: context.colors.textPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Confirmer le code',
+                  labelStyle: TextStyle(color: context.colors.textSecondary),
+                  filled: true,
+                  fillColor: context.colors.surface,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              if (errorMessage != null) ...[
+                const SizedBox(height: 6),
+                Text(errorMessage!, style: TextStyle(color: context.colors.accentRose, fontSize: 12)),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+              child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentIndigo),
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final code = codeCtrl.text.trim();
+                      if (code.length != 6 || int.tryParse(code) == null) {
+                        setDialogState(() => errorMessage = 'Le code doit comporter exactement 6 chiffres.');
+                        return;
+                      }
+                      if (code != confirmCtrl.text.trim()) {
+                        setDialogState(() => errorMessage = 'Les deux codes ne correspondent pas.');
+                        return;
+                      }
+                      setDialogState(() {
+                        isSubmitting = true;
+                        errorMessage = null;
+                      });
+                      final error = await ref.read(studentAuthProvider.notifier).setLoginCode(code);
+                      if (error != null) {
+                        setDialogState(() {
+                          isSubmitting = false;
+                          errorMessage = error;
+                        });
+                        return;
+                      }
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Code personnel enregistré.')),
+                        );
+                      }
+                    },
+              child: isSubmitting
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Enregistrer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
       ),
     );
   }

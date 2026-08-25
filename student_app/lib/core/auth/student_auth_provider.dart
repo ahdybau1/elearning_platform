@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/student_models.dart';
+import 'device_accounts_service.dart';
 
 class StudentAuthState {
   final StudentAccount? account;
@@ -137,6 +138,16 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
         sessionEmail: user.email,
         settings: settings,
       );
+
+      // §7.3/§7.4 : n'enregistre CET appareil comme connaissant ce compte qu'après une session
+      // réellement établie ici (email + mot de passe, ou restauration déjà vérifiée par code) —
+      // jamais à partir d'un code seul. Garde aussi le jeton stocké à jour (rotation Supabase).
+      unawaited(deviceAccountsService.registerCurrentAccount(
+        accountId: account.id,
+        firstName: account.firstName,
+        lastName: account.lastName,
+        email: account.email,
+      ));
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
     }
@@ -213,6 +224,21 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
     try {
       await _client.from('accounts').update({'phone': phone}).eq('id', account.id);
       await _loadAccountAndProfiles();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  /// §7.3/§7.4 : définit/change le code personnel à 6 chiffres (Profil → Sécurité → Mon code) — le
+  /// hash est calculé côté serveur (`set_login_code`, migration 45), jamais en clair côté client.
+  Future<String?> setLoginCode(String code) async {
+    if (state.account == null) return 'Aucun compte connecté.';
+    try {
+      final result = await _client.rpc('set_login_code', params: {'p_code': code});
+      if (result is Map && result['error'] != null) {
+        return result['error'] as String;
+      }
       return null;
     } catch (e) {
       return e.toString();
@@ -382,10 +408,18 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
     }
   }
 
+  /// Déconnexion explicite et complète : révoque la session côté serveur ET retire ce compte du
+  /// registre des comptes connus sur cet appareil (§7.3/§7.4) — distinct de la simple fermeture de
+  /// l'app ou du passage à un autre profil connu (voir device_accounts_service.dart), qui eux
+  /// laissent la session déjà réelle utilisable pour un futur déverrouillage rapide par code.
   Future<void> signOut() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_activeProfilePrefKey);
+    final accountId = state.account?.id;
     await _client.auth.signOut();
+    if (accountId != null) {
+      await deviceAccountsService.forgetAccount(accountId);
+    }
     state = const StudentAuthState(isLoading: false);
   }
 
