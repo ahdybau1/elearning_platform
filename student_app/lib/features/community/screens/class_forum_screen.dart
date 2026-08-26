@@ -17,10 +17,41 @@ class ClassForumScreen extends ConsumerStatefulWidget {
 
 class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
   final TextEditingController _postCtrl = TextEditingController();
+  bool _isPosting = false;
+
+  Future<void> _sendPost(String classNodeId, String authorAccountId) async {
+    final content = _postCtrl.text.trim();
+    if (content.isEmpty || _isPosting) return;
+    setState(() => _isPosting = true);
+    try {
+      await ref.read(studentSupabaseServiceProvider).createForumPost(
+            classNodeId: classNodeId,
+            authorAccountId: authorAccountId,
+            content: content,
+          );
+      _postCtrl.clear();
+      ref.invalidate(studentForumPostsProvider(classNodeId));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Message publié.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Échec de la publication : $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isPosting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final profile = ref.watch(studentAuthProvider).activeProfile;
+    final authState = ref.watch(studentAuthProvider);
+    final profile = authState.activeProfile;
+    final account = authState.account;
     final postsAsync = ref.watch(
       studentForumPostsProvider(profile?.classNodeId ?? ''),
     );
@@ -179,65 +210,6 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
                               height: 1.4,
                             ),
                           ),
-                          const SizedBox(height: 14),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.thumb_up_alt_outlined,
-                                      size: 16,
-                                      color: context.colors.textSecondary,
-                                    ),
-                                    onPressed: () {},
-                                  ),
-                                  Text(
-                                    '${post.likesCount}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: context.colors.textSecondary,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.mode_comment_outlined,
-                                      size: 16,
-                                      color: context.colors.textSecondary,
-                                    ),
-                                    onPressed: () {},
-                                  ),
-                                  Text(
-                                    '${post.repliesCount} réponses',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: context.colors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Ouverture du fil de discussion...',
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: Text(
-                                  'Répondre',
-                                  style: TextStyle(
-                                    color: context.colors.accentPrimary,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
                         ],
                       ),
                     );
@@ -283,36 +255,24 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                IconButton(
-                  icon: Icon(
-                    Icons.send_rounded,
-                    color: context.colors.accentPrimary,
-                  ),
-                  onPressed: () {
-                    if (_postCtrl.text.trim().isNotEmpty && profile != null) {
-                      ref
-                          .read(studentSupabaseServiceProvider)
-                          .createForumPost(
-                            classNodeId: profile.classNodeId,
-                            profileId: profile.id,
-                            authorName: profile.name,
-                            content: _postCtrl.text.trim(),
-                          );
-                      _postCtrl.clear();
-                      ref.invalidate(
-                        studentForumPostsProvider(profile.classNodeId),
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: context.colors.accentEmerald,
-                          content: Text(
-                            'Votre message a été publié après modération IA automatique.',
-                          ),
+                _isPosting
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
                         ),
-                      );
-                    }
-                  },
-                ),
+                      )
+                    : IconButton(
+                        icon: Icon(
+                          Icons.send_rounded,
+                          color: context.colors.accentPrimary,
+                        ),
+                        onPressed: (profile == null || account == null)
+                            ? null
+                            : () => _sendPost(profile.classNodeId, account.id),
+                      ),
               ],
             ),
           ),

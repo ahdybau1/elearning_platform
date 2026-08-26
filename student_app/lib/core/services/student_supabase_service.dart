@@ -312,63 +312,68 @@ class StudentSupabaseService {
   }
 
   // ─── Forum de Classe & Modération ─────────────────────────────
+  // Le forum réel (`forum_threads`/`forum_posts`) prend en charge plusieurs fils par classe, mais
+  // cet écran (une classe = un seul flux) reste volontairement simple : on utilise le fil le plus
+  // ancien de la classe comme unique conversation, créé à la volée au premier message si besoin.
 
+  Future<String?> _classThreadId(String classNodeId, String authorAccountId) async {
+    final existing = await client
+        .from('forum_threads')
+        .select('id')
+        .eq('class_node_id', classNodeId)
+        .order('created_at')
+        .limit(1)
+        .maybeSingle();
+    if (existing != null) return existing['id'] as String;
+
+    final created = await client
+        .from('forum_threads')
+        .insert({
+          'class_node_id': classNodeId,
+          'author_id': authorAccountId,
+          'title': 'Discussion de classe',
+        })
+        .select('id')
+        .single();
+    return created['id'] as String;
+  }
+
+  /// Aucune donnée de secours ici : une erreur (RLS, réseau...) doit remonter telle quelle à
+  /// l'écran (voir `postsAsync.error` dans class_forum_screen.dart), jamais être masquée par un
+  /// faux message codé en dur — c'était le bug précédent (colonnes inexistantes avalées en silence).
   Future<List<ForumPost>> fetchForumPosts(String classNodeId) async {
-    try {
-      if (_isValidUuid(classNodeId)) {
-        final rows = await client
-            .from('forum_posts')
-            .select()
-            .eq('class_node_id', classNodeId)
-            .eq('is_flagged', false)
-            .order('created_at', ascending: false)
-            .then((rows) => rows as List);
-        if (rows.isNotEmpty) {
-          return (rows)
-              .map((r) => ForumPost.fromJson(Map<String, dynamic>.from(r)))
-              .toList();
-        }
-      }
-    } catch (_) {}
+    if (!_isValidUuid(classNodeId)) return [];
 
-    return [
-      ForumPost(
-        id: '1',
-        classNodeId: classNodeId,
-        profileId: 'prof_01',
-        authorName: 'Marc (Délégué de classe)',
-        content: 'Quelqu\'un a compris la méthode de résolution de l\'exercice 4 sur les racines n-ièmes de l\'unité ?',
-        likesCount: 5,
-        repliesCount: 3,
-        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-      ),
-      ForumPost(
-        id: '2',
-        classNodeId: classNodeId,
-        profileId: 'prof_02',
-        authorName: 'Élodie K.',
-        content: 'N\'oubliez pas le devoir sur table de Physique-Chimie prévu ce jeudi sur l\'optique ondulatoire !',
-        likesCount: 12,
-        repliesCount: 4,
-        createdAt: DateTime.now().subtract(const Duration(hours: 6)),
-      ),
-    ];
+    final thread = await client
+        .from('forum_threads')
+        .select('id')
+        .eq('class_node_id', classNodeId)
+        .order('created_at')
+        .limit(1)
+        .maybeSingle();
+    if (thread == null) return [];
+
+    final rows = await client
+        .from('forum_posts')
+        .select('*, accounts(first_name, last_name)')
+        .eq('thread_id', thread['id'] as String)
+        .order('created_at', ascending: false)
+        .then((r) => r as List);
+    return rows.map((r) => ForumPost.fromJson(Map<String, dynamic>.from(r))).toList();
   }
 
   Future<void> createForumPost({
     required String classNodeId,
-    required String profileId,
-    required String authorName,
+    required String authorAccountId,
     required String content,
   }) async {
     if (!_isValidUuid(classNodeId)) return;
-
+    final threadId = await _classThreadId(classNodeId, authorAccountId);
+    if (threadId == null) return;
     await client.from('forum_posts').insert({
-      'class_node_id': classNodeId,
-      'profile_id': _isValidUuid(profileId) ? profileId : '00000000-0000-0000-0000-000000000001',
-      'author_name': authorName,
+      'thread_id': threadId,
+      'author_id': authorAccountId,
       'content': content,
-      'is_flagged': false,
     });
   }
 

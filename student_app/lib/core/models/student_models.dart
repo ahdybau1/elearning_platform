@@ -484,45 +484,40 @@ class Exercise {
   }
 }
 
+// Reflète la vraie table `forum_posts` : un post appartient à un `forum_threads` (qui, lui, porte
+// `class_node_id`), pas directement à une classe — et il n'existe ni compteur de likes ni réponses
+// imbriquées en base (aucune table `forum_post_likes`, pas de `parent_post_id`). Un ancien modèle
+// inventait ces champs et une valeur de repli codée en dur masquait silencieusement l'échec réel des
+// requêtes (colonnes inexistantes) — corrigé pour refléter le schéma réel.
 class ForumPost {
   final String id;
-  final String classNodeId;
-  final String profileId;
+  final String threadId;
+  final String authorId;
   final String authorName;
-  final String? authorAvatar;
   final String content;
-  final String? imageUrl;
-  final int likesCount;
-  final int repliesCount;
-  final bool isFlagged;
+  final bool flagged;
   final DateTime createdAt;
 
   ForumPost({
     required this.id,
-    required this.classNodeId,
-    required this.profileId,
+    required this.threadId,
+    required this.authorId,
     required this.authorName,
-    this.authorAvatar,
     required this.content,
-    this.imageUrl,
-    this.likesCount = 0,
-    this.repliesCount = 0,
-    this.isFlagged = false,
+    this.flagged = false,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
   factory ForumPost.fromJson(Map<String, dynamic> json) {
+    final account = json['accounts'] as Map<String, dynamic>?;
+    final name = '${account?['first_name'] ?? ''} ${account?['last_name'] ?? ''}'.trim();
     return ForumPost(
       id: json['id'] as String,
-      classNodeId: json['class_node_id'] as String,
-      profileId: json['profile_id'] as String,
-      authorName: json['author_name'] as String? ?? 'Camarade de classe',
-      authorAvatar: json['author_avatar'] as String?,
+      threadId: json['thread_id'] as String,
+      authorId: json['author_id'] as String,
+      authorName: name.isNotEmpty ? name : 'Élève',
       content: json['content'] as String,
-      imageUrl: json['image_url'] as String?,
-      likesCount: (json['likes_count'] as int?) ?? 0,
-      repliesCount: (json['replies_count'] as int?) ?? 0,
-      isFlagged: json['is_flagged'] as bool? ?? false,
+      flagged: json['flagged'] as bool? ?? false,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
