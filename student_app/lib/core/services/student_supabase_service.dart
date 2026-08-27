@@ -463,6 +463,22 @@ class StudentSupabaseService {
     }
   }
 
+  // ─── Boutique de Fiches & Livrets (§32.1 du CDC) ───────────────
+  // RLS `shop_documents_select` gate déjà par palier d'abonnement (`current_user_has_feature_access`)
+  // — une liste vide reflète soit l'absence de document publié pour cette classe, soit un palier
+  // insuffisant, jamais une fausse donnée de secours.
+
+  Future<List<ShopDocument>> fetchShopDocuments(String classNodeId) async {
+    if (!_isValidUuid(classNodeId)) return [];
+    final rows = await client
+        .from('shop_documents')
+        .select()
+        .eq('class_node_id', classNodeId)
+        .order('created_at', ascending: false)
+        .then((r) => r as List);
+    return rows.map((r) => ShopDocument.fromJson(Map<String, dynamic>.from(r))).toList();
+  }
+
   // ─── Épreuves par Établissement (§5 du CDC) ───────────────────
   // Lectures publiques réelles (RLS `establishments_select`/`establishment_papers_select` : USING
   // (true)) — catalogue ouvert par design, tout élève peut consulter les épreuves de n'importe quel

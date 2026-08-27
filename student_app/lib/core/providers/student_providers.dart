@@ -174,3 +174,9 @@ final eventLeaderboardProvider =
   final service = ref.watch(studentSupabaseServiceProvider);
   return service.fetchEventLeaderboard(eventId);
 });
+
+final shopDocumentsProvider =
+    FutureProvider.family<List<ShopDocument>, String>((ref, classNodeId) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchShopDocuments(classNodeId);
+});

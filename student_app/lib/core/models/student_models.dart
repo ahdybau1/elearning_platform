@@ -682,6 +682,41 @@ class LeaderboardEntry {
   }
 }
 
+/// Reflète la vraie table `shop_documents` — RLS `shop_documents_select` gate déjà par palier
+/// d'abonnement (`current_user_has_feature_access`), une liste vide reflète donc soit l'absence de
+/// document publié pour cette classe, soit un palier insuffisant.
+class ShopDocument {
+  final String id;
+  final String title;
+  final String? description;
+  final double price;
+  final String documentUrl;
+  final String? previewUrl;
+  final int downloadsCount;
+
+  ShopDocument({
+    required this.id,
+    required this.title,
+    this.description,
+    required this.price,
+    required this.documentUrl,
+    this.previewUrl,
+    this.downloadsCount = 0,
+  });
+
+  factory ShopDocument.fromJson(Map<String, dynamic> json) {
+    return ShopDocument(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String?,
+      price: (json['price'] as num).toDouble(),
+      documentUrl: json['document_url'] as String? ?? '',
+      previewUrl: json['preview_url'] as String?,
+      downloadsCount: (json['downloads_count'] as int?) ?? 0,
+    );
+  }
+}
+
 class Establishment {
   final String id;
   final String name;
