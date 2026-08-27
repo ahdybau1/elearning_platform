@@ -82,23 +82,31 @@ class _LoginCodeEntryScreenState extends ConsumerState<LoginCodeEntryScreen> {
                     child: Container(
                       width: 72,
                       height: 72,
+                      clipBehavior: Clip.antiAlias,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: StudentTheme.primaryGradient,
                         border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 2),
                       ),
-                      child: Center(
-                        child: Text(
-                          widget.account.displayName.isNotEmpty
-                              ? widget.account.displayName[0].toUpperCase()
-                              : '?',
-                          style: GoogleFonts.outfit(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
+                      child: (widget.account.photoUrl?.isNotEmpty == true)
+                          ? Image.network(
+                              widget.account.photoUrl!,
+                              fit: BoxFit.cover,
+                              width: 72,
+                              height: 72,
+                            )
+                          : Center(
+                              child: Text(
+                                widget.account.displayName.isNotEmpty
+                                    ? widget.account.displayName[0].toUpperCase()
+                                    : '?',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -202,11 +210,12 @@ class _LoginCodeEntryScreenState extends ConsumerState<LoginCodeEntryScreen> {
                       Text('·', style: TextStyle(color: context.colors.textSecondary)),
                       TextButton(
                         onPressed: () {
-                          // `pushReplacement` (pas `push`) : sinon, après un login réussi ici, le
-                          // pop ne ferait que révéler à nouveau CET écran de code (resté empilé en
-                          // dessous) au lieu de l'app déjà déverrouillée — voir la remarque de
-                          // student_login_screen.dart sur le pop conditionnel.
-                          Navigator.pushReplacement(
+                          // `push` (pas `pushReplacement`) : garde cet écran de code dans la pile
+                          // pour que le bouton retour de StudentLoginScreen y ramène directement —
+                          // en cas de succès, StudentLoginScreen se charge lui-même de tout retirer
+                          // d'un coup jusqu'à la racine (voir son `popUntil`), donc aucun écran de
+                          // code périmé ne reste affiché.
+                          Navigator.push(
                             context,
                             MaterialPageRoute(builder: (_) => const StudentLoginScreen()),
                           );

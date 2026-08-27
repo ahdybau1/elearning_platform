@@ -10,12 +10,14 @@ class DeviceKnownAccount {
   final String firstName;
   final String lastName;
   final String email;
+  final String? photoUrl;
 
   DeviceKnownAccount({
     required this.accountId,
     required this.firstName,
     required this.lastName,
     required this.email,
+    this.photoUrl,
   });
 
   String get displayName => firstName.isNotEmpty ? firstName : email;
@@ -25,6 +27,7 @@ class DeviceKnownAccount {
         'firstName': firstName,
         'lastName': lastName,
         'email': email,
+        'photoUrl': photoUrl,
       };
 
   factory DeviceKnownAccount.fromJson(Map<String, dynamic> json) => DeviceKnownAccount(
@@ -32,6 +35,7 @@ class DeviceKnownAccount {
         firstName: json['firstName'] as String? ?? '',
         lastName: json['lastName'] as String? ?? '',
         email: json['email'] as String? ?? '',
+        photoUrl: json['photoUrl'] as String?,
       );
 }
 
@@ -63,6 +67,7 @@ class DeviceAccountsService {
     required String firstName,
     required String lastName,
     required String email,
+    String? photoUrl,
   }) async {
     final session = Supabase.instance.client.auth.currentSession;
     if (session == null) return;
@@ -71,7 +76,13 @@ class DeviceAccountsService {
     final known = await listKnown();
     final updated = [
       ...known.where((a) => a.accountId != accountId),
-      DeviceKnownAccount(accountId: accountId, firstName: firstName, lastName: lastName, email: email),
+      DeviceKnownAccount(
+        accountId: accountId,
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        photoUrl: photoUrl,
+      ),
     ];
     await prefs.setString(_registryKey, jsonEncode(updated.map((a) => a.toJson()).toList()));
     await prefs.setString('$_sessionKeyPrefix$accountId', jsonEncode(session.toJson()));

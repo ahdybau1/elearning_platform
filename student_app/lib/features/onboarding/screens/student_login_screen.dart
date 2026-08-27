@@ -44,12 +44,13 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
       return;
     }
     // Succès : StudentAuthGate (main.dart) réagit automatiquement au changement d'état
-    // d'authentification et bascule vers l'app. Mais cet écran peut aussi avoir été EMPILÉ par-dessus
-    // le sélecteur d'appareil (« Code oublié ? », « Ajouter un compte ») — dans ce cas il faut le
-    // retirer de la pile explicitement, sinon il reste affiché par-dessus le contenu déjà à jour et
-    // donne l'impression que "rien ne se passe" alors que la connexion a bien réussi.
+    // d'authentification et bascule vers l'app. Mais cet écran peut avoir été empilé à un ou deux
+    // niveaux (« Ajouter un compte » directement, ou « Code oublié ? » par-dessus l'écran de code
+    // lui-même) — `popUntil(isFirst)` retire tout d'un coup jusqu'à la racine déjà à jour, quel que
+    // soit le nombre d'écrans empilés, au lieu d'un simple pop qui ne révélerait qu'un écran
+    // intermédiaire périmé (ex. l'écran de code, qu'on vient justement de contourner).
     if (Navigator.canPop(context)) {
-      Navigator.pop(context);
+      Navigator.popUntil(context, (route) => route.isFirst);
     }
   }
 

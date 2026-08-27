@@ -170,21 +170,24 @@ class _AccountTile extends StatelessWidget {
             Container(
               width: 80,
               height: 80,
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: StudentTheme.primaryGradient,
                 border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 2),
               ),
-              child: Center(
-                child: Text(
-                  account.displayName.isNotEmpty ? account.displayName[0].toUpperCase() : '?',
-                  style: GoogleFonts.outfit(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+              child: (account.photoUrl?.isNotEmpty == true)
+                  ? Image.network(account.photoUrl!, fit: BoxFit.cover, width: 80, height: 80)
+                  : Center(
+                      child: Text(
+                        account.displayName.isNotEmpty ? account.displayName[0].toUpperCase() : '?',
+                        style: GoogleFonts.outfit(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
             ),
             const SizedBox(height: 14),
             Text(

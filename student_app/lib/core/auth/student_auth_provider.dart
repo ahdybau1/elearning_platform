@@ -166,6 +166,7 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
         firstName: account.firstName,
         lastName: account.lastName,
         email: account.email,
+        photoUrl: account.photoUrl,
       ));
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
