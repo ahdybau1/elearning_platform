@@ -3,13 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
-import '../../../core/auth/parent_auth_provider.dart';
-import '../../../core/auth/parent_space_navigation.dart';
 import '../../../core/providers/student_providers.dart';
 import 'home_dashboard_screen.dart';
 import '../../profile/screens/student_profile_screen.dart';
 import '../../settings/screens/settings_screen.dart';
-import '../../parent_portal/screens/parent_dashboard_screen.dart';
 import '../../courses/screens/subjects_list_screen.dart';
 import '../../courses/screens/exercises_hub_screen.dart';
 import '../../exams/screens/official_exams_screen.dart';
@@ -26,8 +23,7 @@ class _NavPage {
   final String title;
   final IconData icon;
   final Widget screen;
-  final bool requiresParentPin;
-  const _NavPage({required this.title, required this.icon, required this.screen, this.requiresParentPin = false});
+  const _NavPage({required this.title, required this.icon, required this.screen});
 }
 
 class _NavModule {
@@ -79,12 +75,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
         _NavPage(title: 'Tableau de Bord', icon: Icons.dashboard_rounded, screen: const HomeDashboardScreen()),
         _NavPage(title: 'Mon Profil', icon: Icons.person_outline_rounded, screen: const StudentProfileScreen()),
         _NavPage(title: 'Paramètres', icon: Icons.settings_outlined, screen: const SettingsScreen()),
-        _NavPage(
-          title: 'Espace Parent',
-          icon: Icons.family_restroom_rounded,
-          screen: const ParentDashboardScreen(),
-          requiresParentPin: true,
-        ),
       ]),
       _NavModule(title: 'Apprentissage', pages: [
         _NavPage(title: 'Mes Matières & Cours', icon: Icons.menu_book_rounded, screen: const SubjectsListScreen()),
@@ -152,10 +142,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(studentAuthProvider);
-    // Amorce la restauration de session parent dès l'affichage de la coquille principale (voir
-    // ParentAuthNotifier._init) — sans ça, le premier clic sur « Espace Parent » de la session
-    // pourrait redemander une connexion alors qu'une session valide était en cours de restauration.
-    ref.watch(parentAuthProvider);
     final profile = authState.activeProfile;
     final studentModules = _buildModules(profile?.classNodeId);
     final pages = studentModules.expand((m) => m.pages).toList();
@@ -221,9 +207,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                               return _buildNavTile(
                                 page: page,
                                 isSelected: flatIndex == _selectedFlatIndex,
-                                onTap: () => page.requiresParentPin
-                                    ? _openParentPage(flatIndex)
-                                    : setState(() => _selectedFlatIndex = flatIndex),
+                                onTap: () => setState(() => _selectedFlatIndex = flatIndex),
                               );
                             }).toList(),
                           );
@@ -270,9 +254,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                                 return _buildNavTile(
                                   page: page,
                                   isSelected: flatIndex == _selectedFlatIndex,
-                                  onTap: () => page.requiresParentPin
-                                      ? _openParentPage(flatIndex)
-                                      : setState(() => _selectedFlatIndex = flatIndex),
+                                  onTap: () => setState(() => _selectedFlatIndex = flatIndex),
                                 );
                               }),
                             const SizedBox(height: 4),
@@ -388,22 +370,4 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     );
   }
 
-  /// §17 du cahier des charges : vraie session parent (parent_accounts, distincte du compte élève)
-  /// — si déjà connecté (session restaurée automatiquement au démarrage), on bascule directement
-  /// sans redemander quoi que ce soit ; sinon un vrai formulaire email + mot de passe.
-  Future<void> _openParentPage(int targetIndex) async {
-    if (ref.read(parentAuthProvider).isAuthenticated) {
-      setState(() => _selectedFlatIndex = targetIndex);
-      return;
-    }
-    await showDialog(
-      context: context,
-      builder: (ctx) => ParentAuthDialog(
-        onSuccess: () {
-          Navigator.pop(ctx);
-          setState(() => _selectedFlatIndex = targetIndex);
-        },
-      ),
-    );
-  }
 }

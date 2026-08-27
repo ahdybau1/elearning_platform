@@ -145,6 +145,20 @@ class StudentSupabaseService {
     return random;
   }
 
+  /// Sens inverse : un PARENT génère ce code (voir ParentAuthNotifier.getOrCreateInviteCode) et le
+  /// donne à son enfant, qui le saisit ici pour se lier — migration 49. Retourne un message d'erreur
+  /// lisible en cas d'échec (code invalide/expiré), ou `null` en cas de succès.
+  Future<String?> redeemParentInviteCode(String code) async {
+    try {
+      final result = await client.rpc('redeem_parent_invite_code', params: {'p_code': code.trim()});
+      final map = result is Map ? result : <String, dynamic>{};
+      if (map['error'] != null) return map['error'] as String;
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
   String _randomCode(String alphabet) {
     final now = DateTime.now().microsecondsSinceEpoch;
     final buffer = StringBuffer();

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../models/student_models.dart';
+import 'device_accounts_service.dart';
 
 /// §17 du cahier des charges : « Compte parent (identité propre, créé séparément du compte
 /// élève) ». Utilise un [SupabaseClient] DÉDIÉ, distinct de `Supabase.instance.client` (session
@@ -147,6 +148,7 @@ class ParentAuthNotifier extends StateNotifier<ParentAuthState> {
             if (code != null && code.trim().isNotEmpty) {
               await _client.rpc('redeem_parent_link_code', params: {'p_code': code.trim()});
             }
+            await _autoLinkKnownDeviceAccounts();
           } finally {
             await _prefs?.remove(_pendingParentSignupPrefKey);
           }
@@ -243,6 +245,7 @@ class ParentAuthNotifier extends StateNotifier<ParentAuthState> {
       if (linkCode != null && linkCode.trim().isNotEmpty) {
         await _client.rpc('redeem_parent_link_code', params: {'p_code': linkCode.trim()});
       }
+      await _autoLinkKnownDeviceAccounts();
 
       await _loadParentAndChildren();
       return null;
@@ -251,6 +254,52 @@ class ParentAuthNotifier extends StateNotifier<ParentAuthState> {
       return e.message;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      return e.toString();
+    }
+  }
+
+  /// §17 : identification automatique de l'appareil — un parent qui crée son compte sur le MÊME
+  /// appareil qu'un élève déjà réellement authentifié ici (registre local, voir
+  /// device_accounts_service.dart) est lié à lui sans code à saisir. Purement local à l'appareil,
+  /// jamais une empreinte serveur ; échoue silencieusement (aucun compte élève connu, ou déjà lié)
+  /// sans jamais bloquer l'inscription du parent.
+  Future<void> _autoLinkKnownDeviceAccounts() async {
+    try {
+      final known = await deviceAccountsService.listKnown();
+      if (known.isEmpty) return;
+      await _client.rpc('auto_link_known_device_accounts', params: {
+        'p_account_ids': known.map((a) => a.accountId).toList(),
+      });
+    } catch (_) {
+      // Non bloquant : le parent pourra toujours lier manuellement via un code (voir
+      // getOrCreateInviteCode / redeemLinkCode).
+    }
+  }
+
+  /// Code que le parent donne à son enfant pour que CELUI-CI se lie à lui (sens inverse du code
+  /// généré par l'élève, migration 44) — un seul code réutilisable pendant 24h pour tous ses enfants.
+  Future<String?> getOrCreateInviteCode() async {
+    if (state.account == null) return null;
+    try {
+      final result = await _client.rpc('get_or_create_parent_invite_code');
+      if (result is Map) return result['code'] as String?;
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// §17 : un parent peut délier un enfant — VOLONTAIREMENT AUCUNE fonction équivalente côté élève
+  /// (student_auth_provider.dart) : un élève ne peut jamais se délier de son parent.
+  Future<String?> unlinkChild(String profileId) async {
+    if (state.account == null) return 'Aucun compte parent connecté.';
+    try {
+      final result = await _client.rpc('parent_unlink_child', params: {'p_profile_id': profileId});
+      final map = result is Map ? result : <String, dynamic>{};
+      if (map['error'] != null) return map['error'] as String;
+      await _loadParentAndChildren();
+      return null;
+    } catch (e) {
       return e.toString();
     }
   }

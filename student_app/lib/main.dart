@@ -7,11 +7,14 @@ import 'core/models/student_models.dart';
 import 'core/config/supabase_config.dart';
 import 'core/widgets/maintenance_gate.dart';
 import 'core/auth/student_auth_provider.dart';
+import 'core/auth/parent_auth_provider.dart';
 import 'core/auth/device_accounts_service.dart';
+import 'core/providers/app_root_providers.dart';
 import 'features/onboarding/screens/onboarding_wizard_screen.dart';
 import 'features/onboarding/screens/profile_switcher_screen.dart';
 import 'features/onboarding/screens/student_login_screen.dart';
 import 'features/onboarding/screens/device_account_selector_screen.dart';
+import 'features/onboarding/screens/role_selection_screen.dart';
 import 'features/home/screens/main_navigation_screen.dart';
 import 'features/courses/screens/chapters_list_screen.dart';
 import 'features/courses/screens/lesson_reader_screen.dart';
@@ -36,9 +39,32 @@ Future<void> main() async {
   );
 }
 
-/// Point d'entrée réel de l'app : bascule entre connexion, inscription et sélecteur de profils
-/// selon l'état réel de la session Supabase Auth — jamais de route de démarrage codée en dur (voir
-/// la même logique côté admin_app, `SupabaseAuthGate` dans admin_app/lib/main.dart).
+/// §17 du CDC : point d'entrée absolu de l'app, AVANT même StudentAuthGate — l'Espace Parent est un
+/// profil à part entière, pas une page atteinte depuis l'intérieur de l'app élève. Une session
+/// parent déjà active (restaurée automatiquement, même mécanisme que côté élève) bascule directement
+/// sur ParentDashboardScreen sans repasser par le choix de rôle ; sinon, RoleSelectionScreen («Je suis
+/// élève / Je suis parent») s'affiche à CHAQUE démarrage à froid tant qu'aucun rôle n'a été choisi
+/// (voir hasChosenStudentRoleProvider, jamais persisté par design).
+class AppRootGate extends ConsumerWidget {
+  const AppRootGate({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final parentState = ref.watch(parentAuthProvider);
+    if (parentState.isAuthenticated) {
+      return const ParentDashboardScreen();
+    }
+    final hasChosenStudent = ref.watch(hasChosenStudentRoleProvider);
+    if (!hasChosenStudent) {
+      return const RoleSelectionScreen();
+    }
+    return const StudentAuthGate();
+  }
+}
+
+/// Point d'entrée réel de l'app côté élève : bascule entre connexion, inscription et sélecteur de
+/// profils selon l'état réel de la session Supabase Auth — jamais de route de démarrage codée en dur
+/// (voir la même logique côté admin_app, `SupabaseAuthGate` dans admin_app/lib/main.dart).
 class StudentAuthGate extends ConsumerWidget {
   const StudentAuthGate({super.key});
 
@@ -128,7 +154,7 @@ class StudentElearningApp extends ConsumerWidget {
         data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(settings.fontScale)),
         child: MaintenanceGate(child: child!),
       ),
-      home: const StudentAuthGate(),
+      home: const AppRootGate(),
       onGenerateRoute: (settings) {
         switch (settings.name) {
           case '/login':

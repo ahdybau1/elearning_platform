@@ -24,6 +24,33 @@ class StudentProfileScreen extends ConsumerStatefulWidget {
 
 class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
   bool _isUploadingPhoto = false;
+  final _parentCodeCtrl = TextEditingController();
+  bool _isRedeemingParentCode = false;
+
+  @override
+  void dispose() {
+    _parentCodeCtrl.dispose();
+    super.dispose();
+  }
+
+  /// Sens inverse de « Inviter un parent » : un parent a généré son propre code (voir
+  /// ParentAuthNotifier.getOrCreateInviteCode, migration 49) et l'élève le saisit ici pour se lier.
+  Future<void> _redeemParentInviteCode() async {
+    final code = _parentCodeCtrl.text.trim();
+    if (code.isEmpty) return;
+    setState(() => _isRedeemingParentCode = true);
+    final error = await ref.read(studentSupabaseServiceProvider).redeemParentInviteCode(code);
+    if (!mounted) return;
+    setState(() => _isRedeemingParentCode = false);
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur : $error')));
+    } else {
+      _parentCodeCtrl.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Parent lié avec succès.')),
+      );
+    }
+  }
 
   Future<void> _pickAndUploadPhoto(String accountId) async {
     final picker = ImagePicker();
@@ -347,41 +374,82 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.colors.border),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.family_restroom_rounded, color: context.colors.accentAmber, size: 22),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Inviter un parent',
-                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+          Row(
+            children: [
+              Icon(Icons.family_restroom_rounded, color: context.colors.accentAmber, size: 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Inviter un parent',
+                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Donnez ce code à votre parent — il l\'utilisera en s\'inscrivant à son propre compte pour suivre votre scolarité (valable 24h).',
+                      style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Donnez ce code à votre parent — il l\'utilisera en s\'inscrivant à son propre compte pour suivre votre scolarité (valable 24h).',
-                  style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary),
+              ),
+              const SizedBox(width: 12),
+              codeAsync.when(
+                loading: () => const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                error: (err, _) => Icon(Icons.error_outline_rounded, color: context.colors.accentRose),
+                data: (code) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: context.colors.accentAmber.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    code,
+                    style: GoogleFonts.firaCode(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 2, color: context.colors.accentAmber),
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          codeAsync.when(
-            loading: () => const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-            error: (err, _) => Icon(Icons.error_outline_rounded, color: context.colors.accentRose),
-            data: (code) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: context.colors.accentAmber.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
+          const SizedBox(height: 16),
+          Divider(color: context.colors.border, height: 1),
+          const SizedBox(height: 16),
+          Text(
+            'Votre parent a déjà son propre code ?',
+            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _parentCodeCtrl,
+                  textCapitalization: TextCapitalization.characters,
+                  style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Code donné par votre parent',
+                    hintStyle: TextStyle(color: context.colors.textMuted, fontSize: 12),
+                    filled: true,
+                    fillColor: context.colors.surface,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
               ),
-              child: Text(
-                code,
-                style: GoogleFonts.firaCode(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 2, color: context.colors.accentAmber),
+              const SizedBox(width: 10),
+              ElevatedButton(
+                onPressed: _isRedeemingParentCode ? null : _redeemParentInviteCode,
+                style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentAmber),
+                child: _isRedeemingParentCode
+                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                    : const Text('Lier', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
               ),
-            ),
+            ],
           ),
         ],
       ),

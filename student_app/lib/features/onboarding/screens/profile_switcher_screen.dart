@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
-import '../../../core/auth/parent_auth_provider.dart';
-import '../../../core/auth/parent_space_navigation.dart';
 
 class ProfileSwitcherScreen extends ConsumerWidget {
   const ProfileSwitcherScreen({super.key});
@@ -12,9 +10,6 @@ class ProfileSwitcherScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(studentAuthProvider);
-    // Amorce la restauration de session parent dès cet écran (voir ParentAuthNotifier._init et le
-    // même commentaire dans main_navigation_screen.dart).
-    ref.watch(parentAuthProvider);
 
     return Scaffold(
       backgroundColor: context.colors.background,
@@ -27,22 +22,6 @@ class ProfileSwitcherScreen extends ConsumerWidget {
           ),
         ),
         actions: [
-          TextButton.icon(
-            onPressed: () => openParentSpace(context, ref),
-            icon: Icon(
-              Icons.lock_outline_rounded,
-              color: context.colors.accentAmber,
-              size: 18,
-            ),
-            label: Text(
-              'Espace Parent',
-              style: GoogleFonts.inter(
-                color: context.colors.accentAmber,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
           IconButton(
             tooltip: 'Se déconnecter',
             icon: Icon(
