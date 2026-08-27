@@ -29,13 +29,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final settings = authState.settings ?? const AccountSettings();
 
     Future<void> update(Map<String, dynamic> partial) async {
-      final error = await ref.read(studentAuthProvider.notifier).updateSettings(partial);
+      final error = await ref
+          .read(studentAuthProvider.notifier)
+          .updateSettings(partial);
       if (error != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur : $error')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erreur : $error')));
       }
     }
 
-    return StudentPageContent(child: ListView(
+    return StudentPageContent(
+      child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           const StudentScreenHeader(title: 'Paramètres'),
@@ -47,11 +52,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(child: _infoRow('Téléphone', account?.phone ?? 'Non renseigné')),
+                Expanded(
+                  child: _infoRow(
+                    'Téléphone',
+                    account?.phone ?? 'Non renseigné',
+                  ),
+                ),
                 IconButton(
                   tooltip: 'Modifier',
-                  icon: Icon(Icons.edit_outlined, size: 16, color: context.colors.textMuted),
-                  onPressed: () => _showEditPhoneDialog(context, account?.phone ?? ''),
+                  icon: Icon(
+                    Icons.edit_outlined,
+                    size: 16,
+                    color: context.colors.textMuted,
+                  ),
+                  onPressed: () =>
+                      _showEditPhoneDialog(context, account?.phone ?? ''),
                 ),
               ],
             ),
@@ -66,37 +81,80 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 24),
           _sectionTitle('Notifications'),
           _buildCard([
-            _switchRow('Échéances d\'abonnement', 'Rappels J-3, J-1 et expiration', settings.notifSubscription,
-                (v) => update({'notif_subscription': v})),
+            _switchRow(
+              'Échéances d\'abonnement',
+              'Rappels J-3, J-1 et expiration',
+              settings.notifSubscription,
+              (v) => update({'notif_subscription': v}),
+            ),
             Divider(color: context.colors.border, height: 24),
-            _switchRow('Activité du forum', 'Réponses à vos messages', settings.notifForum,
-                (v) => update({'notif_forum': v})),
+            _switchRow(
+              'Activité du forum',
+              'Réponses à vos messages',
+              settings.notifForum,
+              (v) => update({'notif_forum': v}),
+            ),
             Divider(color: context.colors.border, height: 24),
-            _switchRow('Révision intelligente', 'Rappels de révision espacée', settings.notifRevision,
-                (v) => update({'notif_revision': v})),
+            _switchRow(
+              'Révision intelligente',
+              'Rappels de révision espacée',
+              settings.notifRevision,
+              (v) => update({'notif_revision': v}),
+            ),
           ]),
 
           const SizedBox(height: 24),
           _sectionTitle('Langue & Apparence'),
           _buildCard([
-            Text('Langue de l\'interface', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textPrimary)),
+            Text(
+              'Langue de l\'interface',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: context.colors.textPrimary,
+              ),
+            ),
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,
               children: [
                 _chip('Français', selected: true, onSelected: () {}),
-                _chip('English', selected: false, comingSoon: true, onSelected: () {}),
+                _chip(
+                  'English',
+                  selected: false,
+                  comingSoon: true,
+                  onSelected: () {},
+                ),
               ],
             ),
             const SizedBox(height: 20),
-            Text('Apparence', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textPrimary)),
+            Text(
+              'Apparence',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: context.colors.textPrimary,
+              ),
+            ),
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,
               children: [
-                _chip('Sombre', selected: settings.themeMode == 'dark', onSelected: () => update({'theme_mode': 'dark'})),
-                _chip('Clair', selected: settings.themeMode == 'light', onSelected: () => update({'theme_mode': 'light'})),
-                _chip('Automatique', selected: settings.themeMode == 'system', onSelected: () => update({'theme_mode': 'system'})),
+                _chip(
+                  'Sombre',
+                  selected: settings.themeMode == 'dark',
+                  onSelected: () => update({'theme_mode': 'dark'}),
+                ),
+                _chip(
+                  'Clair',
+                  selected: settings.themeMode == 'light',
+                  onSelected: () => update({'theme_mode': 'light'}),
+                ),
+                _chip(
+                  'Automatique',
+                  selected: settings.themeMode == 'system',
+                  onSelected: () => update({'theme_mode': 'system'}),
+                ),
               ],
             ),
           ]),
@@ -104,17 +162,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 24),
           _sectionTitle('Confidentialité & Stockage'),
           _buildCard([
-            _switchRow('Profil visible sur le forum', 'Les autres élèves de votre classe voient votre nom',
-                settings.forumProfileVisible, (v) => update({'forum_profile_visible': v})),
+            _switchRow(
+              'Profil visible sur le forum',
+              'Les autres élèves de votre classe voient votre nom',
+              settings.forumProfileVisible,
+              (v) => update({'forum_profile_visible': v}),
+            ),
             Divider(color: context.colors.border, height: 24),
             Row(
               children: [
-                Icon(Icons.cloud_off_outlined, size: 18, color: context.colors.textMuted),
+                Icon(
+                  Icons.cloud_off_outlined,
+                  size: 18,
+                  color: context.colors.textMuted,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'Aucun contenu téléchargé pour l\'instant — le téléchargement hors-ligne des leçons arrive dans une prochaine mise à jour.',
-                    style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: context.colors.textSecondary,
+                    ),
                   ),
                 ),
               ],
@@ -124,7 +193,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 24),
           _sectionTitle('Accessibilité'),
           _buildCard([
-            Text('Taille du texte', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textPrimary)),
+            Text(
+              'Taille du texte',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: context.colors.textPrimary,
+              ),
+            ),
             Slider(
               value: settings.fontScale,
               min: 0.85,
@@ -136,11 +212,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             Divider(color: context.colors.border, height: 8),
             const SizedBox(height: 12),
-            _switchRow('Contraste élevé', 'Distinct du mode sombre — s\'applique au thème clair et sombre',
-                settings.highContrast, (v) => update({'high_contrast': v})),
+            _switchRow(
+              'Contraste élevé',
+              'Distinct du mode sombre — s\'applique au thème clair et sombre',
+              settings.highContrast,
+              (v) => update({'high_contrast': v}),
+            ),
             Divider(color: context.colors.border, height: 24),
-            _switchRow('Sous-titres vidéo', 'Sur tout contenu vidéo de cours (arrive avec le lecteur vidéo)',
-                settings.subtitlesEnabled, (v) => update({'subtitles_enabled': v})),
+            _switchRow(
+              'Sous-titres vidéo',
+              'Sur tout contenu vidéo de cours (arrive avec le lecteur vidéo)',
+              settings.subtitlesEnabled,
+              (v) => update({'subtitles_enabled': v}),
+            ),
           ]),
 
           const SizedBox(height: 32),
@@ -148,7 +232,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _buildCard([
             Text(
               'Droit à l\'oubli : demandez une copie de vos données ou leur suppression définitive. Le traitement est effectué manuellement par l\'administration.',
-              style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: context.colors.textSecondary,
+              ),
             ),
             const SizedBox(height: 12),
             Row(
@@ -158,7 +245,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     onPressed: () => _submitDataRequest(context, 'export'),
                     icon: const Icon(Icons.download_outlined, size: 16),
                     label: const Text('Exporter mes données'),
-                    style: OutlinedButton.styleFrom(foregroundColor: context.colors.textPrimary, side: BorderSide(color: context.colors.border)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: context.colors.textPrimary,
+                      side: BorderSide(color: context.colors.border),
+                    ),
                   ),
                 ),
               ],
@@ -188,24 +278,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Future<void> _submitDataRequest(BuildContext context, String requestType) async {
-    final error = await ref.read(studentAuthProvider.notifier).createDataRequest(requestType);
+  Future<void> _submitDataRequest(
+    BuildContext context,
+    String requestType,
+  ) async {
+    final error = await ref
+        .read(studentAuthProvider.notifier)
+        .createDataRequest(requestType);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(error != null
-            ? 'Erreur : $error'
-            : requestType == 'export'
-                ? 'Demande d\'export enregistrée — l\'administration vous contactera.'
-                : 'Demande de suppression enregistrée — l\'administration vous contactera.'),
+        content: Text(
+          error != null
+              ? 'Erreur : $error'
+              : requestType == 'export'
+              ? 'Demande d\'export enregistrée — l\'administration vous contactera.'
+              : 'Demande de suppression enregistrée — l\'administration vous contactera.',
+        ),
       ),
     );
   }
 
   Widget _sectionTitle(String title) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Text(title, style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textSecondary)),
-      );
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Text(
+      title,
+      style: GoogleFonts.outfit(
+        fontSize: 15,
+        fontWeight: FontWeight.bold,
+        color: context.colors.textSecondary,
+      ),
+    ),
+  );
 
   Widget _buildCard(List<Widget> children) {
     return Container(
@@ -216,7 +320,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.colors.border),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
     );
   }
 
@@ -224,30 +331,70 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary)),
-        Text(value, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textPrimary)),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            color: context.colors.textSecondary,
+          ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: context.colors.textPrimary,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _switchRow(String title, String subtitle, bool value, ValueChanged<bool> onChanged) {
+  Widget _switchRow(
+    String title,
+    String subtitle,
+    bool value,
+    ValueChanged<bool> onChanged,
+  ) {
     return Row(
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textPrimary)),
-              Text(subtitle, style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary)),
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: context.colors.textPrimary,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: context.colors.textSecondary,
+                ),
+              ),
             ],
           ),
         ),
-        Switch(value: value, onChanged: onChanged, activeThumbColor: context.colors.accentPrimary),
+        Switch(
+          value: value,
+          onChanged: onChanged,
+          activeThumbColor: context.colors.accentPrimary,
+        ),
       ],
     );
   }
 
-  Widget _actionRow({required IconData icon, required String label, required VoidCallback onTap, Color? color}) {
+  Widget _actionRow({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    Color? color,
+  }) {
     final resolvedColor = color ?? context.colors.textPrimary;
     return InkWell(
       onTap: onTap,
@@ -256,24 +403,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           Icon(icon, size: 18, color: resolvedColor),
           const SizedBox(width: 12),
-          Text(label, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: resolvedColor)),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: resolvedColor,
+            ),
+          ),
           const Spacer(),
-          Icon(Icons.chevron_right_rounded, size: 18, color: context.colors.textMuted),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 18,
+            color: context.colors.textMuted,
+          ),
         ],
       ),
     );
   }
 
-  Widget _chip(String label, {required bool selected, bool comingSoon = false, required VoidCallback onSelected}) {
+  Widget _chip(
+    String label, {
+    required bool selected,
+    bool comingSoon = false,
+    required VoidCallback onSelected,
+  }) {
     return ChoiceChip(
       label: Text(comingSoon ? '$label (bientôt)' : label),
       selected: selected,
       onSelected: comingSoon ? null : (_) => onSelected(),
-      selectedColor: context.colors.accentPrimary.withOpacity(0.2),
+      selectedColor: context.colors.accentPrimary.withValues(alpha: 0.2),
       backgroundColor: context.colors.surface,
       labelStyle: GoogleFonts.inter(
         fontSize: 12,
-        color: selected ? context.colors.accentPrimary : (comingSoon ? context.colors.textMuted : context.colors.textPrimary),
+        color: selected
+            ? context.colors.accentPrimary
+            : (comingSoon
+                  ? context.colors.textMuted
+                  : context.colors.textPrimary),
       ),
     );
   }
@@ -287,7 +454,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: context.colors.card,
-          title: Text('Modifier le téléphone', style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
+          title: Text(
+            'Modifier le téléphone',
+            style: GoogleFonts.outfit(
+              color: context.colors.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           content: TextField(
             controller: phoneCtrl,
             keyboardType: TextInputType.phone,
@@ -297,29 +470,53 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               labelStyle: TextStyle(color: context.colors.textSecondary),
               filled: true,
               fillColor: context.colors.surface,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           ),
           actions: [
             TextButton(
               onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
-              child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
+              child: Text(
+                'Annuler',
+                style: TextStyle(color: context.colors.textSecondary),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentPrimary),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.colors.accentPrimary,
+              ),
               onPressed: isSubmitting
                   ? null
                   : () async {
                       setDialogState(() => isSubmitting = true);
-                      final error = await ref.read(studentAuthProvider.notifier).updatePhone(phoneCtrl.text.trim());
+                      final error = await ref
+                          .read(studentAuthProvider.notifier)
+                          .updatePhone(phoneCtrl.text.trim());
                       if (ctx.mounted) Navigator.pop(ctx);
                       if (context.mounted && error != null) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur : $error')));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Erreur : $error')),
+                        );
                       }
                     },
               child: isSubmitting
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                  : const Text('Valider', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.black,
+                      ),
+                    )
+                  : const Text(
+                      'Valider',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ],
         ),
@@ -337,7 +534,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: context.colors.card,
-          title: Text('Changer le mot de passe', style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
+          title: Text(
+            'Changer le mot de passe',
+            style: GoogleFonts.outfit(
+              color: context.colors.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           content: Form(
             key: formKey,
             child: TextFormField(
@@ -349,18 +552,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 labelStyle: TextStyle(color: context.colors.textSecondary),
                 filled: true,
                 fillColor: context.colors.surface,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
-              validator: (v) => (v == null || v.length < 6) ? 'Au moins 6 caractères' : null,
+              validator: (v) =>
+                  (v == null || v.length < 6) ? 'Au moins 6 caractères' : null,
             ),
           ),
           actions: [
             TextButton(
               onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
-              child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
+              child: Text(
+                'Annuler',
+                style: TextStyle(color: context.colors.textSecondary),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentPrimary),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.colors.accentPrimary,
+              ),
               onPressed: isSubmitting
                   ? null
                   : () async {
@@ -373,19 +584,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         if (ctx.mounted) Navigator.pop(ctx);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(backgroundColor: context.colors.accentEmerald, content: Text('Mot de passe mis à jour.')),
+                            SnackBar(
+                              backgroundColor: context.colors.accentEmerald,
+                              content: Text('Mot de passe mis à jour.'),
+                            ),
                           );
                         }
                       } on AuthException catch (e) {
                         setDialogState(() => isSubmitting = false);
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(e.message)));
                         }
                       }
                     },
               child: isSubmitting
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                  : const Text('Valider', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.black,
+                      ),
+                    )
+                  : const Text(
+                      'Valider',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ],
         ),
@@ -402,25 +631,42 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           children: [
             Icon(Icons.warning_amber_rounded, color: context.colors.accentRose),
             const SizedBox(width: 10),
-            Text('Supprimer mon compte', style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
+            Text(
+              'Supprimer mon compte',
+              style: GoogleFonts.outfit(
+                color: context.colors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
         content: Text(
           'La suppression définitive de compte (droit à l\'oubli, §11 du cahier des charges) est traitée manuellement par l\'administration pour des raisons de sécurité. Confirmez pour enregistrer votre demande — nous vous répondrons rapidement.',
-          style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            color: context.colors.textSecondary,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
+            child: Text(
+              'Annuler',
+              style: TextStyle(color: context.colors.textSecondary),
+            ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentRose),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: context.colors.accentRose,
+            ),
             onPressed: () {
               Navigator.pop(ctx);
               _submitDataRequest(context, 'deletion');
             },
-            child: const Text('Confirmer la demande', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Confirmer la demande',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),

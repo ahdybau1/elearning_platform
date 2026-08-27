@@ -60,8 +60,9 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                           ),
                         ),
                         data: (tickets) {
-                          if (tickets.isEmpty)
+                          if (tickets.isEmpty) {
                             return _emptyState(context, account.id);
+                          }
                           return ListView.separated(
                             padding: const EdgeInsets.all(20),
                             itemCount: tickets.length,

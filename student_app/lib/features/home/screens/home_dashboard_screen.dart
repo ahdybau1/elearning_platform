@@ -150,7 +150,8 @@ class HomeDashboardScreen extends ConsumerWidget {
             const SizedBox(height: 24),
 
             // WhatsApp Official Community Card (§16 du cahier des charges)
-            if (profile != null) _buildWhatsAppCard(context, ref, profile.classNodeId),
+            if (profile != null)
+              _buildWhatsAppCard(context, ref, profile.classNodeId),
 
             const SizedBox(height: 24),
 
@@ -456,8 +457,9 @@ class HomeDashboardScreen extends ConsumerWidget {
       loading: () => const SizedBox.shrink(),
       error: (err, _) => const SizedBox.shrink(),
       data: (exam) {
-        if (exam == null || exam.examDate == null)
+        if (exam == null || exam.examDate == null) {
           return const SizedBox.shrink();
+        }
         final daysLeft = exam.examDate!.difference(DateTime.now()).inDays;
         if (daysLeft < 0) return const SizedBox.shrink();
 
@@ -610,7 +612,11 @@ class HomeDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildWhatsAppCard(BuildContext context, WidgetRef ref, String classNodeId) {
+  Widget _buildWhatsAppCard(
+    BuildContext context,
+    WidgetRef ref,
+    String classNodeId,
+  ) {
     final communityAsync = ref.watch(whatsappCommunityProvider(classNodeId));
 
     return communityAsync.when(
@@ -669,17 +675,28 @@ class HomeDashboardScreen extends ConsumerWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF25D366),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
                 onPressed: () async {
                   final uri = Uri.tryParse(community.inviteLink);
-                  if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+                  if (uri == null ||
+                      !await launchUrl(
+                        uri,
+                        mode: LaunchMode.externalApplication,
+                      )) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Impossible d\'ouvrir le lien : ${community.inviteLink}')),
+                        SnackBar(
+                          content: Text(
+                            'Impossible d\'ouvrir le lien : ${community.inviteLink}',
+                          ),
+                        ),
                       );
                     }
                   }
