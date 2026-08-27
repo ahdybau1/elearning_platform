@@ -11,9 +11,7 @@ import '../../../core/providers/student_providers.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../core/widgets/student_screen_header.dart';
 
-/// Données réelles (compte + profils déjà chargés par studentAuthProvider) — rien à simuler ici,
-/// contrairement aux autres pages ajoutées dans cette même passe qui restent volontairement
-/// factices en attendant leur propre passe de rigueur.
+/// Données réelles (compte + profils déjà chargés par studentAuthProvider) — rien à simuler ici.
 class StudentProfileScreen extends ConsumerStatefulWidget {
   const StudentProfileScreen({super.key});
 

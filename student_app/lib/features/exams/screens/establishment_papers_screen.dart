@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
@@ -203,6 +204,18 @@ class _EstablishmentPapersScreenState
     );
   }
 
+  Future<void> _openDocument(BuildContext context, String? url) async {
+    if (url == null || url.isEmpty) return;
+    final uri = Uri.tryParse(url);
+    if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Impossible d\'ouvrir le document : $url')),
+        );
+      }
+    }
+  }
+
   Widget _buildPaperTile(BuildContext context, EstablishmentPaper paper) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -235,9 +248,15 @@ class _EstablishmentPapersScreenState
               ],
             ),
           ),
-          TextButton(onPressed: () {}, child: const Text('Sujet')),
+          TextButton(
+            onPressed: () => _openDocument(context, paper.documentUrl),
+            child: const Text('Sujet'),
+          ),
           if (paper.correctionUrl != null)
-            TextButton(onPressed: () {}, child: const Text('Correction')),
+            TextButton(
+              onPressed: () => _openDocument(context, paper.correctionUrl),
+              child: const Text('Correction'),
+            ),
         ],
       ),
     );

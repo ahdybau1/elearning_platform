@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
@@ -195,6 +196,18 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
     );
   }
 
+  Future<void> _openDocument(BuildContext context, String? url) async {
+    if (url == null || url.isEmpty) return;
+    final uri = Uri.tryParse(url);
+    if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Impossible d\'ouvrir le document : $url')),
+        );
+      }
+    }
+  }
+
   Widget _buildPaperTile(ExamPaper paper) {
     final bool correctionUnlocked = paper.isCorrectionUnlocked;
     return Container(
@@ -220,7 +233,7 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            onPressed: () {},
+            onPressed: () => _openDocument(context, paper.documentUrl),
             icon: const Icon(Icons.description_outlined, size: 15),
             label: const Text('Sujet', style: TextStyle(fontSize: 12)),
           ),
@@ -233,7 +246,7 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              onPressed: () {},
+              onPressed: () => _openDocument(context, paper.correctionUrl),
               icon: const Icon(Icons.check_circle_rounded, size: 15),
               label: const Text('Corrigé', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             )
