@@ -143,3 +143,34 @@ final supportTicketsProvider =
   final service = ref.watch(studentSupabaseServiceProvider);
   return service.fetchSupportTickets(accountId);
 });
+
+final classEventsProvider =
+    FutureProvider.family<List<MockEvent>, String>((ref, classNodeId) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchEventsForClass(classNodeId);
+});
+
+class MyEventResultQuery {
+  final String eventId;
+  final String profileId;
+  const MyEventResultQuery({required this.eventId, required this.profileId});
+
+  @override
+  bool operator ==(Object other) =>
+      other is MyEventResultQuery && other.eventId == eventId && other.profileId == profileId;
+
+  @override
+  int get hashCode => Object.hash(eventId, profileId);
+}
+
+final myEventResultProvider =
+    FutureProvider.family<MyEventResult?, MyEventResultQuery>((ref, query) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchMyEventResult(query.eventId, query.profileId);
+});
+
+final eventLeaderboardProvider =
+    FutureProvider.family<List<LeaderboardEntry>, String>((ref, eventId) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchEventLeaderboard(eventId);
+});

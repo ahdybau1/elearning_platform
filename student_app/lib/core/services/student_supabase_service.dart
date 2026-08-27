@@ -405,6 +405,64 @@ class StudentSupabaseService {
     return rows.map((r) => ExamPaper.fromJson(Map<String, dynamic>.from(r))).toList();
   }
 
+  // ─── Concours Blancs & Olympiades (§14 du CDC) ─────────────────
+  // `events` ne contient aucun lien vers un contenu d'épreuve (pas de question/exercice associé) —
+  // la correction se fait hors-ligne, ces méthodes servent donc à informer et afficher des résultats
+  // déjà saisis par un admin, jamais à faire passer l'épreuve dans l'app (décision explicite).
+
+  Future<List<MockEvent>> fetchEventsForClass(String classNodeId) async {
+    if (!_isValidUuid(classNodeId)) return [];
+    final rows = await client
+        .from('events')
+        .select()
+        .eq('class_node_id', classNodeId)
+        .order('start_date', ascending: false)
+        .then((r) => r as List);
+    return rows.map((r) => MockEvent.fromJson(Map<String, dynamic>.from(r))).toList();
+  }
+
+  /// `maybeSingle` : au plus un résultat par élève et par événement (contrainte implicite du modèle,
+  /// pas de doublon possible côté admin en pratique).
+  Future<MyEventResult?> fetchMyEventResult(String eventId, String profileId) async {
+    if (!_isValidUuid(eventId) || !_isValidUuid(profileId)) return null;
+    final row = await client
+        .from('event_results')
+        .select()
+        .eq('event_id', eventId)
+        .eq('profile_id', profileId)
+        .maybeSingle();
+    return row == null ? null : MyEventResult.fromJson(Map<String, dynamic>.from(row));
+  }
+
+  Future<List<LeaderboardEntry>> fetchEventLeaderboard(String eventId) async {
+    if (!_isValidUuid(eventId)) return [];
+    final rows = await client
+        .rpc('get_event_leaderboard', params: {'p_event_id': eventId})
+        .then((r) => r as List);
+    return rows.map((r) => LeaderboardEntry.fromJson(Map<String, dynamic>.from(r))).toList();
+  }
+
+  /// §11 du CDC (2e Correcteur) : réclamation réelle liée à un résultat précis, jamais un ticket
+  /// support générique — RLS `grade_disputes_insert` vérifie déjà que ce résultat appartient bien à
+  /// l'appelant.
+  Future<String?> submitGradeDispute({
+    required String eventResultId,
+    required String reason,
+    required double originalScore,
+  }) async {
+    try {
+      await client.from('grade_disputes').insert({
+        'event_result_id': eventResultId,
+        'reason': reason,
+        'status': 'ouvert',
+        'original_score': originalScore,
+      });
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
   // ─── Épreuves par Établissement (§5 du CDC) ───────────────────
   // Lectures publiques réelles (RLS `establishments_select`/`establishment_papers_select` : USING
   // (true)) — catalogue ouvert par design, tout élève peut consulter les épreuves de n'importe quel

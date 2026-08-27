@@ -590,6 +590,98 @@ class ExamPaper {
   }
 }
 
+/// Reflète la vraie table `events` (§14 du cahier des charges) — un concours blanc ou une olympiade
+/// programmé pour une classe précise. Aucun lien vers un contenu d'épreuve n'existe en base (pas de
+/// question/exercice associé) : la correction se fait hors-ligne, ce modèle ne sert donc qu'à
+/// informer et à afficher les résultats déjà saisis, jamais à faire passer l'épreuve dans l'app.
+class MockEvent {
+  final String id;
+  final String type; // 'examen_blanc' | 'olympiade'
+  final String title;
+  final DateTime startDate;
+  final DateTime endDate;
+  final String pricingMode; // 'inclus' | 'payant'
+  final double price;
+
+  MockEvent({
+    required this.id,
+    required this.type,
+    required this.title,
+    required this.startDate,
+    required this.endDate,
+    required this.pricingMode,
+    required this.price,
+  });
+
+  bool get isOlympiad => type == 'olympiade';
+  bool get hasEnded => DateTime.now().isAfter(endDate);
+  bool get isOngoing => !hasEnded && DateTime.now().isAfter(startDate);
+
+  factory MockEvent.fromJson(Map<String, dynamic> json) {
+    return MockEvent(
+      id: json['id'] as String,
+      type: json['type'] as String,
+      title: json['title'] as String,
+      startDate: DateTime.parse(json['start_date'] as String),
+      endDate: DateTime.parse(json['end_date'] as String),
+      pricingMode: json['pricing_mode'] as String? ?? 'inclus',
+      price: (json['price'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
+
+/// Le propre résultat de l'élève à un événement — jamais celui d'un autre (RLS `owns_profile`).
+class MyEventResult {
+  final String id;
+  final String eventId;
+  final double score;
+  final int? rank;
+  final double? percentile;
+
+  MyEventResult({
+    required this.id,
+    required this.eventId,
+    required this.score,
+    this.rank,
+    this.percentile,
+  });
+
+  factory MyEventResult.fromJson(Map<String, dynamic> json) {
+    return MyEventResult(
+      id: json['id'] as String,
+      eventId: json['event_id'] as String,
+      score: (json['score'] as num).toDouble(),
+      rank: json['rank'] as int?,
+      percentile: (json['percentile'] as num?)?.toDouble(),
+    );
+  }
+}
+
+/// Une ligne du classement public d'un événement (voir migration 47, `get_event_leaderboard`) —
+/// délibérément minimal (prénom + classe seulement, jamais le nom de famille ni l'email).
+class LeaderboardEntry {
+  final int? rank;
+  final double score;
+  final String firstName;
+  final String className;
+
+  LeaderboardEntry({
+    required this.rank,
+    required this.score,
+    required this.firstName,
+    required this.className,
+  });
+
+  factory LeaderboardEntry.fromJson(Map<String, dynamic> json) {
+    return LeaderboardEntry(
+      rank: json['rank'] as int?,
+      score: (json['score'] as num).toDouble(),
+      firstName: json['first_name'] as String? ?? 'Élève',
+      className: json['class_name'] as String? ?? '',
+    );
+  }
+}
+
 class Establishment {
   final String id;
   final String name;
