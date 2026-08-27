@@ -312,21 +312,28 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                           ),
                         ),
                         const Spacer(),
-                        OutlinedButton.icon(
-                          // Jamais de `pushReplacementNamed('/profiles')` ici : ça évincerait
-                          // StudentAuthGate (main.dart) de la pile de navigation pour de bon, le
-                          // remplaçant par un écran figé qui ne réagirait plus jamais aux
-                          // changements d'état (cause du bug « renvoie vers un ancien écran »).
-                          // resetProfileSelection() laisse la porte réactive faire la bascule.
-                          onPressed: () => ref.read(studentAuthProvider.notifier).resetProfileSelection(),
-                          icon: const Icon(Icons.swap_horiz_rounded, size: 16),
-                          label: const Text('Changer de Profil'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: context.colors.textSecondary,
-                            side: BorderSide(color: context.colors.border),
+                        // Un seul profil sur ce compte : StudentAuthGate (main.dart) saute déjà
+                        // ProfileSwitcherScreen dans ce cas précis (voir `profiles.length == 1`,
+                        // avant même de regarder hasConfirmedProfileThisBoot) — un bouton "Changer
+                        // de Profil" cliquable ici n'aurait donc structurellement AUCUN effet
+                        // visible, ce qui était exactement le bug rapporté (« rien ne se passe »).
+                        if (authState.profiles.length > 1) ...[
+                          OutlinedButton.icon(
+                            // Jamais de `pushReplacementNamed('/profiles')` ici : ça évincerait
+                            // StudentAuthGate (main.dart) de la pile de navigation pour de bon, le
+                            // remplaçant par un écran figé qui ne réagirait plus jamais aux
+                            // changements d'état (cause du bug « renvoie vers un ancien écran »).
+                            // resetProfileSelection() laisse la porte réactive faire la bascule.
+                            onPressed: () => ref.read(studentAuthProvider.notifier).resetProfileSelection(),
+                            icon: const Icon(Icons.swap_horiz_rounded, size: 16),
+                            label: const Text('Changer de Profil'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: context.colors.textSecondary,
+                              side: BorderSide(color: context.colors.border),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
+                          const SizedBox(width: 12),
+                        ],
                         IconButton(
                           tooltip: 'Verrouiller',
                           icon: Icon(Icons.lock_outline_rounded, color: context.colors.textSecondary, size: 20),
