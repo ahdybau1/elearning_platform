@@ -1,4 +1,4 @@
-// Tuteur IA élève (§8 du cahier des charges) — proxy vers Google Gemini (palier gratuit), pour que
+// Tuteur Numérique élève (§8 du cahier des charges) — proxy vers Google Gemini (palier gratuit), pour que
 // la clé API ne soit jamais exposée dans le bundle Flutter web (voir student_app/
 // ai_tutor_chat_screen.dart). Choix Gemini explicitement demandé par l'utilisateur : "totalement
 // gratuit", palier temporaire en attendant un agent IA propriétaire construit ultérieurement (voir
@@ -36,7 +36,7 @@ Deno.serve(async (req: Request) => {
       // Jamais de réponse simulée en secours (voir 06_ai_pipeline.md) : une erreur claire côté
       // client vaut mieux qu'une fausse réussite.
       return new Response(
-        JSON.stringify({ error: "Le Tuteur IA n'est pas encore configuré (clé Gemini absente côté serveur)." }),
+        JSON.stringify({ error: "Le Tuteur Numérique n'est pas encore configuré (clé Gemini absente côté serveur)." }),
         { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -61,15 +61,23 @@ Règles strictes :
     }
     contents.push({ role: "user", parts: [{ text: message }] });
 
+    // §8 du CDC : "superpuissant et super gratuit" — modèle Gemini le plus capable du palier
+    // gratuit, et un budget de sortie plus généreux pour des explications complètes plutôt que
+    // tronquées. gemini-2.0-flash a été retiré (confirmé par l'erreur 404 de l'API elle-même, qui
+    // recommandait explicitement gemini-3.6-flash) — vérifier périodiquement que ce nom de modèle
+    // est toujours valide, Google en retire régulièrement.
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt }] },
           contents,
-          generationConfig: { maxOutputTokens: 800 },
+          // gemini-3.6-flash consomme des jetons de "réflexion" internes avant la réponse visible
+          // (confirmé en test direct : ~140 jetons de réflexion pour "OK") — budget généreux pour
+          // ne jamais tronquer une explication pédagogique complète derrière ce coût caché.
+          generationConfig: { maxOutputTokens: 4096 },
         }),
       }
     );
@@ -78,7 +86,7 @@ Règles strictes :
       const errText = await geminiRes.text();
       console.error("Gemini API error:", geminiRes.status, errText);
       return new Response(
-        JSON.stringify({ error: "Le Tuteur IA est momentanément indisponible (quota atteint ou erreur du fournisseur)." }),
+        JSON.stringify({ error: "Le Tuteur Numérique est momentanément indisponible (quota atteint ou erreur du fournisseur)." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -89,7 +97,7 @@ Règles strictes :
 
     if (!reply) {
       return new Response(
-        JSON.stringify({ error: "Le Tuteur IA n'a pas pu générer de réponse. Réessayez avec une question différente." }),
+        JSON.stringify({ error: "Le Tuteur Numérique n'a pas pu générer de réponse. Réessayez avec une question différente." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

@@ -48,7 +48,6 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
       'features': [
         'Tout le programme débloqué',
         'Annales & Corrigés d\'examens',
-        'Tuteur IA illimité',
         'Mode Hors-Ligne Data-Saver',
       ],
     },

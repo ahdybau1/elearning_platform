@@ -19,7 +19,7 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
     {
       'sender': 'ai',
       'text':
-          'Bonjour ! Je suis ton Tuteur IA personnel pour ton programme officiel. Pose-moi une question sur ton cours ou bloque sur un exercice, et je te guiderai pas-à-pas sans te donner la réponse toute faite !',
+          'Bonjour ! Je suis ton Tuteur Numérique, entièrement gratuit et sans limite. Pose-moi une question sur ton cours ou bloque sur un exercice, et je te guiderai pas-à-pas sans te donner la réponse toute faite !',
     },
   ];
 
@@ -56,25 +56,47 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Tuteur IA Contextualisé',
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        fontSize: 18,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Tuteur Numérique',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              color: context.colors.textPrimary,
+                              fontSize: 18,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: context.colors.accentEmerald.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'GRATUIT ET ILLIMITÉ',
+                              style: GoogleFonts.inter(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: context.colors.accentEmerald,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    Text(
-                      'Programme ${profile?.className ?? ''} • Maïeutique Pédagogique',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: context.colors.accentCyan,
+                      Text(
+                        'Programme ${profile?.className ?? ''} • Maïeutique Pédagogique',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: context.colors.accentCyan,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -188,7 +210,7 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    'Le Tuteur IA réfléchit...',
+                    'Le Tuteur Numérique réfléchit...',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: context.colors.textSecondary,
@@ -282,7 +304,7 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
           'text':
               reply ??
               error ??
-              'Le Tuteur IA est momentanément indisponible, réessayez dans un instant.',
+              'Le Tuteur Numérique est momentanément indisponible, réessayez dans un instant.',
         });
       });
     } catch (e) {
@@ -292,7 +314,7 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
         _messages.add({
           'sender': 'ai',
           'text':
-              'Le Tuteur IA est momentanément indisponible, réessayez dans un instant.',
+              'Le Tuteur Numérique est momentanément indisponible, réessayez dans un instant.',
         });
       });
     }

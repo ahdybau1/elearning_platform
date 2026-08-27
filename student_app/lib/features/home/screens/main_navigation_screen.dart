@@ -89,7 +89,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
       _NavModule(title: 'Apprentissage', pages: [
         _NavPage(title: 'Mes Matières & Cours', icon: Icons.menu_book_rounded, screen: const SubjectsListScreen()),
         _NavPage(title: 'Exercices', icon: Icons.edit_note_rounded, screen: const ExercisesHubScreen()),
-        _NavPage(title: 'Tuteur IA', icon: Icons.auto_awesome_rounded, screen: const AiTutorChatScreen()),
+        _NavPage(title: 'Tuteur Numérique', icon: Icons.auto_awesome_rounded, screen: const AiTutorChatScreen()),
       ]),
       _NavModule(title: 'Évaluation', pages: [
         if (exam != null)
