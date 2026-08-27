@@ -25,6 +25,13 @@ class StudentAuthState {
   /// jamais présenter l'écran de code : une session persistée redémarre "déjà connectée" à chaque
   /// ouverture, avant même que l'utilisateur n'ait rien saisi.
   final bool hasUnlockedThisBoot;
+  /// Vrai seulement après un choix EXPLICITE de profil cette ouverture (voir [selectProfile]) —
+  /// sans ce champ, un compte à plusieurs profils ne pourrait jamais revenir proprement à
+  /// ProfileSwitcherScreen après un premier choix : `activeProfile` reste toujours non-nul (repli
+  /// automatique sur le premier profil, voir `_loadAccountAndProfiles`), donc s'appuyer dessus
+  /// masquerait le sélecteur en permanence. Distinct de `hasUnlockedThisBoot` (même principe, autre
+  /// étape) — voir aussi `hasChosenStudentRoleProvider` côté rôle élève/parent.
+  final bool hasConfirmedProfileThisBoot;
 
   const StudentAuthState({
     this.account,
@@ -35,6 +42,7 @@ class StudentAuthState {
     this.sessionEmail,
     this.settings,
     this.hasUnlockedThisBoot = false,
+    this.hasConfirmedProfileThisBoot = false,
   });
 
   /// Un compte élève (`accounts`) existe pour cette session.
@@ -54,6 +62,7 @@ class StudentAuthState {
     String? sessionEmail,
     AccountSettings? settings,
     bool? hasUnlockedThisBoot,
+    bool? hasConfirmedProfileThisBoot,
   }) {
     return StudentAuthState(
       account: account ?? this.account,
@@ -64,6 +73,7 @@ class StudentAuthState {
       sessionEmail: sessionEmail ?? this.sessionEmail,
       settings: settings ?? this.settings,
       hasUnlockedThisBoot: hasUnlockedThisBoot ?? this.hasUnlockedThisBoot,
+      hasConfirmedProfileThisBoot: hasConfirmedProfileThisBoot ?? this.hasConfirmedProfileThisBoot,
     );
   }
 }
@@ -111,11 +121,16 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
     // [hasUnlockedThisBoot]) — un rechargement ultérieur du compte (rotation de jeton, etc.) ne
     // doit jamais faire réapparaître l'écran de code après un déverrouillage déjà réussi.
     final unlocked = markUnlocked || state.hasUnlockedThisBoot;
+    final confirmedProfile = state.hasConfirmedProfileThisBoot;
     state = state.copyWith(isLoading: true, errorMessage: null, hasUnlockedThisBoot: unlocked);
     try {
       final user = _client.auth.currentUser;
       if (user == null) {
-        state = StudentAuthState(isLoading: false, hasUnlockedThisBoot: unlocked);
+        state = StudentAuthState(
+          isLoading: false,
+          hasUnlockedThisBoot: unlocked,
+          hasConfirmedProfileThisBoot: confirmedProfile,
+        );
         return;
       }
 
@@ -132,7 +147,12 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
         // d'inscription (voir onboarding_wizard_screen.dart) termine le profil sur cette MÊME
         // session au lieu de faire tout recommencer — l'ancien comportement (signOut immédiat)
         // faisait croire à un "identifiants invalides" alors que la connexion avait réussi.
-        state = StudentAuthState(isLoading: false, sessionEmail: user.email, hasUnlockedThisBoot: unlocked);
+        state = StudentAuthState(
+          isLoading: false,
+          sessionEmail: user.email,
+          hasUnlockedThisBoot: unlocked,
+          hasConfirmedProfileThisBoot: confirmedProfile,
+        );
         return;
       }
 
@@ -156,6 +176,7 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
         sessionEmail: user.email,
         settings: settings,
         hasUnlockedThisBoot: unlocked,
+        hasConfirmedProfileThisBoot: confirmedProfile,
       );
 
       // §7.3/§7.4 : n'enregistre CET appareil comme connaissant ce compte qu'après une session
@@ -470,7 +491,17 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
   Future<void> selectProfile(StudentProfile profile) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_activeProfilePrefKey, profile.id);
-    state = state.copyWith(activeProfile: profile);
+    state = state.copyWith(activeProfile: profile, hasConfirmedProfileThisBoot: true);
+  }
+
+  /// « Changer de Profil » : réinitialise le choix explicite pour que StudentAuthGate (main.dart)
+  /// réaffiche ProfileSwitcherScreen tout seul, réactivement — jamais de navigation manuelle vers
+  /// une route nommée ('/profiles', '/home') ici. Un `pushReplacementNamed` appelé alors que la
+  /// route "/" est encore AppRootGate/StudentAuthGate ÉVINCE cette porte réactive de la pile de
+  /// navigation, la remplaçant par un écran figé qui ne réagit plus jamais aux changements d'état
+  /// ensuite — cause exacte du bug « ça renvoie vers un ancien écran » au lieu du début du parcours.
+  void resetProfileSelection() {
+    state = state.copyWith(hasConfirmedProfileThisBoot: false);
   }
 
   /// Ajoute un nouveau profil (= une classe suivie de plus, voir §2.3 du cahier des charges) au

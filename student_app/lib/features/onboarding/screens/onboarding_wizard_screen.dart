@@ -170,7 +170,13 @@ class _OnboardingWizardScreenState
           ),
         );
         if (!mounted) return;
-        Navigator.pushReplacementNamed(context, '/login');
+        // StudentAuthGate (main.dart) affiche déjà StudentLoginScreen tout seul, réactivement, dès
+        // que la session redevient nulle (voir plus haut dans signUp()) — jamais de navigation
+        // manuelle vers une route nommée ici, ça évincerait la porte de la pile si cet écran est
+        // actuellement la racine (voir StudentAuthNotifier.resetProfileSelection pour le même
+        // problème ailleurs). Un simple pop suffit dans le seul cas où c'est utile : cet écran a
+        // été empilé (« Créer un compte » depuis StudentLoginScreen).
+        if (Navigator.canPop(context)) Navigator.pop(context);
         return;
       }
 
@@ -213,7 +219,11 @@ class _OnboardingWizardScreenState
       return;
     }
 
-    Navigator.pushReplacementNamed(context, '/home');
+    // StudentAuthGate (main.dart) réagit déjà tout seul dès que `profiles` n'est plus vide (voir
+    // addProfile, qui met à jour l'état directement) — même raisonnement que ci-dessus : pop
+    // uniquement si cet écran a été réellement empilé, jamais de route nommée qui évincerait la
+    // porte réactive si c'est la racine.
+    if (Navigator.canPop(context)) Navigator.pop(context);
   }
 
   @override

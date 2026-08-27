@@ -122,7 +122,15 @@ class StudentAuthGate extends ConsumerWidget {
       // ne sert que quand il y a réellement plusieurs classes suivies sur le même compte.
       return const MainNavigationScreen();
     }
-    return const ProfileSwitcherScreen();
+    if (!authState.hasConfirmedProfileThisBoot) {
+      // Plusieurs classes sur ce compte : il faut un choix EXPLICITE cette ouverture avant d'entrer
+      // dans l'app — `activeProfile` seul ne suffit pas à sauter cet écran, il est toujours
+      // auto-rempli en repli (voir hasConfirmedProfileThisBoot). « Changer de Profil » repasse par
+      // ici en réinitialisant ce drapeau plutôt qu'en naviguant vers une route nommée, pour ne
+      // jamais évincer cette porte réactive de la pile (voir StudentAuthNotifier.resetProfileSelection).
+      return const ProfileSwitcherScreen();
+    }
+    return const MainNavigationScreen();
   }
 }
 

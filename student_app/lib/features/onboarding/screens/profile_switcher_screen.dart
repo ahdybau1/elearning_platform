@@ -68,12 +68,14 @@ class ProfileSwitcherScreen extends ConsumerWidget {
                     final isActive = profile.id == authState.activeProfile?.id;
                     return InkWell(
                       onTap: () async {
+                        // `selectProfile` marque hasConfirmedProfileThisBoot=true —
+                        // StudentAuthGate (main.dart) réagit tout seul et bascule vers l'app.
+                        // JAMAIS de `pushReplacementNamed` ici : appelé pendant que la route "/"
+                        // est encore cette porte réactive, ça l'évincerait de la pile pour de bon
+                        // (voir la doc de resetProfileSelection).
                         await ref
                             .read(studentAuthProvider.notifier)
                             .selectProfile(profile);
-                        if (context.mounted) {
-                          Navigator.pushReplacementNamed(context, '/home');
-                        }
                       },
                       borderRadius: BorderRadius.circular(20),
                       child: Container(
