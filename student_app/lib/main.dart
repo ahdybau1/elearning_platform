@@ -46,17 +46,16 @@ class StudentAuthGate extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(studentAuthProvider);
 
-    if (authState.isLoading) {
-      return const Scaffold(
-        backgroundColor: StudentTheme.backgroundDark,
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-    if (!authState.hasSession) {
-      // Un compte déjà connu sur CET appareil (déjà réellement authentifié par email + mot de passe
-      // au moins une fois) permet le déverrouillage rapide par code personnel plutôt que de resaisir
-      // le mot de passe à chaque fois — voir DeviceAccountsService pour la garantie de sécurité
-      // exacte (le code ne vaut que pour le compte sélectionné, jamais pour en retrouver un autre).
+    if (!authState.hasUnlockedThisBoot) {
+      // §7.3/§7.4 : cette porte doit s'afficher à CHAQUE ouverture de l'app tant que l'utilisateur
+      // n'a rien saisi lui-même cette fois-ci — jamais seulement quand Supabase n'a pas de session,
+      // car une session persistée se restaure automatiquement au démarrage bien avant que quiconque
+      // n'ait tapé quoi que ce soit (`hasUnlockedThisBoot` capture précisément cette distinction, voir
+      // student_auth_provider.dart). Un compte déjà connu sur CET appareil (déjà réellement
+      // authentifié par email + mot de passe au moins une fois) permet le déverrouillage rapide par
+      // code personnel plutôt que de resaisir le mot de passe à chaque fois — voir
+      // DeviceAccountsService pour la garantie de sécurité exacte (le code ne vaut que pour le
+      // compte sélectionné, jamais pour en retrouver un autre).
       return FutureBuilder<List<DeviceKnownAccount>>(
         future: deviceAccountsService.listKnown(),
         builder: (context, snapshot) {
@@ -71,6 +70,17 @@ class StudentAuthGate extends ConsumerWidget {
               : const DeviceAccountSelectorScreen();
         },
       );
+    }
+    if (authState.isLoading) {
+      return const Scaffold(
+        backgroundColor: StudentTheme.backgroundDark,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (!authState.hasSession) {
+      // Filet de sécurité : déverrouillé cette ouverture, mais plus de session valide (ex.
+      // déconnexion explicite juste après) — retombe sur l'écran de connexion complet.
+      return const StudentLoginScreen();
     }
     if (authState.profiles.isEmpty) {
       // Session réelle mais profil élève pas encore complété (compte `accounts` manquant, ex. un

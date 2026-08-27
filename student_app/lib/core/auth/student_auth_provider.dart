@@ -19,6 +19,12 @@ class StudentAuthState {
   /// §11.1 : préférences réelles du compte (thème, notifications, accessibilité...). `null` tant
   /// que non chargées — voir [StudentAuthNotifier._loadAccountAndProfiles].
   final AccountSettings? settings;
+  /// §7.3/§7.4 : vrai seulement après une action explicite de CETTE ouverture d'app (mot de passe
+  /// saisi, ou code personnel vérifié) — jamais juste parce que Supabase a restauré tout seul une
+  /// session déjà valide depuis le stockage local. Sans ce champ, [StudentAuthGate] ne pourrait
+  /// jamais présenter l'écran de code : une session persistée redémarre "déjà connectée" à chaque
+  /// ouverture, avant même que l'utilisateur n'ait rien saisi.
+  final bool hasUnlockedThisBoot;
 
   const StudentAuthState({
     this.account,
@@ -28,6 +34,7 @@ class StudentAuthState {
     this.errorMessage,
     this.sessionEmail,
     this.settings,
+    this.hasUnlockedThisBoot = false,
   });
 
   /// Un compte élève (`accounts`) existe pour cette session.
@@ -46,6 +53,7 @@ class StudentAuthState {
     String? errorMessage,
     String? sessionEmail,
     AccountSettings? settings,
+    bool? hasUnlockedThisBoot,
   }) {
     return StudentAuthState(
       account: account ?? this.account,
@@ -55,6 +63,7 @@ class StudentAuthState {
       errorMessage: errorMessage,
       sessionEmail: sessionEmail ?? this.sessionEmail,
       settings: settings ?? this.settings,
+      hasUnlockedThisBoot: hasUnlockedThisBoot ?? this.hasUnlockedThisBoot,
     );
   }
 }
@@ -72,7 +81,12 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
         state = const StudentAuthState(isLoading: false);
         return;
       }
-      _loadAccountAndProfiles();
+      // `signedIn` ne peut venir que d'une action explicite de CETTE ouverture (mot de passe saisi
+      // via signIn/signUp) — jamais de la restauration automatique d'une session déjà persistée
+      // (`initialSession`), qui elle ne doit pas dispenser du code personnel. Le déverrouillage par
+      // code, lui, passe par [unlockDeviceAccount] qui force explicitement ce même drapeau.
+      final justSignedInExplicitly = data.event == AuthChangeEvent.signedIn;
+      _loadAccountAndProfiles(markUnlocked: justSignedInExplicitly);
     }, onError: (_) {
       state = const StudentAuthState(isLoading: false);
     });
@@ -92,12 +106,16 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
   // Le compte affiché vient toujours d'une lecture réelle de `accounts` filtrée par
   // auth_user_id = auth.uid() (RLS), jamais d'un état codé en dur côté client — même logique que
   // admin_app (voir 03_auth_flow.md côté admin).
-  Future<void> _loadAccountAndProfiles() async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
+  Future<void> _loadAccountAndProfiles({bool markUnlocked = false}) async {
+    // Une fois vrai pour cette ouverture d'app, le reste conserve toujours ce drapeau (voir
+    // [hasUnlockedThisBoot]) — un rechargement ultérieur du compte (rotation de jeton, etc.) ne
+    // doit jamais faire réapparaître l'écran de code après un déverrouillage déjà réussi.
+    final unlocked = markUnlocked || state.hasUnlockedThisBoot;
+    state = state.copyWith(isLoading: true, errorMessage: null, hasUnlockedThisBoot: unlocked);
     try {
       final user = _client.auth.currentUser;
       if (user == null) {
-        state = const StudentAuthState(isLoading: false);
+        state = StudentAuthState(isLoading: false, hasUnlockedThisBoot: unlocked);
         return;
       }
 
@@ -114,7 +132,7 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
         // d'inscription (voir onboarding_wizard_screen.dart) termine le profil sur cette MÊME
         // session au lieu de faire tout recommencer — l'ancien comportement (signOut immédiat)
         // faisait croire à un "identifiants invalides" alors que la connexion avait réussi.
-        state = StudentAuthState(isLoading: false, sessionEmail: user.email);
+        state = StudentAuthState(isLoading: false, sessionEmail: user.email, hasUnlockedThisBoot: unlocked);
         return;
       }
 
@@ -137,6 +155,7 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
         isLoading: false,
         sessionEmail: user.email,
         settings: settings,
+        hasUnlockedThisBoot: unlocked,
       );
 
       // §7.3/§7.4 : n'enregistre CET appareil comme connaissant ce compte qu'après une session
@@ -243,6 +262,17 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
     } catch (e) {
       return e.toString();
     }
+  }
+
+  /// §7.3/§7.4 : déverrouillage par code personnel — appelé APRÈS que
+  /// `DeviceAccountsService.verifyCodeForAccount` a confirmé le code côté serveur. Installe la
+  /// session déjà réelle sur le client principal, puis force explicitement le drapeau de
+  /// déverrouillage (`markUnlocked: true`) plutôt que de compter sur le listener d'état
+  /// d'authentification : `setInitialSession` émet le même événement `initialSession` qu'une simple
+  /// restauration automatique au démarrage, donc rien ne les distinguerait sans cet appel explicite.
+  Future<void> unlockDeviceAccount(String accountId) async {
+    await deviceAccountsService.activateOnPrimaryClient(accountId);
+    await _loadAccountAndProfiles(markUnlocked: true);
   }
 
   /// §11.1 : demande réelle de droit à l'oubli (export/suppression) — voir migration 41. Le

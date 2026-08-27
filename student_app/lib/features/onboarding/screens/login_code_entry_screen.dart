@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/device_accounts_service.dart';
+import '../../../core/auth/student_auth_provider.dart';
 import 'student_login_screen.dart';
 
 /// Déverrouillage rapide par code personnel — RÈGLE DE SÉCURITÉ NON NÉGOCIABLE : ce code ne fait
@@ -47,7 +48,7 @@ class _LoginCodeEntryScreenState extends ConsumerState<LoginCodeEntryScreen> {
     if (!mounted) return;
 
     if (ok) {
-      await deviceAccountsService.activateOnPrimaryClient(widget.account.accountId);
+      await ref.read(studentAuthProvider.notifier).unlockDeviceAccount(widget.account.accountId);
       if (!mounted) return;
       // Succès : StudentAuthGate (main.dart) réagit automatiquement au changement de session et
       // remplace toute cette pile de navigation — pas de navigation manuelle vers l'accueil ici.
