@@ -89,6 +89,13 @@ class StudentAuthGate extends ConsumerWidget {
       // onboarding_wizard_screen.dart, _accountStepKind).
       return const OnboardingWizardScreen();
     }
+    if (authState.profiles.length == 1) {
+      // Modèle 1 compte = 1 classe (le cas courant) : l'unique profil est déjà auto-sélectionné
+      // (voir StudentAuthNotifier._loadAccountAndProfiles) — reproposer un choix ici serait une
+      // répétition pure de la sélection de compte déjà faite avant le code personnel. Le sélecteur
+      // ne sert que quand il y a réellement plusieurs classes suivies sur le même compte.
+      return const MainNavigationScreen();
+    }
     return const ProfileSwitcherScreen();
   }
 }
