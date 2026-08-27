@@ -41,13 +41,24 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
     setState(() => _isSubmitting = false);
     if (error != null) {
       setState(() => _errorMessage = error);
+      return;
     }
     // Succès : StudentAuthGate (main.dart) réagit automatiquement au changement d'état
-    // d'authentification et bascule vers le sélecteur de profils — pas de navigation manuelle ici.
+    // d'authentification et bascule vers l'app. Mais cet écran peut aussi avoir été EMPILÉ par-dessus
+    // le sélecteur d'appareil (« Code oublié ? », « Ajouter un compte ») — dans ce cas il faut le
+    // retirer de la pile explicitement, sinon il reste affiché par-dessus le contenu déjà à jour et
+    // donne l'impression que "rien ne se passe" alors que la connexion a bien réussi.
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Visible uniquement quand cet écran a été empilé par-dessus le déverrouillage par code
+    // (« Code oublié ? », « Ajouter un compte ») — permet de faire marche arrière sans avoir à
+    // saisir un mot de passe si l'utilisateur se souvient finalement de son code.
+    final canGoBack = Navigator.canPop(context);
     return Scaffold(
       backgroundColor: context.colors.background,
       body: SafeArea(
@@ -59,6 +70,17 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  if (canGoBack) ...[
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: IconButton(
+                        icon: Icon(Icons.arrow_back_rounded, color: context.colors.textSecondary),
+                        tooltip: 'Retour',
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                  ],
                   Center(
                     child: Container(
                       width: 64,

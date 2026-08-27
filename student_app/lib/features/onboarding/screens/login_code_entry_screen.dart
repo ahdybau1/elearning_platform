@@ -202,7 +202,11 @@ class _LoginCodeEntryScreenState extends ConsumerState<LoginCodeEntryScreen> {
                       Text('·', style: TextStyle(color: context.colors.textSecondary)),
                       TextButton(
                         onPressed: () {
-                          Navigator.push(
+                          // `pushReplacement` (pas `push`) : sinon, après un login réussi ici, le
+                          // pop ne ferait que révéler à nouveau CET écran de code (resté empilé en
+                          // dessous) au lieu de l'app déjà déverrouillée — voir la remarque de
+                          // student_login_screen.dart sur le pop conditionnel.
+                          Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(builder: (_) => const StudentLoginScreen()),
                           );
