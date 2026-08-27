@@ -26,11 +26,35 @@ class ExerciseRunnerScreen extends ConsumerStatefulWidget {
       _ExerciseRunnerScreenState();
 }
 
+/// §3.2 du CDC : le format réel d'un exercice ('format' en base, voir admin_app `ExerciseFormat`)
+/// détermine son mode d'interaction — un ancien modèle ne gérait que le QCM et ignorait les 4 autres
+/// formats que l'admin peut réellement créer (réponse courte, rédaction, manuscrit scanné,
+/// flashcard), qui se seraient affichés vides (aucune option à choisir).
 class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
   int _currentIndex = 0;
   int? _selectedOptionIndex;
-  bool _isAnswerValidated = false;
+  bool _isRevealed = false;
   int _totalScore = 0;
+  final TextEditingController _freeTextCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _freeTextCtrl.dispose();
+    super.dispose();
+  }
+
+  void _goToNext(List<Exercise> exercises) {
+    if (_currentIndex < exercises.length - 1) {
+      setState(() {
+        _currentIndex++;
+        _selectedOptionIndex = null;
+        _isRevealed = false;
+        _freeTextCtrl.clear();
+      });
+    } else {
+      _showCompletionDialog(context, exercises.length);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -160,235 +184,329 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Question Card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: context.colors.card,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: context.colors.border),
-                    ),
-                    child: Text(
-                      currentEx.questionText,
-                      style: GoogleFonts.inter(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: context.colors.textPrimary,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Options List
                   Expanded(
-                    child: ListView.separated(
-                      itemCount: currentEx.options.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (context, optIdx) {
-                        final option = currentEx.options[optIdx];
-                        final isSelected = _selectedOptionIndex == optIdx;
-
-                        Color borderColor = context.colors.border;
-                        Color bgColor = context.colors.card;
-
-                        if (_isAnswerValidated) {
-                          if (optIdx == currentEx.correctIndex) {
-                            borderColor = context.colors.accentEmerald;
-                            bgColor = context.colors.accentEmerald.withValues(
-                              alpha: 0.15,
-                            );
-                          } else if (isSelected) {
-                            borderColor = context.colors.accentRose;
-                            bgColor = context.colors.accentRose.withValues(
-                              alpha: 0.15,
-                            );
-                          }
-                        } else if (isSelected) {
-                          borderColor = context.colors.accentPrimary;
-                          bgColor = context.colors.accentPrimary.withValues(
-                            alpha: 0.1,
-                          );
-                        }
-
-                        return InkWell(
-                          onTap: _isAnswerValidated
-                              ? null
-                              : () => setState(
-                                  () => _selectedOptionIndex = optIdx,
-                                ),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                            decoration: BoxDecoration(
-                              color: bgColor,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: borderColor,
-                                width: isSelected ? 2 : 1,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 28,
-                                  height: 28,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: isSelected
-                                        ? context.colors.accentPrimary
-                                        : context.colors.surface,
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      String.fromCharCode(
-                                        65 + optIdx,
-                                      ), // A, B, C, D
-                                      style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.bold,
-                                        color: isSelected
-                                            ? Colors.black
-                                            : context.colors.textPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Text(
-                                    option,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 15,
-                                      color: context.colors.textPrimary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+                    child: SingleChildScrollView(
+                      child: _buildFormatBody(context, currentEx),
                     ),
                   ),
-
-                  // Explanation Block if validated
-                  if (_isAnswerValidated) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: _selectedOptionIndex == currentEx.correctIndex
-                            ? const Color(0xFF0E2E20)
-                            : const Color(0xFF2E121A),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: _selectedOptionIndex == currentEx.correctIndex
-                              ? context.colors.accentEmerald
-                              : context.colors.accentRose,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                _selectedOptionIndex == currentEx.correctIndex
-                                    ? Icons.check_circle_rounded
-                                    : Icons.cancel_rounded,
-                                color:
-                                    _selectedOptionIndex ==
-                                        currentEx.correctIndex
-                                    ? context.colors.accentEmerald
-                                    : context.colors.accentRose,
-                                size: 18,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                _selectedOptionIndex == currentEx.correctIndex
-                                    ? 'Excellente Réponse !'
-                                    : 'Réponse Incorrecte',
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.bold,
-                                  color: context.colors.textPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            currentEx.explanation,
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-
-                  // Action Buttons
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: context.colors.accentPrimary,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: _selectedOptionIndex == null
-                          ? null
-                          : () {
-                              if (!_isAnswerValidated) {
-                                setState(() {
-                                  _isAnswerValidated = true;
-                                  if (_selectedOptionIndex ==
-                                      currentEx.correctIndex) {
-                                    _totalScore += currentEx.points;
-                                  }
-                                });
-                              } else {
-                                if (_currentIndex < exercises.length - 1) {
-                                  setState(() {
-                                    _currentIndex++;
-                                    _selectedOptionIndex = null;
-                                    _isAnswerValidated = false;
-                                  });
-                                } else {
-                                  _showCompletionDialog(
-                                    context,
-                                    exercises.length,
-                                  );
-                                }
-                              }
-                            },
-                      child: Text(
-                        !_isAnswerValidated
-                            ? 'Valider ma réponse'
-                            : (_currentIndex < exercises.length - 1
-                                  ? 'Question Suivante'
-                                  : 'Terminer le Quiz'),
-                        style: GoogleFonts.inter(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                  ),
+                  const SizedBox(height: 16),
+                  _buildActionButton(context, exercises, currentEx),
                 ],
               ),
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _statementCard(BuildContext context, Exercise ex) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.colors.border),
+      ),
+      child: Text(
+        ex.questionText,
+        style: GoogleFonts.inter(
+          fontSize: 17,
+          fontWeight: FontWeight.bold,
+          color: context.colors.textPrimary,
+          height: 1.4,
+        ),
+      ),
+    );
+  }
+
+  Widget _correctionCard(BuildContext context, Exercise ex, {bool? isCorrect}) {
+    final color = isCorrect == null
+        ? context.colors.accentIndigo
+        : (isCorrect ? context.colors.accentEmerald : context.colors.accentRose);
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isCorrect == null
+                    ? Icons.lightbulb_outline_rounded
+                    : (isCorrect ? Icons.check_circle_rounded : Icons.cancel_rounded),
+                color: color,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                isCorrect == null
+                    ? 'Corrigé'
+                    : (isCorrect ? 'Excellente Réponse !' : 'Réponse Incorrecte'),
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            ex.explanation.isNotEmpty ? ex.explanation : 'Aucun corrigé fourni pour cet exercice.',
+            style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormatBody(BuildContext context, Exercise ex) {
+    switch (ex.format) {
+      case 'flashcard':
+        return _buildFlashcardBody(context, ex);
+      case 'reponse_courte':
+      case 'redaction':
+        return _buildFreeTextBody(context, ex);
+      case 'manuscrit_scan':
+        return _buildManuscriptBody(context, ex);
+      case 'qcm':
+      default:
+        return _buildQcmBody(context, ex);
+    }
+  }
+
+  Widget _buildQcmBody(BuildContext context, Exercise ex) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _statementCard(context, ex),
+        const SizedBox(height: 20),
+        ...List.generate(ex.options.length, (optIdx) {
+          final option = ex.options[optIdx];
+          final isSelected = _selectedOptionIndex == optIdx;
+
+          Color borderColor = context.colors.border;
+          Color bgColor = context.colors.card;
+
+          if (_isRevealed) {
+            if (optIdx == ex.correctIndex) {
+              borderColor = context.colors.accentEmerald;
+              bgColor = context.colors.accentEmerald.withValues(alpha: 0.15);
+            } else if (isSelected) {
+              borderColor = context.colors.accentRose;
+              bgColor = context.colors.accentRose.withValues(alpha: 0.15);
+            }
+          } else if (isSelected) {
+            borderColor = context.colors.accentPrimary;
+            bgColor = context.colors.accentPrimary.withValues(alpha: 0.1);
+          }
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: InkWell(
+              onTap: _isRevealed ? null : () => setState(() => _selectedOptionIndex = optIdx),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: borderColor, width: isSelected ? 2 : 1),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isSelected ? context.colors.accentPrimary : context.colors.surface,
+                      ),
+                      child: Center(
+                        child: Text(
+                          String.fromCharCode(65 + optIdx),
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? Colors.black : context.colors.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(option, style: GoogleFonts.inter(fontSize: 15, color: context.colors.textPrimary)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+        if (_isRevealed) _correctionCard(context, ex, isCorrect: _selectedOptionIndex == ex.correctIndex),
+      ],
+    );
+  }
+
+  Widget _buildFreeTextBody(BuildContext context, Exercise ex) {
+    final isRedaction = ex.format == 'redaction';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _statementCard(context, ex),
+        const SizedBox(height: 20),
+        Text(
+          isRedaction ? 'Votre rédaction' : 'Votre réponse',
+          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: context.colors.textSecondary),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _freeTextCtrl,
+          enabled: !_isRevealed,
+          maxLines: isRedaction ? 10 : 3,
+          style: TextStyle(color: context.colors.textPrimary),
+          decoration: InputDecoration(
+            hintText: isRedaction ? 'Rédigez votre réponse ici...' : 'Répondez en quelques mots...',
+            hintStyle: TextStyle(color: context.colors.textMuted),
+            filled: true,
+            fillColor: context.colors.card,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        if (_isRevealed) ...[
+          _correctionCard(context, ex),
+          const SizedBox(height: 8),
+          Text(
+            'Comparez votre réponse au corrigé ci-dessus — aucune notation automatique pour ce format.',
+            style: GoogleFonts.inter(fontSize: 11, color: context.colors.textMuted, fontStyle: FontStyle.italic),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildFlashcardBody(BuildContext context, Exercise ex) {
+    return GestureDetector(
+      onTap: () => setState(() => _isRevealed = !_isRevealed),
+      child: Container(
+        width: double.infinity,
+        constraints: const BoxConstraints(minHeight: 220),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: _isRevealed ? context.colors.accentIndigo.withValues(alpha: 0.12) : context.colors.card,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _isRevealed ? context.colors.accentIndigo : context.colors.border, width: 1.5),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              _isRevealed ? Icons.check_circle_outline_rounded : Icons.touch_app_outlined,
+              color: context.colors.accentIndigo,
+              size: 26,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _isRevealed ? ex.explanation : ex.questionText,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: context.colors.textPrimary,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _isRevealed ? 'Réponse — touchez pour revenir' : 'Touchez la carte pour retourner',
+              style: GoogleFonts.inter(fontSize: 11, color: context.colors.textMuted),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildManuscriptBody(BuildContext context, Exercise ex) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _statementCard(context, ex),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: context.colors.accentAmber.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: context.colors.accentAmber.withValues(alpha: 0.4)),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.edit_document, color: context.colors.accentAmber, size: 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Cet exercice se rédige à la main, sur papier, puis se rend à votre enseignant — l\'application ne recueille pas de copie scannée pour l\'instant.',
+                  style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_isRevealed) _correctionCard(context, ex),
+      ],
+    );
+  }
+
+  Widget _buildActionButton(BuildContext context, List<Exercise> exercises, Exercise currentEx) {
+    final isLast = _currentIndex == exercises.length - 1;
+    final bool canPrimaryAct = switch (currentEx.format) {
+      'qcm' => _selectedOptionIndex != null,
+      'reponse_courte' || 'redaction' => _freeTextCtrl.text.trim().isNotEmpty,
+      _ => true,
+    };
+
+    String label;
+    if (!_isRevealed) {
+      label = switch (currentEx.format) {
+        'flashcard' => 'Retourner la carte',
+        'manuscrit_scan' => 'Voir un corrigé de référence',
+        _ => 'Valider ma réponse',
+      };
+    } else {
+      label = isLast ? 'Terminer le Quiz' : 'Question Suivante';
+    }
+
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: context.colors.accentPrimary,
+          foregroundColor: Colors.black,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        onPressed: !canPrimaryAct
+            ? null
+            : () {
+                if (!_isRevealed) {
+                  setState(() {
+                    _isRevealed = true;
+                    if (currentEx.format == 'qcm' && _selectedOptionIndex == currentEx.correctIndex) {
+                      _totalScore += currentEx.points;
+                    } else if (currentEx.format != 'qcm') {
+                      _totalScore += currentEx.points;
+                    }
+                  });
+                } else {
+                  _goToNext(exercises);
+                }
+              },
+        child: Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15)),
       ),
     );
   }
