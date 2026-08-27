@@ -116,12 +116,12 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
   // Le compte affiché vient toujours d'une lecture réelle de `accounts` filtrée par
   // auth_user_id = auth.uid() (RLS), jamais d'un état codé en dur côté client — même logique que
   // admin_app (voir 03_auth_flow.md côté admin).
-  Future<void> _loadAccountAndProfiles({bool markUnlocked = false}) async {
+  Future<void> _loadAccountAndProfiles({bool markUnlocked = false, bool markProfileConfirmed = false}) async {
     // Une fois vrai pour cette ouverture d'app, le reste conserve toujours ce drapeau (voir
     // [hasUnlockedThisBoot]) — un rechargement ultérieur du compte (rotation de jeton, etc.) ne
     // doit jamais faire réapparaître l'écran de code après un déverrouillage déjà réussi.
     final unlocked = markUnlocked || state.hasUnlockedThisBoot;
-    final confirmedProfile = state.hasConfirmedProfileThisBoot;
+    final confirmedProfile = markProfileConfirmed || state.hasConfirmedProfileThisBoot;
     state = state.copyWith(isLoading: true, errorMessage: null, hasUnlockedThisBoot: unlocked);
     try {
       final user = _client.auth.currentUser;
@@ -457,7 +457,11 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove(_activeProfilePrefKey);
       }
-      await _loadAccountAndProfiles();
+      // markProfileConfirmed: true — cette action ne peut être déclenchée que depuis Mon Profil,
+      // donc l'utilisateur est nécessairement DÉJÀ dans l'app (pas un premier chargement à froid).
+      // Sans ça, archiver le seul autre profil actif d'un compte à 2 classes ferait soudainement
+      // réapparaître ProfileSwitcherScreen en pleine utilisation (bug réel corrigé 2026-08-28).
+      await _loadAccountAndProfiles(markProfileConfirmed: true);
       return null;
     } catch (e) {
       return e.toString();
@@ -467,7 +471,7 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
   Future<String?> reactivateProfile(String profileId) async {
     try {
       await _client.from('profiles').update({'status': 'actif'}).eq('id', profileId);
-      await _loadAccountAndProfiles();
+      await _loadAccountAndProfiles(markProfileConfirmed: true);
       return null;
     } catch (e) {
       return e.toString();
