@@ -265,6 +265,20 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
     }
   }
 
+  /// §7.3/§7.4 : consultation du propre code (migration 48, chiffrement réversible — jamais un
+  /// autre compte que `auth.uid()`, jamais transmis avant demande explicite de l'utilisateur).
+  /// Renvoie `null` si aucun code n'est encore défini, ou en cas d'erreur.
+  Future<String?> fetchMyLoginCode() async {
+    if (state.account == null) return null;
+    try {
+      final result = await _client.rpc('get_my_login_code');
+      if (result is Map) return result['code'] as String?;
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// §7.3/§7.4 : déverrouillage par code personnel — appelé APRÈS que
   /// `DeviceAccountsService.verifyCodeForAccount` a confirmé le code côté serveur. Installe la
   /// session déjà réelle sur le client principal, puis force explicitement le drapeau de

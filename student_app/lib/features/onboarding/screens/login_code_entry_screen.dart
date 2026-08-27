@@ -34,8 +34,8 @@ class _LoginCodeEntryScreenState extends ConsumerState<LoginCodeEntryScreen> {
 
   Future<void> _submit() async {
     final code = _codeCtrl.text.trim();
-    if (code.length != 6) {
-      setState(() => _errorMessage = 'Saisissez les 6 chiffres de votre code personnel.');
+    if (code.isEmpty) {
+      setState(() => _errorMessage = 'Saisissez votre code personnel.');
       return;
     }
     setState(() {
@@ -130,16 +130,12 @@ class _LoginCodeEntryScreenState extends ConsumerState<LoginCodeEntryScreen> {
                     controller: _codeCtrl,
                     autofocus: true,
                     obscureText: true,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(6),
-                    ],
+                    inputFormatters: [LengthLimitingTextInputFormatter(40)],
                     textAlign: TextAlign.center,
                     style: GoogleFonts.outfit(
-                      fontSize: 28,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 12,
+                      letterSpacing: 4,
                       color: context.colors.textPrimary,
                     ),
                     decoration: InputDecoration(

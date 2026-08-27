@@ -388,10 +388,10 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
     );
   }
 
-  /// §7.3/§7.4 : « Sécurité → Mon code » — définit/change le code personnel utilisé pour le
-  /// déverrouillage rapide (voir device_accounts_service.dart et login_code_entry_screen.dart). La
-  /// carte n'indique jamais si un code est déjà défini ou lequel (le hash ne quitte jamais la base,
-  /// voir migration 45) : seule l'action « Définir/Changer mon code » est proposée.
+  /// §7.3/§7.4 : « Sécurité → Mon code » — définit/change ET consulte le code personnel utilisé
+  /// pour le déverrouillage rapide (voir device_accounts_service.dart et
+  /// login_code_entry_screen.dart). Migration 48 : chiffrement réversible (plus un hash à sens
+  /// unique) précisément pour permettre cette consultation par le propriétaire.
   Widget _buildLoginCodeCard(StudentAccount account) {
     return Container(
       padding: const EdgeInsets.all(18),
@@ -414,13 +414,22 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Code personnel à 6 chiffres pour vous reconnecter rapidement sur cet appareil.',
+                  'Code personnel (lettres, chiffres, caractères) pour vous reconnecter rapidement sur cet appareil.',
                   style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
+          OutlinedButton(
+            onPressed: () => _showMyLoginCodeDialog(),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: context.colors.textSecondary,
+              side: BorderSide(color: context.colors.border),
+            ),
+            child: const Text('Voir'),
+          ),
+          const SizedBox(width: 8),
           OutlinedButton(
             onPressed: () => _showSetLoginCodeDialog(),
             style: OutlinedButton.styleFrom(
@@ -428,6 +437,47 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
               side: BorderSide(color: context.colors.accentIndigo),
             ),
             child: const Text('Définir / Changer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showMyLoginCodeDialog() async {
+    final code = await ref.read(studentAuthProvider.notifier).fetchMyLoginCode();
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.colors.card,
+        title: Text('Mon code personnel', style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
+        content: code == null
+            ? Text(
+                'Aucun code défini pour l\'instant.',
+                style: TextStyle(color: context.colors.textSecondary),
+              )
+            : Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: context.colors.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: context.colors.border),
+                ),
+                child: Text(
+                  code,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.firaCode(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                    color: context.colors.textPrimary,
+                  ),
+                ),
+              ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Fermer', style: TextStyle(color: context.colors.accentPrimary)),
           ),
         ],
       ),
@@ -461,11 +511,10 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
               TextField(
                 controller: codeCtrl,
                 obscureText: true,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
+                maxLength: 40,
                 style: TextStyle(color: context.colors.textPrimary),
                 decoration: InputDecoration(
-                  labelText: 'Nouveau code (6 chiffres)',
+                  labelText: 'Nouveau code (4 à 40 caractères)',
                   labelStyle: TextStyle(color: context.colors.textSecondary),
                   filled: true,
                   fillColor: context.colors.surface,
@@ -475,8 +524,7 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
               TextField(
                 controller: confirmCtrl,
                 obscureText: true,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
+                maxLength: 40,
                 style: TextStyle(color: context.colors.textPrimary),
                 decoration: InputDecoration(
                   labelText: 'Confirmer le code',
@@ -503,8 +551,8 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                   ? null
                   : () async {
                       final code = codeCtrl.text.trim();
-                      if (code.length != 6 || int.tryParse(code) == null) {
-                        setDialogState(() => errorMessage = 'Le code doit comporter exactement 6 chiffres.');
+                      if (code.length < 4 || code.length > 40) {
+                        setDialogState(() => errorMessage = 'Le code doit comporter entre 4 et 40 caractères.');
                         return;
                       }
                       if (code != confirmCtrl.text.trim()) {
