@@ -23,9 +23,9 @@ class ProfileSwitcherScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            tooltip: 'Se déconnecter',
+            tooltip: 'Verrouiller',
             icon: Icon(
-              Icons.logout_rounded,
+              Icons.lock_outline_rounded,
               color: context.colors.textSecondary,
               size: 20,
             ),

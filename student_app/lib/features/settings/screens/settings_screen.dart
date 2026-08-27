@@ -259,8 +259,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _sectionTitle('Zone sensible'),
           _buildCard([
             _actionRow(
-              icon: Icons.logout_rounded,
-              label: 'Se déconnecter',
+              icon: Icons.lock_outline_rounded,
+              label: 'Verrouiller',
               color: context.colors.textSecondary,
               onTap: () => ref.read(studentAuthProvider.notifier).signOut(),
             ),

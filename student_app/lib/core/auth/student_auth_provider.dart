@@ -453,18 +453,17 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
     }
   }
 
-  /// Déconnexion explicite et complète : révoque la session côté serveur ET retire ce compte du
-  /// registre des comptes connus sur cet appareil (§7.3/§7.4) — distinct de la simple fermeture de
-  /// l'app ou du passage à un autre profil connu (voir device_accounts_service.dart), qui eux
-  /// laissent la session déjà réelle utilisable pour un futur déverrouillage rapide par code.
+  /// §7.3/§7.4 : « Se déconnecter » reverrouille l'app (retour à l'écran de code) SANS révoquer la
+  /// session ni oublier l'appareil — l'utilisateur doit pouvoir rouvrir immédiatement avec son code
+  /// personnel, exactement comme s'il venait de fermer puis rouvrir l'app. Un vrai `signOut()`
+  /// Supabase révoque le jeton de rafraîchissement côté serveur (vérifié en lisant
+  /// gotrue_client.dart), ce qui casserait justement ce réappui immédiat par code — d'où l'absence
+  /// volontaire d'appel à `_client.auth.signOut()` ici. L'action plus dure (« Oublier ce compte »,
+  /// qui elle révoque vraiment et retire l'appareil du registre) reste disponible séparément par
+  /// appui long sur un profil dans DeviceAccountSelectorScreen.
   Future<void> signOut() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_activeProfilePrefKey);
-    final accountId = state.account?.id;
-    await _client.auth.signOut();
-    if (accountId != null) {
-      await deviceAccountsService.forgetAccount(accountId);
-    }
     state = const StudentAuthState(isLoading: false);
   }
 

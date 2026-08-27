@@ -323,8 +323,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                         ),
                         const SizedBox(width: 12),
                         IconButton(
-                          tooltip: 'Se déconnecter',
-                          icon: Icon(Icons.logout_rounded, color: context.colors.textSecondary, size: 20),
+                          tooltip: 'Verrouiller',
+                          icon: Icon(Icons.lock_outline_rounded, color: context.colors.textSecondary, size: 20),
                           onPressed: () => ref.read(studentAuthProvider.notifier).signOut(),
                         ),
                         const SizedBox(width: 12),
