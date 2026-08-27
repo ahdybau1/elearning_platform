@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
+import '../../../core/providers/app_root_providers.dart';
 
 class StudentLoginScreen extends ConsumerStatefulWidget {
   const StudentLoginScreen({super.key});
@@ -56,10 +57,11 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Visible uniquement quand cet écran a été empilé par-dessus le déverrouillage par code
-    // (« Code oublié ? », « Ajouter un compte ») — permet de faire marche arrière sans avoir à
-    // saisir un mot de passe si l'utilisateur se souvient finalement de son code.
-    final canGoBack = Navigator.canPop(context);
+    // Deux cas bien distincts : empilé par-dessus le déverrouillage par code (« Code oublié ? »,
+    // « Ajouter un compte ») → un simple pop suffit. Racine directe du parcours élève (juste après
+    // « Je suis élève » sur RoleSelectionScreen, jamais empilée) → il n'y a rien à dépiler, il faut
+    // réinitialiser le choix de rôle pour revenir à cet écran (voir AppRootGate, main.dart).
+    final canPop = Navigator.canPop(context);
     return Scaffold(
       backgroundColor: context.colors.background,
       body: SafeArea(
@@ -71,17 +73,21 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (canGoBack) ...[
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: IconButton(
-                        icon: Icon(Icons.arrow_back_rounded, color: context.colors.textSecondary),
-                        tooltip: 'Retour',
-                        onPressed: () => Navigator.pop(context),
-                      ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      icon: Icon(Icons.arrow_back_rounded, color: context.colors.textSecondary),
+                      tooltip: 'Retour',
+                      onPressed: () {
+                        if (canPop) {
+                          Navigator.pop(context);
+                        } else {
+                          ref.read(hasChosenStudentRoleProvider.notifier).state = false;
+                        }
+                      },
                     ),
-                    const SizedBox(height: 4),
-                  ],
+                  ),
+                  const SizedBox(height: 4),
                   Center(
                     child: Container(
                       width: 64,

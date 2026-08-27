@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/device_accounts_service.dart';
+import '../../../core/providers/app_root_providers.dart';
 import 'login_code_entry_screen.dart';
 import 'student_login_screen.dart';
 
@@ -41,6 +42,18 @@ class _DeviceAccountSelectorScreenState extends ConsumerState<DeviceAccountSelec
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    icon: Icon(Icons.arrow_back_rounded, color: context.colors.textSecondary),
+                    tooltip: 'Retour',
+                    // Cet écran est toujours la racine directe du parcours élève (jamais empilé) —
+                    // rien à dépiler, il faut réinitialiser le choix de rôle pour revenir à
+                    // RoleSelectionScreen (voir AppRootGate, main.dart).
+                    onPressed: () => ref.read(hasChosenStudentRoleProvider.notifier).state = false,
+                  ),
+                ),
+                const SizedBox(height: 4),
                 Text(
                   'Qui se connecte ?',
                   style: GoogleFonts.outfit(
