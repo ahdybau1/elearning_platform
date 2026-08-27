@@ -3,95 +3,166 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
+import '../../../core/providers/student_providers.dart';
+import '../../../core/models/student_models.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../core/widgets/student_screen_header.dart';
+import 'exercise_runner_screen.dart';
 
 /// §3.2 du cahier des charges : structure à trois niveaux d'indépendance (liés à une leçon, liés à
-/// un chapitre hors leçon, indépendants). Données de démonstration pour cette passe de conception —
-/// la couche réelle de contenu (subjects/chapters/exercises) a un décalage de schéma connu qui doit
-/// être corrigé dans une passe dédiée avant de brancher cette page sur de vraies requêtes.
+/// un chapitre hors leçon, indépendants) — vraies données depuis `exercises` (voir
+/// StudentSupabaseService.fetchExercisesForClass), regroupées côté client sur lesson_id/chapter_id.
 class ExercisesHubScreen extends ConsumerWidget {
   const ExercisesHubScreen({super.key});
-
-  static const _byLesson = [
-    {'title': 'Nombres Complexes — Forme algébrique', 'subject': 'Mathématiques', 'count': 8, 'difficulty': 'Intermédiaire'},
-    {'title': 'Limites & Continuité', 'subject': 'Mathématiques', 'count': 6, 'difficulty': 'Approfondissement'},
-    {'title': 'Optique Ondulatoire', 'subject': 'Physique - Chimie', 'count': 5, 'difficulty': 'Simple'},
-  ];
-
-  static const _byChapter = [
-    {'title': 'Entraînement général — Fonctions', 'subject': 'Mathématiques', 'count': 14, 'difficulty': 'Mixte'},
-    {'title': 'Approfondissement — Mécanique', 'subject': 'Physique - Chimie', 'count': 10, 'difficulty': 'Approfondissement'},
-  ];
-
-  static const _independent = [
-    {'title': 'Série Type Examen — Toutes Notions', 'subject': 'Mathématiques', 'count': 25, 'difficulty': 'Examen'},
-    {'title': 'Révision Multi-Chapitres', 'subject': 'Français & Littérature', 'count': 12, 'difficulty': 'Mixte'},
-  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(studentAuthProvider).activeProfile;
+    final exercisesAsync = profile == null
+        ? const AsyncValue<List<Exercise>>.data([])
+        : ref.watch(classExercisesProvider(profile.classNodeId));
 
     return StudentPageContent(
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            StudentScreenHeader(title: 'Exercices (${profile?.className ?? ''})'),
-            const SizedBox(height: 24),
-            _buildSection(context, 'Liés à une leçon', 'Créés par l\'enseignant et/ou générés par l\'IA', _byLesson, context.colors.accentPrimary),
-            const SizedBox(height: 28),
-            _buildSection(context, 'Entraînement de chapitre', 'Synthèse hors leçon précise, approfondissement', _byChapter, context.colors.accentIndigo),
-            const SizedBox(height: 28),
-            _buildSection(context, 'Indépendants (type examen)', 'Mélange de chapitres, accessibles depuis cette page générale', _independent, context.colors.accentAmber),
-          ],
+      child: exercisesAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => Center(
+          child: Text('Erreur : $err', style: TextStyle(color: context.colors.accentRose)),
         ),
+        data: (exercises) {
+          final byLesson = exercises.where((e) => e.lessonId != null).toList();
+          final byChapter = exercises.where((e) => e.lessonId == null && e.chapterId != null).toList();
+          final independent = exercises.where((e) => e.isIndependent).toList();
+
+          return ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              StudentScreenHeader(title: 'Exercices (${profile?.className ?? ''})'),
+              const SizedBox(height: 24),
+              _buildSection(
+                context,
+                'Liés à une leçon',
+                'Créés par l\'enseignant et/ou générés par l\'IA',
+                byLesson,
+                context.colors.accentPrimary,
+              ),
+              const SizedBox(height: 28),
+              _buildSection(
+                context,
+                'Entraînement de chapitre',
+                'Synthèse hors leçon précise, approfondissement',
+                byChapter,
+                context.colors.accentIndigo,
+              ),
+              const SizedBox(height: 28),
+              _buildSection(
+                context,
+                'Indépendants (type examen)',
+                'Mélange de chapitres, accessibles depuis cette page générale',
+                independent,
+                context.colors.accentAmber,
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildSection(BuildContext context, String title, String subtitle, List<Map<String, dynamic>> items, Color accent) {
+  Widget _buildSection(
+    BuildContext context,
+    String title,
+    String subtitle,
+    List<Exercise> items,
+    Color accent,
+  ) {
+    // Regroupe par chapitre/leçon (un même chapitre peut avoir plusieurs exercices) pour retrouver
+    // le rendu "série d'exercices" attendu plutôt qu'une ligne par question isolée.
+    final groups = <String, List<Exercise>>{};
+    for (final ex in items) {
+      final key = ex.chapterTitle ?? (ex.isIndependent ? 'Exercices indépendants' : 'Sans titre');
+      groups.putIfAbsent(key, () => []).add(ex);
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+        Text(
+          title,
+          style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+        ),
         const SizedBox(height: 2),
         Text(subtitle, style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary)),
         const SizedBox(height: 14),
-        ...items.map((item) => Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                color: context.colors.card,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: context.colors.border),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(9),
-                    decoration: BoxDecoration(color: accent.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
-                    child: Icon(Icons.edit_note_rounded, color: accent, size: 20),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(item['title'] as String, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
-                        Text('${item['subject']} • ${item['count']} exercices • ${item['difficulty']}',
-                            style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary)),
-                      ],
+        if (groups.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: context.colors.card.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: context.colors.border),
+            ),
+            child: Text(
+              'Aucun exercice publié dans cette catégorie pour le moment.',
+              style: GoogleFonts.inter(fontSize: 12, color: context.colors.textMuted),
+            ),
+          )
+        else
+          ...groups.entries.map((entry) {
+            final groupExercises = entry.value;
+            final subjectName = groupExercises.first.subjectName;
+            return Builder(
+              builder: (context) => Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: context.colors.card,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: context.colors.border),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(Icons.edit_note_rounded, color: accent, size: 20),
                     ),
-                  ),
-                  TextButton(
-                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Lancement de la série d\'exercices...')),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            entry.key,
+                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+                          ),
+                          Text(
+                            '${subjectName != null ? '$subjectName • ' : ''}${groupExercises.length} exercice${groupExercises.length > 1 ? 's' : ''}',
+                            style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: const Text('Commencer'),
-                  ),
-                ],
+                    TextButton(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ExerciseRunnerScreen(
+                            chapterId: groupExercises.first.chapterId ?? '',
+                            chapterTitle: entry.key,
+                            preloadedExercises: groupExercises,
+                          ),
+                        ),
+                      ),
+                      child: const Text('Commencer'),
+                    ),
+                  ],
+                ),
               ),
-            )),
+            );
+          }),
       ],
     );
   }

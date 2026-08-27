@@ -441,45 +441,79 @@ class Lesson {
   }
 }
 
+/// Reflète la vraie table `exercises` : le contenu de la question vit dans `instructions_json`
+/// (`statement`/`options`/`media`) et la correction dans `solution_json` (`correct_index`/
+/// `correction`) — pas de colonnes plates `question_text`/`options`/`correct_index` en base. `type`
+/// ici est en réalité la catégorie pédagogique ('entraînement'/'évaluation', gate RLS distincte),
+/// `format` porte la vraie nature de la question ('qcm', etc.) ; `points` n'existe nulle part en
+/// base (aucun barème réel n'est encore défini) — valeur d'affichage fixe assumée comme telle.
 class Exercise {
   final String id;
   final String? lessonId;
   final String? chapterId;
+  final String? classNodeId;
+  final String title;
+  final String format; // 'qcm', ...
+  final String difficulty;
   final String questionText;
-  final String type; // 'qcm', 'saisie', 'vrai_faux'
   final List<String> options;
   final int correctIndex;
   final String explanation;
   final int points;
+  final String? chapterTitle;
+  final String? subjectName;
 
   Exercise({
     required this.id,
     this.lessonId,
     this.chapterId,
+    this.classNodeId,
+    required this.title,
+    this.format = 'qcm',
+    this.difficulty = 'facile',
     required this.questionText,
-    this.type = 'qcm',
     this.options = const [],
     required this.correctIndex,
     required this.explanation,
     this.points = 10,
+    this.chapterTitle,
+    this.subjectName,
   });
 
+  /// Ni lié à une leçon ni à un chapitre : exercice de brassage multi-chapitres (§3.2 du CDC).
+  bool get isIndependent => lessonId == null && chapterId == null;
+
   factory Exercise.fromJson(Map<String, dynamic> json) {
-    final rawOptions = json['options'];
+    final instructions = Map<String, dynamic>.from(json['instructions_json'] as Map? ?? {});
+    final solution = Map<String, dynamic>.from(json['solution_json'] as Map? ?? {});
+    final rawOptions = instructions['options'];
     final List<String> parsedOptions = rawOptions is List
         ? rawOptions.map((o) => o.toString()).toList()
         : [];
+
+    // Le libellé chapitre/matière peut venir soit directement (exercice lié à un chapitre), soit
+    // via la leçon (exercice lié à une leçon, qui elle-même appartient à un chapitre) — jamais les
+    // deux en même temps en pratique, on prend le premier trouvé.
+    final directChapter = json['chapters'] as Map<String, dynamic>?;
+    final lesson = json['lessons'] as Map<String, dynamic>?;
+    final lessonChapter = lesson?['chapters'] as Map<String, dynamic>?;
+    final subject = (directChapter?['subjects'] ?? lessonChapter?['subjects']) as Map<String, dynamic>?;
 
     return Exercise(
       id: json['id'] as String,
       lessonId: json['lesson_id'] as String?,
       chapterId: json['chapter_id'] as String?,
-      questionText: json['question_text'] as String? ?? '',
-      type: json['type'] as String? ?? 'qcm',
+      classNodeId: json['class_node_id'] as String?,
+      title: json['title'] as String? ?? '',
+      format: json['format'] as String? ?? 'qcm',
+      difficulty: json['difficulty'] as String? ?? 'facile',
+      questionText: instructions['statement'] as String? ?? '',
       options: parsedOptions,
-      correctIndex: (json['correct_index'] as int?) ?? 0,
-      explanation: json['explanation'] as String? ?? '',
-      points: (json['points'] as int?) ?? 10,
+      correctIndex: (solution['correct_index'] as int?) ?? 0,
+      explanation: solution['correction'] as String? ?? '',
+      points: 10,
+      chapterTitle: (directChapter?['title'] ?? lesson?['title']) as String?,
+      subjectName: subject?['name'] as String?,
     );
   }
 }

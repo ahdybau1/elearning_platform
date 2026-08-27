@@ -3,16 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/providers/student_providers.dart';
+import '../../../core/models/student_models.dart';
 import '../../../core/widgets/student_page_content.dart';
 
 class ExerciseRunnerScreen extends ConsumerStatefulWidget {
   final String chapterId;
   final String chapterTitle;
+  /// Quand fourni (ex. depuis le hub « Exercices » — voir exercises_hub_screen.dart), court-circuite
+  /// la récupération par `chapterId` : nécessaire pour les exercices liés à une leçon ou indépendants,
+  /// qui n'ont justement pas de `chapterId` unique à interroger.
+  final List<Exercise>? preloadedExercises;
 
   const ExerciseRunnerScreen({
     super.key,
     required this.chapterId,
     required this.chapterTitle,
+    this.preloadedExercises,
   });
 
   @override
@@ -28,9 +34,9 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final exercisesAsync = ref.watch(
-      studentExercisesProvider(widget.chapterId),
-    );
+    final exercisesAsync = widget.preloadedExercises != null
+        ? AsyncValue<List<Exercise>>.data(widget.preloadedExercises!)
+        : ref.watch(studentExercisesProvider(widget.chapterId));
 
     return Scaffold(
       backgroundColor: context.colors.background,

@@ -299,6 +299,8 @@ class StudentSupabaseService {
   // ─── Exercises ────────────────────────────────────────────────
 
   /// Même principe que fetchLessons : plus de repli sur les 2 exercices fictifs codés en dur.
+  /// `exercises` n'a pas de colonne `display_order` (contrairement à `lessons`) — trié par date de
+  /// création, seul ordre stable réellement disponible en base.
   Future<List<Exercise>> fetchExercises(String chapterId) async {
     if (!_isValidUuid(chapterId)) return [];
     final rows = await client
@@ -306,7 +308,22 @@ class StudentSupabaseService {
         .select()
         .eq('chapter_id', chapterId)
         .eq('is_active', true)
-        .order('display_order')
+        .order('created_at')
+        .then((r) => r as List);
+    return rows.map((r) => Exercise.fromJson(Map<String, dynamic>.from(r))).toList();
+  }
+
+  /// §3.2 du CDC : vue globale « Exercices » de la classe, catégorisée par niveau de rattachement
+  /// (liés à une leçon / liés à un chapitre hors leçon / indépendants type examen) — une seule requête
+  /// par `class_node_id`, la catégorisation se fait ensuite côté client sur `lesson_id`/`chapter_id`.
+  Future<List<Exercise>> fetchExercisesForClass(String classNodeId) async {
+    if (!_isValidUuid(classNodeId)) return [];
+    final rows = await client
+        .from('exercises')
+        .select('*, chapters(title, subjects(name)), lessons(title, chapters(subjects(name)))')
+        .eq('class_node_id', classNodeId)
+        .eq('is_active', true)
+        .order('created_at')
         .then((r) => r as List);
     return rows.map((r) => Exercise.fromJson(Map<String, dynamic>.from(r))).toList();
   }

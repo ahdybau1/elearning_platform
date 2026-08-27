@@ -180,3 +180,9 @@ final shopDocumentsProvider =
   final service = ref.watch(studentSupabaseServiceProvider);
   return service.fetchShopDocuments(classNodeId);
 });
+
+final classExercisesProvider =
+    FutureProvider.family<List<Exercise>, String>((ref, classNodeId) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchExercisesForClass(classNodeId);
+});
