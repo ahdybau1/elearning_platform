@@ -19,7 +19,7 @@ point de départ, pas une supposition.
 
 ---
 
-## CF-001 — Modèle de contenu structuré (blocs typés) + migration additive
+## CF-001 — Modèle de contenu structuré (blocs typés) + migration additive [FAIT — 2026-08-28, commit `072f05f`]
 
 **Objectif.** Faire évoluer `content_json` vers une structure `{ "blocks": [ {id, type, order, data,
 renderer_key, version}, ... ] }` sans casser les leçons existantes.
@@ -51,6 +51,15 @@ nouveau format.
 
 **Critères d'acceptation.** Une leçon existante s'affiche à l'identique après le changement. Une nouvelle
 leçon écrite au format `blocks` s'affiche correctement. Aucun `if/else` par type ajouté hors du registre.
+
+**Réalisé.** `content_block.dart` + `block_renderer_registry.dart` (student_app), `Lesson.blocks` dans
+`student_models.dart`, branchement dans `lesson_reader_screen.dart`. Constat confirmé en cours de route :
+ce n'était pas qu'un problème de style — `contentJson['theoreme'/'formule'/'piege'/'methode']` n'étaient
+écrites par **aucun** chemin réel (ni l'éditeur manuel admin, ni la génération IA, qui stocke plutôt sous
+`contentJson['ai_structured']`) ; ces blocs ne s'affichaient donc jamais avant ce correctif. `Lesson.blocks`
+lit maintenant réellement `ai_structured.sections/common_traps/exam_tips`. `quiz_questions` (également
+généré par `ai-course-structuring` mais jamais exploité) reste explicitement hors périmètre — voir CF-003.
+`flutter analyze` propre + `flutter build web --release` réussi + build vérifié servi en HTTP 200.
 
 ---
 

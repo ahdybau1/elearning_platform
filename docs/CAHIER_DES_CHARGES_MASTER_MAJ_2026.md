@@ -1596,6 +1596,28 @@ traitement des comptes enseignant et pour éviter un lien non vérifié à un pr
   lecture de la progression/abonnement) : nécessiterait d'étendre les RLS de presque toutes les tables de
   contenu pédagogique — chantier dédié distinct.
 
+### Addendum — 2026-08-28 : pack de gouvernance IA/Content Factory + CF-001
+
+Un pack de gouvernance complet a été reçu et installé (`.agents/AGENTS.md` + 29 skills, cahiers
+`docs/CAHIER_DES_CHARGES_AGENTS_IA.md` et `docs/CAHIER_TECHNIQUE_*.md`, `docs/CAHIER_DES_CHARGES_
+MASTER_MAJ_2026.md`). Audit réel produit dans `docs/AUDIT_REPORT.md`, `docs/CONTENT_FACTORY_
+GAP_ANALYSIS.md`, `docs/CONTENT_FACTORY_IMPLEMENTATION_PLAN.md` : 5 Supabase Edge Functions IA existaient
+déjà (`ai-tutor-chat`, `ai-course-structuring`, `ai-exercise-generation`, `ai-catalog-types-generation`,
+`ai-moderation`) mais aucun RAG, Agent Registry, Quota Engine ni Compute Fabric — ces derniers sont
+volontairement différés (le pack lui-même les place en dernier, et ce serait un pivot d'infrastructure
+hors de la stack actuelle Flutter + Supabase).
+
+**CF-001 (fait, commit `072f05f`)** : `lesson_reader_screen.dart` lisait des clés fixes
+(`contentJson['theoreme'/'formule'/'piege'/'methode']`) qui n'étaient en réalité écrites par **aucun**
+chemin réel — un vrai bug de perte de donnée, pas seulement un défaut de style. La structuration IA
+(`ai-course-structuring`) génère et l'admin stocke bien `contentJson['ai_structured']` (sections
+théorème/définition/formule/méthode/exemple, pièges classiques, conseils d'examen, quiz), mais rien ne
+l'affichait jamais côté élève. Nouveau modèle `ContentBlock` + `BlockRendererRegistry`
+(`student_app/lib/core/{models,rendering}/`) : `Lesson.blocks` dérive maintenant les blocs réels depuis
+`ai_structured`, avec repli sur le texte brut historique pour les leçons plus anciennes — aucune
+régression, `contentJson` lui-même n'est pas modifié. `quiz_questions` (également généré mais toujours
+inexploité) reste hors périmètre, réservé à l'Exercise Factory (CF-003).
+
 
 ---
 
