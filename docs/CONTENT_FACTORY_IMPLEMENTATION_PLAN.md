@@ -102,10 +102,19 @@ d'aplatissement markdown, devenu mort) a été supprimé.
 
 Ce qui manque réellement par rapport à la cible U2.4 (`hints`, `skills`, `prerequisites`, `provenance`,
 détecteur de doublons, classification automatique de difficulté) n'est donc **pas un bug à corriger** mais
-une **fonctionnalité à ajouter** — et ce sont des choix produit (quelle taxonomie de compétences ? quel
-seuil de similarité pour un doublon ?) qu'il vaut mieux trancher avec le porteur de projet avant de créer
-des colonnes/migrations, plutôt que de les inventer. Non démarré ; pas de raison de le prioriser avant
-confirmation, la fonctionnalité existante étant déjà saine.
+une **fonctionnalité à ajouter**.
+
+**Enrichissement `hints`/`skills`/`prerequisites`/`provenance` [FAIT — 2026-08-29, commit `859ff54`].**
+Plutôt que d'attendre une taxonomie de compétences figée (choix produit non tranché), migration 54 :
+`skills`/`prerequisites` en tags texte libre (`TEXT[]`), migrables vers une vraie taxonomie/Competency
+Graph plus tard sans perte de données — voir le commentaire de la migration pour la justification complète.
+`hints` dans `instructions_json` (contenu élève, pas une colonne). `ai-exercise-generation` génère
+maintenant indices + compétences en plus de l'énoncé/corrigé (déployé). Formulaire admin étendu (3 champs
+« Pédagogie »), flux de génération par lot les reprend automatiquement. Côté élève,
+`exercise_runner_screen.dart` révèle les indices progressivement (bouton « Voir un indice », jamais tous
+d'un coup). Détecteur de doublons et classification automatique de difficulté restent non démarrés —
+plus proches d'un vrai chantier RAG/similarité que d'un ajout de colonne, pas de raison de les prioriser
+maintenant.
 
 ## CF-004 — Agents IA existants → contrat standard §4 [FAIT ET DÉPLOYÉ — 2026-08-28, commit `9522227`]
 
