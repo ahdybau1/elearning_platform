@@ -63,12 +63,28 @@ généré par `ai-course-structuring` mais jamais exploité) reste explicitement
 
 ---
 
-## CF-002 — Étendre le registre au Block Editor Admin + preview
+## CF-002 — Étendre le registre au Block Editor Admin + preview [PARTIE 1 FAITE — 2026-08-28, commit `4b9f8b9`]
 
 Une fois CF-001 stable : éditeur admin capable d'ajouter/réordonner/supprimer des blocs typés (pas de saisie
 JSON brute), preview live réutilisant le même registre que l'app élève (même rendu, une seule source de
 vérité). Nécessite d'abord de lister les types de blocs réellement utiles avec l'équipe pédagogique
 (catalogue §16.0 — déjà partiellement outillé via `pedagogical_catalog_screen.dart`, à vérifier/étendre).
+
+**Réalisé (partie 1 — honnêteté de l'aperçu + persistance native, pas encore l'éditeur visuel).**
+`admin_app` et `student_app` sont deux projets Flutter sans package Dart partagé (vérifié : aucune
+dépendance `path:` entre les deux `pubspec.yaml`) — « réutiliser le même registre » au sens littéral
+demande d'extraire un package commun, non fait ici. À la place : le rendu de l'aperçu admin
+(`_buildPreviewSection`/`_buildPreviewCallout` dans `lessons_manager_screen.dart`) a été réécrit pour
+reproduire fidèlement le même mapping type→icône/couleur que `BlockRendererRegistry`, et pour afficher
+pièges/conseils/formules qu'il ignorait avant (l'aperçu mentait sur ce que l'élève voit réellement).
+`_blocksFromAiStructured` persiste désormais `content_json['blocks']` au format natif dès l'enregistrement,
+avec le même mapping exact que `Lesson.blocks` côté élève.
+
+**Reste à faire (partie 2, non commencée).** Éditeur visuel permettant d'ajouter/modifier/réordonner/
+supprimer des blocs à la main (pas seulement via génération IA) — nécessite d'abord de confirmer avec vous
+la liste définitive des types de blocs à exposer dans l'UI (au-delà de theoreme/definition/formule/methode/
+exemple/piege/conseil_examen déjà supportés en lecture). Ne pas commencer sans cette confirmation, pour
+éviter de construire une UI qu'il faudra reprendre.
 
 ## CF-003 — Exercise Factory : aligner `exercises` sur le schéma cible U2.4
 
