@@ -1,37 +1,37 @@
-# CAHIER DES CHARGES â AGENTS IA EDLEARN
+# CAHIER DES CHARGES — AGENTS IA EDLEARN
 
-**Plateforme E-learning Cameroun â CollÃ¨ge et LycÃ©e**  
-**Version : 1.0 consolidÃ©e â 28 aoÃ»t 2026**  
-**Statut : spÃ©cification technique et fonctionnelle pour vibe coding**
+**Plateforme E-learning Cameroun — Collège et Lycée**  
+**Version : 1.0 consolidée — 28 août 2026**  
+**Statut : spécification technique et fonctionnelle pour vibe coding**
 
-> Ce document complÃ¨te le cahier maÃ®tre. Il ne remplace aucune exigence du cahier principal. En cas de conflit, les dÃ©cisions fermes les plus rÃ©centes validÃ©es par le porteur du projet, puis le cahier maÃ®tre mis Ã  jour, priment.
+> Ce document complète le cahier maître. Il ne remplace aucune exigence du cahier principal. En cas de conflit, les décisions fermes les plus récentes validées par le porteur du projet, puis le cahier maître mis à jour, priment.
 
 ---
 
 ## 1. Objet
 
-Ce document spÃ©cifie la couche d'agents IA de la plateforme : responsabilitÃ©s, frontiÃ¨res, donnÃ©es, outils, RAG, modÃ¨les, quotas, sÃ©curitÃ©, observabilitÃ©, modes dÃ©gradÃ©s, tests et administration.
+Ce document spécifie la couche d'agents IA de la plateforme : responsabilités, frontières, données, outils, RAG, modèles, quotas, sécurité, observabilité, modes dégradés, tests et administration.
 
-L'objectif n'est pas de crÃ©er 26 chatbots indÃ©pendants. Un **agent** est un workflow mÃ©tier spÃ©cialisÃ© qui combine, selon le besoin : rÃ¨gles dÃ©terministes, RAG, Student Model, Competency Graph, outils typÃ©s, cache, modÃ¨les locaux/on-device/serveur, validation humaine et journalisation.
+L'objectif n'est pas de créer 26 chatbots indépendants. Un **agent** est un workflow métier spécialisé qui combine, selon le besoin : règles déterministes, RAG, Student Model, Competency Graph, outils typés, cache, modèles locaux/on-device/serveur, validation humaine et journalisation.
 
 Principe directeur :
 
-> **Le LLM comprend, raisonne, explique, crÃ©e et orchestre ; les bibliothÃ¨ques spÃ©cialisÃ©es calculent, exÃ©cutent, rendent, simulent et stockent.**
+> **Le LLM comprend, raisonne, explique, crée et orchestre ; les bibliothèques spécialisées calculent, exécutent, rendent, simulent et stockent.**
 
 ---
 
 ## 2. Contraintes absolues
 
-1. Aucune API IA commerciale payante n'est une dÃ©pendance obligatoire.
-2. Les modÃ¨les sont interchangeables via un Model Provider/Router.
-3. Aucun agent n'obtient un accÃ¨s SQL gÃ©nÃ©rique Ã  toute la base.
-4. Les outils sont allowlistÃ©s, typÃ©s, autorisÃ©s par contexte et auditÃ©s.
-5. Toute sortie structurÃ©e est validÃ©e avant effet mÃ©tier.
-6. Publication pÃ©dagogique, notes officielles, sanctions, remboursements et actions financiÃ¨res passent par les services mÃ©tier et les validations requises.
-7. Les fonctions pÃ©dagogiques essentielles disposent d'un mode sans LLM lorsque techniquement pertinent.
-8. Les contenus destinÃ©s aux mineurs suivent les rÃ¨gles de validation humaine du cahier maÃ®tre.
-9. Les quotas protÃ¨gent principalement le **compute distant/gÃ©nÃ©ratif coÃ»teux** ; ils ne doivent pas artificiellement bloquer les moteurs dÃ©terministes, le cache ou les contenus dÃ©jÃ  publiÃ©s.
-10. Les valeurs numÃ©riques de quotas ne sont pas codÃ©es en dur avant benchmark rÃ©el.
+1. Aucune API IA commerciale payante n'est une dépendance obligatoire.
+2. Les modèles sont interchangeables via un Model Provider/Router.
+3. Aucun agent n'obtient un accès SQL générique à toute la base.
+4. Les outils sont allowlistés, typés, autorisés par contexte et audités.
+5. Toute sortie structurée est validée avant effet métier.
+6. Publication pédagogique, notes officielles, sanctions, remboursements et actions financières passent par les services métier et les validations requises.
+7. Les fonctions pédagogiques essentielles disposent d'un mode sans LLM lorsque techniquement pertinent.
+8. Les contenus destinés aux mineurs suivent les règles de validation humaine du cahier maître.
+9. Les quotas protègent principalement le **compute distant/génératif coûteux** ; ils ne doivent pas artificiellement bloquer les moteurs déterministes, le cache ou les contenus déjà publiés.
+10. Les valeurs numériques de quotas ne sont pas codées en dur avant benchmark réel.
 
 Configuration cible :
 
@@ -75,36 +75,36 @@ Flutter / PWA
 
 ### 3.1 Deux orchestrateurs
 
-**Local Orchestrator Flutter/Dart** : dÃ©cide si la demande peut Ãªtre rÃ©solue par cache, contenu validÃ©, outil local, RAG local ou modÃ¨le on-device.
+**Local Orchestrator Flutter/Dart** : décide si la demande peut être résolue par cache, contenu validé, outil local, RAG local ou modèle on-device.
 
-**Sovereign AI Gateway** : prend en charge les workflows serveur, RAG global, modÃ¨les plus lourds, queues, Compute Fabric, Ã©valuations et politiques centralisÃ©es.
+**Sovereign AI Gateway** : prend en charge les workflows serveur, RAG global, modèles plus lourds, queues, Compute Fabric, évaluations et politiques centralisées.
 
 ---
 
 ## 4. Contrat standard de tout agent
 
-Chaque agent DOIT dÃ©clarer :
+Chaque agent DOIT déclarer :
 
 - `agent_id`, `name`, `version`, `status` ;
 - mission et non-mission ;
-- acteurs autorisÃ©s et scopes ;
+- acteurs autorisés et scopes ;
 - triggers ;
-- schÃ©ma JSON d'entrÃ©e et de sortie ;
-- donnÃ©es lisibles et donnÃ©es modifiables ;
-- tools autorisÃ©s/interdits ;
+- schéma JSON d'entrée et de sortie ;
+- données lisibles et données modifiables ;
+- tools autorisés/interdits ;
 - politique RAG ;
-- politique mÃ©moire ;
-- politique modÃ¨le ;
-- classe de coÃ»t/quota ;
+- politique mémoire ;
+- politique modèle ;
+- classe de coût/quota ;
 - timeout, retry, cache et idempotence ;
-- mode offline/dÃ©gradÃ© ;
+- mode offline/dégradé ;
 - validations automatiques ;
 - Human-In-The-Loop ;
-- mÃ©triques ;
+- métriques ;
 - tests ;
 - rollback/versioning.
 
-### 4.1 Envelope d'entrÃ©e commun
+### 4.1 Envelope d'entrée commun
 
 ```json
 {
@@ -147,29 +147,29 @@ Chaque agent DOIT dÃ©clarer :
 
 ---
 
-## 5. Routage, modÃ¨les et coÃ»ts
+## 5. Routage, modèles et coûts
 
-Ordre prÃ©fÃ©rÃ© :
+Ordre préféré :
 
 ```text
-1. rÃ¨gles / moteur dÃ©terministe
-2. cache / contenu validÃ©
+1. règles / moteur déterministe
+2. cache / contenu validé
 3. Device AI
 4. Device AI + RAG + tools
 5. Compute Fabric souverain
-6. capacitÃ© externe gratuite autorisÃ©e
-7. provider payant optionnel, dÃ©sactivÃ© en AI_ZERO_COST_MODE
+6. capacité externe gratuite autorisée
+7. provider payant optionnel, désactivé en AI_ZERO_COST_MODE
 ```
 
-Les agents ne choisissent pas directement un fournisseur. Ils demandent une **capability** : `classification_small`, `pedagogy_small`, `reasoning_strong`, `vision_ocr`, `embedding`, etc. Le Model Router choisit le moteur autorisÃ©.
+Les agents ne choisissent pas directement un fournisseur. Ils demandent une **capability** : `classification_small`, `pedagogy_small`, `reasoning_strong`, `vision_ocr`, `embedding`, etc. Le Model Router choisit le moteur autorisé.
 
 ### 5.1 Trois cerveaux logiques
 
-- **EduRouter** : petit modÃ¨le/classifieur pour intention, routage, tool calling simple.
-- **EduSmall** : modÃ¨le pÃ©dagogique local/on-device ou serveur lÃ©ger pour tutorat courant.
-- **EduStrong** : modÃ¨le plus puissant pour tÃ¢ches complexes, uniquement si nÃ©cessaire.
+- **EduRouter** : petit modèle/classifieur pour intention, routage, tool calling simple.
+- **EduSmall** : modèle pédagogique local/on-device ou serveur léger pour tutorat courant.
+- **EduStrong** : modèle plus puissant pour tâches complexes, uniquement si nécessaire.
 
-Les 26 agents logiques peuvent partager ces modÃ¨les, prompts, tools et adapters. Il est interdit de crÃ©er 26 gros modÃ¨les sÃ©parÃ©s par dÃ©faut.
+Les 26 agents logiques peuvent partager ces modèles, prompts, tools et adapters. Il est interdit de créer 26 gros modèles séparés par défaut.
 
 ---
 
@@ -181,358 +181,358 @@ Le droit d'abonnement et le droit IA sont deux concepts distincts.
 SUBSCRIPTION -> AI POLICY -> ALLOWANCES / PRIORITY / MODEL TIER / CONCURRENCY
 ```
 
-L'Admin doit pouvoir dÃ©finir des politiques pour FREE, DAY_PASS, WEEKLY, MONTHLY, PREMIUM, SCHOOL ou futures offres.
+L'Admin doit pouvoir définir des politiques pour FREE, DAY_PASS, WEEKLY, MONTHLY, PREMIUM, SCHOOL ou futures offres.
 
-Une action IA reÃ§oit un poids de compute calculÃ© Ã  partir de mÃ©triques observables : modÃ¨le, tokens, durÃ©e GPU/CPU, OCR, vision, audio, gÃ©nÃ©ration, taille de contexte, etc. Les valeurs finales sont dÃ©terminÃ©es par benchmark, jamais inventÃ©es dans le code.
+Une action IA reçoit un poids de compute calculé à partir de métriques observables : modèle, tokens, durée GPU/CPU, OCR, vision, audio, génération, taille de contexte, etc. Les valeurs finales sont déterminées par benchmark, jamais inventées dans le code.
 
-Ã quota distant Ã©puisÃ© : basculer vers cache, contenu validÃ©, outil dÃ©terministe, Device AI, modÃ¨le plus lÃ©ger, queue diffÃ©rÃ©e ou message utile. Les cours, exercices existants, examens, jeux publiÃ©s, musiques publiÃ©es, labs dÃ©terministes et offline restent accessibles selon les droits pÃ©dagogiques du plan.
+À quota distant épuisé : basculer vers cache, contenu validé, outil déterministe, Device AI, modèle plus léger, queue différée ou message utile. Les cours, exercices existants, examens, jeux publiés, musiques publiées, labs déterministes et offline restent accessibles selon les droits pédagogiques du plan.
 
 ---
 
 # 7. CATALOGUE OFFICIEL DES 26 AGENTS
 
-## AIA-AGT-001 â TutorAgent
+## AIA-AGT-001 — TutorAgent
 
-**Mission.** Tutorat conversationnel personnalisÃ©, contextualisÃ© par curriculum, Student Model et contenus validÃ©s. Explique, questionne, donne des indices et adapte la profondeur.
+**Mission.** Tutorat conversationnel personnalisé, contextualisé par curriculum, Student Model et contenus validés. Explique, questionne, donne des indices et adapte la profondeur.
 
-**Non-mission.** Ne modifie pas une note officielle, ne publie pas de contenu, ne remplace pas un enseignant dans une dÃ©cision sensible, ne calcule pas approximativement lorsqu'un moteur exact existe.
+**Non-mission.** Ne modifie pas une note officielle, ne publie pas de contenu, ne remplace pas un enseignant dans une décision sensible, ne calcule pas approximativement lorsqu'un moteur exact existe.
 
-**EntrÃ©es mÃ©tier.** Question, contexte acadÃ©mique, compÃ©tence ciblÃ©e, historique conversationnel court, maÃ®trise/confidence, prÃ©fÃ©rences d'accessibilitÃ©.
+**Entrées métier.** Question, contexte académique, compétence ciblée, historique conversationnel court, maîtrise/confidence, préférences d'accessibilité.
 
-**Sortie.** RÃ©ponse pÃ©dagogique structurÃ©e : `answer`, `steps`, `hints`, `check_for_understanding`, `recommended_next_action`, citations.
+**Sortie.** Réponse pédagogique structurée : `answer`, `steps`, `hints`, `check_for_understanding`, `recommended_next_action`, citations.
 
 **Tools.** `search_validated_content`, `get_skill_context`, `get_student_mastery`, `sympy_solve`, `numeric_compute`, `get_formula`, `get_example`, `create_learning_event`.
 
-**RAG.** Curriculum et contenus publiÃ©s du scope actif uniquement. Citations obligatoires pour les faits pÃ©dagogiques rÃ©cupÃ©rÃ©s.
+**RAG.** Curriculum et contenus publiés du scope actif uniquement. Citations obligatoires pour les faits pédagogiques récupérés.
 
-**MÃ©moire.** MÃ©moire conversationnelle courte + Student Model structurÃ© ; pas de stockage illimitÃ© du chat brut.
+**Mémoire.** Mémoire conversationnelle courte + Student Model structuré ; pas de stockage illimité du chat brut.
 
-**ModÃ¨le.** Cache/dÃ©terministe si possible â EduSmall â EduStrong pour difficultÃ© justifiÃ©e.
+**Modèle.** Cache/déterministe si possible — EduSmall — EduStrong pour difficulté justifiée.
 
-**Quota.** Cache/tools/local gÃ©nÃ©ralement 0 remote credits ; infÃ©rence distante pondÃ©rÃ©e.
+**Quota.** Cache/tools/local généralement 0 remote credits ; inférence distante pondérée.
 
-**Workflow.** Classifier intention â rÃ©cupÃ©rer contexte â rechercher sources â choisir tools â produire rÃ©ponse â vÃ©rifier niveau/factualitÃ© â proposer mini-vÃ©rification â journaliser preuve utile.
+**Workflow.** Classifier intention — récupérer contexte — rechercher sources — choisir tools — produire réponse — vérifier niveau/factualité — proposer mini-vérification — journaliser preuve utile.
 
-**HITL.** Escalade vers enseignant/support selon rÃ¨gles de sÃ©curitÃ© ou impossibilitÃ© pÃ©dagogique.
+**HITL.** Escalade vers enseignant/support selon règles de sécurité ou impossibilité pédagogique.
 
-**CritÃ¨res d'acceptation.** Ne fuit aucun autre profil ; respecte niveau/classe ; cite le RAG ; utilise le moteur exact pour calculs ; mode dÃ©gradÃ© utile ; latence et coÃ»t observables.
+**Critères d'acceptation.** Ne fuit aucun autre profil ; respecte niveau/classe ; cite le RAG ; utilise le moteur exact pour calculs ; mode dégradé utile ; latence et coût observables.
 
 ---
 
-## AIA-AGT-002 â SocraticAgent
+## AIA-AGT-002 — SocraticAgent
 
-**Mission.** Faire progresser l'Ã©lÃ¨ve par questions graduÃ©es plutÃ´t que donner immÃ©diatement la solution.
+**Mission.** Faire progresser l'élève par questions graduées plutôt que donner immédiatement la solution.
 
-**EntrÃ©es.** ProblÃ¨me, tentative de l'Ã©lÃ¨ve, compÃ©tence, niveau de maÃ®trise, nombre d'indices dÃ©jÃ  consommÃ©s.
+**Entrées.** Problème, tentative de l'élève, compétence, niveau de maîtrise, nombre d'indices déjà consommés.
 
 **Sortie.** `next_question`, `hint_level`, `diagnostic_signal`, `stop_condition`.
 
-**Tools.** RAG, mastery lookup, exact solvers en vÃ©rification interne.
+**Tools.** RAG, mastery lookup, exact solvers en vérification interne.
 
-**Interdits.** RÃ©vÃ©ler immÃ©diatement la solution si le mode socratique est actif, sauf demande explicite ou politique d'accessibilitÃ©.
+**Interdits.** Révéler immédiatement la solution si le mode socratique est actif, sauf demande explicite ou politique d'accessibilité.
 
-**ModÃ¨le/coÃ»t.** EduSmall privilÃ©giÃ© ; questions prÃ©-gÃ©nÃ©rÃ©es/cache possibles.
+**Modèle/coût.** EduSmall privilégié ; questions pré-générées/cache possibles.
 
-**Tests.** Progression des indices, absence de boucle, dÃ©tection de blocage, solution finale correcte.
+**Tests.** Progression des indices, absence de boucle, détection de blocage, solution finale correcte.
 
 ---
 
-## AIA-AGT-003 â ExplanationAgent
+## AIA-AGT-003 — ExplanationAgent
 
-**Mission.** Reformuler une notion validÃ©e selon niveau, langue, style, accessibilitÃ© et difficultÃ©.
+**Mission.** Reformuler une notion validée selon niveau, langue, style, accessibilité et difficulté.
 
-**Sortie.** Explication courte/standard/dÃ©taillÃ©e, exemples et analogies clairement identifiÃ©es.
+**Sortie.** Explication courte/standard/détaillée, exemples et analogies clairement identifiées.
 
 **Tools.** RAG, glossary, formula/math tools, accessibility formatter.
 
-**RÃ¨gle.** Ne transforme pas une analogie en fait scientifique. Ne change pas le sens d'une dÃ©finition officielle.
+**Règle.** Ne transforme pas une analogie en fait scientifique. Ne change pas le sens d'une définition officielle.
 
-**Mode dÃ©gradÃ©.** Utiliser variantes Ã©ditoriales prÃ©validÃ©es.
+**Mode dégradé.** Utiliser variantes éditoriales prévalidées.
 
 ---
 
-## AIA-AGT-004 â ExerciseAgent
+## AIA-AGT-004 — ExerciseAgent
 
-**Mission.** GÃ©nÃ©rer ou transformer des exercices alignÃ©s sur compÃ©tences, difficultÃ©, format et curriculum.
+**Mission.** Générer ou transformer des exercices alignés sur compétences, difficulté, format et curriculum.
 
-**EntrÃ©es.** Nombre, distribution de difficultÃ©, types, compÃ©tences, source/course optionnel, contraintes d'examen.
+**Entrées.** Nombre, distribution de difficulté, types, compétences, source/course optionnel, contraintes d'examen.
 
-**Sortie.** Liste d'objets structurÃ©s avec `statement`, `questions`, `answers`, `solution`, `hints`, `difficulty`, `skills`, `prerequisites`, `grading`, `metadata`.
+**Sortie.** Liste d'objets structurés avec `statement`, `questions`, `answers`, `solution`, `hints`, `difficulty`, `skills`, `prerequisites`, `grading`, `metadata`.
 
 **Tools.** RAG, SymPy/NumPy/SciPy, validators, duplicate detector, curriculum tools.
 
-**Workflow.** Plan de lot â gÃ©nÃ©ration â rÃ©solution indÃ©pendante â validation â dÃ©duplication â classification difficultÃ© â `waiting_review`.
+**Workflow.** Plan de lot — génération — résolution indépendante — validation — déduplication — classification difficulté — `waiting_review`.
 
-**HITL.** Publication interdite sans workflow Ã©ditorial appropriÃ©.
+**HITL.** Publication interdite sans workflow éditorial approprié.
 
-**Admin.** Accepter/modifier/rÃ©gÃ©nÃ©rer/rejeter exercice par exercice ; statistiques d'acceptation par version d'agent/modÃ¨le.
-
----
-
-## AIA-AGT-005 â CorrectionAgent
-
-**Mission.** Corriger une tentative Ã  partir d'une solution/barÃ¨me versionnÃ© et expliquer les erreurs.
-
-**Tools.** Exact solvers, code runner, rubric engine, OCR/formula recognition si rÃ©ponse photo.
-
-**RÃ¨gle.** SÃ©parer `machine_score`, `confidence`, `feedback` et `official_grade`. Une note officielle nÃ©cessitant validation humaine ne peut Ãªtre Ã©crite directement.
-
-**Sortie.** score proposÃ©, Ã©tapes correctes/incorrectes, feedback, misconception candidates, confiance, besoin de revue.
+**Admin.** Accepter/modifier/régénérer/rejeter exercice par exercice ; statistiques d'acceptation par version d'agent/modèle.
 
 ---
 
-## AIA-AGT-006 â RevisionAgent
+## AIA-AGT-005 — CorrectionAgent
 
-**Mission.** Construire une sÃ©ance de rÃ©vision selon maÃ®trise, oubli estimÃ©, Ã©chÃ©ances et temps disponible.
+**Mission.** Corriger une tentative à partir d'une solution/barème versionné et expliquer les erreurs.
+
+**Tools.** Exact solvers, code runner, rubric engine, OCR/formula recognition si réponse photo.
+
+**Règle.** Séparer `machine_score`, `confidence`, `feedback` et `official_grade`. Une note officielle nécessitant validation humaine ne peut être écrite directement.
+
+**Sortie.** score proposé, étapes correctes/incorrectes, feedback, misconception candidates, confiance, besoin de revue.
+
+---
+
+## AIA-AGT-006 — RevisionAgent
+
+**Mission.** Construire une séance de révision selon maîtrise, oubli estimé, échéances et temps disponible.
 
 **Tools.** Student Model, spaced-repetition engine, Learning Orchestrator, content catalog.
 
-**LLM.** Facultatif ; sÃ©lection mÃ©canique dÃ©terministe possible.
+**LLM.** Facultatif ; sélection mécanique déterministe possible.
 
-**Sortie.** Plan ordonnÃ© d'activitÃ©s avec raison de chaque choix.
-
----
-
-## AIA-AGT-007 â ExamCoachAgent
-
-**Mission.** PrÃ©parer aux BEPC, Probatoire, BaccalaurÃ©at, examens blancs et autres Ã©valuations configurÃ©es.
-
-**Tools.** Exam catalog, curriculum, mastery, timer/planning, past-paper RAG autorisÃ©.
-
-**RÃ¨gles.** Ne prÃ©tend pas connaÃ®tre une future Ã©preuve confidentielle ; distingue entraÃ®nement, prÃ©diction statistique et information officielle.
-
-**Sortie.** plan, prioritÃ©s, simulations, gestion du temps, lacunes, prochaines actions.
+**Sortie.** Plan ordonné d'activités avec raison de chaque choix.
 
 ---
 
-## AIA-AGT-008 â DiagnosticAgent
+## AIA-AGT-007 — ExamCoachAgent
 
-**Mission.** Estimer les compÃ©tences acquises/manquantes Ã  partir de preuves diagnostiques.
+**Mission.** Préparer aux BEPC, Probatoire, Baccalauréat, examens blancs et autres évaluations configurées.
 
-**LLM.** Non obligatoire pour scoring ; rÃ¨gles/IRT/BKT ou moteur validÃ© privilÃ©giÃ©s.
+**Tools.** Exam catalog, curriculum, mastery, timer/planning, past-paper RAG autorisé.
+
+**Règles.** Ne prétend pas connaître une future épreuve confidentielle ; distingue entraînement, prédiction statistique et information officielle.
+
+**Sortie.** plan, priorités, simulations, gestion du temps, lacunes, prochaines actions.
+
+---
+
+## AIA-AGT-008 — DiagnosticAgent
+
+**Mission.** Estimer les compétences acquises/manquantes à partir de preuves diagnostiques.
+
+**LLM.** Non obligatoire pour scoring ; règles/IRT/BKT ou moteur validé privilégiés.
 
 **Sortie.** skill estimates + confidence + evidence IDs + next diagnostic action.
 
-**RÃ¨gle.** Diagnostic explicable, contestable, non-Ã©tiquetant.
+**Règle.** Diagnostic explicable, contestable, non-étiquetant.
 
 ---
 
-## AIA-AGT-009 â MisconceptionAgent
+## AIA-AGT-009 — MisconceptionAgent
 
-**Mission.** DÃ©tecter des erreurs conceptuelles rÃ©currentes et proposer une remÃ©diation.
+**Mission.** Détecter des erreurs conceptuelles récurrentes et proposer une remédiation.
 
-**EntrÃ©es.** Tentatives et erreurs pÃ©dagogiques nÃ©cessaires, pseudonymisÃ©es selon contexte.
+**Entrées.** Tentatives et erreurs pédagogiques nécessaires, pseudonymisées selon contexte.
 
 **Sortie.** misconception candidate, confidence, evidence, remediation.
 
-**RÃ¨gle.** Une hypothÃ¨se n'est jamais stockÃ©e comme vÃ©ritÃ© dÃ©finitive ; version/confidence obligatoires.
+**Règle.** Une hypothèse n'est jamais stockée comme vérité définitive ; version/confidence obligatoires.
 
 ---
 
-## AIA-AGT-010 â RecommendationAgent
+## AIA-AGT-010 — RecommendationAgent
 
 **Mission.** Fournir des candidats/recommandations au Learning Orchestrator.
 
-**LLM.** Optionnel. Le moteur dÃ©terministe doit fonctionner sans LLM.
+**LLM.** Optionnel. Le moteur déterministe doit fonctionner sans LLM.
 
-**Sortie.** activitÃ©s candidates, score, raisons, contraintes et alternatives.
+**Sortie.** activités candidates, score, raisons, contraintes et alternatives.
 
-**Interdit.** Contourner les droits d'abonnement, rÃ¨gles d'Ã¢ge, fatigue, calendrier ou accessibilitÃ©.
+**Interdit.** Contourner les droits d'abonnement, règles d'âge, fatigue, calendrier ou accessibilité.
 
 ---
 
-## AIA-AGT-011 â GameContentAgent
+## AIA-AGT-011 — GameContentAgent
 
-**Mission.** GÃ©nÃ©rer du contenu/configuration de serious games liÃ©s aux compÃ©tences.
+**Mission.** Générer du contenu/configuration de serious games liés aux compétences.
 
-**Sortie.** JSON conforme Ã  un `GameTemplateEngine`, jamais du code Flutter arbitraire par dÃ©faut.
+**Sortie.** JSON conforme à un `GameTemplateEngine`, jamais du code Flutter arbitraire par défaut.
 
 **Tools.** Curriculum, competency graph, game template registry, validators.
 
-**RÃ¨gles.** Score de jeu distinct de maÃ®trise ; transfert vers activitÃ© scolaire mesurÃ© ; pas de dÃ©pendance IA temps rÃ©el obligatoire.
+**Règles.** Score de jeu distinct de maîtrise ; transfert vers activité scolaire mesuré ; pas de dépendance IA temps réel obligatoire.
 
-**HITL.** Validation pÃ©dagogique avant publication.
-
----
-
-## AIA-AGT-012 â MusicLearningAgent
-
-**Mission.** Transformer des objectifs pÃ©dagogiques en contenus musicaux mÃ©morisables et activitÃ©s de transfert.
-
-**Formats.** Chanson mnÃ©motechnique, rap Ã©ducatif, comptine, call-response, spoken word, rythme de formule/dÃ©finition, vocabulaire/prononciation.
-
-**Workflow.** Objectifs â paroles â validation factuelle/pÃ©dagogique â structure musicale â moteur audio autorisÃ© â intelligibilitÃ©/prononciation â synchronisation â activitÃ© de transfert â validation â publication.
-
-**RÃ¨gles.** RÃ©ussite en chant â  maÃ®trise. Pas de contenu protÃ©gÃ© sans licence ; pas de clonage vocal sans autorisation explicite ; enregistrements d'Ã©lÃ¨ves privÃ©s par dÃ©faut.
+**HITL.** Validation pédagogique avant publication.
 
 ---
 
-## AIA-AGT-013 â LabAssistantAgent
+## AIA-AGT-012 — MusicLearningAgent
 
-**Mission.** Guider l'Ã©lÃ¨ve dans un laboratoire virtuel et expliquer les rÃ©sultats d'un simulateur dÃ©terministe.
+**Mission.** Transformer des objectifs pédagogiques en contenus musicaux mémorisables et activités de transfert.
 
-**Tools.** Selon matiÃ¨re : ngspice, RDKit/Open Babel, 3Dmol.js, SymPy/SciPy, OpenModelica ou simulateurs validÃ©s.
+**Formats.** Chanson mnémotechnique, rap éducatif, comptine, call-response, spoken word, rythme de formule/définition, vocabulaire/prononciation.
 
-**RÃ¨gle.** Le LLM n'invente pas les rÃ©sultats physiques/chimiques ; le simulateur calcule, l'agent explique.
+**Workflow.** Objectifs — paroles — validation factuelle/pédagogique — structure musicale — moteur audio autorisé — intelligibilité/prononciation — synchronisation — activité de transfert — validation — publication.
 
----
-
-## AIA-AGT-014 â OCRAgent
-
-**Mission.** Extraire texte, structure grossiÃ¨re et zones utiles de PDF/image/scan.
-
-**Tools.** OpenCV preprocessing, PaddleOCR ou moteur validÃ©.
-
-**Sortie.** blocs OCR + coordonnÃ©es + confiance + langue + pages.
-
-**Quota.** Peut Ãªtre pondÃ©rÃ© pour OCR serveur ; OCR local possible hors quota distant.
-
-**RÃ¨gle.** Le rÃ©sultat OCR est une extraction candidate, pas une vÃ©ritÃ© publiÃ©e.
+**Règles.** Réussite en chant —  maîtrise. Pas de contenu protégé sans licence ; pas de clonage vocal sans autorisation explicite ; enregistrements d'élèves privés par défaut.
 
 ---
 
-## AIA-AGT-015 â FormulaRecognitionAgent
+## AIA-AGT-013 — LabAssistantAgent
 
-**Mission.** ReconnaÃ®tre formules imprimÃ©es/manuscrites et produire une reprÃ©sentation structurÃ©e (LaTeX/AST) vÃ©rifiable.
+**Mission.** Guider l'élève dans un laboratoire virtuel et expliquer les résultats d'un simulateur déterministe.
+
+**Tools.** Selon matière : ngspice, RDKit/Open Babel, 3Dmol.js, SymPy/SciPy, OpenModelica ou simulateurs validés.
+
+**Règle.** Le LLM n'invente pas les résultats physiques/chimiques ; le simulateur calcule, l'agent explique.
+
+---
+
+## AIA-AGT-014 — OCRAgent
+
+**Mission.** Extraire texte, structure grossière et zones utiles de PDF/image/scan.
+
+**Tools.** OpenCV preprocessing, PaddleOCR ou moteur validé.
+
+**Sortie.** blocs OCR + coordonnées + confiance + langue + pages.
+
+**Quota.** Peut être pondéré pour OCR serveur ; OCR local possible hors quota distant.
+
+**Règle.** Le résultat OCR est une extraction candidate, pas une vérité publiée.
+
+---
+
+## AIA-AGT-015 — FormulaRecognitionAgent
+
+**Mission.** Reconnaître formules imprimées/manuscrites et produire une représentation structurée (LaTeX/AST) vérifiable.
 
 **Tools.** Formula recognition engine, parser, SymPy.
 
 **Sortie.** formule, confidence, parse status, semantic validation.
 
-**RÃ¨gle.** Toute formule utilisÃ©e pour correction/calcul doit Ãªtre parsÃ©e/validÃ©e ou envoyÃ©e en revue.
+**Règle.** Toute formule utilisée pour correction/calcul doit être parsée/validée ou envoyée en revue.
 
 ---
 
-## AIA-AGT-016 â DocumentStructuringAgent
+## AIA-AGT-016 — DocumentStructuringAgent
 
-**Mission.** Transformer une source importÃ©e en Structured Content compatible Content Factory.
+**Mission.** Transformer une source importée en Structured Content compatible Content Factory.
 
-**EntrÃ©es.** OCR/text extraction, styles, images, tableaux, formules, metadata.
+**Entrées.** OCR/text extraction, styles, images, tableaux, formules, metadata.
 
-**Sortie.** chapitres/leÃ§ons/blocs structurÃ©s, ordre, types de blocs, assets, confidence, ambiguÃ¯tÃ©s.
+**Sortie.** chapitres/leçons/blocs structurés, ordre, types de blocs, assets, confidence, ambiguïtés.
 
 **Tools.** Pedagogical Catalog, template schemas, OCR/formula agents, validators.
 
-**RÃ¨gle.** Ne publie jamais. Conserve la traÃ§abilitÃ© source â bloc.
+**Règle.** Ne publie jamais. Conserve la traçabilité source — bloc.
 
 ---
 
-## AIA-AGT-017 â CurriculumMappingAgent
+## AIA-AGT-017 — CurriculumMappingAgent
 
-**Mission.** Proposer le rattachement d'un contenu aux pays/versions/classes/sÃ©ries/matiÃ¨res/chapitres/leÃ§ons/compÃ©tences.
+**Mission.** Proposer le rattachement d'un contenu aux pays/versions/classes/séries/matières/chapitres/leçons/compétences.
 
 **Tools.** Curriculum Graph, semantic search, taxonomy matcher.
 
 **Sortie.** mappings candidats + confidence + evidence.
 
-**HITL.** Mapping ambigu ou Ã  fort impact soumis au responsable pÃ©dagogique.
+**HITL.** Mapping ambigu ou à fort impact soumis au responsable pédagogique.
 
 ---
 
-## AIA-AGT-018 â TeacherAssistantAgent
+## AIA-AGT-018 — TeacherAssistantAgent
 
-**Mission.** Aider enseignants/auteurs Ã  prÃ©parer cours, exercices, corrections, plans, feedbacks et analyses de cohorte dans leur scope.
+**Mission.** Aider enseignants/auteurs à préparer cours, exercices, corrections, plans, feedbacks et analyses de cohorte dans leur scope.
 
 **Tools.** Content Factory, Exercise Factory, cohort analytics, RAG, generators.
 
-**RÃ¨gles.** Respect strict du scope enseignant ; pas d'accÃ¨s global aux Ã©lÃ¨ves ; toute publication suit workflow.
+**Règles.** Respect strict du scope enseignant ; pas d'accès global aux élèves ; toute publication suit workflow.
 
 ---
 
-## AIA-AGT-019 â ParentInsightAgent
+## AIA-AGT-019 — ParentInsightAgent
 
-**Mission.** Transformer les donnÃ©es autorisÃ©es d'un enfant liÃ© en synthÃ¨se claire et actionnable.
+**Mission.** Transformer les données autorisées d'un enfant lié en synthèse claire et actionnable.
 
-**Sortie.** progrÃ¨s, forces, points Ã  travailler, recommandations de soutien, alertes autorisÃ©es.
+**Sortie.** progrès, forces, points à travailler, recommandations de soutien, alertes autorisées.
 
-**RÃ¨gles.** Pas de surveillance punitive ; pas d'accÃ¨s aux conversations/donnÃ©es privÃ©es non autorisÃ©es ; langage comprÃ©hensible et non stigmatisant.
+**Règles.** Pas de surveillance punitive ; pas d'accès aux conversations/données privées non autorisées ; langage compréhensible et non stigmatisant.
 
-**LLM.** RÃ©sumÃ©s peuvent Ãªtre prÃ©-calculÃ©s ; donnÃ©es source dÃ©terministes.
+**LLM.** Résumés peuvent être pré-calculés ; données source déterministes.
 
 ---
 
-## AIA-AGT-020 â ModerationAgent
+## AIA-AGT-020 — ModerationAgent
 
-**Mission.** DÃ©tecter et prioriser contenus communautaires potentiellement contraires aux rÃ¨gles.
+**Mission.** Détecter et prioriser contenus communautaires potentiellement contraires aux règles.
 
 **Sortie.** labels, severity, confidence, recommended action.
 
-**RÃ¨gle.** Le modÃ¨le ne prononce pas automatiquement une sanction lourde. Human review selon seuil/politique. Conserver appels et audit.
+**Règle.** Le modèle ne prononce pas automatiquement une sanction lourde. Human review selon seuil/politique. Conserver appels et audit.
 
 ---
 
-## AIA-AGT-021 â AdminAssistantAgent
+## AIA-AGT-021 — AdminAssistantAgent
 
-**Mission.** Aider un administrateur Ã  comprendre l'Ã©tat de la plateforme, naviguer dans les donnÃ©es autorisÃ©es et prÃ©parer des actions.
+**Mission.** Aider un administrateur à comprendre l'état de la plateforme, naviguer dans les données autorisées et préparer des actions.
 
-**Tools.** Read-only analytics par dÃ©faut, search admin docs, job status, configuration readers.
+**Tools.** Read-only analytics par défaut, search admin docs, job status, configuration readers.
 
-**Interdits.** SQL arbitraire, modification RLS directe, remboursement/publication/suppression massive sans service mÃ©tier + confirmation/validation.
+**Interdits.** SQL arbitraire, modification RLS directe, remboursement/publication/suppression massive sans service métier + confirmation/validation.
 
-**RÃ¨gle.** Toute action mutante doit Ãªtre prÃ©sentÃ©e explicitement avant exÃ©cution et passer par permission + audit.
+**Règle.** Toute action mutante doit être présentée explicitement avant exécution et passer par permission + audit.
 
 ---
 
-## AIA-AGT-022 â SupportTriageAgent
+## AIA-AGT-022 — SupportTriageAgent
 
-**Mission.** Classer demandes support, dÃ©tecter urgence, rechercher solutions documentÃ©es, router vers la bonne Ã©quipe.
+**Mission.** Classer demandes support, détecter urgence, rechercher solutions documentées, router vers la bonne équipe.
 
 **Sortie.** category, priority, suggested response, routing target, required context.
 
-**RÃ¨gle.** Minimisation des donnÃ©es ; pas de demande de secrets ; aucune action sensible sans procÃ©dure support autorisÃ©e.
+**Règle.** Minimisation des données ; pas de demande de secrets ; aucune action sensible sans procédure support autorisée.
 
 ---
 
-## AIA-AGT-023 â TranslationAgent
+## AIA-AGT-023 — TranslationAgent
 
-**Mission.** Traduire interfaces/contenus autorisÃ©s en conservant sens pÃ©dagogique, terminologie et formules.
+**Mission.** Traduire interfaces/contenus autorisés en conservant sens pédagogique, terminologie et formules.
 
-**Tools.** Glossaire versionnÃ©, translation memory, RAG terminologique.
+**Tools.** Glossaire versionné, translation memory, RAG terminologique.
 
-**RÃ¨gle.** Une traduction de contenu pÃ©dagogique publiÃ©e est versionnÃ©e et validÃ©e selon workflow. Ne traduit pas aveuglÃ©ment noms propres, symboles ou terminologie officielle.
+**Règle.** Une traduction de contenu pédagogique publiée est versionnée et validée selon workflow. Ne traduit pas aveuglément noms propres, symboles ou terminologie officielle.
 
 ---
 
-## AIA-AGT-024 â PedagogicalValidationAgent
+## AIA-AGT-024 — PedagogicalValidationAgent
 
-**Mission.** PrÃ©contrÃ´ler exactitude, alignement curriculum, niveau, structure, accessibilitÃ©, citations, sÃ©curitÃ© et cohÃ©rence d'un contenu.
+**Mission.** Précontrôler exactitude, alignement curriculum, niveau, structure, accessibilité, citations, sécurité et cohérence d'un contenu.
 
 **Sortie.** checklist, errors, warnings, confidence, blocking issues, suggested fixes.
 
-**RÃ¨gle.** C'est un prÃ©-validateur ; la publication humaine reste requise lorsque le workflow l'exige.
+**Règle.** C'est un pré-validateur ; la publication humaine reste requise lorsque le workflow l'exige.
 
 **Tools.** Curriculum, RAG, exact solvers, schema validators, accessibility checks, duplicate/plagiarism-like internal checks selon droits.
 
 ---
 
-## AIA-AGT-025 â FraudRiskAgent
+## AIA-AGT-025 — FraudRiskAgent
 
 **Mission.** Produire des signaux de risque sur paiements, examens, comptes, promotions ou usages anormaux.
 
 **Sortie.** risk signals + evidence + confidence + recommended review.
 
-**RÃ¨gle.** Signal â  preuve. Pas de sanction automatique lourde sur seul score IA. Features sensibles limitÃ©es, explicabilitÃ© et audit obligatoires.
+**Règle.** Signal —  preuve. Pas de sanction automatique lourde sur seul score IA. Features sensibles limitées, explicabilité et audit obligatoires.
 
 ---
 
-## AIA-AGT-026 â InfrastructureOpsAgent
+## AIA-AGT-026 — InfrastructureOpsAgent
 
-**Mission.** Observer jobs, modÃ¨les, nÅuds Compute Fabric, files d'attente, erreurs et capacitÃ© ; proposer ou exÃ©cuter uniquement les opÃ©rations techniques explicitement autorisÃ©es.
+**Mission.** Observer jobs, modèles, nœuds Compute Fabric, files d'attente, erreurs et capacité ; proposer ou exécuter uniquement les opérations techniques explicitement autorisées.
 
 **Tools.** Metrics/log readers, health checks, deployment status, queue controls, feature flags selon permission.
 
-**Interdits par dÃ©faut.** Shell arbitraire en production, secrets, destruction de donnÃ©es, modification RLS, suppression de backups.
+**Interdits par défaut.** Shell arbitraire en production, secrets, destruction de données, modification RLS, suppression de backups.
 
-**HITL.** Rollback, dÃ©ploiement, scaling coÃ»teux ou action destructive selon politique d'approbation.
+**HITL.** Rollback, déploiement, scaling coûteux ou action destructive selon politique d'approbation.
 
 ---
 
 # 8. AGENTS ET CONTENT FACTORY ADMIN
 
-Le cÃ´tÃ© Admin doit permettre trois origines Ã©quivalentes de contenu :
+Le côté Admin doit permettre trois origines équivalentes de contenu :
 
 ```text
-MANUEL        IMPORT/UPLOAD        GÃNÃRATION IA
+MANUEL        IMPORT/UPLOAD        GÉNÉRATION IA
    \               |                  /
     +--------------+-----------------+
                    |
@@ -553,9 +553,9 @@ MANUEL        IMPORT/UPLOAD        GÃNÃRATION IA
        APP          PDF       OFFLINE
 ```
 
-Un cours uploadÃ© n'est donc pas affichÃ© comme un simple PDF. Il devient une **source** : extraction â OCR/formules â structuration â mapping curriculum/catalogue â validation â Structured Content â templates configurÃ©s â preview â validation humaine â publication.
+Un cours uploadé n'est donc pas affiché comme un simple PDF. Il devient une **source** : extraction — OCR/formules — structuration — mapping curriculum/catalogue — validation — Structured Content — templates configurés — preview — validation humaine — publication.
 
-Un exercice importÃ© suit la mÃªme philosophie : dÃ©tection Ã©noncÃ©/questions/sous-questions/figures/barÃ¨me/rÃ©ponses/correction â structure d'exercice â renderer configurÃ© â validation.
+Un exercice importé suit la même philosophie : détection énoncé/questions/sous-questions/figures/barème/réponses/correction — structure d'exercice — renderer configuré — validation.
 
 ---
 
@@ -563,28 +563,28 @@ Un exercice importÃ© suit la mÃªme philosophie : dÃ©tection Ã©noncÃ©/q
 
 L'Administration Flutter doit exposer progressivement :
 
-- **ADM-AI-001 Agent Registry** : 26 agents, statut, version, propriÃ©taire, permissions, dÃ©ploiement.
-- **ADM-AI-002 Agent Detail** : mission, tools, prompts, RAG, modÃ¨les, quotas, mÃ©triques, tests.
-- **ADM-AI-003 Prompt Registry** : prompts versionnÃ©s, diff, statut draft/candidate/production/retired, rollback.
-- **ADM-AI-004 Tool Registry** : schÃ©mas, permissions, timeout, rate limit, environnements.
-- **ADM-AI-005 Model Registry** : modÃ¨le, licence, taille, quantization, benchmark, matÃ©riel, contexte, langues.
+- **ADM-AI-001 Agent Registry** : 26 agents, statut, version, propriétaire, permissions, déploiement.
+- **ADM-AI-002 Agent Detail** : mission, tools, prompts, RAG, modèles, quotas, métriques, tests.
+- **ADM-AI-003 Prompt Registry** : prompts versionnés, diff, statut draft/candidate/production/retired, rollback.
+- **ADM-AI-004 Tool Registry** : schémas, permissions, timeout, rate limit, environnements.
+- **ADM-AI-005 Model Registry** : modèle, licence, taille, quantization, benchmark, matériel, contexte, langues.
 - **ADM-AI-006 Model Deployments** : device/server, version, canary, rollback.
 - **ADM-AI-007 RAG Sources** : sources, licences, scopes, versions, ingestion, chunks, index.
 - **ADM-AI-008 RAG Quality** : recall tests, citation quality, stale sources, retrieval failures.
 - **ADM-AI-009 Evaluation Center** : datasets, suites, factuality, safety, pedagogy, latency, resource use.
-- **ADM-AI-010 Model Factory** : datasets autorisÃ©s, training runs, LoRA/adapters, evaluations, quantization.
+- **ADM-AI-010 Model Factory** : datasets autorisés, training runs, LoRA/adapters, evaluations, quantization.
 - **ADM-AI-011 Compute Fabric** : nodes, CPU/GPU/RAM/VRAM, availability, trust, queue, utilization.
-- **ADM-AI-012 Jobs** : OCR, RAG, gÃ©nÃ©ration, training, PDF, audio, jeux ; cancel/retry selon droits.
+- **ADM-AI-012 Jobs** : OCR, RAG, génération, training, PDF, audio, jeux ; cancel/retry selon droits.
 - **ADM-AI-013 Quotas & Entitlements** : policies par offre, compute units, reset, priority, concurrency, bonus.
-- **ADM-AI-014 Usage Ledger** : consommation append-only et rÃ©conciliation.
-- **ADM-AI-015 AI Cost Dashboard** : coÃ»t physique estimÃ©, temps GPU/CPU, cache hit, device offload, coÃ»t par activitÃ©.
+- **ADM-AI-014 Usage Ledger** : consommation append-only et réconciliation.
+- **ADM-AI-015 AI Cost Dashboard** : coût physique estimé, temps GPU/CPU, cache hit, device offload, coût par activité.
 - **ADM-AI-016 Agent Analytics** : acceptance/rejection/edit rate, latency, failures, fallback.
 - **ADM-AI-017 Safety & Incidents** : flags, escalations, incident timeline, mitigations.
 - **ADM-AI-018 Feature Flags** : activation par pays/role/plan/version/device.
 - **ADM-AI-019 Audit & Rollback** : historique des changements IA.
 - **ADM-AI-020 Learning Orchestrator Policies** et **Mastery Engine Parameters** avec versioning et simulation avant publication.
 
-Les rÃ´les Admin IA, infrastructure, sÃ©curitÃ©, contenu et pÃ©dagogie doivent Ãªtre distincts. `is_admin=true` ne suffit pas.
+Les rôles Admin IA, infrastructure, sécurité, contenu et pédagogie doivent être distincts. `is_admin=true` ne suffit pas.
 
 ---
 
@@ -593,44 +593,44 @@ Les rÃ´les Admin IA, infrastructure, sÃ©curitÃ©, contenu et pÃ©dagogie d
 Pipeline :
 
 ```text
-SOURCE VALIDÃE
- -> ingestion versionnÃ©e
+SOURCE VALIDÉE
+ -> ingestion versionnée
  -> nettoyage
  -> segmentation structure-aware
  -> metadata curriculum/permission/version
  -> embeddings locaux
- -> pgvector par dÃ©faut
- -> retrieval filtrÃ©
+ -> pgvector par défaut
+ -> retrieval filtré
  -> reranking local si utile
  -> citations
  -> retrieval logs
 ```
 
-RÃ¨gles :
-- documents non fiables isolÃ©s ;
-- dÃ©fense contre prompt injection documentaire ;
+Règles :
+- documents non fiables isolés ;
+- défense contre prompt injection documentaire ;
 - aucun chunk d'un autre scope/profil ;
-- retrait d'une source propagÃ© Ã  l'index ;
-- citation liÃ©e Ã  version/source ;
-- rÃ©indexation contrÃ´lÃ©e et observable.
+- retrait d'une source propagé à l'index ;
+- citation liée à version/source ;
+- réindexation contrôlée et observable.
 
 ---
 
-# 11. MÃMOIRE
+# 11. MÉMOIRE
 
 Trois niveaux :
 
 1. **conversation courte** : contexte temporaire minimal ;
-2. **mÃ©moire pÃ©dagogique structurÃ©e** : Student Model, maÃ®trise, misconceptions, prÃ©fÃ©rences autorisÃ©es ;
-3. **prÃ©fÃ©rences explicites** : langue, accessibilitÃ©, formats.
+2. **mémoire pédagogique structurée** : Student Model, maîtrise, misconceptions, préférences autorisées ;
+3. **préférences explicites** : langue, accessibilité, formats.
 
-Interdit : mÃ©moire brute illimitÃ©e par dÃ©faut, mÃ©lange entre profils, conservation sans politique, transformation d'une infÃ©rence fragile en attribut permanent.
+Interdit : mémoire brute illimitée par défaut, mélange entre profils, conservation sans politique, transformation d'une inférence fragile en attribut permanent.
 
 ---
 
 # 12. TOOLS
 
-CatÃ©gories initiales :
+Catégories initiales :
 
 - curriculum/competency tools ;
 - content/RAG tools ;
@@ -643,13 +643,13 @@ CatÃ©gories initiales :
 - analytics read tools ;
 - support/admin controlled tools.
 
-Chaque tool possÃ¨de JSON Schema, permissions, scope, timeout, idempotence, journalisation, limites et tests.
+Chaque tool possède JSON Schema, permissions, scope, timeout, idempotence, journalisation, limites et tests.
 
 ---
 
 # 13. MODEL FACTORY
 
-Ne pas entraÃ®ner un foundation model depuis zÃ©ro par dÃ©faut.
+Ne pas entraîner un foundation model depuis zéro par défaut.
 
 Pipeline cible :
 
@@ -668,56 +668,56 @@ OPEN-WEIGHT BASE MODEL
 
 Fine-tuning apprend surtout **comment** l'agent travaille ; RAG apporte **quoi** consulter.
 
-Datasets possibles uniquement avec droits et gouvernance : curriculum officiel, cours validÃ©s, sujets/corrections autorisÃ©s, erreurs frÃ©quentes, mÃ©thodes pÃ©dagogiques validÃ©es, exemples de tool calling.
+Datasets possibles uniquement avec droits et gouvernance : curriculum officiel, cours validés, sujets/corrections autorisés, erreurs fréquentes, méthodes pédagogiques validées, exemples de tool calling.
 
 ---
 
 # 14. COMPUTE FABRIC
 
-Sources de compute possibles : machine dÃ©veloppeur, serveur propre, Ã©tablissement, universitÃ©/partenaire, association/sponsor, nÅud Ã©cole, capacitÃ© gratuite opportuniste.
+Sources de compute possibles : machine développeur, serveur propre, établissement, université/partenaire, association/sponsor, nœud école, capacité gratuite opportuniste.
 
-Une ressource gratuite externe n'est jamais une dÃ©pendance de production garantie.
+Une ressource gratuite externe n'est jamais une dépendance de production garantie.
 
-Chaque nÅud dÃ©clare : identitÃ©, trust level, hardware, modÃ¨les autorisÃ©s, disponibilitÃ©, queue, mÃ©triques, politique de donnÃ©es. Les donnÃ©es personnelles sensibles ne sont pas envoyÃ©es vers un nÅud non approuvÃ©.
-
----
-
-# 15. OBSERVABILITÃ
-
-Pour chaque run : request/trace ID, agent/version, route, model/version, tools, durÃ©e, retries, cache, compute units, quota decision, error class, validation result, safety flags et rÃ©sultat mÃ©tier minimal pseudonymisÃ©.
-
-Ne jamais mettre secrets, tokens, PIN, donnÃ©es brutes sensibles ou contenu privÃ© inutile dans les logs.
-
-MÃ©triques : latency p50/p95/p99, success/fallback/error, cache hit, device offload, GPU/CPU time, acceptance/edit/rejection, factuality, citation quality, tool accuracy, coÃ»t physique estimÃ©.
+Chaque nœud déclare : identité, trust level, hardware, modèles autorisés, disponibilité, queue, métriques, politique de données. Les données personnelles sensibles ne sont pas envoyées vers un nœud non approuvé.
 
 ---
 
-# 16. ÃVALUATION AVANT PRODUCTION
+# 15. OBSERVABILITÉ
 
-Aucune nouvelle version de modÃ¨le/prompt/agent ne passe en production sans suite d'Ã©valuation pertinente :
+Pour chaque run : request/trace ID, agent/version, route, model/version, tools, durée, retries, cache, compute units, quota decision, error class, validation result, safety flags et résultat métier minimal pseudonymisé.
 
-- exactitude/factualitÃ© ;
+Ne jamais mettre secrets, tokens, PIN, données brutes sensibles ou contenu privé inutile dans les logs.
+
+Métriques : latency p50/p95/p99, success/fallback/error, cache hit, device offload, GPU/CPU time, acceptance/edit/rejection, factuality, citation quality, tool accuracy, coût physique estimé.
+
+---
+
+# 16. ÉVALUATION AVANT PRODUCTION
+
+Aucune nouvelle version de modèle/prompt/agent ne passe en production sans suite d'évaluation pertinente :
+
+- exactitude/factualité ;
 - alignement curriculum ;
-- niveau pÃ©dagogique ;
+- niveau pédagogique ;
 - citations ;
 - tool calling ;
-- sÃ©curitÃ© mineurs ;
-- confidentialitÃ© ;
+- sécurité mineurs ;
+- confidentialité ;
 - biais ;
 - hallucination ;
 - robustesse aux prompt injections ;
 - latence ;
 - RAM/VRAM ;
 - consommation ;
-- comportement offline/dÃ©gradÃ©.
+- comportement offline/dégradé.
 
-Comparaison obligatoire Ã  la version actuellement en production et seuils configurables.
+Comparaison obligatoire à la version actuellement en production et seuils configurables.
 
 ---
 
-# 17. DONNÃES IA â MODÃLE CONCEPTUEL
+# 17. DONNÉES IA — MODÈLE CONCEPTUEL
 
-Avant crÃ©ation, auditer les tables Supabase existantes. EntitÃ©s cibles possibles :
+Avant création, auditer les tables Supabase existantes. Entités cibles possibles :
 
 ```text
 ai_agents
@@ -747,7 +747,7 @@ ai_adapters
 ai_incidents
 ```
 
-Principes : UUID/ULID, UTC, FKs explicites, RLS/ABAC, audit append-only pour usages sensibles, idempotence, sÃ©paration PII/analytics, chiffrement, versioning, soft-delete sÃ©lectif.
+Principes : UUID/ULID, UTC, FKs explicites, RLS/ABAC, audit append-only pour usages sensibles, idempotence, séparation PII/analytics, chiffrement, versioning, soft-delete sélectif.
 
 ---
 
@@ -762,10 +762,10 @@ REQUEST
  -> Agent selection
  -> RAG context
  -> Tool plan
- -> Model route si nÃ©cessaire
+ -> Model route si nécessaire
  -> Structured output validation
  -> Safety/pedagogical validation
- -> Business service / HITL si effet mÃ©tier
+ -> Business service / HITL si effet métier
  -> Response
  -> Usage ledger
  -> Metrics/evaluation sample
@@ -775,112 +775,112 @@ REQUEST
 
 # 19. ERREURS ET FALLBACK
 
-Codes mÃ©tier recommandÃ©s : `AGENT_UNAVAILABLE`, `MODEL_UNAVAILABLE`, `QUOTA_EXHAUSTED`, `RAG_EMPTY`, `TOOL_FAILED`, `OUTPUT_INVALID`, `PERMISSION_DENIED`, `HUMAN_REVIEW_REQUIRED`, `OFFLINE_LIMITATION`, `CONTENT_VERSION_CONFLICT`.
+Codes métier recommandés : `AGENT_UNAVAILABLE`, `MODEL_UNAVAILABLE`, `QUOTA_EXHAUSTED`, `RAG_EMPTY`, `TOOL_FAILED`, `OUTPUT_INVALID`, `PERMISSION_DENIED`, `HUMAN_REVIEW_REQUIRED`, `OFFLINE_LIMITATION`, `CONTENT_VERSION_CONFLICT`.
 
-Un Ã©chec de modÃ¨le ne doit pas devenir automatiquement une erreur gÃ©nÃ©rale. Le router tente, selon politique : cache â local â modÃ¨le alternatif â queue â mode dÃ©gradÃ©.
+Un échec de modèle ne doit pas devenir automatiquement une erreur générale. Le router tente, selon politique : cache — local — modèle alternatif — queue — mode dégradé.
 
 ---
 
-# 20. SÃCURITÃ DES MINEURS
+# 20. SÉCURITÉ DES MINEURS
 
 - minimisation stricte ;
 - scope parent/enseignant explicite ;
-- consentements versionnÃ©s ;
+- consentements versionnés ;
 - voix/images selon politique ;
-- pas de profilage opaque Ã  fort impact ;
+- pas de profilage opaque à fort impact ;
 - pas de sanctions automatiques lourdes ;
-- signalement/escalade selon rÃ¨gles validÃ©es ;
-- contenus gÃ©nÃ©rÃ©s pour mineurs soumis aux contrÃ´les appropriÃ©s ;
-- export/suppression/contestation selon politique de donnÃ©es.
+- signalement/escalade selon règles validées ;
+- contenus générés pour mineurs soumis aux contrôles appropriés ;
+- export/suppression/contestation selon politique de données.
 
 ---
 
 # 21. TESTS OBLIGATOIRES PAR AGENT
 
-Chaque agent possÃ¨de au minimum :
+Chaque agent possède au minimum :
 
 1. happy path ;
 2. permission denied ;
 3. mauvais scope ;
 4. RAG vide ;
 5. tool timeout ;
-6. modÃ¨le indisponible ;
-7. quota Ã©puisÃ© ;
+6. modèle indisponible ;
+7. quota épuisé ;
 8. sortie JSON invalide ;
 9. offline/degraded ;
 10. prompt injection ;
-11. donnÃ©es d'un autre profil ;
+11. données d'un autre profil ;
 12. version rollback ;
-13. benchmark coÃ»t/latence ;
-14. critÃ¨res pÃ©dagogiques spÃ©cifiques.
+13. benchmark coût/latence ;
+14. critères pédagogiques spécifiques.
 
 ---
 
-# 22. ORDRE D'IMPLÃMENTATION POUR CLAUDE CODE
+# 22. ORDRE D'IMPLÉMENTATION POUR CLAUDE CODE
 
-Ne pas implÃ©menter les 26 agents simultanÃ©ment.
+Ne pas implémenter les 26 agents simultanément.
 
-### IA-000 â Audit
-Inspecter code, DB, services IA existants, dÃ©pendances, secrets/configs, RLS, queues, offline, Content Factory.
+### IA-000 — Audit
+Inspecter code, DB, services IA existants, dépendances, secrets/configs, RLS, queues, offline, Content Factory.
 
-### IA-001 â Contracts
-CrÃ©er interfaces/envelopes, registry, typed errors, capability model, tool contracts.
+### IA-001 — Contracts
+Créer interfaces/envelopes, registry, typed errors, capability model, tool contracts.
 
-### IA-002 â Gateway minimal
+### IA-002 — Gateway minimal
 Auth, permissions, request IDs, structured validation, observability.
 
-### IA-003 â Tool Gateway
-Curriculum/content/RAG/math tools, sans accÃ¨s SQL arbitraire.
+### IA-003 — Tool Gateway
+Curriculum/content/RAG/math tools, sans accès SQL arbitraire.
 
-### IA-004 â RAG minimal
-Sources validÃ©es, ingestion, pgvector, filtres, citations.
+### IA-004 — RAG minimal
+Sources validées, ingestion, pgvector, filtres, citations.
 
-### IA-005 â Model Router
-Provider abstraction + local provider par dÃ©faut.
+### IA-005 — Model Router
+Provider abstraction + local provider par défaut.
 
-### IA-006 â Quota Engine
+### IA-006 — Quota Engine
 Policies, entitlements, weighted compute units, ledger, fallback.
 
-### IA-007 â Premier vertical slice
-`TutorAgent` sur une matiÃ¨re/leÃ§on test avec RAG + math tool + Student Model read + cache + quota + observabilitÃ©.
+### IA-007 — Premier vertical slice
+`TutorAgent` sur une matière/leçon test avec RAG + math tool + Student Model read + cache + quota + observabilité.
 
-### IA-008 â Content Factory agents
-OCRAgent â FormulaRecognitionAgent â DocumentStructuringAgent â CurriculumMappingAgent â PedagogicalValidationAgent.
+### IA-008 — Content Factory agents
+OCRAgent — FormulaRecognitionAgent — DocumentStructuringAgent — CurriculumMappingAgent — PedagogicalValidationAgent.
 
-### IA-009 â Exercise vertical slice
+### IA-009 — Exercise vertical slice
 ExerciseAgent + CorrectionAgent + validation humaine.
 
-### IA-010 â Learning intelligence
+### IA-010 — Learning intelligence
 DiagnosticAgent, MisconceptionAgent, RevisionAgent, RecommendationAgent, SocraticAgent, ExplanationAgent, ExamCoachAgent.
 
-### IA-011 â Multimodal factories
+### IA-011 — Multimodal factories
 GameContentAgent, MusicLearningAgent, LabAssistantAgent.
 
-### IA-012 â Staff/family
+### IA-012 — Staff/family
 TeacherAssistantAgent, ParentInsightAgent, TranslationAgent.
 
-### IA-013 â Operations
+### IA-013 — Operations
 ModerationAgent, AdminAssistantAgent, SupportTriageAgent, FraudRiskAgent, InfrastructureOpsAgent.
 
-### IA-014 â Model Factory / Compute Fabric
-Seulement aprÃ¨s benchmarks et besoins observÃ©s.
+### IA-014 — Model Factory / Compute Fabric
+Seulement après benchmarks et besoins observés.
 
 ---
 
-# 23. CRITÃRES DE DONE D'UN AGENT
+# 23. CRITÈRES DE DONE D'UN AGENT
 
-Un agent n'est pas Â« terminÃ© Â» parce qu'un prompt rÃ©pond dans une console. Il est Done seulement si : contrat versionnÃ©, permissions, tools, RAG, route modÃ¨le, quota, cache, erreurs, mode dÃ©gradÃ©, observabilitÃ©, tests, Ã©valuation, Admin visibility, documentation, sÃ©curitÃ© et rollback sont opÃ©rationnels pour son pÃ©rimÃ¨tre.
-
----
-
-# 24. RÃGLE DE NON-RÃGRESSION POUR VIBE CODING
-
-Claude Code/Antigravity doit toujours commencer un work package par l'inspection du code rÃ©el. Pour chaque modification : `EXISTING -> TARGET -> GAP -> MIGRATION -> TEST`. Ne jamais recrÃ©er une table/route/service en doublon. Ne jamais supprimer une fonctionnalitÃ© compatible. Toute migration destructive exige analyse, sauvegarde/rollback et validation.
+Un agent n'est pas « terminé » parce qu'un prompt répond dans une console. Il est Done seulement si : contrat versionné, permissions, tools, RAG, route modèle, quota, cache, erreurs, mode dégradé, observabilité, tests, évaluation, Admin visibility, documentation, sécurité et rollback sont opérationnels pour son périmètre.
 
 ---
 
-# 25. RÃGLE D'OR
+# 24. RÈGLE DE NON-RÉGRESSION POUR VIBE CODING
 
-L'objectif n'est pas d'afficher Â« IA Â» partout. L'objectif est que l'intelligence soit **utile, mesurable, sÃ»re, Ã©conomiquement contrÃ´lable, souveraine, compatible offline et intÃ©grÃ©e au moteur pÃ©dagogique**.
+Claude Code/Antigravity doit toujours commencer un work package par l'inspection du code réel. Pour chaque modification : `EXISTING -> TARGET -> GAP -> MIGRATION -> TEST`. Ne jamais recréer une table/route/service en doublon. Ne jamais supprimer une fonctionnalité compatible. Toute migration destructive exige analyse, sauvegarde/rollback et validation.
 
-Un bon agent EDLEARN est celui qui utilise le moins de compute nÃ©cessaire pour produire un rÃ©sultat pÃ©dagogique correct, vÃ©rifiable et adaptÃ© Ã  l'Ã©lÃ¨ve.
+---
+
+# 25. RÈGLE D'OR
+
+L'objectif n'est pas d'afficher « IA » partout. L'objectif est que l'intelligence soit **utile, mesurable, sûre, économiquement contrôlable, souveraine, compatible offline et intégrée au moteur pédagogique**.
+
+Un bon agent EDLEARN est celui qui utilise le moins de compute nécessaire pour produire un résultat pédagogique correct, vérifiable et adapté à l'élève.
