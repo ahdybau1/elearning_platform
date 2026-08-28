@@ -12,12 +12,16 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// CF-004 : contrat de sortie minimal §4 du cahier des charges Agents IA — additif uniquement.
+const AGENT_VERSION = "1.0.0";
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   const startTime = Date.now();
+  const requestId = crypto.randomUUID();
 
   try {
     const { post_id, content, image_url } = await req.json();
@@ -106,10 +110,14 @@ Message : "${content}"`,
     // 4. Traçabilité dans ai_agent_calls (colonnes réelles du schéma)
     try {
       await supabase.from("ai_agent_calls").insert({
+        request_id: requestId,
         agent_type: "moderation",
         provider: GEMINI_API_KEY ? "gemini" : "local_regex",
+        model: GEMINI_API_KEY ? "gemini-1.5-flash" : "local_regex",
         tokens_used: Math.ceil((content ?? "").length / 4),
         cost_estimate: GEMINI_API_KEY ? 0.0002 : 0,
+        duration_ms: durationMs,
+        status: "success",
       });
     } catch (insertErr) {
       console.error("Échec d'enregistrement ai_agent_calls:", insertErr);
@@ -120,6 +128,9 @@ Message : "${content}"`,
         approved: !isViolating,
         flagged: isViolating,
         reason: violationReason,
+        _request_id: requestId,
+        _agent_version: AGENT_VERSION,
+        _duration_ms: durationMs,
       }),
       {
         status: 200,

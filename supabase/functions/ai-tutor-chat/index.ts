@@ -17,10 +17,34 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// CF-004 : contrat de sortie minimal §4 du cahier des charges Agents IA — additif uniquement.
+const AGENT_VERSION = "1.0.0";
+const MODEL = "gemini-3.6-flash";
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+
+  const startTime = Date.now();
+  const requestId = crypto.randomUUID();
+
+  // Journalise un échec dans ai_agent_calls (jusqu'ici jamais fait pour ce tuteur — les pannes
+  // Gemini/quota étaient invisibles côté coûts/observabilité, seulement les succès).
+  const logFailure = async (errorMessage: string) => {
+    try {
+      await supabase.from("ai_agent_calls").insert({
+        request_id: requestId,
+        agent_type: "student_tutor_chat",
+        provider: "gemini",
+        duration_ms: Date.now() - startTime,
+        status: "failed",
+        error_message: errorMessage,
+      });
+    } catch (insertErr) {
+      console.error("Échec d'enregistrement ai_agent_calls:", insertErr);
+    }
+  };
 
   try {
     const { message, subject_name, class_name, history } = await req.json();
@@ -35,8 +59,10 @@ Deno.serve(async (req: Request) => {
     if (!GEMINI_API_KEY) {
       // Jamais de réponse simulée en secours (voir 06_ai_pipeline.md) : une erreur claire côté
       // client vaut mieux qu'une fausse réussite.
+      const errorMessage = "Le Tuteur Numérique n'est pas encore configuré (clé Gemini absente côté serveur).";
+      await logFailure(errorMessage);
       return new Response(
-        JSON.stringify({ error: "Le Tuteur Numérique n'est pas encore configuré (clé Gemini absente côté serveur)." }),
+        JSON.stringify({ error: errorMessage, _request_id: requestId }),
         { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -67,7 +93,7 @@ Règles strictes :
     // recommandait explicitement gemini-3.6-flash) — vérifier périodiquement que ce nom de modèle
     // est toujours valide, Google en retire régulièrement.
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -85,8 +111,10 @@ Règles strictes :
     if (!geminiRes.ok) {
       const errText = await geminiRes.text();
       console.error("Gemini API error:", geminiRes.status, errText);
+      const errorMessage = "Le Tuteur Numérique est momentanément indisponible (quota atteint ou erreur du fournisseur).";
+      await logFailure(errorMessage);
       return new Response(
-        JSON.stringify({ error: "Le Tuteur Numérique est momentanément indisponible (quota atteint ou erreur du fournisseur)." }),
+        JSON.stringify({ error: errorMessage, _request_id: requestId }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -96,24 +124,38 @@ Règles strictes :
     const tokensUsed = geminiData.usageMetadata?.totalTokenCount ?? 0;
 
     if (!reply) {
+      const errorMessage = "Le Tuteur Numérique n'a pas pu générer de réponse. Réessayez avec une question différente.";
+      await logFailure(errorMessage);
       return new Response(
-        JSON.stringify({ error: "Le Tuteur Numérique n'a pas pu générer de réponse. Réessayez avec une question différente." }),
+        JSON.stringify({ error: errorMessage, _request_id: requestId }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    const durationMs = Date.now() - startTime;
+
     try {
       await supabase.from("ai_agent_calls").insert({
+        request_id: requestId,
         agent_type: "student_tutor_chat",
         provider: "gemini",
+        model: MODEL,
         tokens_used: tokensUsed,
         cost_estimate: 0,
+        duration_ms: durationMs,
+        status: "success",
       });
     } catch (insertErr) {
       console.error("Échec d'enregistrement ai_agent_calls:", insertErr);
     }
 
-    return new Response(JSON.stringify({ reply }), {
+    return new Response(JSON.stringify({
+      reply,
+      _request_id: requestId,
+      _agent_version: AGENT_VERSION,
+      _model: MODEL,
+      _duration_ms: durationMs,
+    }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

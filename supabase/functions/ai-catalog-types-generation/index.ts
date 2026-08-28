@@ -15,6 +15,9 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// CF-004 : contrat de sortie minimal §4 du cahier des charges Agents IA — additif uniquement.
+const AGENT_VERSION = "1.0.0";
+
 // Contenu utilisé UNIQUEMENT quand AI_MOCK_MODE=true — jamais comme repli silencieux en cas
 // d'échec des appels API réels (voir 06_ai_pipeline.md).
 function buildMockCatalogTypes(count: number, subjectName: string): Record<string, unknown>[] {
@@ -30,6 +33,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const startTime = Date.now();
+  const requestId = crypto.randomUUID();
 
   try {
     const {
@@ -78,12 +82,14 @@ Règles strictes :
 
     let types: Record<string, unknown>[] | null = null;
     let provider = "none";
+    let modelUsed: string | null = null;
     let tokensUsed = 0;
     let costEstimate = 0;
 
     if (AI_MOCK_MODE) {
       types = buildMockCatalogTypes(typeCount, subject_name);
       provider = "mock";
+      modelUsed = "mock";
     } else {
       if (ANTHROPIC_API_KEY) {
         try {
@@ -108,6 +114,7 @@ Règles strictes :
             const cleanedJson = rawText.replace(/^```json\s*/i, "").replace(/\s*```$/i, "").trim();
             types = JSON.parse(cleanedJson);
             provider = "anthropic";
+            modelUsed = "claude-3-5-sonnet-20241022";
             tokensUsed = (anthropicData.usage?.input_tokens ?? 0) + (anthropicData.usage?.output_tokens ?? 0);
             costEstimate = tokensUsed * 0.000003;
           }
@@ -135,6 +142,7 @@ Règles strictes :
             const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
             types = JSON.parse(rawText);
             provider = "gemini";
+            modelUsed = "gemini-1.5-flash";
             tokensUsed = geminiData.usageMetadata?.totalTokenCount ?? 0;
             costEstimate = tokensUsed * 0.00000035;
           }
@@ -150,26 +158,48 @@ Règles strictes :
     // Aucun résultat réel et mode mock inactif : erreur explicite, jamais de contenu statique
     // déguisé en résultat réel (voir 06_ai_pipeline.md).
     if (!types) {
+      const errorMessage = "Échec de la génération IA : aucun fournisseur (Claude, Gemini) n'a retourné de résultat exploitable.";
+      try {
+        await supabase.from("ai_agent_calls").insert({
+          request_id: requestId,
+          agent_type: "catalog_generation",
+          provider,
+          duration_ms: durationMs,
+          status: "failed",
+          error_message: errorMessage,
+        });
+      } catch (insertErr) {
+        console.error("Échec d'enregistrement ai_agent_calls:", insertErr);
+      }
       return new Response(
-        JSON.stringify({
-          error: "Échec de la génération IA : aucun fournisseur (Claude, Gemini) n'a retourné de résultat exploitable.",
-        }),
+        JSON.stringify({ error: errorMessage, _request_id: requestId }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     try {
       await supabase.from("ai_agent_calls").insert({
+        request_id: requestId,
         agent_type: "catalog_generation",
         provider,
+        model: modelUsed,
         tokens_used: tokensUsed,
         cost_estimate: costEstimate,
+        duration_ms: durationMs,
+        status: "success",
       });
     } catch (insertErr) {
       console.error("Échec d'enregistrement ai_agent_calls:", insertErr);
     }
 
-    return new Response(JSON.stringify({ types, _mock: provider === "mock" }), {
+    return new Response(JSON.stringify({
+      types,
+      _mock: provider === "mock",
+      _request_id: requestId,
+      _agent_version: AGENT_VERSION,
+      _model: modelUsed,
+      _duration_ms: durationMs,
+    }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
