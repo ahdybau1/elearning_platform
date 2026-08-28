@@ -313,6 +313,12 @@ final aiAgentCallsProvider =
   return service.fetchAiAgentCalls(days: days);
 });
 
+/// IA-001 (migration 55) : registre réel des agents IA (ADM-AI-001 Agent Registry).
+final aiAgentsProvider = FutureProvider<List<AiAgent>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchAiAgents();
+});
+
 // ─── Dashboard KPI Counts ─────────────────────────────────────
 
 final activeProfilesCountProvider = FutureProvider<int>((ref) async {

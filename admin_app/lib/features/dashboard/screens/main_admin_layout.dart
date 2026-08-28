@@ -28,6 +28,7 @@ import '../../community_support/screens/forum_moderation_screen.dart';
 import '../../community_support/screens/whatsapp_groups_screen.dart';
 import '../../community_support/screens/support_tickets_screen.dart';
 import '../../system_settings/screens/ai_agents_dashboard_screen.dart';
+import '../../system_settings/screens/ai_agent_registry_screen.dart';
 import '../../system_settings/screens/announcements_screen.dart';
 import '../../system_settings/screens/system_settings_screen.dart';
 import '../../content_management/screens/pedagogical_catalog_screen.dart';
@@ -232,6 +233,12 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
           allowedRoles: [AdminRole.superAdmin],
         ),
         NavItem(
+          id: 27,
+          title: 'Registre des Agents IA (IA-001)',
+          icon: Icons.hub_rounded,
+          allowedRoles: [AdminRole.superAdmin],
+        ),
+        NavItem(
           id: 20,
           title: 'Bannières Annonces',
           icon: Icons.campaign_rounded,
@@ -346,6 +353,8 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
         return const SchoolYearPromotionScreen();
       case 26:
         return const ActiveSessionsScreen();
+      case 27:
+        return const AiAgentRegistryScreen();
       default:
         return const DashboardOverviewScreen();
     }

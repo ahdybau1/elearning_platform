@@ -907,6 +907,17 @@ class SupabaseService {
 
   // ─── AI Agents ────────────────────────────────────────────────
 
+  /// IA-001 "Contracts" (migration 55) : registre réel des agents IA déployés, avec leurs versions
+  /// (schémas d'entrée/sortie, politique de modèle, Edge Function qui les exécute réellement).
+  Future<List<AiAgent>> fetchAiAgents() async {
+    final rows = await client
+        .from('ai_agents')
+        .select('*, ai_agent_versions(*)')
+        .order('agent_id')
+        .then((r) => r as List);
+    return rows.map((r) => AiAgent.fromJson(Map<String, dynamic>.from(r))).toList();
+  }
+
   Future<List<AiAgentCall>> fetchAiAgentCalls({int? days}) async {
     var query = client.from('ai_agent_calls').select();
     if (days != null) {

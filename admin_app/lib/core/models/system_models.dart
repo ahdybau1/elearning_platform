@@ -1,3 +1,79 @@
+/// IA-001 "Contracts" (docs/CAHIER_DES_CHARGES_AGENTS_IA.md §22, migration 55) : registre réel des
+/// agents IA déployés. Une version par agent aujourd'hui (1.0.0), reliée à l'Edge Function Deno qui
+/// l'exécute réellement — pas encore de Sovereign AI Gateway FastAPI (IA-002+).
+class AiAgentVersion {
+  final String id;
+  final String version;
+  final Map<String, dynamic> inputSchema;
+  final Map<String, dynamic> outputSchema;
+  final Map<String, dynamic> modelPolicy;
+  final String quotaClass;
+  final String status; // 'draft' | 'candidate' | 'production' | 'retired'
+  final String? edgeFunctionName;
+
+  AiAgentVersion({
+    required this.id,
+    required this.version,
+    Map<String, dynamic>? inputSchema,
+    Map<String, dynamic>? outputSchema,
+    Map<String, dynamic>? modelPolicy,
+    this.quotaClass = 'standard',
+    this.status = 'draft',
+    this.edgeFunctionName,
+  })  : inputSchema = inputSchema ?? {},
+        outputSchema = outputSchema ?? {},
+        modelPolicy = modelPolicy ?? {};
+
+  factory AiAgentVersion.fromJson(Map<String, dynamic> json) => AiAgentVersion(
+        id: json['id'] as String,
+        version: json['version'] as String,
+        inputSchema: (json['input_schema'] as Map?)?.cast<String, dynamic>(),
+        outputSchema: (json['output_schema'] as Map?)?.cast<String, dynamic>(),
+        modelPolicy: (json['model_policy'] as Map?)?.cast<String, dynamic>(),
+        quotaClass: json['quota_class'] as String? ?? 'standard',
+        status: json['status'] as String? ?? 'draft',
+        edgeFunctionName: json['edge_function_name'] as String?,
+      );
+}
+
+class AiAgent {
+  final String id;
+  final String agentId;
+  final String name;
+  final String mission;
+  final String? nonMission;
+  final String? catalogueRelation;
+  final String status; // 'draft' | 'active' | 'deprecated'
+  final String? owner;
+  final List<AiAgentVersion> versions;
+
+  AiAgent({
+    required this.id,
+    required this.agentId,
+    required this.name,
+    required this.mission,
+    this.nonMission,
+    this.catalogueRelation,
+    this.status = 'draft',
+    this.owner,
+    List<AiAgentVersion>? versions,
+  }) : versions = versions ?? [];
+
+  factory AiAgent.fromJson(Map<String, dynamic> json) => AiAgent(
+        id: json['id'] as String,
+        agentId: json['agent_id'] as String,
+        name: json['name'] as String,
+        mission: json['mission'] as String,
+        nonMission: json['non_mission'] as String?,
+        catalogueRelation: json['catalogue_relation'] as String?,
+        status: json['status'] as String? ?? 'draft',
+        owner: json['owner'] as String?,
+        versions: ((json['ai_agent_versions'] as List?) ?? const [])
+            .map((v) => AiAgentVersion.fromJson(Map<String, dynamic>.from(v as Map)))
+            .toList(),
+      );
+}
+
 /// CF-004 (docs/CONTENT_FACTORY_IMPLEMENTATION_PLAN.md, migration 53) : request_id/model/
 /// duration_ms/status/error_message sont réels depuis le 2026-08-28 — avant cette migration, un
 /// appel IA échoué n'était même pas enregistré du tout (invisible), et le modèle exact utilisé
