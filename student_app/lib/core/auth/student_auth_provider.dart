@@ -163,9 +163,18 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
       final prefs = await SharedPreferences.getInstance();
       final savedProfileId = prefs.getString(_activeProfilePrefKey);
       StudentProfile? active = profiles.isEmpty ? null : profiles.first;
+      // Un choix déjà sauvegardé (par un `selectProfile` d'une session précédente) vaut
+      // confirmation implicite — l'utilisateur ne doit plus revoir ProfileSwitcherScreen à chaque
+      // ouverture juste parce que hasConfirmedProfileThisBoot repart de zéro à chaque démarrage à
+      // froid (retour utilisateur explicite : le code doit ouvrir directement la dernière classe
+      // utilisée, le sélecteur ne doit s'afficher que via « Changer de Profil »).
+      var hasSavedProfileChoice = false;
       if (savedProfileId != null) {
         final match = profiles.where((p) => p.id == savedProfileId).firstOrNull;
-        if (match != null) active = match;
+        if (match != null) {
+          active = match;
+          hasSavedProfileChoice = true;
+        }
       }
 
       state = StudentAuthState(
@@ -176,7 +185,7 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
         sessionEmail: user.email,
         settings: settings,
         hasUnlockedThisBoot: unlocked,
-        hasConfirmedProfileThisBoot: confirmedProfile,
+        hasConfirmedProfileThisBoot: confirmedProfile || hasSavedProfileChoice,
       );
 
       // §7.3/§7.4 : n'enregistre CET appareil comme connaissant ce compte qu'après une session
