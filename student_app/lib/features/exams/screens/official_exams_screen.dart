@@ -252,7 +252,10 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
             )
           else
             Tooltip(
-              message: 'Le corrigé se débloque après une première tentative',
+              // `is_correction_unlocked` est un simple drapeau publié par l'administration (pas de
+              // suivi réel des tentatives de l'élève) — le texte doit refléter ce mécanisme réel,
+              // pas en inventer un qui n'existe pas.
+              message: 'Corrigé pas encore publié par l\'administration',
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   foregroundColor: context.colors.textMuted,

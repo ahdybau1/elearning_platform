@@ -39,15 +39,19 @@ class LessonReaderScreen extends ConsumerWidget {
           IconButton(
             icon: Icon(
               Icons.download_for_offline_rounded,
-              color: context.colors.accentEmerald,
+              color: context.colors.textMuted,
             ),
-            tooltip: 'Télécharger pour le mode Hors-Ligne (Data-Saver)',
+            tooltip: 'Mode Hors-Ligne — pas encore disponible',
+            // Le mode Hors-Ligne est explicitement hors périmètre pour l'instant (aucun mécanisme
+            // de téléchargement réel n'existe) — un faux message de succès ferait croire à une
+            // leçon réellement sauvegardée alors qu'elle ne l'est pas. Honnête plutôt que simulé,
+            // comme pour la Boutique/les Dons/le Paywall.
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  backgroundColor: context.colors.accentEmerald,
-                  content: Text(
-                    'Leçon enregistrée en mode Hors-Ligne avec Forensic Watermark.',
+                  backgroundColor: context.colors.accentAmber,
+                  content: const Text(
+                    'Mode Hors-Ligne pas encore disponible — fonctionnalité à venir.',
                   ),
                 ),
               );
