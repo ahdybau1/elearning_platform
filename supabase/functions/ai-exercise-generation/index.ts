@@ -29,6 +29,8 @@ function buildMockExercises(count: number, format: string, difficulty: string): 
       : "Corrigé détaillé factice, étape par étape.",
     options: format === "qcm" ? ["Option A", "Option B", "Option C", "Option D"] : null,
     correct_index: format === "qcm" ? 1 : null,
+    hints: ["Indice factice 1 — relire l'énoncé.", "Indice factice 2 — identifier la formule adaptée."],
+    skills: ["Compétence factice"],
   }));
 }
 
@@ -88,6 +90,8 @@ Règles strictes :
 - Toutes les formules mathématiques, chimiques ou physiques DOIVENT être encadrées par des balises LaTeX : $...$ pour inline ou $$...$$ pour blocs séparés.
 - Le corrigé doit être pas-à-pas, justifié, rigoureux.
 - Si le format est "qcm", fournir exactement 4 options et l'index (0-3) de la bonne réponse.
+- Fournir 2 à 3 indices progressifs (du plus léger au plus explicite), à utiliser avant de révéler la solution — jamais la réponse finale dans un indice.
+- Fournir 1 à 3 compétences courtes (2-5 mots) mobilisées par l'exercice, pour le rattachement pédagogique.
 - Ne renvoyer QUE du JSON valide, sans texte additionnel ni balises de commentaires Markdown.`;
 
     const userPrompt = `Contexte / notes brutes :
@@ -102,7 +106,9 @@ Génère un tableau JSON exact de ${exerciseCount} exercice(s) avec les clés :
     "statement": "Énoncé complet avec LaTeX si nécessaire",
     "correction": "Corrigé pas-à-pas détaillé",
     "options": ["Option A", "Option B", "Option C", "Option D"] ou null si non-QCM,
-    "correct_index": 0 à 3, ou null si non-QCM
+    "correct_index": 0 à 3, ou null si non-QCM,
+    "hints": ["Indice 1 (léger)", "Indice 2 (plus précis)"],
+    "skills": ["Compétence courte 1", "Compétence courte 2"]
   }
 ]`;
 

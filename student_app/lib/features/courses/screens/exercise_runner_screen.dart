@@ -36,6 +36,9 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
   bool _isRevealed = false;
   int _totalScore = 0;
   final TextEditingController _freeTextCtrl = TextEditingController();
+  /// Nombre d'indices déjà révélés pour l'exercice courant (CF-003 enrichissement) — remis à zéro à
+  /// chaque changement d'exercice, jamais partagé entre deux exercices différents.
+  int _hintsShown = 0;
 
   @override
   void dispose() {
@@ -49,6 +52,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
         _currentIndex++;
         _selectedOptionIndex = null;
         _isRevealed = false;
+        _hintsShown = 0;
         _freeTextCtrl.clear();
       });
     } else {
@@ -221,6 +225,53 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
     );
   }
 
+  /// Indices progressifs (CF-003 enrichissement) : un bouton révèle l'indice suivant, jamais tous
+  /// d'un coup — cohérent avec la maïeutique du Tuteur Numérique plutôt qu'une solution donnée
+  /// directement. Masqué une fois la réponse validée (plus d'utilité à ce stade).
+  Widget _hintsSection(BuildContext context, Exercise ex) {
+    if (ex.hints.isEmpty || _isRevealed) return const SizedBox.shrink();
+    final hasMore = _hintsShown < ex.hints.length;
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < _hintsShown; i++)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: context.colors.accentAmber.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: context.colors.accentAmber.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.lightbulb_outline_rounded, size: 16, color: context.colors.accentAmber),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      ex.hints[i],
+                      style: GoogleFonts.inter(fontSize: 12, color: context.colors.textPrimary, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (hasMore)
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(foregroundColor: context.colors.accentAmber),
+              onPressed: () => setState(() => _hintsShown++),
+              icon: const Icon(Icons.lightbulb_outline_rounded, size: 16),
+              label: Text(_hintsShown == 0 ? 'Voir un indice' : 'Indice suivant'),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _correctionCard(BuildContext context, Exercise ex, {bool? isCorrect}) {
     final color = isCorrect == null
         ? context.colors.accentIndigo
@@ -285,6 +336,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _statementCard(context, ex),
+        _hintsSection(context, ex),
         const SizedBox(height: 20),
         ...List.generate(ex.options.length, (optIdx) {
           final option = ex.options[optIdx];
@@ -358,6 +410,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _statementCard(context, ex),
+        _hintsSection(context, ex),
         const SizedBox(height: 20),
         Text(
           isRedaction ? 'Votre rédaction' : 'Votre réponse',
@@ -436,6 +489,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _statementCard(context, ex),
+        _hintsSection(context, ex),
         const SizedBox(height: 16),
         Container(
           padding: const EdgeInsets.all(16),

@@ -552,6 +552,10 @@ class Exercise {
   final int points;
   final String? chapterTitle;
   final String? subjectName;
+  /// Indices progressifs (CF-003 enrichissement, migration 54) : du plus léger au plus explicite,
+  /// jamais la réponse finale. Rangés dans instructions_json, pas une colonne dédiée.
+  final List<String> hints;
+  final List<String> skills;
 
   Exercise({
     required this.id,
@@ -568,6 +572,8 @@ class Exercise {
     this.points = 10,
     this.chapterTitle,
     this.subjectName,
+    this.hints = const [],
+    this.skills = const [],
   });
 
   /// Ni lié à une leçon ni à un chapitre : exercice de brassage multi-chapitres (§3.2 du CDC).
@@ -604,6 +610,8 @@ class Exercise {
       points: 10,
       chapterTitle: (directChapter?['title'] ?? lesson?['title']) as String?,
       subjectName: subject?['name'] as String?,
+      hints: ((instructions['hints'] as List?) ?? const []).map((h) => h.toString()).toList(),
+      skills: ((json['skills'] as List?) ?? const []).map((s) => s.toString()).toList(),
     );
   }
 }

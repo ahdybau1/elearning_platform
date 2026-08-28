@@ -277,6 +277,11 @@ class Exercise {
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<ExerciseVersion> versions;
+  /// CF-003 enrichissement (migration 54) — tags libres, pas une taxonomie figée (voir la migration
+  /// pour la justification : un vrai Competency Graph est un chantier séparé, U9 du cahier).
+  final List<String> skills;
+  final List<String> prerequisites;
+  final String provenance; // 'manual' | 'ai_generated' | 'imported'
 
   Exercise({
     required this.id,
@@ -296,11 +301,21 @@ class Exercise {
     DateTime? createdAt,
     DateTime? updatedAt,
     List<ExerciseVersion>? versions,
+    List<String>? skills,
+    List<String>? prerequisites,
+    this.provenance = 'manual',
   })  : instructionsJson = instructionsJson ?? {},
         solutionJson = solutionJson ?? {},
         createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now(),
-        versions = versions ?? [];
+        versions = versions ?? [],
+        skills = skills ?? [],
+        prerequisites = prerequisites ?? [];
+
+  /// Indices progressifs — rangés dans instructions_json (contenu destiné à l'élève, voir migration
+  /// 54), pas une colonne dédiée.
+  List<String> get hints =>
+      ((instructionsJson['hints'] as List?) ?? const []).map((h) => h.toString()).toList();
 
   factory Exercise.fromJson(Map<String, dynamic> json) {
     return Exercise(
@@ -327,6 +342,9 @@ class Exercise {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
           : DateTime.now(),
+      skills: ((json['skills'] as List?) ?? const []).map((s) => s.toString()).toList(),
+      prerequisites: ((json['prerequisites'] as List?) ?? const []).map((p) => p.toString()).toList(),
+      provenance: json['provenance'] as String? ?? 'manual',
     );
   }
 
@@ -347,6 +365,9 @@ class Exercise {
         'is_active': isActive,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
+        'skills': skills,
+        'prerequisites': prerequisites,
+        'provenance': provenance,
       };
 }
 

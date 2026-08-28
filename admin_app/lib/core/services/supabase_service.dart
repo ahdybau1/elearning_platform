@@ -2380,6 +2380,9 @@ class SupabaseService {
     required Map<String, dynamic> instructionsJson,
     Map<String, dynamic>? solutionJson,
     String minSubscriptionTier = 'gratuit',
+    List<String> skills = const [],
+    List<String> prerequisites = const [],
+    String provenance = 'manual',
   }) async {
     final data = <String, dynamic>{
       'type': exerciseTypeToDb(type),
@@ -2390,6 +2393,9 @@ class SupabaseService {
       'solution_json': solutionJson ?? {},
       'min_subscription_tier': minSubscriptionTier,
       'is_published': false,
+      'skills': skills,
+      'prerequisites': prerequisites,
+      'provenance': provenance,
     };
     if (lessonId != null) data['lesson_id'] = lessonId;
     if (chapterId != null) data['chapter_id'] = chapterId;
@@ -2445,6 +2451,8 @@ class SupabaseService {
     bool updateTermId = false,
     String? termId,
     String? editedBy,
+    List<String>? skills,
+    List<String>? prerequisites,
   }) async {
     if ((instructionsJson != null || solutionJson != null) && editedBy != null) {
       final current = await getExercise(id);
@@ -2479,6 +2487,8 @@ class SupabaseService {
     if (updateChapterId) data['chapter_id'] = chapterId;
     if (updateClassNodeId) data['class_node_id'] = classNodeId;
     if (updateTermId) data['term_id'] = termId;
+    if (skills != null) data['skills'] = skills;
+    if (prerequisites != null) data['prerequisites'] = prerequisites;
     await client.from('exercises').update(data).eq('id', id);
   }
 

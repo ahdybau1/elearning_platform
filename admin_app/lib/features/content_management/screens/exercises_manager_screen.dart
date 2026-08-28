@@ -974,6 +974,18 @@ class _ExercisesManagerScreenState
         .map((o) => TextEditingController(text: o))
         .toList();
     int? correctOptionIndex = existing?.solutionJson['correct_index'] as int?;
+    // CF-003 enrichissement (migration 54) : indices progressifs (dans instructions_json, contenu
+    // élève), compétences/prérequis (colonnes dédiées, tags libres — voir la migration pour le choix
+    // de ne pas figer de taxonomie ici).
+    final hintsController = TextEditingController(
+      text: (existing?.hints ?? const []).join('\n'),
+    );
+    final skillsController = TextEditingController(
+      text: (existing?.skills ?? const []).join(', '),
+    );
+    final prerequisitesController = TextEditingController(
+      text: (existing?.prerequisites ?? const []).join(', '),
+    );
     String? submitError;
     bool isLoading = false;
 
@@ -1300,6 +1312,41 @@ class _ExercisesManagerScreenState
                                     onChanged: (assets) => attachedSolutionMedia = assets,
                                   ),
                                 ),
+                                const SizedBox(height: 20),
+                                const Divider(height: 1, color: AppTheme.primaryBorder),
+                                const SizedBox(height: 12),
+                                Text('Pédagogie (optionnel)',
+                                    style: GoogleFonts.outfit(
+                                        fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: hintsController,
+                                  maxLines: 3,
+                                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Indices progressifs (un par ligne)',
+                                    helperText: 'Du plus léger au plus explicite — jamais la réponse finale.',
+                                    isDense: true,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                TextField(
+                                  controller: skillsController,
+                                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Compétences mobilisées (séparées par des virgules)',
+                                    isDense: true,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                TextField(
+                                  controller: prerequisitesController,
+                                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Prérequis (séparés par des virgules)',
+                                    isDense: true,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -1350,10 +1397,26 @@ class _ExercisesManagerScreenState
                               .map((c) => c.text.trim())
                               .where((o) => o.isNotEmpty)
                               .toList();
+                          final hints = hintsController.text
+                              .split('\n')
+                              .map((h) => h.trim())
+                              .where((h) => h.isNotEmpty)
+                              .toList();
+                          final skills = skillsController.text
+                              .split(',')
+                              .map((s) => s.trim())
+                              .where((s) => s.isNotEmpty)
+                              .toList();
+                          final prerequisites = prerequisitesController.text
+                              .split(',')
+                              .map((p) => p.trim())
+                              .where((p) => p.isNotEmpty)
+                              .toList();
                           final instructionsJson = {
                             'statement': instructionsController.text.trim(),
                             'media': statementMediaPayload,
                             if (selectedFormat == ExerciseFormat.qcm && options.isNotEmpty) 'options': options,
+                            if (hints.isNotEmpty) 'hints': hints,
                           };
                           final solutionJson = {
                             'correction': solutionController.text.trim(),
@@ -1379,6 +1442,8 @@ class _ExercisesManagerScreenState
                               updateTermId: true,
                               termId: selectedTermId,
                               editedBy: _currentAdminId(),
+                              skills: skills,
+                              prerequisites: prerequisites,
                             );
                           } else {
                             final exercise = await service.createExercise(
@@ -1392,6 +1457,8 @@ class _ExercisesManagerScreenState
                               instructionsJson: instructionsJson,
                               solutionJson: solutionJson,
                               minSubscriptionTier: selectedTier,
+                              skills: skills,
+                              prerequisites: prerequisites,
                             );
 
                             if (exercise != null) {
@@ -1909,6 +1976,8 @@ class _ExercisesManagerScreenState
                             final item = generated![i];
                             final options = (item['options'] as List?)?.cast<String>();
                             final correctIndex = item['correct_index'] as int?;
+                            final hints = (item['hints'] as List?)?.map((h) => h.toString()).toList() ?? const [];
+                            final skills = (item['skills'] as List?)?.map((s) => s.toString()).toList() ?? const [];
                             final exercise = await service.createExercise(
                               chapterId: selectedChapterId,
                               classNodeId: selectedClassNodeId,
@@ -1921,11 +1990,14 @@ class _ExercisesManagerScreenState
                                 'statement': item['statement'] as String? ?? '',
                                 'options': ?options,
                                 'media': [],
+                                if (hints.isNotEmpty) 'hints': hints,
                               },
                               solutionJson: {
                                 'correction': item['correction'] as String? ?? '',
                                 'correct_index': ?correctIndex,
                               },
+                              skills: skills,
+                              provenance: 'ai_generated',
                             );
                             if (exercise != null) {
                               await service.submitOrAutoApprove(
