@@ -107,7 +107,7 @@ seuil de similarité pour un doublon ?) qu'il vaut mieux trancher avec le porteu
 des colonnes/migrations, plutôt que de les inventer. Non démarré ; pas de raison de le prioriser avant
 confirmation, la fonctionnalité existante étant déjà saine.
 
-## CF-004 — Agents IA existants → contrat standard §4 [CODE FAIT, NON DÉPLOYÉ — 2026-08-28, commit `9522227`]
+## CF-004 — Agents IA existants → contrat standard §4 [FAIT ET DÉPLOYÉ — 2026-08-28, commit `9522227`]
 
 Faire évoluer `ai-course-structuring`, `ai-exercise-generation`, `ai-catalog-types-generation` pour émettre
 l'enveloppe de sortie standard (`request_id`, `status`, `result`, `usage.route`, `agent_version`) sans
@@ -120,9 +120,12 @@ en plus, même convention que `_mock` déjà présent et jamais lu par aucun cli
 jusqu'ici jamais journalisés du tout. Les 5 fonctions IA journalisent maintenant systématiquement (succès
 ET échec) avec le vrai modèle utilisé. Vérifié via `deno check` (vraie vérification de types) sur les 5.
 
-**Bloqué avant déploiement réel : nécessite le PAT Supabase de l'utilisateur** (absent de cette session,
-jamais persisté par choix — voir mémoire `reference_supabase_management_api`). Deux étapes restent à
-faire une fois le PAT disponible : appliquer la migration 53, puis redéployer les 5 fonctions.
+**Déployé et vérifié en conditions réelles (2026-08-28)** : migration 53 appliquée (colonnes confirmées via
+`information_schema.columns`), 5 fonctions redéployées via `npx supabase functions deploy`. Appel réel de
+`ai-tutor-chat` (pas un mock) : réponse contient bien `_request_id`/`_agent_version`/`_model`/
+`_duration_ms`, et la ligne correspondante existe dans `ai_agent_calls` avec `model=gemini-3.6-flash`,
+`status=success`, `duration_ms` cohérent — la chaîne fonction → DB est confirmée bout en bout, pas
+seulement déployée à l'aveugle.
 
 ## Explicitement différé (ne pas commencer sans confirmation explicite de l'utilisateur)
 
