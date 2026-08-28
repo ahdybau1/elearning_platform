@@ -326,7 +326,12 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                             // resetProfileSelection() laisse la porte réactive faire la bascule.
                             onPressed: () => ref.read(studentAuthProvider.notifier).resetProfileSelection(),
                             icon: const Icon(Icons.swap_horiz_rounded, size: 16),
-                            label: const Text('Changer de Profil'),
+                            // « Classe », pas « Profil » : sur cet appareil, « profil » désigne déjà
+                            // le compte/la personne (voir « Qui se connecte ? »,
+                            // device_account_selector_screen.dart) — réutiliser le même mot ici pour
+                            // choisir entre les classes du MÊME compte donnait l'impression de « profil
+                            // dans un profil » (retour utilisateur direct).
+                            label: const Text('Changer de Classe'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: context.colors.textSecondary,
                               side: BorderSide(color: context.colors.border),

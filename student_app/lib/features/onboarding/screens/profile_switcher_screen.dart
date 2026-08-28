@@ -50,7 +50,7 @@ class ProfileSwitcherScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Modèle 1 Profil = 1 Classe pour un suivi individuel sans confusion.',
+                'Choisissez la classe à ouvrir sur ce compte — une classe = un suivi individuel séparé.',
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   color: context.colors.textSecondary,
@@ -197,7 +197,7 @@ class ProfileSwitcherScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'Ajouter un profil',
+                            'Ajouter une classe',
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,

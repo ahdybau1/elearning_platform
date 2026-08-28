@@ -274,7 +274,7 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Modèle 1 profil = 1 classe = 1 abonnement (§2.3 du cahier des charges).',
+              'Chaque classe suivie a son propre suivi et son propre abonnement.',
               style: GoogleFonts.inter(
                 fontSize: 12,
                 color: context.colors.textSecondary,
@@ -780,7 +780,7 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.colors.card,
         title: Text(
-          'Archiver ce profil ?',
+          'Archiver cette classe ?',
           style: GoogleFonts.outfit(
             color: context.colors.textPrimary,
             fontWeight: FontWeight.bold,
@@ -827,7 +827,7 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
     } else {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Profil archivé.')));
+      ).showSnackBar(const SnackBar(content: Text('Classe archivée.')));
     }
   }
 
@@ -843,7 +843,7 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
     } else {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Profil réactivé.')));
+      ).showSnackBar(const SnackBar(content: Text('Classe réactivée.')));
       ref.invalidate(archivedProfilesProvider);
     }
   }
@@ -860,7 +860,7 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Profils archivés',
+              'Classes archivées',
               style: GoogleFonts.outfit(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -1043,7 +1043,7 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
           if (canArchive) ...[
             const SizedBox(width: 4),
             IconButton(
-              tooltip: 'Archiver ce profil',
+              tooltip: 'Archiver cette classe',
               icon: Icon(
                 Icons.archive_outlined,
                 size: 18,
