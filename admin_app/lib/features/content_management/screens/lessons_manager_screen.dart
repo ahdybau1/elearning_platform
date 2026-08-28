@@ -2471,6 +2471,11 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                                   })
                               .toList(),
                           'ai_structured': ?aiStructured,
+                          // Format natif "blocks" (CF-001/CF-002, docs/CONTENT_FACTORY_IMPLEMENTATION_
+                          // PLAN.md) — dérivé de la structuration IA avec exactement le même mapping que
+                          // Lesson.blocks côté student_app, pour que ce qui est enregistré ici corresponde
+                          // à ce qui sera réellement affiché à l'élève.
+                          'blocks': ?_blocksFromAiStructured(aiStructured),
                         };
 
                         if (isEditing) {
@@ -2536,6 +2541,161 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
           ],
           );
         },
+      ),
+    );
+  }
+
+  /// Dérive `content_json['blocks']` (format natif, CF-001/CF-002) depuis la structuration IA brute.
+  /// Mapping volontairement identique à `Lesson.blocks` dans
+  /// `student_app/lib/core/models/student_models.dart` : mêmes types de blocs, même ordre, même
+  /// formatage des puces — les deux applications n'ayant pas de package Dart partagé (voir
+  /// `docs/CONTENT_FACTORY_GAP_ANALYSIS.md`), toute évolution de l'un doit être reportée manuellement
+  /// sur l'autre tant qu'un package commun n'existe pas.
+  List<Map<String, dynamic>>? _blocksFromAiStructured(Map<String, dynamic>? structured) {
+    if (structured == null) return null;
+    final blocks = <Map<String, dynamic>>[];
+    var order = 0;
+
+    final summary = structured['summary'] as String?;
+    if (summary != null && summary.trim().isNotEmpty) {
+      blocks.add({'type': 'paragraph', 'body': summary.trim(), 'order': order++});
+    }
+
+    final sections = (structured['sections'] as List?) ?? const [];
+    for (final s in sections) {
+      if (s is Map) {
+        final section = Map<String, dynamic>.from(s);
+        final type = (section['type'] as String?)?.trim().toLowerCase();
+        blocks.add({
+          'type': (type != null && type.isNotEmpty) ? type : 'paragraph',
+          'heading': section['heading'],
+          'body': section['body'] ?? '',
+          'formulas': _asStringList(section['latex_formulas']),
+          'order': order++,
+        });
+      }
+    }
+
+    final traps = _asStringList(structured['common_traps']);
+    if (traps.isNotEmpty) {
+      blocks.add({'type': 'piege', 'body': traps.map((t) => '•  $t').join('\n'), 'order': order++});
+    }
+
+    final tips = _asStringList(structured['exam_tips']);
+    if (tips.isNotEmpty) {
+      blocks.add({'type': 'conseil_examen', 'body': tips.map((t) => '•  $t').join('\n'), 'order': order++});
+    }
+
+    return blocks.isEmpty ? null : blocks;
+  }
+
+  /// Convertit une liste dynamique issue du JSON (`common_traps`, `exam_tips`, ...) en `List<String>`
+  /// sûre, quelle que soit la forme exacte des éléments.
+  List<String> _asStringList(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw.map((e) => e.toString()).where((e) => e.trim().isNotEmpty).toList();
+  }
+
+  /// Même typologie que `BlockRendererRegistry` côté `student_app` (theoreme/definition/formule/
+  /// methode/exemple) : icône + couleur par type, pour que cet aperçu reflète fidèlement ce que
+  /// l'élève verra réellement, section par section — au lieu d'un rendu uniforme.
+  ({IconData icon, Color color, String defaultLabel}) _previewSectionMeta(String? type) {
+    switch ((type ?? '').trim().toLowerCase()) {
+      case 'theoreme':
+      case 'theorem':
+        return (icon: Icons.verified_rounded, color: const Color(0xFF1E3A8A), defaultLabel: 'Théorème');
+      case 'definition':
+        return (icon: Icons.menu_book_rounded, color: AppTheme.accentIndigo, defaultLabel: 'Définition');
+      case 'formule':
+      case 'formula':
+        return (icon: Icons.functions_rounded, color: AppTheme.accentEmerald, defaultLabel: 'Formule');
+      case 'methode':
+      case 'method':
+        return (icon: Icons.lightbulb_outline_rounded, color: AppTheme.accentAmber, defaultLabel: 'Méthode');
+      case 'exemple':
+      case 'example':
+        return (icon: Icons.auto_awesome_rounded, color: AppTheme.accentCyan, defaultLabel: 'Exemple');
+      default:
+        return (icon: Icons.article_rounded, color: const Color(0xFF6B7280), defaultLabel: 'Section');
+    }
+  }
+
+  Widget _buildPreviewSection(Map<String, dynamic> section) {
+    final meta = _previewSectionMeta(section['type'] as String?);
+    final heading = (section['heading'] as String?)?.trim();
+    final formulas = _asStringList(section['latex_formulas']);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(meta.icon, size: 15, color: meta.color),
+              const SizedBox(width: 6),
+              Text(
+                (heading != null && heading.isNotEmpty) ? heading : meta.defaultLabel,
+                style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: meta.color),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            section['body'] as String? ?? '',
+            style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF374151), height: 1.5),
+          ),
+          for (final f in formulas)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  f,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.firaCode(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF111827)),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreviewCallout({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required Color bgColor,
+    required List<String> items,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(8)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 15, color: color),
+                const SizedBox(width: 6),
+                Text(title, style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: color)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            for (final item in items)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Text('•  $item', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF374151))),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -2611,29 +2771,30 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                             fontSize: 19, fontWeight: FontWeight.bold, color: const Color(0xFF111827)),
                       ),
                       const SizedBox(height: 12),
-                      if (sections.isNotEmpty)
-                        ...sections.map((s) {
-                          final section = Map<String, dynamic>.from(s as Map);
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 14),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  section['heading'] as String? ?? '',
-                                  style: GoogleFonts.outfit(
-                                      fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF1E3A8A)),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  section['body'] as String? ?? '',
-                                  style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF374151), height: 1.5),
-                                ),
-                              ],
-                            ),
-                          );
-                        })
-                      else
+                      if (sections.isNotEmpty) ...[
+                        // Rendu aligné sur BlockRendererRegistry (student_app/lib/core/rendering/) : un
+                        // type de section = une couleur/icône, comme réellement vu par l'élève (CF-002 —
+                        // avant ce correctif, cet aperçu ignorait pièges/conseils/formules et affichait
+                        // toutes les sections de façon identique quel que soit leur type, ce qui rendait
+                        // l'aperçu trompeur).
+                        ...sections.map((s) => _buildPreviewSection(Map<String, dynamic>.from(s as Map))),
+                        if (_asStringList(structured?['common_traps']).isNotEmpty)
+                          _buildPreviewCallout(
+                            title: 'Pièges classiques',
+                            icon: Icons.warning_amber_rounded,
+                            color: const Color(0xFFDC2626),
+                            bgColor: const Color(0xFFFEF2F2),
+                            items: _asStringList(structured?['common_traps']),
+                          ),
+                        if (_asStringList(structured?['exam_tips']).isNotEmpty)
+                          _buildPreviewCallout(
+                            title: 'Conseils d\'examen',
+                            icon: Icons.tips_and_updates_rounded,
+                            color: const Color(0xFF059669),
+                            bgColor: const Color(0xFFECFDF5),
+                            items: _asStringList(structured?['exam_tips']),
+                          ),
+                      ] else
                         Text(
                           body.isEmpty ? 'Aucun contenu rédigé pour le moment.' : body,
                           style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF374151), height: 1.5),
