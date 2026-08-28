@@ -10,6 +10,75 @@ import '../widgets/media_attachment_picker.dart';
 import '../utils/lesson_pdf_generator.dart';
 import '../../../core/widgets/app_dialog_title.dart';
 
+/// Types de blocs reconnus par `BlockRendererRegistry` côté `student_app` (voir
+/// `docs/CONTENT_FACTORY_IMPLEMENTATION_PLAN.md`, CF-002). Tenu manuellement synchronisé avec
+/// `student_app/lib/core/rendering/block_renderer_registry.dart` tant qu'aucun package Dart partagé
+/// n'existe entre les deux apps.
+const List<(String value, String label)> kEditableBlockTypes = [
+  ('paragraph', 'Paragraphe simple'),
+  ('definition', 'Définition'),
+  ('theoreme', 'Théorème / Propriété'),
+  ('formule', 'Formule (LaTeX)'),
+  ('methode', 'Méthode / Savoir-faire'),
+  ('exemple', 'Exemple'),
+  ('piege', 'Piège classique d\'examen'),
+  ('conseil_examen', 'Conseil d\'examen'),
+];
+
+/// Bloc de contenu structuré éditable dans le formulaire admin (CF-002 partie 2). Porte ses propres
+/// `TextEditingController` pour rester stable entre les rebuilds `setModalState` sans perdre le
+/// curseur/la sélection en cours de frappe.
+class _EditableBlock {
+  String type;
+  final TextEditingController headingCtrl;
+  final TextEditingController bodyCtrl;
+  final TextEditingController formulasCtrl;
+
+  _EditableBlock({
+    required this.type,
+    String heading = '',
+    String body = '',
+    List<String> formulas = const [],
+  })  : headingCtrl = TextEditingController(text: heading),
+        bodyCtrl = TextEditingController(text: body),
+        formulasCtrl = TextEditingController(text: formulas.join('\n'));
+
+  factory _EditableBlock.fromJson(Map<String, dynamic> json) {
+    final rawFormulas = json['formulas'] ?? json['latex_formulas'];
+    return _EditableBlock(
+      type: (json['type'] as String?)?.trim().toLowerCase().isNotEmpty == true
+          ? (json['type'] as String).trim().toLowerCase()
+          : 'paragraph',
+      heading: (json['heading'] as String?) ?? '',
+      body: (json['body'] as String?) ?? '',
+      formulas: rawFormulas is List ? rawFormulas.map((f) => f.toString()).toList() : const [],
+    );
+  }
+
+  Map<String, dynamic> toJson(int order) {
+    final formulas = formulasCtrl.text
+        .split('\n')
+        .map((f) => f.trim())
+        .where((f) => f.isNotEmpty)
+        .toList();
+    return {
+      'type': type,
+      if (headingCtrl.text.trim().isNotEmpty) 'heading': headingCtrl.text.trim(),
+      'body': bodyCtrl.text.trim(),
+      'formulas': formulas,
+      'order': order,
+    };
+  }
+
+  bool get isEmpty => bodyCtrl.text.trim().isEmpty && formulasCtrl.text.trim().isEmpty;
+
+  void dispose() {
+    headingCtrl.dispose();
+    bodyCtrl.dispose();
+    formulasCtrl.dispose();
+  }
+}
+
 class LessonsManagerScreen extends ConsumerStatefulWidget {
   const LessonsManagerScreen({super.key});
 
@@ -824,7 +893,7 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
               tier: lesson.minSubscriptionTier,
               body: lesson.contentJson['body'] as String? ?? '',
               media: List<Map<String, dynamic>>.from((lesson.contentJson['media'] as List?) ?? []),
-              structured: (lesson.contentJson['ai_structured'] as Map?)?.cast<String, dynamic>(),
+              blocks: _resolveBlocksForPreview(lesson.contentJson),
               subjectName: subjectName,
               chapterTitle: chapterTitle,
             ),
@@ -931,46 +1000,6 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
         style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.accentIndigo),
       ),
     );
-  }
-
-  /// Convertit le JSON structuré renvoyé par l'IA (sections, pièges, conseils, quiz) en texte
-  /// simple éditable dans le champ "Contenu pédagogique" — garde une UX à un seul champ texte
-  /// plutôt que d'imposer un formulaire structuré complexe, tout en conservant le JSON d'origine
-  /// (voir 'ai_structured') pour un rendu plus riche en aperçu et à l'export PDF.
-  String _formatAiStructuredAsText(Map<String, dynamic> structured) {
-    final buffer = StringBuffer();
-    final summary = structured['summary'] as String?;
-    if (summary != null && summary.isNotEmpty) {
-      buffer.writeln(summary);
-      buffer.writeln();
-    }
-    final sections = (structured['sections'] as List?) ?? [];
-    for (final s in sections) {
-      final section = Map<String, dynamic>.from(s as Map);
-      buffer.writeln('## ${section['heading'] ?? ''}');
-      buffer.writeln(section['body'] ?? '');
-      final formulas = (section['latex_formulas'] as List?) ?? [];
-      for (final f in formulas) {
-        buffer.writeln('  $f');
-      }
-      buffer.writeln();
-    }
-    final traps = (structured['common_traps'] as List?) ?? [];
-    if (traps.isNotEmpty) {
-      buffer.writeln('## Pièges classiques');
-      for (final t in traps) {
-        buffer.writeln('- $t');
-      }
-      buffer.writeln();
-    }
-    final tips = (structured['exam_tips'] as List?) ?? [];
-    if (tips.isNotEmpty) {
-      buffer.writeln('## Conseils d\'examen');
-      for (final t in tips) {
-        buffer.writeln('- $t');
-      }
-    }
-    return buffer.toString().trim();
   }
 
   /// Dialogue de confirmation générique pour les 6 actions archiver/désarchiver/supprimer
@@ -2143,6 +2172,25 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
         .toList();
     Map<String, dynamic>? aiStructured =
         (existing?.contentJson['ai_structured'] as Map?)?.cast<String, dynamic>();
+    // Blocs de contenu éditables (CF-002 partie 2) : pré-remplis depuis content_json['blocks']
+    // (format natif) si présent, sinon dérivés de ai_structured, sinon — pour une très ancienne leçon
+    // enregistrée avant la structuration IA — un unique bloc paragraphe repris du texte brut.
+    final List<_EditableBlock> blocks = isEditing
+        ? _resolveBlocksForPreview(existing.contentJson)
+            .map((b) => _EditableBlock.fromJson(b))
+            .toList()
+        : <_EditableBlock>[];
+    if (blocks.isEmpty && isEditing) {
+      final legacyBody = existing.contentJson['body'] as String?;
+      if (legacyBody != null && legacyBody.trim().isNotEmpty) {
+        blocks.add(_EditableBlock(type: 'paragraph', body: legacyBody.trim()));
+      }
+    }
+    // Nouvelle leçon : un bloc paragraphe vide prêt à l'emploi, pour ne pas forcer un clic
+    // supplémentaire sur "Ajouter un bloc" avant de pouvoir taper du contenu.
+    if (blocks.isEmpty && !isEditing) {
+      blocks.add(_EditableBlock(type: 'paragraph'));
+    }
     String? submitError;
     bool isLoading = false;
     bool isGeneratingAi = false;
@@ -2207,6 +2255,7 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                                 .map((a) => {'url': a.url, 'filename': a.filename, 'type': a.type})
                                 .toList(),
                             'ai_structured': ?aiStructured,
+                            'blocks': [for (var i = 0; i < blocks.length; i++) blocks[i].toJson(i)],
                           },
                         ),
                         subjectName: resolvedSubjectName ?? 'Matière',
@@ -2228,7 +2277,7 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                         media: attachedMedia
                             .map((a) => {'url': a.url, 'filename': a.filename, 'type': a.type})
                             .toList(),
-                        structured: aiStructured,
+                        blocks: [for (var i = 0; i < blocks.length; i++) blocks[i].toJson(i)],
                         subjectName: resolvedSubjectName ?? 'Matière',
                         chapterTitle: resolvedChapterTitle ?? 'Chapitre',
                       ),
@@ -2341,15 +2390,14 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                             children: [
                               TextField(
                                 controller: contentController,
-                                maxLines: 10,
+                                maxLines: 4,
                                 style: const TextStyle(color: Colors.white),
                                 decoration: const InputDecoration(
-                                  labelText: 'Contenu pédagogique (Texte enrichi, formules LaTeX)',
-                                  helperText: 'Notes brutes ou mots-clés : point de départ pour la génération IA ci-dessous',
+                                  labelText: 'Notes brutes / mots-clés',
+                                  helperText: 'Optionnel — point de départ pour la génération IA ci-dessous',
                                   alignLabelWithHint: true,
                                   prefixIcon: Icon(Icons.article_rounded, size: 20),
                                 ),
-                                onChanged: (_) => setModalState(() {}),
                               ),
                               const SizedBox(height: 12),
                               Align(
@@ -2361,7 +2409,7 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                                       : () async {
                                           if (contentController.text.trim().isEmpty) {
                                             setModalState(() => submitError =
-                                                'Saisissez quelques notes/mots-clés dans le champ contenu avant de générer.');
+                                                'Saisissez quelques notes/mots-clés avant de générer.');
                                             return;
                                           }
                                           setModalState(() {
@@ -2380,7 +2428,16 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                                               if (titleController.text.trim().isEmpty && result['title'] != null) {
                                                 titleController.text = result['title'] as String;
                                               }
-                                              contentController.text = _formatAiStructuredAsText(result);
+                                              // Remplace les blocs par la structuration IA — l'admin
+                                              // reste libre de les modifier/supprimer un par un ensuite
+                                              // (voir CF-002, blocs éditables ci-dessous).
+                                              final generated = _blocksFromAiStructured(result) ?? const [];
+                                              for (final b in blocks) {
+                                                b.dispose();
+                                              }
+                                              blocks
+                                                ..clear()
+                                                ..addAll(generated.map(_EditableBlock.fromJson));
                                             });
                                           } catch (e) {
                                             setModalState(() {
@@ -2398,24 +2455,67 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                                       : const Icon(Icons.psychology_rounded, size: 16),
                                   label: Text(isGeneratingAi
                                       ? 'Génération en cours...'
-                                      : 'Structurer avec l\'IA (Claude)'),
+                                      : (blocks.isEmpty
+                                          ? 'Structurer avec l\'IA (Claude)'
+                                          : 'Regénérer avec l\'IA (remplace les blocs ci-dessous)')),
                                 ),
                               ),
-                              if (aiStructured != null) ...[
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.check_circle_rounded, size: 14, color: AppTheme.accentEmerald),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        'Structure IA appliquée (sections, pièges, conseils, quiz) — modifiable ci-dessus.',
-                                        style: GoogleFonts.inter(fontSize: 11, color: AppTheme.accentEmerald),
-                                      ),
-                                    ),
-                                  ],
+                              const SizedBox(height: 20),
+                              const Divider(height: 1, color: AppTheme.primaryBorder),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Blocs de contenu',
+                                style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Chaque bloc a un type (icône/couleur propre côté élève) — ajoutez, réordonnez ou '
+                                'supprimez librement. La génération IA les remplit, mais tout reste modifiable à la main.',
+                                style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted),
+                              ),
+                              const SizedBox(height: 10),
+                              if (blocks.isEmpty)
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryDark,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppTheme.primaryBorder),
+                                  ),
+                                  child: Text(
+                                    'Aucun bloc pour l\'instant — générez avec l\'IA ci-dessus ou ajoutez un bloc manuellement.',
+                                    style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted),
+                                  ),
+                                )
+                              else
+                                for (var i = 0; i < blocks.length; i++)
+                                  _buildEditableBlockCard(
+                                    blocks[i],
+                                    index: i,
+                                    isFirst: i == 0,
+                                    isLast: i == blocks.length - 1,
+                                    onTypeChanged: () => setModalState(() {}),
+                                    onMoveUp: () => setModalState(() {
+                                      final b = blocks.removeAt(i);
+                                      blocks.insert(i - 1, b);
+                                    }),
+                                    onMoveDown: () => setModalState(() {
+                                      final b = blocks.removeAt(i);
+                                      blocks.insert(i + 1, b);
+                                    }),
+                                    onDelete: () => setModalState(() => blocks.removeAt(i).dispose()),
+                                  ),
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(foregroundColor: AppTheme.accentIndigo),
+                                  onPressed: () => setModalState(() => blocks.add(_EditableBlock(type: 'paragraph'))),
+                                  icon: const Icon(Icons.add_rounded, size: 16),
+                                  label: const Text('Ajouter un bloc'),
                                 ),
-                              ],
+                              ),
                               const SizedBox(height: 16),
                               Align(
                                 alignment: Alignment.centerLeft,
@@ -2449,7 +2549,6 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                   ? null
                   : () async {
                       final title = titleController.text.trim();
-                      final content = contentController.text.trim();
                       if (title.isEmpty) {
                         setModalState(() => submitError = 'Le titre est obligatoire.');
                         return;
@@ -2461,8 +2560,21 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                       });
                       try {
                         final service = ref.read(supabaseServiceProvider);
+                        // Format natif "blocks" (CF-001/CF-002, docs/CONTENT_FACTORY_IMPLEMENTATION_
+                        // PLAN.md) — c'est désormais la véritable source de vérité éditée à la main,
+                        // que la structuration IA ait servi de point de départ ou non. `body` reste
+                        // dérivé (concaténation des contenus des blocs) pour la compatibilité des
+                        // écrans/exports qui ne connaissent pas encore `blocks`.
+                        final blocksJson = [
+                          for (var i = 0; i < blocks.length; i++)
+                            if (!blocks[i].isEmpty) blocks[i].toJson(i)
+                        ];
+                        final derivedBody = blocksJson
+                            .map((b) => b['body'] as String)
+                            .where((s) => s.isNotEmpty)
+                            .join('\n\n');
                         final contentJson = {
-                          'body': content,
+                          'body': derivedBody,
                           'media': attachedMedia
                               .map((a) => {
                                     'url': a.url,
@@ -2471,11 +2583,7 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                                   })
                               .toList(),
                           'ai_structured': ?aiStructured,
-                          // Format natif "blocks" (CF-001/CF-002, docs/CONTENT_FACTORY_IMPLEMENTATION_
-                          // PLAN.md) — dérivé de la structuration IA avec exactement le même mapping que
-                          // Lesson.blocks côté student_app, pour que ce qui est enregistré ici corresponde
-                          // à ce qui sera réellement affiché à l'élève.
-                          'blocks': ?_blocksFromAiStructured(aiStructured),
+                          if (blocksJson.isNotEmpty) 'blocks': blocksJson,
                         };
 
                         if (isEditing) {
@@ -2589,11 +2697,123 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
     return blocks.isEmpty ? null : blocks;
   }
 
+  /// Résout la liste de blocs à utiliser pour l'aperçu/l'édition d'une leçon déjà enregistrée :
+  /// `content_json['blocks']` natif en priorité (CF-002), sinon dérivé de `ai_structured` (leçons
+  /// enregistrées avant l'éditeur de blocs manuel), sinon liste vide (repli sur `body` brut).
+  List<Map<String, dynamic>> _resolveBlocksForPreview(Map<String, dynamic> contentJson) {
+    final rawBlocks = contentJson['blocks'];
+    if (rawBlocks is List && rawBlocks.isNotEmpty) {
+      return rawBlocks.whereType<Map>().map((b) => Map<String, dynamic>.from(b)).toList();
+    }
+    final structured = (contentJson['ai_structured'] as Map?)?.cast<String, dynamic>();
+    return _blocksFromAiStructured(structured) ?? const [];
+  }
+
   /// Convertit une liste dynamique issue du JSON (`common_traps`, `exam_tips`, ...) en `List<String>`
   /// sûre, quelle que soit la forme exacte des éléments.
   List<String> _asStringList(dynamic raw) {
     if (raw is! List) return const [];
     return raw.map((e) => e.toString()).where((e) => e.trim().isNotEmpty).toList();
+  }
+
+  /// Carte d'édition d'un bloc dans l'éditeur de leçon (CF-002 partie 2) : type (dropdown), titre,
+  /// contenu et formules, avec contrôles de réordonnancement/suppression.
+  Widget _buildEditableBlockCard(
+    _EditableBlock block, {
+    required int index,
+    required bool isFirst,
+    required bool isLast,
+    required VoidCallback onTypeChanged,
+    required VoidCallback onMoveUp,
+    required VoidCallback onMoveDown,
+    required VoidCallback onDelete,
+  }) {
+    final meta = _previewSectionMeta(block.type);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryDark,
+        borderRadius: BorderRadius.circular(10),
+        border: Border(left: BorderSide(color: meta.color, width: 3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(meta.icon, size: 15, color: meta.color),
+              const SizedBox(width: 6),
+              Text('Bloc ${index + 1}', style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted)),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.arrow_upward_rounded, size: 16),
+                tooltip: 'Monter',
+                onPressed: isFirst ? null : onMoveUp,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              ),
+              IconButton(
+                icon: const Icon(Icons.arrow_downward_rounded, size: 16),
+                tooltip: 'Descendre',
+                onPressed: isLast ? null : onMoveDown,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline_rounded, size: 16, color: AppTheme.accentRose),
+                tooltip: 'Supprimer ce bloc',
+                onPressed: onDelete,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // ignore: deprecated_member_use
+          DropdownButtonFormField<String>(
+            // ignore: deprecated_member_use
+            value: block.type,
+            dropdownColor: AppTheme.primaryDark,
+            style: const TextStyle(color: Colors.white, fontSize: 13),
+            isDense: true,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Type de bloc', isDense: true),
+            items: kEditableBlockTypes
+                .map((t) => DropdownMenuItem(value: t.$1, child: Text(t.$2)))
+                .toList(),
+            onChanged: (v) {
+              block.type = v ?? 'paragraph';
+              onTypeChanged();
+            },
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: block.headingCtrl,
+            style: const TextStyle(color: Colors.white, fontSize: 13),
+            decoration: const InputDecoration(labelText: 'Titre du bloc (optionnel)', isDense: true),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: block.bodyCtrl,
+            maxLines: 3,
+            style: const TextStyle(color: Colors.white, fontSize: 13),
+            decoration: const InputDecoration(labelText: 'Contenu', alignLabelWithHint: true, isDense: true),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: block.formulasCtrl,
+            maxLines: 2,
+            style: const TextStyle(color: Colors.white, fontSize: 12),
+            decoration: const InputDecoration(
+              labelText: 'Formules LaTeX (une par ligne, optionnel)',
+              alignLabelWithHint: true,
+              isDense: true,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Même typologie que `BlockRendererRegistry` côté `student_app` (theoreme/definition/formule/
@@ -2615,15 +2835,64 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
       case 'exemple':
       case 'example':
         return (icon: Icons.auto_awesome_rounded, color: AppTheme.accentCyan, defaultLabel: 'Exemple');
+      case 'piege':
+      case 'trap':
+        return (icon: Icons.warning_amber_rounded, color: const Color(0xFFDC2626), defaultLabel: 'Piège classique');
+      case 'conseil_examen':
+      case 'exam_tip':
+        return (icon: Icons.tips_and_updates_rounded, color: const Color(0xFF059669), defaultLabel: 'Conseil d\'examen');
+      case 'paragraph':
+        return (icon: Icons.notes_rounded, color: const Color(0xFF6B7280), defaultLabel: 'Paragraphe');
       default:
         return (icon: Icons.article_rounded, color: const Color(0xFF6B7280), defaultLabel: 'Section');
     }
   }
 
+  /// Sépare un texte enregistré sous forme de puces (`•  item`, une par ligne — voir
+  /// `_blocksFromAiStructured`) en éléments de liste. Fonctionne aussi sur du texte libre saisi à la
+  /// main (une ligne = un élément), pour rester utile même sans puces explicites.
+  List<String> _splitBulletBody(String body) {
+    return body
+        .split('\n')
+        .map((l) => l.trim().replaceFirst(RegExp(r'^•\s*'), ''))
+        .where((l) => l.isNotEmpty)
+        .toList();
+  }
+
+  /// Dispatcheur générique par type de bloc — miroir de `BlockRendererRegistry.build` côté
+  /// `student_app` : `paragraph` en texte simple, `piege`/`conseil_examen` en encart coloré à puces,
+  /// tout le reste en carte titrée avec formules éventuelles.
+  Widget _buildPreviewBlock(Map<String, dynamic> block) {
+    final type = (block['type'] as String?)?.trim().toLowerCase() ?? 'paragraph';
+    final body = (block['body'] as String?) ?? '';
+    if (type == 'paragraph') {
+      if (body.trim().isEmpty) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Text(body, style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF374151), height: 1.5)),
+      );
+    }
+    if (type == 'piege' || type == 'conseil_examen') {
+      final meta = _previewSectionMeta(type);
+      final items = _splitBulletBody(body);
+      if (items.isEmpty) return const SizedBox.shrink();
+      return _buildPreviewCallout(
+        title: (block['heading'] as String?)?.trim().isNotEmpty == true
+            ? (block['heading'] as String).trim()
+            : meta.defaultLabel,
+        icon: meta.icon,
+        color: meta.color,
+        bgColor: meta.color.withValues(alpha: 0.08),
+        items: items,
+      );
+    }
+    return _buildPreviewSection(block);
+  }
+
   Widget _buildPreviewSection(Map<String, dynamic> section) {
     final meta = _previewSectionMeta(section['type'] as String?);
     final heading = (section['heading'] as String?)?.trim();
-    final formulas = _asStringList(section['latex_formulas']);
+    final formulas = _asStringList(section['formulas'] ?? section['latex_formulas']);
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Column(
@@ -2706,11 +2975,10 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
     required String tier,
     required String body,
     required List<Map<String, dynamic>> media,
-    Map<String, dynamic>? structured,
+    required List<Map<String, dynamic>> blocks,
     required String subjectName,
     required String chapterTitle,
   }) {
-    final sections = (structured?['sections'] as List?) ?? [];
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -2771,30 +3039,14 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                             fontSize: 19, fontWeight: FontWeight.bold, color: const Color(0xFF111827)),
                       ),
                       const SizedBox(height: 12),
-                      if (sections.isNotEmpty) ...[
+                      if (blocks.isNotEmpty)
                         // Rendu aligné sur BlockRendererRegistry (student_app/lib/core/rendering/) : un
-                        // type de section = une couleur/icône, comme réellement vu par l'élève (CF-002 —
+                        // type de bloc = une couleur/icône, comme réellement vu par l'élève (CF-002 —
                         // avant ce correctif, cet aperçu ignorait pièges/conseils/formules et affichait
                         // toutes les sections de façon identique quel que soit leur type, ce qui rendait
                         // l'aperçu trompeur).
-                        ...sections.map((s) => _buildPreviewSection(Map<String, dynamic>.from(s as Map))),
-                        if (_asStringList(structured?['common_traps']).isNotEmpty)
-                          _buildPreviewCallout(
-                            title: 'Pièges classiques',
-                            icon: Icons.warning_amber_rounded,
-                            color: const Color(0xFFDC2626),
-                            bgColor: const Color(0xFFFEF2F2),
-                            items: _asStringList(structured?['common_traps']),
-                          ),
-                        if (_asStringList(structured?['exam_tips']).isNotEmpty)
-                          _buildPreviewCallout(
-                            title: 'Conseils d\'examen',
-                            icon: Icons.tips_and_updates_rounded,
-                            color: const Color(0xFF059669),
-                            bgColor: const Color(0xFFECFDF5),
-                            items: _asStringList(structured?['exam_tips']),
-                          ),
-                      ] else
+                        ...blocks.map(_buildPreviewBlock)
+                      else
                         Text(
                           body.isEmpty ? 'Aucun contenu rédigé pour le moment.' : body,
                           style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF374151), height: 1.5),

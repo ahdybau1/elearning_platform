@@ -23,6 +23,10 @@ class LessonPdfGenerator {
     final doc = pw.Document(
       theme: pw.ThemeData.withFont(base: baseFont, bold: boldFont, italic: italicFont),
     );
+    final blocks = (lesson.contentJson['blocks'] as List?)
+        ?.whereType<Map>()
+        .map((b) => Map<String, dynamic>.from(b))
+        .toList();
     final structured = lesson.contentJson['ai_structured'] as Map<String, dynamic>?;
     final body = lesson.contentJson['body'] as String? ?? '';
     final media = (lesson.contentJson['media'] as List?) ?? [];
@@ -59,7 +63,12 @@ class LessonPdfGenerator {
             style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700, fontStyle: pw.FontStyle.italic),
           ),
           pw.SizedBox(height: 20),
-          if (structured != null) ..._buildStructured(structured) else _buildPlainBody(body),
+          if (blocks != null && blocks.isNotEmpty)
+            ..._buildBlocks(blocks)
+          else if (structured != null)
+            ..._buildStructured(structured)
+          else
+            _buildPlainBody(body),
           if (media.isNotEmpty) ...[
             pw.SizedBox(height: 24),
             pw.Text('Médias attachés', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
@@ -84,6 +93,79 @@ class LessonPdfGenerator {
       body.isEmpty ? 'Aucun contenu rédigé.' : body,
       style: const pw.TextStyle(fontSize: 12, lineSpacing: 3),
     );
+  }
+
+  /// Rend le format natif `content_json['blocks']` (CF-002 — source de vérité une fois la leçon
+  /// éditée manuellement, y compris après une structuration IA modifiée à la main). Pièges et
+  /// conseils d'examen arrivent ici comme un bloc unique au corps formaté en puces (`•  item`, voir
+  /// `_blocksFromAiStructured` côté `lessons_manager_screen.dart`) plutôt que des listes séparées.
+  static List<pw.Widget> _buildBlocks(List<Map<String, dynamic>> blocks) {
+    final widgets = <pw.Widget>[];
+    for (final block in blocks) {
+      final type = (block['type'] as String?)?.trim().toLowerCase() ?? 'paragraph';
+      final heading = (block['heading'] as String?)?.trim();
+      final body = (block['body'] as String?) ?? '';
+      final formulas = (block['formulas'] as List?) ?? const [];
+
+      if (type == 'piege' || type == 'conseil_examen') {
+        final isPiege = type == 'piege';
+        widgets.add(pw.Container(
+          padding: const pw.EdgeInsets.all(10),
+          decoration: pw.BoxDecoration(
+            color: isPiege ? PdfColors.red50 : PdfColors.green50,
+            borderRadius: pw.BorderRadius.circular(4),
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                (heading != null && heading.isNotEmpty)
+                    ? heading
+                    : (isPiege ? 'Piège classique' : 'Conseil d\'examen'),
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  fontWeight: pw.FontWeight.bold,
+                  color: isPiege ? PdfColors.red900 : PdfColors.green900,
+                ),
+              ),
+              pw.SizedBox(height: 4),
+              for (final line in body.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty))
+                pw.Bullet(
+                  text: line.replaceFirst(RegExp(r'^•\s*'), ''),
+                  style: const pw.TextStyle(fontSize: 11),
+                ),
+            ],
+          ),
+        ));
+        widgets.add(pw.SizedBox(height: 14));
+        continue;
+      }
+
+      if (type == 'paragraph') {
+        if (body.isNotEmpty) {
+          widgets.add(pw.Text(body, style: const pw.TextStyle(fontSize: 12, lineSpacing: 3)));
+          widgets.add(pw.SizedBox(height: 14));
+        }
+        continue;
+      }
+
+      // theoreme / definition / formule / methode / exemple / type inconnu : rendu carte titrée.
+      if (heading != null && heading.isNotEmpty) {
+        widgets.add(pw.Text(heading, style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)));
+        widgets.add(pw.SizedBox(height: 4));
+      }
+      if (body.isNotEmpty) {
+        widgets.add(pw.Text(body, style: const pw.TextStyle(fontSize: 12, lineSpacing: 3)));
+      }
+      for (final f in formulas) {
+        widgets.add(pw.Padding(
+          padding: const pw.EdgeInsets.only(top: 4, left: 12),
+          child: pw.Text('$f', style: pw.TextStyle(fontSize: 12, color: PdfColors.indigo)),
+        ));
+      }
+      widgets.add(pw.SizedBox(height: 14));
+    }
+    return widgets;
   }
 
   static List<pw.Widget> _buildStructured(Map<String, dynamic> structured) {
