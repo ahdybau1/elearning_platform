@@ -63,7 +63,7 @@ généré par `ai-course-structuring` mais jamais exploité) reste explicitement
 
 ---
 
-## CF-002 — Étendre le registre au Block Editor Admin + preview [PARTIE 1 FAITE — 2026-08-28, commit `4b9f8b9`]
+## CF-002 — Étendre le registre au Block Editor Admin + preview [FAIT — 2026-08-28, commits `4b9f8b9` + `c69654a`]
 
 Une fois CF-001 stable : éditeur admin capable d'ajouter/réordonner/supprimer des blocs typés (pas de saisie
 JSON brute), preview live réutilisant le même registre que l'app élève (même rendu, une seule source de
@@ -80,11 +80,16 @@ pièges/conseils/formules qu'il ignorait avant (l'aperçu mentait sur ce que l'�
 `_blocksFromAiStructured` persiste désormais `content_json['blocks']` au format natif dès l'enregistrement,
 avec le même mapping exact que `Lesson.blocks` côté élève.
 
-**Reste à faire (partie 2, non commencée).** Éditeur visuel permettant d'ajouter/modifier/réordonner/
-supprimer des blocs à la main (pas seulement via génération IA) — nécessite d'abord de confirmer avec vous
-la liste définitive des types de blocs à exposer dans l'UI (au-delà de theoreme/definition/formule/methode/
-exemple/piege/conseil_examen déjà supportés en lecture). Ne pas commencer sans cette confirmation, pour
-éviter de construire une UI qu'il faudra reprendre.
+**Réalisé (partie 2 — éditeur visuel).** `_EditableBlock` + `kEditableBlockTypes` (les 8 types déjà
+supportés en lecture : paragraph/definition/theoreme/formule/methode/exemple/piege/conseil_examen — décidé
+sans confirmation supplémentaire puisqu'ils étaient déjà la liste réellement rendue par
+`BlockRendererRegistry`, aucune raison de la faire diverger) + `_buildEditableBlockCard` dans
+`lessons_manager_screen.dart` : ajout/réordonnancement/modification/suppression de blocs à la main. La
+génération IA remplit désormais directement ces blocs (au lieu d'aplatir en texte markdown non rendu,
+l'ancien bug de fond de CF-001) et reste éditable ensuite. Aperçu élève + export PDF lisent maintenant les
+blocs réellement en cours d'édition (live), plus la structuration IA figée — évite toute dérive entre ce
+qui est corrigé à la main et ce qui est prévisualisé/exporté. `_formatAiStructuredAsText` (le mécanisme
+d'aplatissement markdown, devenu mort) a été supprimé.
 
 ## CF-003 — Exercise Factory : aligner `exercises` sur le schéma cible U2.4
 
