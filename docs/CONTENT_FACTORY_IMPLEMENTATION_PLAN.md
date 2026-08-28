@@ -107,11 +107,22 @@ seuil de similarité pour un doublon ?) qu'il vaut mieux trancher avec le porteu
 des colonnes/migrations, plutôt que de les inventer. Non démarré ; pas de raison de le prioriser avant
 confirmation, la fonctionnalité existante étant déjà saine.
 
-## CF-004 — Agents IA existants → contrat standard §4
+## CF-004 — Agents IA existants → contrat standard §4 [CODE FAIT, NON DÉPLOYÉ — 2026-08-28, commit `9522227`]
 
 Faire évoluer `ai-course-structuring`, `ai-exercise-generation`, `ai-catalog-types-generation` pour émettre
 l'enveloppe de sortie standard (`request_id`, `status`, `result`, `usage.route`, `agent_version`) sans
 changer leur logique métier actuelle — traçabilité et observabilité d'abord, avant tout Agent Registry.
+
+**Réalisé, additif uniquement (pas d'enveloppe imbriquée `result` — aurait cassé les clients existants sans
+les mettre à jour en même temps ; choisi des champs `_request_id`/`_agent_version`/`_model`/`_duration_ms`
+en plus, même convention que `_mock` déjà présent et jamais lu par aucun client).** Migration `53_...` :
+`ai_agent_calls` gagne `request_id`/`model`/`duration_ms`/`status`/`error_message` — les échecs n'étaient
+jusqu'ici jamais journalisés du tout. Les 5 fonctions IA journalisent maintenant systématiquement (succès
+ET échec) avec le vrai modèle utilisé. Vérifié via `deno check` (vraie vérification de types) sur les 5.
+
+**Bloqué avant déploiement réel : nécessite le PAT Supabase de l'utilisateur** (absent de cette session,
+jamais persisté par choix — voir mémoire `reference_supabase_management_api`). Deux étapes restent à
+faire une fois le PAT disponible : appliquer la migration 53, puis redéployer les 5 fonctions.
 
 ## Explicitement différé (ne pas commencer sans confirmation explicite de l'utilisateur)
 
