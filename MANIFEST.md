@@ -1,0 +1,43 @@
+# MANIFESTE DU PACK
+
+- `.agents/AGENTS.md`
+- `.agents/skills/accessibility-i18n/SKILL.md`
+- `.agents/skills/ai-agent-contracts/SKILL.md`
+- `.agents/skills/compute-fabric/SKILL.md`
+- `.agents/skills/content-factory/SKILL.md`
+- `.agents/skills/course-import/SKILL.md`
+- `.agents/skills/docs-progress/SKILL.md`
+- `.agents/skills/exercise-factory/SKILL.md`
+- `.agents/skills/feature-flags-canary/SKILL.md`
+- `.agents/skills/flutter-architecture/SKILL.md`
+- `.agents/skills/game-learning/SKILL.md`
+- `.agents/skills/license-governance/SKILL.md`
+- `.agents/skills/model-factory/SKILL.md`
+- `.agents/skills/model-routing/SKILL.md`
+- `.agents/skills/music-learning/SKILL.md`
+- `.agents/skills/non-regression/SKILL.md`
+- `.agents/skills/observability/SKILL.md`
+- `.agents/skills/ocr-formula/SKILL.md`
+- `.agents/skills/offline-sync/SKILL.md`
+- `.agents/skills/pedagogical-renderer/SKILL.md`
+- `.agents/skills/performance-budget/SKILL.md`
+- `.agents/skills/project-audit/SKILL.md`
+- `.agents/skills/quota-entitlements/SKILL.md`
+- `.agents/skills/rag-pipeline/SKILL.md`
+- `.agents/skills/rbac-rls/SKILL.md`
+- `.agents/skills/scientific-tools/SKILL.md`
+- `.agents/skills/security-minors/SKILL.md`
+- `.agents/skills/supabase-migrations/SKILL.md`
+- `.agents/skills/testing-gates/SKILL.md`
+- `.agents/skills/virtual-labs/SKILL.md`
+- `CLAUDE.md`
+- `PROMPT_MAITRE_VIBE_CODING_ELEARNING.md`
+- `README_START_HERE.md`
+- `docs/CAHIER_DES_CHARGES_AGENTS_IA.md`
+- `docs/CAHIER_DES_CHARGES_MASTER_MAJ_2026.md`
+- `docs/CAHIER_TECHNIQUE_ADMIN_AI_CONTROL_PLANE.md`
+- `docs/CAHIER_TECHNIQUE_CONTENT_FACTORY.md`
+- `docs/CAHIER_TECHNIQUE_FRAMEWORKS_OUTILS_IA.md`
+- `docs/CAHIER_TECHNIQUE_QUOTAS_COMPUTE.md`
+
+> Note d'intégration (2026-08-28) : ce pack a été copié tel quel dans le repo `elearning_platform`. Le cahier historique `docs/cahier_des_charges.md` (transcrit le 2026-08-21) reste conservé comme archive ; `docs/CAHIER_DES_CHARGES_MASTER_MAJ_2026.md` (ce pack) est désormais la version de référence, augmentée de la section IA/Content Factory/Vibe Coding (U1-U12) absente de l'archive.
