@@ -526,6 +526,22 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
     final account = state.account;
     if (account == null) return 'Aucun compte connecté.';
     try {
+      // §2.3 du CDC : une même classe ne peut pas être suivie deux fois sur le même compte (migration
+      // 49, contrainte unique account_id+class_node_id) — vérifié ici en amont pour un message clair
+      // distinguant classe déjà active de classe archivée, plutôt que de laisser remonter l'erreur
+      // brute de la base en cas de violation de contrainte.
+      final existing = await _client
+          .from('profiles')
+          .select('status')
+          .eq('account_id', account.id)
+          .eq('class_node_id', classNodeId)
+          .maybeSingle();
+      if (existing != null) {
+        return existing['status'] == 'archive'
+            ? 'Vous suivez déjà cette classe (archivée) — réactivez-la depuis Mon Profil au lieu d\'en créer une nouvelle.'
+            : 'Vous suivez déjà cette classe.';
+      }
+
       final row = await _client
           .from('profiles')
           .insert({
@@ -543,6 +559,11 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
       await selectProfile(newProfile);
       return null;
     } catch (e) {
+      // Filet de sécurité si la vérification préalable a manqué une course concurrente : la
+      // contrainte unique (migration 49) refuse quand même l'insertion côté serveur.
+      if (e.toString().contains('profiles_account_class_unique')) {
+        return 'Vous suivez déjà cette classe.';
+      }
       return e.toString();
     }
   }

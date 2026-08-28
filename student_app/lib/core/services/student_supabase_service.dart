@@ -145,6 +145,34 @@ class StudentSupabaseService {
     return random;
   }
 
+  /// §2.3 du CDC : avertissement (jamais un blocage dur — de vrais jumeaux dans la même classe
+  /// existent) quand un profil au prénom+nom+date de naissance identiques existe déjà pour cette
+  /// classe sur un AUTRE compte (migration 52, SECURITY DEFINER — ne renvoie jamais l'identité du
+  /// compte trouvé, seulement un booléen). `birthDate` étant optionnelle à l'inscription, appelant
+  /// doit sauter cette vérification si elle est absente (rien de fiable à comparer).
+  Future<bool> checkDuplicatePersonProfile({
+    required String firstName,
+    required String lastName,
+    required DateTime birthDate,
+    required String classNodeId,
+    String? excludeAccountId,
+  }) async {
+    try {
+      final result = await client.rpc('check_duplicate_person_profile', params: {
+        'p_first_name': firstName,
+        'p_last_name': lastName,
+        'p_birth_date': birthDate.toIso8601String().split('T').first,
+        'p_class_node_id': classNodeId,
+        'p_exclude_account_id': excludeAccountId,
+      });
+      return result == true;
+    } catch (_) {
+      // Jamais bloquant : une panne de cette vérification ne doit pas empêcher une inscription
+      // par ailleurs valide.
+      return false;
+    }
+  }
+
   /// Sens inverse : un PARENT génère ce code (voir ParentAuthNotifier.getOrCreateInviteCode) et le
   /// donne à son enfant, qui le saisit ici pour se lier — migration 49. Retourne un message d'erreur
   /// lisible en cas d'échec (code invalide/expiré), ou `null` en cas de succès.

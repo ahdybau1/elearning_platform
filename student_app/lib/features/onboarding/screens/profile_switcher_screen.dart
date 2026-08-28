@@ -41,7 +41,7 @@ class ProfileSwitcherScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Qui apprend aujourd\'hui ?',
+                'Quelle classe ouvrir ?',
                 style: GoogleFonts.outfit(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -50,7 +50,7 @@ class ProfileSwitcherScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Choisissez la classe à ouvrir sur ce compte — une classe = un suivi individuel séparé.',
+                'Ce compte suit plusieurs classes — chacune a son propre suivi séparé.',
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   color: context.colors.textSecondary,

@@ -106,6 +106,61 @@ class _OnboardingWizardScreenState
       return;
     }
 
+    // §2.3 du CDC : avertissement (pas un blocage) si un profil prénom+nom+date de naissance
+    // identiques existe déjà pour CETTE classe sur un autre compte — n'a de sens que si une date de
+    // naissance a été saisie (optionnelle) et qu'un prénom/nom sont renseignés.
+    if (_birthDate != null &&
+        _firstNameCtrl.text.trim().isNotEmpty &&
+        _lastNameCtrl.text.trim().isNotEmpty) {
+      final isDuplicate = await service.checkDuplicatePersonProfile(
+        firstName: _firstNameCtrl.text.trim(),
+        lastName: _lastNameCtrl.text.trim(),
+        birthDate: _birthDate!,
+        classNodeId: leaf.id,
+        excludeAccountId: ref.read(studentAuthProvider).account?.id,
+      );
+      if (isDuplicate && mounted) {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: context.colors.card,
+            title: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: context.colors.accentAmber),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Profil déjà existant ?',
+                    style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              'Un profil avec le même prénom, nom et date de naissance existe déjà pour cette classe, sur un autre compte. '
+              'Si c\'est vous, connectez-vous plutôt avec ce compte existant. Si vous êtes des jumeaux/jumelles dans la même classe, continuez normalement.',
+              style: GoogleFonts.inter(color: context.colors.textSecondary, fontSize: 13),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentAmber),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Continuer quand même', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true) {
+          setState(() => _isSubmitting = false);
+          return;
+        }
+      }
+    }
+
     final notifier = ref.read(studentAuthProvider.notifier);
     final accountStepKind = _accountStepKind;
 
