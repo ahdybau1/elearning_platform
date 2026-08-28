@@ -1,3 +1,5 @@
+import 'content_block.dart';
+
 // Reflète exactement la table réelle `accounts` (voir docs/cahier_des_charges.md, §36.1) — un
 // compte = une identité unique. Un compte "parent" est un modèle SÉPARÉ (`parent_accounts`, §17),
 // pas un simple booléen ici comme le laissait croire l'ancien modèle 100% fictif.
@@ -438,6 +440,94 @@ class Lesson {
       isFree: json['is_free'] as bool? ?? (json['min_subscription_tier'] == 'gratuit'),
       readingTimeMinutes: (json['reading_time_minutes'] as int?) ?? 15,
     );
+  }
+
+  /// Dérive la liste de blocs structurés (CF-001, `docs/CONTENT_FACTORY_IMPLEMENTATION_PLAN.md`) à
+  /// partir de `contentJson`, sans jamais modifier `contentJson` lui-même (non-régression : tout code
+  /// existant qui lit `contentJson` directement continue de fonctionner à l'identique).
+  ///
+  /// Trois sources possibles, dans cet ordre :
+  /// 1. `contentJson['blocks']` — format natif futur (Block Editor Admin, CF-002).
+  /// 2. `contentJson['ai_structured']` — sortie réelle de l'edge function `ai-course-structuring`
+  ///    (`{summary, sections: [{heading, type, body, latex_formulas}], common_traps, exam_tips,
+  ///    quiz_questions}`, voir `admin_app/.../lessons_manager_screen.dart`). Avant CF-001 cette
+  ///    structure était capturée et stockée mais jamais réellement affichée à l'élève — seul le texte
+  ///    brut `body` (un résumé markdown aplati) l'était, sans mise en forme. `quiz_questions` n'est pas
+  ///    exploité ici : c'est un chantier Exercise Factory séparé (voir plan CF-003), pas de la lecture
+  ///    de leçon.
+  /// 3. Repli : texte brut historique `contentJson['body']` (leçons créées avant l'IA de structuration,
+  ///    ou sans notes suffisantes) — jamais un écran vide.
+  List<ContentBlock> get blocks {
+    final rawBlocks = contentJson['blocks'];
+    if (rawBlocks is List && rawBlocks.isNotEmpty) {
+      final parsed = <ContentBlock>[];
+      for (var i = 0; i < rawBlocks.length; i++) {
+        final b = rawBlocks[i];
+        if (b is Map) {
+          parsed.add(ContentBlock.fromJson(Map<String, dynamic>.from(b), fallbackOrder: i));
+        }
+      }
+      if (parsed.isNotEmpty) {
+        parsed.sort((a, b) => a.order.compareTo(b.order));
+        return parsed;
+      }
+    }
+
+    final aiStructured = contentJson['ai_structured'];
+    if (aiStructured is Map) {
+      final structured = Map<String, dynamic>.from(aiStructured);
+      final result = <ContentBlock>[];
+      var order = 0;
+
+      final summary = structured['summary'] as String?;
+      if (summary != null && summary.trim().isNotEmpty) {
+        result.add(ContentBlock(type: 'paragraph', body: summary.trim(), order: order++));
+      }
+
+      final sections = (structured['sections'] as List?) ?? const [];
+      for (final s in sections) {
+        if (s is Map) {
+          result.add(ContentBlock.fromAiSection(Map<String, dynamic>.from(s), order++));
+        }
+      }
+
+      final traps = ((structured['common_traps'] as List?) ?? const [])
+          .map((t) => t.toString())
+          .where((t) => t.trim().isNotEmpty)
+          .toList();
+      if (traps.isNotEmpty) {
+        result.add(ContentBlock(
+          type: 'piege',
+          body: traps.map((t) => '•  $t').join('\n'),
+          order: order++,
+        ));
+      }
+
+      final tips = ((structured['exam_tips'] as List?) ?? const [])
+          .map((t) => t.toString())
+          .where((t) => t.trim().isNotEmpty)
+          .toList();
+      if (tips.isNotEmpty) {
+        result.add(ContentBlock(
+          type: 'conseil_examen',
+          body: tips.map((t) => '•  $t').join('\n'),
+          order: order++,
+        ));
+      }
+
+      if (result.isNotEmpty) return result;
+    }
+
+    final body = contentJson['body'] as String?;
+    return [
+      ContentBlock(
+        type: 'paragraph',
+        body: (body != null && body.trim().isNotEmpty)
+            ? body
+            : 'Contenu pédagogique officiel conforme au programme.',
+        order: 0,
+      ),
+    ];
   }
 }
 
