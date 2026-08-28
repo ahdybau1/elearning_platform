@@ -91,10 +91,21 @@ blocs réellement en cours d'édition (live), plus la structuration IA figée �
 qui est corrigé à la main et ce qui est prévisualisé/exporté. `_formatAiStructuredAsText` (le mécanisme
 d'aplatissement markdown, devenu mort) a été supprimé.
 
-## CF-003 — Exercise Factory : aligner `exercises` sur le schéma cible U2.4
+## CF-003 — Exercise Factory : aligner `exercises` sur le schéma cible U2.4 [AUDITÉ — 2026-08-28]
 
-Lire le schéma réel de la table `exercises` (non fait dans cet audit) avant de décider des colonnes
-manquantes (`hints`, `skills`, `prerequisites`, `provenance`). Étendre par migration additive uniquement.
+**Constat, contrairement à l'hypothèse initiale de l'audit.** Vérification faite (schéma réel de
+`exercises` dans `02_schema_academic_content.sql`, pipeline `ai-exercise-generation` → 
+`exercises_manager_screen.dart` → `Exercise.fromJson` côté élève) : **la chaîne génération → admin →
+élève est déjà correctement câblée de bout en bout**, contrairement au bug réel trouvé sur les leçons
+(CF-001). `statement`/`options` dans `instructions_json`, `correction`/`correct_index` dans
+`solution_json`, tout est écrit et lu avec les mêmes clés partout — aucune donnée générée n'est perdue.
+
+Ce qui manque réellement par rapport à la cible U2.4 (`hints`, `skills`, `prerequisites`, `provenance`,
+détecteur de doublons, classification automatique de difficulté) n'est donc **pas un bug à corriger** mais
+une **fonctionnalité à ajouter** — et ce sont des choix produit (quelle taxonomie de compétences ? quel
+seuil de similarité pour un doublon ?) qu'il vaut mieux trancher avec le porteur de projet avant de créer
+des colonnes/migrations, plutôt que de les inventer. Non démarré ; pas de raison de le prioriser avant
+confirmation, la fonctionnalité existante étant déjà saine.
 
 ## CF-004 — Agents IA existants → contrat standard §4
 
