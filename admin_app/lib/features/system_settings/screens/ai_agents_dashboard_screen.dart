@@ -11,6 +11,7 @@ const _agentTypeLabels = <String, String>{
   'exercise_generation': 'Génération d\'Exercices',
   'catalog_generation': 'Génération de Catalogue',
   'moderation': 'Modération Automatique',
+  'student_tutor_chat': 'Tuteur Numérique (élève)',
 };
 
 const _providerLabels = <String, String>{
@@ -302,6 +303,13 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
 
     final totalTokens = calls.fold<int>(0, (sum, c) => sum + c.tokensUsed);
     final totalCost = calls.fold<double>(0, (sum, c) => sum + c.costEstimate);
+    // CF-004 : avant la migration 53, un appel échoué n'était même pas enregistré — ce taux
+    // d'échec n'était donc jamais mesurable, même approximativement.
+    final failedCalls = calls.where((c) => c.isFailed).toList();
+    final failureRate = calls.isNotEmpty ? failedCalls.length / calls.length : 0.0;
+    final durationsMs = calls.map((c) => c.durationMs).whereType<int>().toList();
+    final avgDurationMs =
+        durationsMs.isNotEmpty ? durationsMs.reduce((a, b) => a + b) / durationsMs.length : null;
 
     final byAgent = <String, List<AiAgentCall>>{};
     final byProvider = <String, List<AiAgentCall>>{};
@@ -323,6 +331,20 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
             const SizedBox(width: 16),
             _buildKpiCard('Coût estimé', '\$${totalCost.toStringAsFixed(4)}', Icons.payments_rounded,
                 AppTheme.accentEmerald),
+            const SizedBox(width: 16),
+            _buildKpiCard(
+              'Taux d\'échec',
+              '${(failureRate * 100).toStringAsFixed(1)}% (${failedCalls.length})',
+              Icons.error_outline_rounded,
+              failedCalls.isEmpty ? AppTheme.textMuted : AppTheme.accentRose,
+            ),
+            const SizedBox(width: 16),
+            _buildKpiCard(
+              'Durée moyenne',
+              avgDurationMs != null ? '${avgDurationMs.round()} ms' : '—',
+              Icons.timer_outlined,
+              AppTheme.accentIndigo,
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -349,41 +371,68 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Derniers Appels', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+              const SizedBox(height: 4),
+              Text(
+                'Un appel en échec (jamais visible avant le 2026-08-28 — voir CF-004) reste journalisé ici, en rouge, avec son motif.',
+                style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted, fontStyle: FontStyle.italic),
+              ),
               const SizedBox(height: 10),
-              ...calls.take(10).map((c) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: Text(_agentTypeLabels[c.agentType] ?? c.agentType,
-                              style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Text(_providerLabels[c.provider] ?? c.provider,
-                              style: GoogleFonts.inter(
-                                  fontSize: 12, color: _providerColors[c.provider] ?? Colors.white38)),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Text('${c.tokensUsed} tok.',
-                              style: GoogleFonts.inter(fontSize: 12, color: Colors.white38)),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Text('\$${c.costEstimate.toStringAsFixed(5)}',
-                              style: GoogleFonts.inter(fontSize: 12, color: Colors.white38)),
-                        ),
-                        Expanded(
-                          flex: 3,
-                          child: Text(
-                            DateFormat('dd/MM/yyyy HH:mm').format(c.createdAt.toLocal()),
-                            textAlign: TextAlign.end,
-                            style: GoogleFonts.inter(fontSize: 11, color: Colors.white24),
+              ...calls.take(15).map((c) => Tooltip(
+                    message: c.isFailed
+                        ? (c.errorMessage ?? 'Échec sans message enregistré.')
+                        : (c.model != null ? 'Modèle : ${c.model}' : ''),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: c.isFailed ? AppTheme.accentRose.withValues(alpha: 0.08) : null,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            c.isFailed ? Icons.error_rounded : Icons.check_circle_rounded,
+                            size: 13,
+                            color: c.isFailed ? AppTheme.accentRose : AppTheme.accentEmerald,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Expanded(
+                            flex: 3,
+                            child: Text(_agentTypeLabels[c.agentType] ?? c.agentType,
+                                style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(c.model ?? (_providerLabels[c.provider] ?? c.provider),
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.inter(
+                                    fontSize: 12, color: _providerColors[c.provider] ?? Colors.white38)),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text('${c.tokensUsed} tok.',
+                                style: GoogleFonts.inter(fontSize: 12, color: Colors.white38)),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(c.durationMs != null ? '${c.durationMs} ms' : '—',
+                                style: GoogleFonts.inter(fontSize: 12, color: Colors.white38)),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text('\$${c.costEstimate.toStringAsFixed(5)}',
+                                style: GoogleFonts.inter(fontSize: 12, color: Colors.white38)),
+                          ),
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              DateFormat('dd/MM/yyyy HH:mm').format(c.createdAt.toLocal()),
+                              textAlign: TextAlign.end,
+                              style: GoogleFonts.inter(fontSize: 11, color: Colors.white24),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   )),
             ],

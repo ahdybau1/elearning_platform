@@ -1,28 +1,49 @@
+/// CF-004 (docs/CONTENT_FACTORY_IMPLEMENTATION_PLAN.md, migration 53) : request_id/model/
+/// duration_ms/status/error_message sont réels depuis le 2026-08-28 — avant cette migration, un
+/// appel IA échoué n'était même pas enregistré du tout (invisible), et le modèle exact utilisé
+/// (Claude vs Gemini, quelle version) n'était jamais persisté.
 class AiAgentCall {
   final String id;
+  final String? requestId;
   final String agentType;
   final String provider;
+  final String? model;
   final int tokensUsed;
   final double costEstimate;
+  final int? durationMs;
+  final String status; // 'success' | 'failed'
+  final String? errorMessage;
   final DateTime createdAt;
 
   AiAgentCall({
     required this.id,
+    this.requestId,
     required this.agentType,
     required this.provider,
+    this.model,
     required this.tokensUsed,
     required this.costEstimate,
+    this.durationMs,
+    this.status = 'success',
+    this.errorMessage,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
+
+  bool get isFailed => status == 'failed';
 
   factory AiAgentCall.fromJson(Map<String, dynamic> json) {
     return AiAgentCall(
       id: json['id'] as String,
+      requestId: json['request_id'] as String?,
       agentType: json['agent_type'] as String,
       provider: json['provider'] as String,
+      model: json['model'] as String?,
       tokensUsed: (json['tokens_used'] as int?) ?? 0,
       costEstimate: double.parse(
           (json['cost_estimate'] as num?)?.toString() ?? '0'),
+      durationMs: json['duration_ms'] as int?,
+      status: json['status'] as String? ?? 'success',
+      errorMessage: json['error_message'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
