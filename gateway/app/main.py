@@ -20,7 +20,10 @@ from pydantic import BaseModel
 
 from .agents.correction_agent import CorrectionAgentError, correct_attempt
 from .agents.curriculum_mapping import map_content
+from .agents.diagnostic_agent import diagnose
+from .agents.misconception_agent import detect_misconceptions
 from .agents.pedagogical_validation import validate_lesson
+from .agents.recommendation_agent import recommend_activities
 from .agents.tutor_agent import run_tutor_agent
 from .auth import AuthenticatedUser, get_current_user, verify_profile_access
 from .config import settings
@@ -97,6 +100,37 @@ async def invoke_agent(
                 duration_ms=duration_ms, error_message=str(exc),
             )
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except Exception as exc:
+            duration_ms = int((time.monotonic() - started) * 1000)
+            await log_gateway_call(
+                request_id=request_id, agent_type=agent_id, status="failed",
+                duration_ms=duration_ms, error_message=str(exc),
+            )
+            raise HTTPException(status_code=502, detail=f"{agent_id} en échec : {exc}") from exc
+        duration_ms = int((time.monotonic() - started) * 1000)
+        await log_gateway_call(request_id=request_id, agent_type=agent_id, status="success", duration_ms=duration_ms)
+        return AgentResponse(
+            request_id=request_id, status="success", result=result,
+            usage=UsageInfo(route="server", compute_units=0),
+            agent_version=version["version"], model_version=None, safety=SafetyInfo(),
+        )
+
+    # IA-010 "Learning intelligence" : DiagnosticAgent/MisconceptionAgent/RecommendationAgent, tous
+    # Gateway-native, tous scopés à profile_id (déjà vérifié via verify_profile_access ci-dessus —
+    # un élève peut voir son propre diagnostic, comme pour le Student Model IA-007).
+    if agent_id in ("AIA-AGT-008", "AIA-AGT-009", "AIA-AGT-010"):
+        if not request.profile_id:
+            raise HTTPException(status_code=400, detail="profile_id requis pour cet agent.")
+        subject_id = str(request.payload.get("subject_id") or request.academic_context.subject_id or "")
+        if not subject_id:
+            raise HTTPException(status_code=400, detail="subject_id requis (payload.subject_id ou academic_context.subject_id).")
+        try:
+            if agent_id == "AIA-AGT-008":
+                result = await diagnose(request.profile_id, subject_id)
+            elif agent_id == "AIA-AGT-009":
+                result = {"misconceptions": await detect_misconceptions(request.profile_id, subject_id)}
+            else:
+                result = await recommend_activities(request.profile_id, subject_id)
         except Exception as exc:
             duration_ms = int((time.monotonic() - started) * 1000)
             await log_gateway_call(

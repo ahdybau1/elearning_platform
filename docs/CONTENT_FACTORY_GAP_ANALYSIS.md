@@ -86,6 +86,35 @@ Vérifié réellement, pas relu :
 slice) : déduplication d'exercices par embeddings (mentionnée dans le workflow ExerciseAgent du cahier)
 — à construire si un vrai volume d'exercices apparaît (6 exercices fixtures aujourd'hui, prématuré).
 
+**IA-010 (2026-08-29) — Learning intelligence.** 7 agents catalogués (§22) : DiagnosticAgent,
+MisconceptionAgent, RevisionAgent, RecommendationAgent, SocraticAgent, ExplanationAgent, ExamCoachAgent.
+Construits (Gateway-native, aucun nouvel appel LLM sauf MisconceptionAgent qui n'agrège que du texte
+déjà produit par CorrectionAgent) : **DiagnosticAgent (AIA-AGT-008)**, **MisconceptionAgent
+(AIA-AGT-009)**, **RecommendationAgent (AIA-AGT-010)** — tous les trois s'appuient directement sur le
+Student Model/Competency Graph réels d'IA-007 et les `ai_misconceptions` réels de CorrectionAgent
+(IA-009), sans rien inventer. **Différés honnêtement** (`status='draft'`, même posture que
+OCRAgent/FormulaRecognitionAgent en IA-008) : SocraticAgent (chevauche déjà le comportement maïeutique
+réel de TutorAgent), RevisionAgent (nécessite un modèle d'oubli non calibrable sans historique réel),
+ExplanationAgent (chevauche TutorAgent+RAG), ExamCoachAgent (dépend d'un audit non fait de
+`exam_papers`/`official_exams`).
+
+**Bug trouvé et corrigé en testant DiagnosticAgent** (pas en relecture) : `get_student_skill_mastery`
+(IA-007, migration 64) ne lisait que `is_correct` (posé uniquement pour le QCM côté client) — une
+tentative rédigée validée par un admin via `official_correct` (IA-009) ne comptait donc JAMAIS dans la
+maîtrise réelle de l'élève, même après validation humaine positive. Corrigé (migration 72) :
+`COALESCE(official_correct, is_correct)` — la validation humaine prime quand elle existe.
+
+Vérifié réellement, pas relu :
+- DiagnosticAgent : estimations réelles par compétence avec preuves (IDs de tentatives réelles), avant
+  et après le fix ci-dessus (0.0 → 1.0 sur la compétence dont la tentative avait été validée par un
+  admin — preuve directe que le bug est résolu).
+- RecommendationAgent : bascule correctement vers la compétence suivante (DEFINITIONS et METHODE
+  maîtrisées → recommande THEOREMES) avec 1 leçon + 2 exercices réels correctement liés, filtrés par
+  palier d'abonnement réel.
+- MisconceptionAgent : testé avec une vraie réponse scientifiquement fausse (confusion sur l'âge de la
+  Terre) → CorrectionAgent a identifié 2 vraies erreurs conceptuelles → MisconceptionAgent les a
+  agrégées en 2 lignes `student_misconceptions` réelles, `status='candidate'` (jamais auto-confirmé).
+
 ## Lecture
 
 Le seul écart **structurel bloquant** avant de coder quoi que ce soit est **Structured Content /
