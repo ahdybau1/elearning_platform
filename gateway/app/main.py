@@ -1,9 +1,10 @@
 """Sovereign AI Gateway (docs/CAHIER_DES_CHARGES_AGENTS_IA.md §22, §3).
 
-IA-002 (Gateway minimale) + IA-003 (Tool Gateway) + IA-004 (RAG) + IA-005 (Model Router) faits, dans
-cet ordre. PAS encore d'Agent Orchestrator (LangGraph) ni de modèle auto-hébergé (vLLM/Ollama) — la
-Gateway route aujourd'hui vers les Edge Functions Deno réellement déployées (via le registre IA-001),
-elle ne les remplace pas.
+IA-002 (Gateway minimale) + IA-003 (Tool Gateway) + IA-004 (RAG) + IA-005 (Model Router) + IA-006
+(Quota Engine — traçage réel, pas encore d'application de plafond) faits, dans cet ordre. PAS encore
+d'Agent Orchestrator (LangGraph) ni de modèle auto-hébergé (vLLM/Ollama) — la Gateway route
+aujourd'hui vers les Edge Functions Deno réellement déployées (via le registre IA-001), elle ne les
+remplace pas.
 
 Lancer en local ("machine développeur", légitime en Compute Fabric — §U6 du cahier) :
     cd gateway && pip install -r requirements.txt && uvicorn app.main:app --reload
@@ -21,6 +22,7 @@ from .config import settings
 from .envelope import AgentRequest, AgentResponse, SafetyInfo, UsageInfo
 from .model_router.router import route_generate
 from .observability import log_gateway_call
+from .quota import record_usage
 from .rag.ingest import ingest_lesson
 from .registry import get_agent_version
 from .tools import TOOL_REGISTRY
@@ -103,11 +105,18 @@ async def invoke_agent(
     # a déjà produites sont extraites pour peupler l'enveloppe standard, puis retirées de `result`
     # pour ne pas les dupliquer.
     model_version = body.pop("_model", None)
-    body.pop("_request_id", None)
+    edge_request_id = body.pop("_request_id", None)
     body.pop("_agent_version", None)
     body.pop("_duration_ms", None)
 
     await log_gateway_call(request_id=request_id, agent_type=agent_id, status="success", duration_ms=duration_ms)
+    # IA-006 : journalise l'usage réel (voir app/quota.py). N'échoue jamais la requête si ça rate —
+    # ne bloque encore aucune requête, se contente de tracer pour un futur benchmark (§6/U7 du cahier).
+    await record_usage(
+        profile_id=request.profile_id,
+        agent_type=agent_id,
+        edge_function_request_id=edge_request_id,
+    )
 
     return AgentResponse(
         request_id=request_id,
