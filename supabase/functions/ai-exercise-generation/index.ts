@@ -1,9 +1,11 @@
 import { createClient } from "npm:@supabase/supabase-js@2.39.0";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
+  "";
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
+// Claude retiré le 2026-08-29 (demande explicite du porteur de projet) — voir le commentaire
+// équivalent dans ai-course-structuring/index.ts : ANTHROPIC_API_KEY n'a jamais été configurée.
 // Mode mock explicite (voir 06_ai_pipeline.md) : absent par défaut, jamais un comportement silencieux.
 const AI_MOCK_MODE = Deno.env.get("AI_MOCK_MODE") === "true";
 
@@ -11,7 +13,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -20,16 +23,27 @@ const AGENT_VERSION = "1.0.0";
 
 // Contenu utilisé UNIQUEMENT quand AI_MOCK_MODE=true — jamais comme repli silencieux en cas
 // d'échec des appels API réels (voir 06_ai_pipeline.md).
-function buildMockExercises(count: number, format: string, difficulty: string): Record<string, unknown>[] {
+function buildMockExercises(
+  count: number,
+  format: string,
+  difficulty: string,
+): Record<string, unknown>[] {
   return Array.from({ length: count }, (_, i) => ({
     title: `Exercice ${i + 1} (MOCK, ${difficulty})`,
-    statement: `Énoncé généré factice n°${i + 1} — remplacez par un contenu réel avant publication.`,
+    statement: `Énoncé généré factice n°${
+      i + 1
+    } — remplacez par un contenu réel avant publication.`,
     correction: format === "qcm"
       ? "Réponse correcte : Option B — justification factice."
       : "Corrigé détaillé factice, étape par étape.",
-    options: format === "qcm" ? ["Option A", "Option B", "Option C", "Option D"] : null,
+    options: format === "qcm"
+      ? ["Option A", "Option B", "Option C", "Option D"]
+      : null,
     correct_index: format === "qcm" ? 1 : null,
-    hints: ["Indice factice 1 — relire l'énoncé.", "Indice factice 2 — identifier la formule adaptée."],
+    hints: [
+      "Indice factice 1 — relire l'énoncé.",
+      "Indice factice 2 — identifier la formule adaptée.",
+    ],
     skills: ["Compétence factice"],
   }));
 }
@@ -58,13 +72,20 @@ Deno.serve(async (req: Request) => {
 
     if (!subject_id && !chapter_id && !raw_notes) {
       return new Response(
-        JSON.stringify({ error: "Paramètres manquants : subject_id, chapter_id ou raw_notes requis" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error:
+            "Paramètres manquants : subject_id, chapter_id ou raw_notes requis",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
     // 1. Récupération du catalogue pédagogique de la matière (Section 16.0 du CDC)
-    let catalogPrompt = "Structure type : énoncé clair, corrigé pas à pas, niveau calibré.";
+    let catalogPrompt =
+      "Structure type : énoncé clair, corrigé pas à pas, niveau calibré.";
     if (subject_id) {
       const { data: catalogItems } = await supabase
         .from("content_catalog")
@@ -80,8 +101,13 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const systemPrompt = `Tu es un expert pédagogique national et concepteur d'exercices scolaires d'excellence.
-Ta mission est de générer ${exerciseCount} exercice(s) de type "${type ?? "entraînement"}", format "${format ?? "qcm"}", niveau de difficulté "${difficulty ?? "facile"}", au format JSON strict.
+    const systemPrompt =
+      `Tu es un expert pédagogique national et concepteur d'exercices scolaires d'excellence.
+Ta mission est de générer ${exerciseCount} exercice(s) de type "${
+        type ?? "entraînement"
+      }", format "${format ?? "qcm"}", niveau de difficulté "${
+        difficulty ?? "facile"
+      }", au format JSON strict.
 
 Typologie pédagogique de référence :
 ${catalogPrompt}
@@ -95,9 +121,16 @@ Règles strictes :
 - Ne renvoyer QUE du JSON valide, sans texte additionnel ni balises de commentaires Markdown.`;
 
     const userPrompt = `Contexte / notes brutes :
-${raw_notes ?? "Génère des exercices conformes au programme officiel du chapitre sélectionné."}
+${
+      raw_notes ??
+        "Génère des exercices conformes au programme officiel du chapitre sélectionné."
+    }
 
-${prompt_directives ? `Directives spécifiques du professeur : ${prompt_directives}` : ""}
+${
+      prompt_directives
+        ? `Directives spécifiques du professeur : ${prompt_directives}`
+        : ""
+    }
 
 Génère un tableau JSON exact de ${exerciseCount} exercice(s) avec les clés :
 [
@@ -119,78 +152,58 @@ Génère un tableau JSON exact de ${exerciseCount} exercice(s) avec les clés :
     let costEstimate = 0;
 
     if (AI_MOCK_MODE) {
-      exercises = buildMockExercises(exerciseCount, format ?? "qcm", difficulty ?? "facile");
+      exercises = buildMockExercises(
+        exerciseCount,
+        format ?? "qcm",
+        difficulty ?? "facile",
+      );
       provider = "mock";
       modelUsed = "mock";
-    } else {
-      if (ANTHROPIC_API_KEY) {
-        try {
-          const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+    } else if (GEMINI_API_KEY) {
+      try {
+        const geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`,
+          {
             method: "POST",
-            headers: {
-              "x-api-key": ANTHROPIC_API_KEY,
-              "anthropic-version": "2023-06-01",
-              "content-type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              model: "claude-3-5-sonnet-20241022",
-              max_tokens: 4000,
-              system: systemPrompt,
-              messages: [{ role: "user", content: userPrompt }],
+              contents: [{
+                role: "user",
+                parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }],
+              }],
+              generationConfig: {
+                responseMimeType: "application/json",
+                maxOutputTokens: 4096, // gemini-3.6-flash consomme des jetons de réflexion cachés — voir ai-tutor-chat
+              },
             }),
-          });
+          },
+        );
 
-          if (anthropicRes.ok) {
-            const anthropicData = await anthropicRes.json();
-            const rawText = anthropicData.content?.[0]?.text ?? "";
-            const cleanedJson = rawText.replace(/^```json\s*/i, "").replace(/\s*```$/i, "").trim();
-            exercises = JSON.parse(cleanedJson);
-            provider = "anthropic";
-            modelUsed = "claude-3-5-sonnet-20241022";
-            tokensUsed = (anthropicData.usage?.input_tokens ?? 0) + (anthropicData.usage?.output_tokens ?? 0);
-            costEstimate = tokensUsed * 0.000003;
-          }
-        } catch (anthropicErr) {
-          console.warn("Anthropic API Error:", anthropicErr);
+        if (geminiRes.ok) {
+          const geminiData = await geminiRes.json();
+          const rawText =
+            geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+          exercises = JSON.parse(rawText);
+          provider = "gemini";
+          modelUsed = "gemini-3.6-flash";
+          tokensUsed = geminiData.usageMetadata?.totalTokenCount ?? 0;
+          costEstimate = 0;
         }
-      }
-
-      if (!exercises && GEMINI_API_KEY) {
-        try {
-          const geminiRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                contents: [{ role: "user", parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
-                generationConfig: { responseMimeType: "application/json" },
-              }),
-            }
-          );
-
-          if (geminiRes.ok) {
-            const geminiData = await geminiRes.json();
-            const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-            exercises = JSON.parse(rawText);
-            provider = "gemini";
-            modelUsed = "gemini-1.5-flash";
-            tokensUsed = geminiData.usageMetadata?.totalTokenCount ?? 0;
-            costEstimate = tokensUsed * 0.00000035;
-          }
-        } catch (geminiErr) {
-          console.warn("Gemini API Error:", geminiErr);
-        }
+      } catch (geminiErr) {
+        console.warn("Gemini API Error:", geminiErr);
       }
     }
 
     const durationMs = Date.now() - startTime;
-    console.log(`Génération d'exercices IA terminée en ${durationMs}ms via provider=${provider}`);
+    console.log(
+      `Génération d'exercices IA terminée en ${durationMs}ms via provider=${provider}`,
+    );
 
     // Aucun résultat réel et mode mock inactif : erreur explicite, jamais de contenu statique
     // déguisé en résultat réel (voir 06_ai_pipeline.md).
     if (!exercises) {
-      const errorMessage = "Échec de la génération IA : aucun fournisseur (Claude, Gemini) n'a retourné de résultat exploitable.";
+      const errorMessage =
+        "Échec de la génération IA : Gemini n'a retourné aucun résultat exploitable.";
       try {
         await supabase.from("ai_agent_calls").insert({
           request_id: requestId,
@@ -205,7 +218,10 @@ Génère un tableau JSON exact de ${exerciseCount} exercice(s) avec les clés :
       }
       return new Response(
         JSON.stringify({ error: errorMessage, _request_id: requestId }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -224,22 +240,28 @@ Génère un tableau JSON exact de ${exerciseCount} exercice(s) avec les clés :
       console.error("Échec d'enregistrement ai_agent_calls:", insertErr);
     }
 
-    return new Response(JSON.stringify({
-      exercises,
-      _mock: provider === "mock",
-      _request_id: requestId,
-      _agent_version: AGENT_VERSION,
-      _model: modelUsed,
-      _duration_ms: durationMs,
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        exercises,
+        _mock: provider === "mock",
+        _request_id: requestId,
+        _agent_version: AGENT_VERSION,
+        _model: modelUsed,
+        _duration_ms: durationMs,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
     console.error("AI Exercise Generation Error:", error);
     return new Response(
       JSON.stringify({ error: (error as Error).message ?? String(error) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
 });

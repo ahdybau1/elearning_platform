@@ -2,20 +2,20 @@
 // générique par CAPABILITY, pas par fournisseur choisi à la main par l'appelant — « Les agents ne
 // choisissent pas directement un fournisseur. Ils demandent une capability [...] Le Model Router
 // choisit le moteur autorisé. » (§5). Cette fonction EST le point d'entrée réel de ce choix ; le
-// Model Router côté Gateway (gateway/app/model_router/) l'appelle plutôt que d'appeler Gemini/Claude
-// directement, pour que GEMINI_API_KEY/ANTHROPIC_API_KEY restent uniquement ici.
+// Model Router côté Gateway (gateway/app/model_router/) l'appelle plutôt que d'appeler Gemini
+// directement, pour que GEMINI_API_KEY reste uniquement ici.
 //
-// Politique de routage par capability (reprend celle déjà en place dans ai-course-structuring/
-// ai-exercise-generation/ai-catalog-types-generation — Claude préféré + repli Gemini pour la
-// qualité pédagogique — plutôt que de la réinventer) :
-//   reasoning_strong  -> Claude Sonnet, repli Gemini
-//   pedagogy_small     -> Gemini uniquement (capability "légère", pas de recours au provider payant)
-//   classification_small -> Gemini uniquement (haut volume, coût prioritaire — §16.3 du cahier maître)
+// Claude retiré le 2026-08-29 (demande explicite du porteur de projet) : ANTHROPIC_API_KEY n'a
+// jamais été configurée sur ce projet (vérifié via `supabase secrets list`), la préférence
+// "reasoning_strong -> Claude" n'a donc jamais été exercée en pratique — voir le même constat dans
+// ai-course-structuring/ai-exercise-generation/ai-catalog-types-generation. Les 3 capabilities
+// routent aujourd'hui toutes vers Gemini ; la distinction reste dans le contrat (le cahier demande
+// aux agents de raisonner par capability, pas par fournisseur) pour ne pas avoir à changer l'API
+// le jour où un second moteur (local ou un autre provider) est réellement configuré.
 import { createClient } from "npm:@supabase/supabase-js@2.39.0";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -29,28 +29,6 @@ const corsHeaders = {
 const AGENT_VERSION = "1.0.0";
 const VALID_CAPABILITIES = ["reasoning_strong", "pedagogy_small", "classification_small"] as const;
 type Capability = (typeof VALID_CAPABILITIES)[number];
-
-async function callClaude(systemPrompt: string, userPrompt: string, maxTokens: number) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-    }),
-  });
-  if (!res.ok) throw new Error(`Claude HTTP ${res.status}`);
-  const data = await res.json();
-  const text = data.content?.[0]?.text ?? "";
-  const tokensUsed = (data.usage?.input_tokens ?? 0) + (data.usage?.output_tokens ?? 0);
-  return { text, provider: "anthropic", model: "claude-3-5-sonnet-20241022", tokensUsed, costEstimate: tokensUsed * 0.000003 };
-}
 
 async function callGemini(systemPrompt: string, userPrompt: string, maxTokens: number) {
   // gemini-3.6-flash consomme des jetons de "réflexion" internes avant la réponse visible (déjà
@@ -108,17 +86,7 @@ Deno.serve(async (req: Request) => {
     let outcome: { text: string; provider: string; model: string; tokensUsed: number; costEstimate: number } | null = null;
     let lastError: string | null = null;
 
-    // reasoning_strong : Claude préféré (qualité), repli Gemini si absent/en échec.
-    if (cap === "reasoning_strong" && ANTHROPIC_API_KEY) {
-      try {
-        outcome = await callClaude(systemPrompt, user_prompt, maxTokens);
-      } catch (err) {
-        lastError = String(err);
-        console.warn("Claude error, repli Gemini:", err);
-      }
-    }
-
-    if (!outcome && GEMINI_API_KEY) {
+    if (GEMINI_API_KEY) {
       try {
         outcome = await callGemini(systemPrompt, user_prompt, maxTokens);
       } catch (err) {
@@ -129,7 +97,7 @@ Deno.serve(async (req: Request) => {
     const durationMs = Date.now() - startTime;
 
     if (!outcome) {
-      const errorMessage = `Échec de génération pour capability='${cap}' : ${lastError ?? "aucun fournisseur disponible"}.`;
+      const errorMessage = `Échec de génération pour capability='${cap}' : ${lastError ?? "Gemini non configuré"}.`;
       await supabase.from("ai_agent_calls").insert({
         request_id: requestId, agent_type: `model_router:${cap}`, provider: "none",
         duration_ms: durationMs, status: "failed", error_message: errorMessage,

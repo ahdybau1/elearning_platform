@@ -15,16 +15,16 @@ const _agentTypeLabels = <String, String>{
 };
 
 const _providerLabels = <String, String>{
-  'anthropic': 'Claude (Anthropic)',
   'gemini': 'Gemini (Google)',
+  'gateway': 'Gateway (Python)',
   'mock': 'Simulation (clé API absente)',
   'local_regex': 'Filtre local (sans IA)',
   'none': 'Échec (aucun fournisseur)',
 };
 
 const _providerColors = <String, Color>{
-  'anthropic': AppTheme.accentBlue,
   'gemini': AppTheme.accentEmerald,
+  'gateway': AppTheme.accentIndigo,
   'mock': AppTheme.accentAmber,
   'local_regex': AppTheme.textMuted,
   'none': AppTheme.accentRose,
@@ -67,7 +67,7 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Routage multi-modèles (Claude / Gemini), suivi réel des coûts API et catalogue d\'éléments par matière',
+                      'Suivi réel des coûts API (Gemini) et catalogue d\'éléments par matière',
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         color: AppTheme.textMuted,
@@ -91,31 +91,25 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
           ),
           const SizedBox(height: 24),
 
-          // Routing Strategy Summary Cards
+          // Modèles réellement utilisés aujourd'hui (voir le registre IA-001, écran « Registre des
+          // Agents IA ») — Claude retiré le 2026-08-29 : ANTHROPIC_API_KEY n'a jamais été configurée
+          // sur ce projet, donc jamais réellement utilisé malgré ce qu'affichait cet écran avant.
           Row(
             children: [
               _buildModelCard(
-                'Claude Sonnet (Anthropic)',
-                'Structuration & Exercices',
-                'Haute précision pédagogique',
-                '0.003 \$ / 1k tokens',
-                AppTheme.accentBlue,
-              ),
-              const SizedBox(width: 16),
-              _buildModelCard(
-                'Gemini Flash (Google)',
-                'Modération Forum Massique',
-                'Gratuit en Free Tier / Haut Volume',
-                '0.0001 \$ / 1k tokens',
+                'Gemini 3.6 Flash (Google)',
+                'Tuteur, structuration, exercices, catalogue',
+                'Gratuit en Free Tier',
+                '0 \$ (free tier)',
                 AppTheme.accentEmerald,
               ),
               const SizedBox(width: 16),
               _buildModelCard(
-                'Gemini Multimodal (Google)',
-                'OCR Scans Manuscrits',
-                'Vision native d\'images',
-                '0.002 \$ / image',
-                AppTheme.accentCyan,
+                'Gemini Embedding 001 (Google)',
+                'Recherche RAG (ai_rag_chunks)',
+                '768 dimensions',
+                '0 \$ (free tier)',
+                AppTheme.accentIndigo,
               ),
             ],
           ),

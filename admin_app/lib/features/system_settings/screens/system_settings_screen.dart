@@ -67,7 +67,7 @@ class SystemSettingsScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Les secrets (clé service_role, agrégateur Mobile Money, clés Claude/Gemini) ne se '
+                              'Les secrets (clé service_role, agrégateur Mobile Money, clé Gemini) ne se '
                               'configurent jamais depuis cette application admin — ils resteraient lisibles par '
                               'quiconque a accès au client. Configurez-les dans Supabase Dashboard → Edge Functions '
                               '→ Secrets.',

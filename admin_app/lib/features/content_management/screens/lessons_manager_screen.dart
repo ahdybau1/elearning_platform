@@ -2456,7 +2456,7 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                                   label: Text(isGeneratingAi
                                       ? 'Génération en cours...'
                                       : (blocks.isEmpty
-                                          ? 'Structurer avec l\'IA (Claude)'
+                                          ? 'Structurer avec l\'IA (Gemini)'
                                           : 'Regénérer avec l\'IA (remplace les blocs ci-dessous)')),
                                 ),
                               ),

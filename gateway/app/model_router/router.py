@@ -2,16 +2,14 @@
 pas directement un fournisseur. Ils demandent une capability [...] Le Model Router choisit le moteur
 autorisé. »
 
-Le choix réel du moteur vit dans l'Edge Function `ai-generate-text` (secrets Gemini/Claude
-uniquement là-bas — même principe que embeddings_client.py) ; ce module est le point d'entrée côté
-Gateway que les agents/outils appelleront, pas un second endroit qui réinvente le routage.
+Le choix réel du moteur vit dans l'Edge Function `ai-generate-text` (secret Gemini uniquement
+là-bas — même principe que embeddings_client.py) ; ce module est le point d'entrée côté Gateway que
+les agents/outils appelleront, pas un second endroit qui réinvente le routage.
 
-ÉTAT VÉRIFIÉ le 2026-08-29, pas supposé : `ANTHROPIC_API_KEY` n'est PAS configurée comme secret sur
-ce projet (`npx supabase secrets list` — absente). La capability `reasoning_strong`, censée
-préférer Claude, retombe donc aujourd'hui TOUJOURS sur Gemini, silencieusement, comme les 3 autres
-Edge Functions existantes (`ai-course-structuring`/`ai-exercise-generation`/
-`ai-catalog-types-generation`) qui ont le même repli. Ce n'est pas un bug du routeur : c'est l'état
-réel du provisioning de secrets, à signaler plutôt qu'à cacher.
+Claude retiré le 2026-08-29 (demande explicite du porteur de projet) : `ANTHROPIC_API_KEY` n'était
+pas configurée comme secret sur ce projet (vérifié via `supabase secrets list`), la préférence
+"reasoning_strong -> Claude" n'a donc jamais été exercée en pratique — voir le même constat côté
+`ai-generate-text/index.ts`. Les 3 capabilities routent aujourd'hui toutes vers Gemini.
 """
 from typing import Literal
 
