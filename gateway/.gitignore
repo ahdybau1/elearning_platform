@@ -1,5 +1,5 @@
 __pycache__/
 *.pyc
-uvicorn.log
+uvicorn*.log
 .venv/
 venv/

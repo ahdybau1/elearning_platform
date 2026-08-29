@@ -10,15 +10,18 @@ Lancer en local ("machine développeur", légitime en Compute Fabric — §U6 du
 """
 import time
 import uuid
+from typing import Any
 
 import httpx
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Body, Depends, FastAPI, HTTPException
 
 from .auth import AuthenticatedUser, get_current_user
 from .config import settings
 from .envelope import AgentRequest, AgentResponse, SafetyInfo, UsageInfo
 from .observability import log_gateway_call
 from .registry import get_agent_version
+from .tools import TOOL_REGISTRY
+from .tools.registry import TOOL_ERRORS
 
 app = FastAPI(
     title="EDLEARN Sovereign AI Gateway",
@@ -105,3 +108,39 @@ async def invoke_agent(
         model_version=model_version,
         safety=SafetyInfo(),
     )
+
+
+@app.get("/v1/tools")
+async def list_tools(user: AuthenticatedUser = Depends(get_current_user)) -> dict:
+    """IA-003 : liste allowlistée — jamais d'accès SQL générique (§2 du cahier Agents IA)."""
+    return {"tools": sorted(TOOL_REGISTRY.keys())}
+
+
+@app.post("/v1/tools/{tool_key}/call")
+async def call_tool(
+    tool_key: str,
+    payload: dict[str, Any] = Body(default_factory=dict),
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> dict:
+    """IA-003 "Tool Gateway". Chaque tool est une fonction Python à paramètres fixes (voir
+    app/tools/registry.py) — `tool_key` hors de l'allowlist est un 404, jamais une exécution
+    générique."""
+    handler = TOOL_REGISTRY.get(tool_key)
+    if handler is None:
+        raise HTTPException(status_code=404, detail=f"Tool inconnu ou non allowlisté : {tool_key}")
+
+    request_id = str(uuid.uuid4())
+    started = time.monotonic()
+    try:
+        result = await handler(payload)
+    except TOOL_ERRORS as exc:
+        duration_ms = int((time.monotonic() - started) * 1000)
+        await log_gateway_call(
+            request_id=request_id, agent_type=f"tool:{tool_key}", status="failed",
+            duration_ms=duration_ms, error_message=str(exc),
+        )
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    duration_ms = int((time.monotonic() - started) * 1000)
+    await log_gateway_call(request_id=request_id, agent_type=f"tool:{tool_key}", status="success", duration_ms=duration_ms)
+    return {"request_id": request_id, "tool_key": tool_key, "result": result, "duration_ms": duration_ms}
