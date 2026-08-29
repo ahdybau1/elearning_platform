@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from .content import ContentToolError, search_validated_content
 from .curriculum import CurriculumToolError, get_curriculum_context
 from .math_tools import MathToolError, sympy_solve
+from ..rag.retrieve import rag_search
 
 
 class CurriculumContextInput(BaseModel):
@@ -28,6 +29,13 @@ class SympySolveInput(BaseModel):
     mode: str = "solve"  # 'solve' | 'simplify' | 'evaluate'
 
 
+class RagSearchInput(BaseModel):
+    query: str
+    class_node_id: Optional[str] = None
+    subject_id: Optional[str] = None
+    top_k: int = 5
+
+
 async def _run_curriculum(payload: dict) -> dict:
     data = CurriculumContextInput(**payload)
     return await get_curriculum_context(data.class_node_id)
@@ -45,10 +53,18 @@ async def _run_math(payload: dict) -> dict:
     return sympy_solve(expression=data.expression, variable=data.variable, mode=data.mode)
 
 
+async def _run_rag_search(payload: dict) -> dict:
+    data = RagSearchInput(**payload)
+    return await rag_search(
+        query=data.query, class_node_id=data.class_node_id, subject_id=data.subject_id, top_k=data.top_k,
+    )
+
+
 TOOL_REGISTRY: dict[str, Callable[[dict], Awaitable[dict]]] = {
     "get_curriculum_context": _run_curriculum,
     "search_validated_content": _run_content,
     "sympy_solve": _run_math,
+    "rag_search": _run_rag_search,
 }
 
 TOOL_ERRORS: tuple[type[Exception], ...] = (CurriculumToolError, ContentToolError, MathToolError)

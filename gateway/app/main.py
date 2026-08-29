@@ -19,6 +19,7 @@ from .auth import AuthenticatedUser, get_current_user
 from .config import settings
 from .envelope import AgentRequest, AgentResponse, SafetyInfo, UsageInfo
 from .observability import log_gateway_call
+from .rag.ingest import ingest_lesson
 from .registry import get_agent_version
 from .tools import TOOL_REGISTRY
 from .tools.registry import TOOL_ERRORS
@@ -144,3 +145,25 @@ async def call_tool(
     duration_ms = int((time.monotonic() - started) * 1000)
     await log_gateway_call(request_id=request_id, agent_type=f"tool:{tool_key}", status="success", duration_ms=duration_ms)
     return {"request_id": request_id, "tool_key": tool_key, "result": result, "duration_ms": duration_ms}
+
+
+@app.post("/v1/rag/ingest/{lesson_id}")
+async def rag_ingest(lesson_id: str, user: AuthenticatedUser = Depends(get_current_user)) -> dict:
+    """IA-004 partie 2 : ingère une leçon réellement publiée dans le RAG (chunking + embeddings
+    réels + pgvector). Réservé admin — ingérer du contenu n'est pas une action élève."""
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Réservé aux comptes admin.")
+    request_id = str(uuid.uuid4())
+    started = time.monotonic()
+    try:
+        result = await ingest_lesson(lesson_id)
+    except HTTPException as exc:
+        duration_ms = int((time.monotonic() - started) * 1000)
+        await log_gateway_call(
+            request_id=request_id, agent_type="rag_ingest", status="failed",
+            duration_ms=duration_ms, error_message=exc.detail,
+        )
+        raise
+    duration_ms = int((time.monotonic() - started) * 1000)
+    await log_gateway_call(request_id=request_id, agent_type="rag_ingest", status="success", duration_ms=duration_ms)
+    return {"request_id": request_id, **result}
