@@ -11,12 +11,14 @@ Lancer en local ("machine développeur", légitime en Compute Fabric — §U6 du
 """
 import time
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 import httpx
 from fastapi import Body, Depends, FastAPI, HTTPException
 from pydantic import BaseModel
 
+from .agents.correction_agent import CorrectionAgentError, correct_attempt
 from .agents.curriculum_mapping import map_content
 from .agents.pedagogical_validation import validate_lesson
 from .agents.tutor_agent import run_tutor_agent
@@ -39,6 +41,10 @@ class ModelRouterRequest(BaseModel):
     user_prompt: str
     system_prompt: str | None = None
     max_tokens: int = 1024
+
+
+class ReviewAttemptRequest(BaseModel):
+    official_correct: bool
 
 app = FastAPI(
     title="EDLEARN Sovereign AI Gateway",
@@ -74,14 +80,23 @@ async def invoke_agent(
     # IA-008 : CurriculumMappingAgent et PedagogicalValidationAgent sont "gateway_native" (aucune
     # Edge Function Deno — pure orchestration Python, pas de génération LLM nécessaire). Agents de la
     # chaîne Content Factory, réservés à l'équipe contenu/admin — jamais un appel élève.
-    if agent_id in ("AIA-AGT-017", "AIA-AGT-024"):
+    if agent_id in ("AIA-AGT-017", "AIA-AGT-024", "AIA-AGT-005"):
         if not user.is_admin:
-            raise HTTPException(status_code=403, detail="Réservé aux comptes admin (agent Content Factory).")
+            raise HTTPException(status_code=403, detail="Réservé aux comptes admin (agent Content Factory / correction).")
         try:
             if agent_id == "AIA-AGT-017":
                 result = await map_content(text=str(request.payload.get("text", "")))
-            else:
+            elif agent_id == "AIA-AGT-024":
                 result = await validate_lesson(lesson_id=str(request.payload.get("lesson_id", "")))
+            else:
+                result = await correct_attempt(attempt_id=str(request.payload.get("attempt_id", "")))
+        except CorrectionAgentError as exc:
+            duration_ms = int((time.monotonic() - started) * 1000)
+            await log_gateway_call(
+                request_id=request_id, agent_type=agent_id, status="failed",
+                duration_ms=duration_ms, error_message=str(exc),
+            )
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         except Exception as exc:
             duration_ms = int((time.monotonic() - started) * 1000)
             await log_gateway_call(
@@ -306,3 +321,36 @@ async def student_model_next_skill(
     await verify_profile_access(user, profile_id)
     recommendation = await recommend_next_skill(profile_id, subject_id)
     return {"recommendation": recommendation}
+
+
+@app.post("/v1/exercise-attempts/{attempt_id}/review")
+async def review_exercise_attempt(
+    attempt_id: str,
+    review: ReviewAttemptRequest,
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> dict:
+    """IA-009 : la "validation humaine" exigée par le cahier pour CorrectionAgent (AIA-AGT-005) —
+    `official_correct` (la note qui compte réellement) ne peut être écrite QUE par un admin ici, jamais
+    par l'agent lui-même (voir gateway/app/agents/correction_agent.py, qui n'écrit que les champs
+    `ai_*`). Réservé admin, RLS de la migration 68 l'impose aussi côté base (défense en profondeur)."""
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Réservé aux comptes admin.")
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        res = await client.patch(
+            f"{settings.rest_url}/exercise_attempts",
+            params={"id": f"eq.{attempt_id}"},
+            json={
+                "official_correct": review.official_correct,
+                "reviewed_by": user.admin_user_id,
+                "reviewed_at": datetime.now(timezone.utc).isoformat(),
+            },
+            headers={
+                "Authorization": f"Bearer {settings.supabase_service_role_key}",
+                "apikey": settings.supabase_service_role_key,
+                "Content-Type": "application/json",
+                "Prefer": "return=representation",
+            },
+        )
+    if res.status_code not in (200, 204):
+        raise HTTPException(status_code=502, detail=f"Échec de l'enregistrement de la revue : HTTP {res.status_code}")
+    return {"attempt_id": attempt_id, "official_correct": review.official_correct}

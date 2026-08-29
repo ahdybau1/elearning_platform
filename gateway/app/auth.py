@@ -14,6 +14,7 @@ class AuthenticatedUser:
         self.raw_token = raw_token
         self.is_admin: bool = False
         self.admin_role: str | None = None
+        self.admin_user_id: str | None = None
         self.account_id: str | None = None
 
 
@@ -38,7 +39,7 @@ async def get_current_user(authorization: str = Header(...)) -> AuthenticatedUse
     async with httpx.AsyncClient(timeout=10.0) as client:
         admin_res = await client.get(
             f"{settings.rest_url}/admin_users",
-            params={"auth_user_id": f"eq.{user.auth_user_id}", "is_active": "eq.true", "select": "role"},
+            params={"auth_user_id": f"eq.{user.auth_user_id}", "is_active": "eq.true", "select": "id,role"},
             headers={
                 "Authorization": f"Bearer {settings.supabase_service_role_key}",
                 "apikey": settings.supabase_service_role_key,
@@ -47,6 +48,7 @@ async def get_current_user(authorization: str = Header(...)) -> AuthenticatedUse
     if admin_res.status_code == 200 and admin_res.json():
         user.is_admin = True
         user.admin_role = admin_res.json()[0]["role"]
+        user.admin_user_id = admin_res.json()[0]["id"]
     else:
         async with httpx.AsyncClient(timeout=10.0) as client:
             acct_res = await client.get(

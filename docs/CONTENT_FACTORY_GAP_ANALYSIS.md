@@ -55,6 +55,37 @@ absents. Construits et vérifiés réellement :
 Registre : migration 67, `ai_agent_tools` lié (`rag_search` pour AIA-AGT-017, `sympy_solve` pour
 AIA-AGT-024).
 
+**IA-009 (2026-08-29) — Exercise vertical slice.** ExerciseAgent (AIA-AGT-004) était déjà réel (CF-003).
+Construit et vérifié : **CorrectionAgent (AIA-AGT-005)**, nouveau — `gateway/app/agents/
+correction_agent.py`, Gateway-native (appelle `ai-generate-text` via le Model Router IA-005, pas de
+nouvelle Edge Function). Ne traite que `reponse_courte`/`redaction` (le QCM a déjà une correction
+déterministe exacte, testé : rejet propre avec message clair). Respecte la règle explicite du cahier
+(« séparer machine_score/confidence/feedback et official_grade ») : écrit uniquement les colonnes
+`ai_score`/`ai_confidence`/`ai_feedback`/`ai_misconceptions`/`needs_human_review` (migration 68),
+**jamais** `official_correct`.
+
+**Validation humaine réelle** : nouvel endpoint `POST /v1/exercise-attempts/{id}/review` (admin
+uniquement, RLS + vérification applicative) qui pose `official_correct`/`reviewed_by`/`reviewed_at` —
+c'est le SEUL chemin qui écrit une note officielle. `reviewed_by` résout le vrai `admin_users.id` de
+l'appelant (a nécessité d'exposer `admin_user_id` sur `AuthenticatedUser`, absent avant).
+
+**Persistance élève réelle** : `exercise_attempts.submitted_answer` (JSONB, déjà utilisé par
+`recordExerciseAttempt` côté `student_app`, IA-007) est la source lue par CorrectionAgent — aucune
+nouvelle table élève nécessaire.
+
+Vérifié réellement, pas relu :
+- Insertion d'une vraie tentative `reponse_courte` (RLS élève réelle) avec une réponse substantielle →
+  CorrectionAgent appelé → score/confiance/feedback pédagogique cohérents renvoyés par Gemini, écrits en
+  base, `official_correct` resté `null`.
+- Validation humaine : admin pose `official_correct=true` → `reviewed_by`/`reviewed_at` réels écrits ;
+  un élève tentant la même requête reçoit 403.
+- Garde-fou format : une tentative QCM envoyée à CorrectionAgent est rejetée avec un message clair
+  (« a déjà une correction déterministe »), pas silencieusement acceptée.
+
+**Différé consciemment** (pas construit dans cette passe, pour rester dans le périmètre d'un vertical
+slice) : déduplication d'exercices par embeddings (mentionnée dans le workflow ExerciseAgent du cahier)
+— à construire si un vrai volume d'exercices apparaît (6 exercices fixtures aujourd'hui, prématuré).
+
 ## Lecture
 
 Le seul écart **structurel bloquant** avant de coder quoi que ce soit est **Structured Content /
