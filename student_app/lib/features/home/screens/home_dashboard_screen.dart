@@ -64,18 +64,26 @@ class HomeDashboardScreen extends ConsumerWidget {
 
             const SizedBox(height: 28),
 
-            // Section Title
+            // Section Title — le titre rétrécit avant de déborder (Expanded+ellipsis) : sur un
+            // petit écran, "Vos Matières au Programme" + "Programme Officiel" côte à côte ne
+            // tenaient pas et débordaient hors de l'écran (retour utilisateur réel sur téléphone,
+            // vérifié visuellement).
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Vos Matières au Programme',
-                  style: GoogleFonts.outfit(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: context.colors.textPrimary,
+                Expanded(
+                  child: Text(
+                    'Vos Matières au Programme',
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    style: GoogleFonts.outfit(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: context.colors.textPrimary,
+                    ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 Text(
                   'Programme Officiel',
                   style: GoogleFonts.inter(

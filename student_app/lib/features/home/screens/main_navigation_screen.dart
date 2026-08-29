@@ -39,13 +39,13 @@ const List<String> _kModuleGroupTitles = [
 ];
 
 /// Application élève à part entière (projet Flutter distinct de admin_app, jamais compilée ni
-/// déployée avec lui) — construction VOLONTAIREMENT calquée sur `main_admin_layout.dart` (même
-/// structure : coquille avec barre latérale + une seule barre du haut partagée, réduction de la
-/// barre, surbrillance du groupe actif, survol des items) pour que les deux applications
-/// « soient faites de la même façon », comme demandé — pas un partage de code, juste la même
-/// discipline de construction. Groupes et pages calqués sur l'architecture de navigation du
-/// cahier des charges (§20) : Mon espace / Apprentissage / Évaluation / Communauté / Services /
-/// Support.
+/// déployée avec lui) — construction à l'origine calquée sur `main_admin_layout.dart` (barre
+/// latérale permanente), corrigée ensuite (2026-08-29, retour utilisateur réel sur téléphone : "le
+/// responsive est très nulle" — vérifié visuellement, la barre latérale de 260px ne laissait qu'un
+/// filet de ~40px de contenu sur un écran de 390px, texte réduit à une lettre par ligne). En dessous
+/// de `_kMobileBreakpoint`, la barre latérale devient un `Drawer` (tiroir standard Material,
+/// dissimulé par défaut, ouvert via une icône burger) au lieu d'être en permanence à l'écran — le
+/// contenu de la barre (groupes/pages/icônes) reste identique, seul son mode d'affichage change.
 class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
 
@@ -57,6 +57,11 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   int _selectedFlatIndex = 0;
   bool _isSidebarCollapsed = false;
   final Set<String> _expandedModules = {..._kModuleGroupTitles};
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  // En dessous de cette largeur, une barre latérale permanente ne tient plus (testé réellement sur
+  // un viewport de 390px, la référence "petit téléphone" — voir le commentaire de la classe).
+  static const double _kMobileBreakpoint = 700;
 
   /// §4 du cahier des charges : « Un niveau sans examen officiel n'affiche simplement pas cette
   /// fonctionnalité. » — un profil dont la classe n'a aucune ligne dans `official_exams` (ex : une
@@ -139,6 +144,145 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     );
   }
 
+  /// Contenu de la barre latérale, partagé entre le mode permanent (desktop/tablette large, dans le
+  /// `Row` du `body`) et le mode tiroir (`Drawer`, mobile — `isDrawer: true` force la barre à rester
+  /// dépliée, "réduire la barre" n'aurait aucun sens dans un tiroir qui se referme déjà tout seul).
+  Widget _buildSidebarContent(List<_NavModule> studentModules, List<_NavPage> pages, {required bool isDrawer}) {
+    final collapsed = isDrawer ? false : _isSidebarCollapsed;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [context.colors.accentPrimary, context.colors.accentIndigo],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.school_rounded, color: Colors.white, size: 20),
+              ),
+              if (!collapsed) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('E-Learning National',
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+                ),
+              ],
+            ],
+          ),
+        ),
+        Divider(height: 1, color: context.colors.border),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            children: studentModules.map((module) {
+              final isExpanded = collapsed ? false : _expandedModules.contains(module.title);
+              final isModuleActive = module.pages.contains(pages.isEmpty ? null : pages[_selectedFlatIndex]);
+
+              void selectPage(int flatIndex) {
+                setState(() => _selectedFlatIndex = flatIndex);
+                if (isDrawer) Navigator.of(context).pop();
+              }
+
+              if (collapsed) {
+                // Barre réduite en rail d'icônes : accès direct, pas de groupes (le nom du groupe
+                // est de toute façon invisible ici) — jamais en mode Drawer (voir isDrawer ci-dessus).
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: module.pages.map((page) {
+                    final flatIndex = pages.indexOf(page);
+                    return _buildNavTile(
+                      page: page,
+                      isSelected: flatIndex == _selectedFlatIndex,
+                      onTap: () => selectPage(flatIndex),
+                    );
+                  }).toList(),
+                );
+              }
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  InkWell(
+                    onTap: () => setState(() {
+                      if (isExpanded) {
+                        _expandedModules.remove(module.title);
+                      } else {
+                        _expandedModules.add(module.title);
+                      }
+                    }),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              module.title.toUpperCase(),
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: isModuleActive ? context.colors.accentPrimary : context.colors.textMuted,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_right_rounded,
+                            size: 18,
+                            color: isModuleActive ? context.colors.accentPrimary : context.colors.textMuted,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (isExpanded)
+                    ...module.pages.map((page) {
+                      final flatIndex = pages.indexOf(page);
+                      return _buildNavTile(
+                        page: page,
+                        isSelected: flatIndex == _selectedFlatIndex,
+                        onTap: () => selectPage(flatIndex),
+                      );
+                    }),
+                  const SizedBox(height: 4),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+        // Réduire la barre — uniquement pertinent en mode permanent (desktop/tablette).
+        if (!isDrawer)
+          InkWell(
+            onTap: () => setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(border: Border(top: BorderSide(color: context.colors.border))),
+              child: Row(
+                mainAxisAlignment: _isSidebarCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
+                children: [
+                  Icon(
+                    _isSidebarCollapsed ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
+                    color: context.colors.textMuted,
+                  ),
+                  if (!_isSidebarCollapsed) ...[
+                    const SizedBox(width: 12),
+                    Text('Réduire la barre', style: GoogleFonts.inter(fontSize: 12, color: context.colors.textMuted)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(studentAuthProvider);
@@ -147,11 +291,24 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     final pages = studentModules.expand((m) => m.pages).toList();
     if (_selectedFlatIndex >= pages.length) _selectedFlatIndex = 0;
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < _kMobileBreakpoint;
+
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: context.colors.background,
+      drawer: isMobile
+          ? Drawer(
+              backgroundColor: context.colors.surface,
+              width: 280,
+              child: SafeArea(child: _buildSidebarContent(studentModules, pages, isDrawer: true)),
+            )
+          : null,
       body: Row(
-          children: [
-            // Sidebar Left Navigation — mêmes dimensions/transition que main_admin_layout.dart
+        children: [
+          // Sidebar permanente — uniquement au-delà du seuil mobile (voir `drawer` ci-dessus pour
+          // l'équivalent en dessous).
+          if (!isMobile)
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               width: _isSidebarCollapsed ? 80 : 260,
@@ -159,202 +316,87 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                 color: context.colors.surface,
                 border: Border(right: BorderSide(color: context.colors.border)),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [context.colors.accentPrimary, context.colors.accentIndigo],
-                            ),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.school_rounded, color: Colors.white, size: 20),
-                        ),
-                        if (!_isSidebarCollapsed) ...[
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text('E-Learning National',
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  Divider(height: 1, color: context.colors.border),
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      children: studentModules.map((module) {
-                        final isExpanded = _expandedModules.contains(module.title);
-                        final isModuleActive = module.pages.contains(pages.isEmpty ? null : pages[_selectedFlatIndex]);
-
-                        if (_isSidebarCollapsed) {
-                          // Barre réduite en rail d'icônes : accès direct, pas de groupes (le nom
-                          // du groupe est de toute façon invisible ici) — même comportement que
-                          // main_admin_layout.dart.
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: module.pages.map((page) {
-                              final flatIndex = pages.indexOf(page);
-                              return _buildNavTile(
-                                page: page,
-                                isSelected: flatIndex == _selectedFlatIndex,
-                                onTap: () => setState(() => _selectedFlatIndex = flatIndex),
-                              );
-                            }).toList(),
-                          );
-                        }
-
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            InkWell(
-                              onTap: () => setState(() {
-                                if (isExpanded) {
-                                  _expandedModules.remove(module.title);
-                                } else {
-                                  _expandedModules.add(module.title);
-                                }
-                              }),
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        module.title.toUpperCase(),
-                                        style: GoogleFonts.inter(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: isModuleActive ? context.colors.accentPrimary : context.colors.textMuted,
-                                          letterSpacing: 1.0,
-                                        ),
-                                      ),
-                                    ),
-                                    Icon(
-                                      isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_right_rounded,
-                                      size: 18,
-                                      color: isModuleActive ? context.colors.accentPrimary : context.colors.textMuted,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            if (isExpanded)
-                              ...module.pages.map((page) {
-                                final flatIndex = pages.indexOf(page);
-                                return _buildNavTile(
-                                  page: page,
-                                  isSelected: flatIndex == _selectedFlatIndex,
-                                  onTap: () => setState(() => _selectedFlatIndex = flatIndex),
-                                );
-                              }),
-                            const SizedBox(height: 4),
-                          ],
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  // Réduire la barre — même emplacement/style que main_admin_layout.dart.
-                  InkWell(
-                    onTap: () => setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(border: Border(top: BorderSide(color: context.colors.border))),
-                      child: Row(
-                        mainAxisAlignment: _isSidebarCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
-                        children: [
-                          Icon(
-                            _isSidebarCollapsed ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
-                            color: context.colors.textMuted,
-                          ),
-                          if (!_isSidebarCollapsed) ...[
-                            const SizedBox(width: 12),
-                            Text('Réduire la barre', style: GoogleFonts.inter(fontSize: 12, color: context.colors.textMuted)),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              child: _buildSidebarContent(studentModules, pages, isDrawer: false),
             ),
 
-            // Espace de travail principal : une seule barre du haut partagée (contexte + profil),
-            // puis le contenu de la page sans AppBar individuelle — même structure que
-            // main_admin_layout.dart.
-            Expanded(
-              child: Column(
-                children: [
-                  Container(
-                    height: 70,
-                    padding: const EdgeInsets.symmetric(horizontal: 28),
-                    decoration: BoxDecoration(
-                      color: context.colors.surface,
-                      border: Border(bottom: BorderSide(color: context.colors.border, width: 1)),
-                    ),
-                    child: Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            'Espace Élève (${profile?.className ?? '...'})',
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: context.colors.textSecondary),
-                          ),
-                        ),
-                        const Spacer(),
-                        // Un seul profil sur ce compte : StudentAuthGate (main.dart) saute déjà
-                        // ProfileSwitcherScreen dans ce cas précis (voir `profiles.length == 1`,
-                        // avant même de regarder hasConfirmedProfileThisBoot) — un bouton "Changer
-                        // de Profil" cliquable ici n'aurait donc structurellement AUCUN effet
-                        // visible, ce qui était exactement le bug rapporté (« rien ne se passe »).
-                        if (authState.profiles.length > 1) ...[
-                          OutlinedButton.icon(
-                            // Jamais de `pushReplacementNamed('/profiles')` ici : ça évincerait
-                            // StudentAuthGate (main.dart) de la pile de navigation pour de bon, le
-                            // remplaçant par un écran figé qui ne réagirait plus jamais aux
-                            // changements d'état (cause du bug « renvoie vers un ancien écran »).
-                            // resetProfileSelection() laisse la porte réactive faire la bascule.
-                            onPressed: () => ref.read(studentAuthProvider.notifier).resetProfileSelection(),
-                            icon: const Icon(Icons.swap_horiz_rounded, size: 16),
-                            // « Classe », pas « Profil » : sur cet appareil, « profil » désigne déjà
-                            // le compte/la personne (voir « Qui se connecte ? »,
-                            // device_account_selector_screen.dart) — réutiliser le même mot ici pour
-                            // choisir entre les classes du MÊME compte donnait l'impression de « profil
-                            // dans un profil » (retour utilisateur direct).
-                            label: const Text('Changer de Classe'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: context.colors.textSecondary,
-                              side: BorderSide(color: context.colors.border),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                        ],
+          // Espace de travail principal : une seule barre du haut partagée (contexte + profil),
+          // puis le contenu de la page sans AppBar individuelle.
+          Expanded(
+            child: Column(
+              children: [
+                Container(
+                  height: 70,
+                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 28),
+                  decoration: BoxDecoration(
+                    color: context.colors.surface,
+                    border: Border(bottom: BorderSide(color: context.colors.border, width: 1)),
+                  ),
+                  child: Row(
+                    children: [
+                      if (isMobile) ...[
                         IconButton(
-                          tooltip: 'Verrouiller',
-                          icon: Icon(Icons.lock_outline_rounded, color: context.colors.textSecondary, size: 20),
-                          onPressed: () => ref.read(studentAuthProvider.notifier).signOut(),
+                          icon: Icon(Icons.menu_rounded, color: context.colors.textSecondary),
+                          tooltip: 'Menu',
+                          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      Flexible(
+                        child: Text(
+                          isMobile ? (pages.isEmpty ? '' : pages[_selectedFlatIndex].title) : 'Espace Élève (${profile?.className ?? '...'})',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: context.colors.textSecondary),
+                        ),
+                      ),
+                      const Spacer(),
+                      // Un seul profil sur ce compte : StudentAuthGate (main.dart) saute déjà
+                      // ProfileSwitcherScreen dans ce cas précis (voir `profiles.length == 1`,
+                      // avant même de regarder hasConfirmedProfileThisBoot) — un bouton "Changer
+                      // de Profil" cliquable ici n'aurait donc structurellement AUCUN effet
+                      // visible, ce qui était exactement le bug rapporté (« rien ne se passe »).
+                      // Masqué sur mobile (place limitée, action secondaire) — reste accessible
+                      // depuis Mon Profil.
+                      if (!isMobile && authState.profiles.length > 1) ...[
+                        OutlinedButton.icon(
+                          // Jamais de `pushReplacementNamed('/profiles')` ici : ça évincerait
+                          // StudentAuthGate (main.dart) de la pile de navigation pour de bon, le
+                          // remplaçant par un écran figé qui ne réagirait plus jamais aux
+                          // changements d'état (cause du bug « renvoie vers un ancien écran »).
+                          // resetProfileSelection() laisse la porte réactive faire la bascule.
+                          onPressed: () => ref.read(studentAuthProvider.notifier).resetProfileSelection(),
+                          icon: const Icon(Icons.swap_horiz_rounded, size: 16),
+                          // « Classe », pas « Profil » : sur cet appareil, « profil » désigne déjà
+                          // le compte/la personne (voir « Qui se connecte ? »,
+                          // device_account_selector_screen.dart) — réutiliser le même mot ici pour
+                          // choisir entre les classes du MÊME compte donnait l'impression de « profil
+                          // dans un profil » (retour utilisateur direct).
+                          label: const Text('Changer de Classe'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: context.colors.textSecondary,
+                            side: BorderSide(color: context.colors.border),
+                          ),
                         ),
                         const SizedBox(width: 12),
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: context.colors.accentPrimary,
-                          child: Text(
-                            (authState.account?.firstName.isNotEmpty == true)
-                                ? authState.account!.firstName[0].toUpperCase()
-                                : 'É',
-                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.black),
-                          ),
+                      ],
+                      IconButton(
+                        tooltip: 'Verrouiller',
+                        icon: Icon(Icons.lock_outline_rounded, color: context.colors.textSecondary, size: 20),
+                        onPressed: () => ref.read(studentAuthProvider.notifier).signOut(),
+                      ),
+                      const SizedBox(width: 8),
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: context.colors.accentPrimary,
+                        child: Text(
+                          (authState.account?.firstName.isNotEmpty == true)
+                              ? authState.account!.firstName[0].toUpperCase()
+                              : 'É',
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.black),
                         ),
+                      ),
+                      // Nom/rôle à côté de l'avatar : seulement s'il reste de la place (desktop).
+                      if (!isMobile) ...[
                         const SizedBox(width: 10),
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -368,23 +410,23 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                           ],
                         ),
                       ],
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    color: context.colors.background,
+                    child: IndexedStack(
+                      index: _selectedFlatIndex,
+                      children: pages.map((p) => p.screen).toList(),
                     ),
                   ),
-                  Expanded(
-                    child: Container(
-                      color: context.colors.background,
-                      child: IndexedStack(
-                        index: _selectedFlatIndex,
-                        children: pages.map((p) => p.screen).toList(),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
+          ),
         ],
       ),
     );
   }
-
 }

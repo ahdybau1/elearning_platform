@@ -48,6 +48,13 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
   bool _isSidebarCollapsed = false;
   final Set<String> _expandedGroups = {};
   bool _expansionInitialized = false;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  // En dessous de cette largeur, une barre latérale permanente ne tient plus (retour utilisateur
+  // réel sur téléphone, 2026-08-29 : "le responsive est très nulle" — vérifié visuellement, la barre
+  // de 280px ne laissait qu'un filet de contenu sur un écran de 390px). Même seuil que
+  // student_app/main_navigation_screen.dart, pour la même discipline de construction.
+  static const double _kMobileBreakpoint = 700;
 
   static const _allRoles = AdminRole.values;
 
@@ -369,10 +376,13 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
     required NavItem item,
     required bool isSelected,
     bool indented = false,
+    bool? collapsedOverride,
+    bool closeDrawerOnTap = false,
   }) {
+    final collapsed = collapsedOverride ?? _isSidebarCollapsed;
     return Container(
       margin: EdgeInsets.only(
-        left: indented && !_isSidebarCollapsed ? 20 : 12,
+        left: indented && !collapsed ? 20 : 12,
         right: 12,
         top: 2,
         bottom: 2,
@@ -398,7 +408,7 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
             size: 20,
             color: isSelected ? AppTheme.accentBlue : Colors.white70,
           ),
-          title: _isSidebarCollapsed
+          title: collapsed
               ? null
               : Row(
                   children: [
@@ -430,9 +440,186 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
                       ),
                   ],
                 ),
-          onTap: () => ref.read(selectedNavIndexProvider.notifier).state = item.id,
+          onTap: () {
+            ref.read(selectedNavIndexProvider.notifier).state = item.id;
+            if (closeDrawerOnTap) Navigator.of(context).pop();
+          },
         ),
       ),
+    );
+  }
+
+  /// Contenu de la barre latérale, partagé entre le mode permanent (desktop/tablette large, dans le
+  /// `Row` du `body`) et le mode tiroir (`Drawer`, mobile — `isDrawer: true` force la barre à rester
+  /// dépliée : "réduire la barre" n'a pas de sens dans un tiroir qui se referme déjà tout seul, et
+  /// chaque tap sur un item ferme le tiroir, voir `_buildNavTile`'s `closeDrawerOnTap`).
+  Widget _buildSidebarColumn(List<NavGroup> filteredGroups, int selectedIndex, {required bool isDrawer}) {
+    final collapsed = isDrawer ? false : _isSidebarCollapsed;
+    return Column(
+      children: [
+        // App Brand Header
+        Container(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppTheme.accentBlue, AppTheme.accentIndigo],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.school_rounded, color: Colors.white, size: 24),
+              ),
+              if (!collapsed) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'E-LEARNING',
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.white,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      Text(
+                        'Administration HQ',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: AppTheme.accentBlue,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+
+        // Navigation Items List (STRICTLY FILTERED BY ROLE)
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            itemCount: filteredGroups.length,
+            itemBuilder: (context, groupIdx) {
+              final group = filteredGroups[groupIdx];
+              final isGroupExpanded = collapsed ? false : _expandedGroups.contains(group.title);
+              final isGroupActive = group.items.any((i) => i.id == selectedIndex);
+              final groupHasBadges = group.items.any((i) => i.badgeCount != null);
+
+              if (collapsed) {
+                // Barre réduite en rail d'icônes : pas de groupes, accès direct à toutes les
+                // pages autorisées (le nom du groupe est de toute façon invisible ici). Jamais en
+                // mode Drawer (voir `collapsed` ci-dessus).
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: group.items.map((item) => _buildNavTile(
+                        context: context,
+                        item: item,
+                        isSelected: selectedIndex == item.id,
+                        collapsedOverride: collapsed,
+                        closeDrawerOnTap: isDrawer,
+                      )).toList(),
+                );
+              }
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => setState(() {
+                        if (isGroupExpanded) {
+                          _expandedGroups.remove(group.title);
+                        } else {
+                          _expandedGroups.add(group.title);
+                        }
+                      }),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                group.title.toUpperCase(),
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: isGroupActive ? AppTheme.accentBlue : AppTheme.textMuted,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                            ),
+                            if (groupHasBadges && !isGroupExpanded)
+                              Container(
+                                margin: const EdgeInsets.only(right: 6),
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: AppTheme.accentRose,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            Icon(
+                              isGroupExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_right_rounded,
+                              size: 18,
+                              color: isGroupActive ? AppTheme.accentBlue : AppTheme.textMuted,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (isGroupExpanded)
+                    ...group.items.map((item) => _buildNavTile(
+                          context: context,
+                          item: item,
+                          isSelected: selectedIndex == item.id,
+                          indented: true,
+                          collapsedOverride: collapsed,
+                          closeDrawerOnTap: isDrawer,
+                        )),
+                ],
+              );
+            },
+          ),
+        ),
+
+        // Sidebar Collapse Toggle — uniquement pertinent en mode permanent (desktop/tablette).
+        if (!isDrawer)
+          InkWell(
+            onTap: () => setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: AppTheme.primaryBorder)),
+              ),
+              child: Row(
+                mainAxisAlignment: _isSidebarCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
+                children: [
+                  Icon(
+                    _isSidebarCollapsed ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
+                    color: AppTheme.textMuted,
+                  ),
+                  if (!_isSidebarCollapsed) ...[
+                    const SizedBox(width: 12),
+                    Text('Réduire la barre', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -493,209 +680,35 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
       }
     });
 
+    final isMobile = MediaQuery.of(context).size.width < _kMobileBreakpoint;
+
     return Scaffold(
+      key: _scaffoldKey,
+      drawer: isMobile
+          ? Drawer(
+              backgroundColor: AppTheme.primarySurface,
+              width: 280,
+              child: SafeArea(
+                child: _buildSidebarColumn(filteredGroups, selectedIndex, isDrawer: true),
+              ),
+            )
+          : null,
       body: Row(
         children: [
-          // Sidebar Left Navigation
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: _isSidebarCollapsed ? 80 : 280,
-            decoration: const BoxDecoration(
-              color: AppTheme.primarySurface,
-              border: Border(
-                right: BorderSide(color: AppTheme.primaryBorder, width: 1),
+          // Sidebar Left Navigation — uniquement en permanence au-delà du seuil mobile (voir
+          // `drawer` ci-dessus pour l'équivalent en dessous, même contenu de navigation).
+          if (!isMobile)
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: _isSidebarCollapsed ? 80 : 280,
+              decoration: const BoxDecoration(
+                color: AppTheme.primarySurface,
+                border: Border(
+                  right: BorderSide(color: AppTheme.primaryBorder, width: 1),
+                ),
               ),
+              child: _buildSidebarColumn(filteredGroups, selectedIndex, isDrawer: false),
             ),
-            child: Column(
-              children: [
-                // App Brand Header
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              AppTheme.accentBlue,
-                              AppTheme.accentIndigo,
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.school_rounded,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                      if (!_isSidebarCollapsed) ...[
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'E-LEARNING',
-                                style: GoogleFonts.outfit(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: Colors.white,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                              Text(
-                                'Administration HQ',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  color: AppTheme.accentBlue,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-
-                // Navigation Items List (STRICTLY FILTERED BY ROLE)
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    itemCount: filteredGroups.length,
-                    itemBuilder: (context, groupIdx) {
-                      final group = filteredGroups[groupIdx];
-                      final isGroupExpanded = _expandedGroups.contains(group.title);
-                      final isGroupActive = group.items.any((i) => i.id == selectedIndex);
-                      final groupHasBadges = group.items.any((i) => i.badgeCount != null);
-
-                      if (_isSidebarCollapsed) {
-                        // Barre réduite en rail d'icônes : pas de groupes, accès direct à toutes
-                        // les pages autorisées (le nom du groupe est de toute façon invisible ici).
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: group.items.map((item) => _buildNavTile(
-                                context: context,
-                                item: item,
-                                isSelected: selectedIndex == item.id,
-                              )).toList(),
-                        );
-                      }
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () => setState(() {
-                                if (isGroupExpanded) {
-                                  _expandedGroups.remove(group.title);
-                                } else {
-                                  _expandedGroups.add(group.title);
-                                }
-                              }),
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        group.title.toUpperCase(),
-                                        style: GoogleFonts.inter(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: isGroupActive
-                                              ? AppTheme.accentBlue
-                                              : AppTheme.textMuted,
-                                          letterSpacing: 1.0,
-                                        ),
-                                      ),
-                                    ),
-                                    if (groupHasBadges && !isGroupExpanded)
-                                      Container(
-                                        margin: const EdgeInsets.only(right: 6),
-                                        width: 6,
-                                        height: 6,
-                                        decoration: const BoxDecoration(
-                                          color: AppTheme.accentRose,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                    Icon(
-                                      isGroupExpanded
-                                          ? Icons.keyboard_arrow_down_rounded
-                                          : Icons.keyboard_arrow_right_rounded,
-                                      size: 18,
-                                      color: isGroupActive
-                                          ? AppTheme.accentBlue
-                                          : AppTheme.textMuted,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (isGroupExpanded)
-                            ...group.items.map((item) => _buildNavTile(
-                                  context: context,
-                                  item: item,
-                                  isSelected: selectedIndex == item.id,
-                                  indented: true,
-                                )),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-
-                // Sidebar Collapse Toggle
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      _isSidebarCollapsed = !_isSidebarCollapsed;
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: const BoxDecoration(
-                      border: Border(
-                        top: BorderSide(color: AppTheme.primaryBorder),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: _isSidebarCollapsed
-                          ? MainAxisAlignment.center
-                          : MainAxisAlignment.start,
-                      children: [
-                        Icon(
-                          _isSidebarCollapsed
-                              ? Icons.chevron_right_rounded
-                              : Icons.chevron_left_rounded,
-                          color: AppTheme.textMuted,
-                        ),
-                        if (!_isSidebarCollapsed) ...[
-                          const SizedBox(width: 12),
-                          Text(
-                            'Réduire la barre',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: AppTheme.textMuted,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
 
           // Main Screen Right Workspace
           Expanded(
@@ -704,7 +717,7 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
                 // Top Global Header Bar
                 Container(
                   height: 70,
-                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 28),
                   decoration: const BoxDecoration(
                     color: AppTheme.primarySurface,
                     border: Border(
@@ -713,64 +726,90 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
                   ),
                   child: Row(
                     children: [
+                      // Menu burger — uniquement sous le seuil mobile (voir `drawer` du Scaffold).
+                      if (isMobile) ...[
+                        IconButton(
+                          icon: const Icon(Icons.menu_rounded, color: Colors.white70),
+                          tooltip: 'Menu',
+                          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
                       // Active Context Indicator — Flexible pour ne jamais forcer un overflow du
-                      // Row quand la fenêtre est étroite (RenderFlex overflow constaté).
-                      Consumer(
-                        builder: (context, ref, _) {
-                          final selectedIds = ref.watch(selectedCountryIdsProvider);
-                          final countriesAsync = ref.watch(nodesByTypeProvider('country'));
-                          final countries = countriesAsync.valueOrNull ?? [];
-                          final label = selectedIds == null
-                              ? 'Tous les pays'
-                              : selectedIds.length == 1
-                                  ? (countries.where((c) => c.id == selectedIds.first).firstOrNull?.name ??
-                                      '1 pays')
-                                  : '${selectedIds.length} pays';
-                          return Flexible(
-                            child: Text(
-                              'Espace Administration ($label)',
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white70,
+                      // Row quand la fenêtre est étroite (RenderFlex overflow constaté). Sur mobile,
+                      // le titre de la page active remplace le contexte pays (plus utile, moins
+                      // encombrant — le contexte pays reste accessible via le sélecteur compact).
+                      if (!isMobile)
+                        Consumer(
+                          builder: (context, ref, _) {
+                            final selectedIds = ref.watch(selectedCountryIdsProvider);
+                            final countriesAsync = ref.watch(nodesByTypeProvider('country'));
+                            final countries = countriesAsync.valueOrNull ?? [];
+                            final label = selectedIds == null
+                                ? 'Tous les pays'
+                                : selectedIds.length == 1
+                                    ? (countries.where((c) => c.id == selectedIds.first).firstOrNull?.name ??
+                                        '1 pays')
+                                    : '${selectedIds.length} pays';
+                            return Flexible(
+                              child: Text(
+                                'Espace Administration ($label)',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white70,
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                      ),
-                      const Spacer(),
-
-                      // Sélecteur de pays — multi-sélection réelle + "Tous les pays", remplace
-                      // l'ancienne liste factice codée en dur jamais connectée à rien.
-                      const _CountryScopeSelector(),
-                      const SizedBox(width: 16),
-
-                      // Financial Rights Badge Indicator
-                      Tooltip(
-                        message: authState.canViewFinancials
-                            ? 'Accès Financier : Autorisé (Super-Admin)'
-                            : 'Accès Financier : Restreint (Masquage de sécurité)',
-                        child: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: authState.canViewFinancials
-                              ? AppTheme.accentEmerald.withValues(alpha: 0.2)
-                              : AppTheme.accentRose.withValues(alpha: 0.2),
-                          child: Icon(
-                            authState.canViewFinancials
-                                ? Icons.attach_money_rounded
-                                : Icons.lock_rounded,
-                            size: 18,
-                            color: authState.canViewFinancials
-                                ? AppTheme.accentEmerald
-                                : AppTheme.accentRose,
+                            );
+                          },
+                        )
+                      else
+                        Expanded(
+                          child: Text(
+                            groupTitleFor(selectedIndex) ?? 'Administration',
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white70),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
+                      if (!isMobile) const Spacer(),
 
-                      // Profile Avatar User Info
+                      // Sélecteur de pays — multi-sélection réelle + "Tous les pays", remplace
+                      // l'ancienne liste factice codée en dur jamais connectée à rien. Version
+                      // compacte (icône seule) sur mobile — la place manque pour le libellé complet.
+                      _CountryScopeSelector(compact: isMobile),
+                      SizedBox(width: isMobile ? 8 : 16),
+
+                      // Financial Rights Badge Indicator — masqué sur mobile (information
+                      // secondaire, place limitée ; reste visible dans Paramètres/Profil admin).
+                      if (!isMobile) ...[
+                        Tooltip(
+                          message: authState.canViewFinancials
+                              ? 'Accès Financier : Autorisé (Super-Admin)'
+                              : 'Accès Financier : Restreint (Masquage de sécurité)',
+                          child: CircleAvatar(
+                            radius: 18,
+                            backgroundColor: authState.canViewFinancials
+                                ? AppTheme.accentEmerald.withValues(alpha: 0.2)
+                                : AppTheme.accentRose.withValues(alpha: 0.2),
+                            child: Icon(
+                              authState.canViewFinancials
+                                  ? Icons.attach_money_rounded
+                                  : Icons.lock_rounded,
+                              size: 18,
+                              color: authState.canViewFinancials
+                                  ? AppTheme.accentEmerald
+                                  : AppTheme.accentRose,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                      ],
+
+                      // Profile Avatar User Info — nom/rôle masqués sur mobile, seul l'avatar reste
+                      // (identité complète toujours visible dans Mon Profil).
                       Row(
                         children: [
                           CircleAvatar(
@@ -786,28 +825,30 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${authState.firstName} ${authState.lastName}',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                          if (!isMobile) ...[
+                            const SizedBox(width: 10),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${authState.firstName} ${authState.lastName}',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                authState.role.label,
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  color: AppTheme.textMuted,
+                                Text(
+                                  authState.role.label,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: AppTheme.textMuted,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
+                              ],
+                            ),
+                          ],
                         ],
                       ),
                     ],
@@ -843,7 +884,11 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
 /// lu en interne par nodesByTypeProvider/termsProvider/subjectsProvider) — remplace l'ancienne
 /// liste factice codée en dur (Cameroun/Côte d'Ivoire/Sénégal) jamais connectée à rien.
 class _CountryScopeSelector extends ConsumerWidget {
-  const _CountryScopeSelector();
+  // `compact` (mobile) : icône seule, sans le libellé texte — la barre du haut n'a plus la place
+  // pour "Tous les pays"/le nom du pays à côté du menu burger et de l'avatar (retour utilisateur
+  // réel sur téléphone, 2026-08-29). Le picker complet reste identique, juste son déclencheur change.
+  final bool compact;
+  const _CountryScopeSelector({this.compact = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -855,6 +900,21 @@ class _CountryScopeSelector extends ConsumerWidget {
         : selectedIds.length == 1
             ? (countries.where((c) => c.id == selectedIds.first).firstOrNull?.name ?? '1 pays')
             : '${selectedIds.length} pays';
+
+    if (compact) {
+      return Container(
+        decoration: BoxDecoration(
+          color: AppTheme.primaryDark,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppTheme.primaryBorder),
+        ),
+        child: IconButton(
+          tooltip: label,
+          icon: const Icon(Icons.flag_rounded, color: AppTheme.accentEmerald, size: 18),
+          onPressed: countries.isEmpty ? null : () => _showPicker(context, ref, countries, selectedIds),
+        ),
+      );
+    }
 
     return Container(
       decoration: BoxDecoration(
