@@ -1,9 +1,9 @@
-"""Sovereign AI Gateway — IA-002 "Gateway minimal" (docs/CAHIER_DES_CHARGES_AGENTS_IA.md §22, §3).
+"""Sovereign AI Gateway (docs/CAHIER_DES_CHARGES_AGENTS_IA.md §22, §3).
 
-Portée volontairement minimale, conforme à l'ordre du cahier : auth, permissions, request IDs,
-validation structurée (enveloppe §4), observabilité. PAS encore d'Agent Orchestrator (LangGraph),
-PAS de RAG branché, PAS de Model Router (IA-005) — la Gateway route aujourd'hui vers les Edge
-Functions Deno réellement déployées (via le registre IA-001), elle ne les remplace pas.
+IA-002 (Gateway minimale) + IA-003 (Tool Gateway) + IA-004 (RAG) + IA-005 (Model Router) faits, dans
+cet ordre. PAS encore d'Agent Orchestrator (LangGraph) ni de modèle auto-hébergé (vLLM/Ollama) — la
+Gateway route aujourd'hui vers les Edge Functions Deno réellement déployées (via le registre IA-001),
+elle ne les remplace pas.
 
 Lancer en local ("machine développeur", légitime en Compute Fabric — §U6 du cahier) :
     cd gateway && pip install -r requirements.txt && uvicorn app.main:app --reload
@@ -14,15 +14,24 @@ from typing import Any
 
 import httpx
 from fastapi import Body, Depends, FastAPI, HTTPException
+from pydantic import BaseModel
 
 from .auth import AuthenticatedUser, get_current_user
 from .config import settings
 from .envelope import AgentRequest, AgentResponse, SafetyInfo, UsageInfo
+from .model_router.router import route_generate
 from .observability import log_gateway_call
 from .rag.ingest import ingest_lesson
 from .registry import get_agent_version
 from .tools import TOOL_REGISTRY
 from .tools.registry import TOOL_ERRORS
+
+
+class ModelRouterRequest(BaseModel):
+    capability: str
+    user_prompt: str
+    system_prompt: str | None = None
+    max_tokens: int = 1024
 
 app = FastAPI(
     title="EDLEARN Sovereign AI Gateway",
@@ -167,3 +176,21 @@ async def rag_ingest(lesson_id: str, user: AuthenticatedUser = Depends(get_curre
     duration_ms = int((time.monotonic() - started) * 1000)
     await log_gateway_call(request_id=request_id, agent_type="rag_ingest", status="success", duration_ms=duration_ms)
     return {"request_id": request_id, **result}
+
+
+@app.post("/v1/model-router/generate")
+async def model_router_generate(
+    request: ModelRouterRequest,
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> dict:
+    """IA-005 "Model Router". L'appelant demande une capability, jamais un fournisseur (§5 du
+    cahier) — le choix réel du moteur vit dans ai-generate-text, pas ici."""
+    if request.capability not in ("reasoning_strong", "pedagogy_small", "classification_small"):
+        raise HTTPException(status_code=400, detail=f"capability invalide : {request.capability}")
+    result = await route_generate(
+        capability=request.capability,  # type: ignore[arg-type]
+        user_prompt=request.user_prompt,
+        system_prompt=request.system_prompt,
+        max_tokens=request.max_tokens,
+    )
+    return result
