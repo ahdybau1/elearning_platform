@@ -61,3 +61,25 @@ async def get_current_user(authorization: str = Header(...)) -> AuthenticatedUse
             user.account_id = acct_res.json()[0]["id"]
 
     return user
+
+
+async def verify_profile_access(user: AuthenticatedUser, profile_id: str | None) -> None:
+    """Un profil élève appartient à un seul compte — jamais interrogeable pour un autre compte
+    authentifié, même via un `profile_id` fourni tel quel dans le corps d'une requête. Avant IA-007,
+    rien ne vérifiait ce lien dans `invoke_agent` (un `profile_id` arbitraire était accepté tel quel,
+    y compris pour `record_usage` — IA-006). Nécessaire dès maintenant : IA-007 lit le Student Model
+    (données pédagogiques sur un profil, potentiellement mineur) à partir de ce même `profile_id`."""
+    if not profile_id or user.is_admin:
+        return
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        res = await client.get(
+            f"{settings.rest_url}/profiles",
+            params={"id": f"eq.{profile_id}", "select": "account_id"},
+            headers={
+                "Authorization": f"Bearer {settings.supabase_service_role_key}",
+                "apikey": settings.supabase_service_role_key,
+            },
+        )
+    rows = res.json() if res.status_code == 200 else []
+    if not rows or rows[0].get("account_id") != user.account_id:
+        raise HTTPException(status_code=403, detail="profile_id ne correspond pas au compte authentifié.")

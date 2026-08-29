@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
+import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/models/student_models.dart';
 import '../../../core/widgets/student_page_content.dart';
@@ -44,6 +45,32 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
   void dispose() {
     _freeTextCtrl.dispose();
     super.dispose();
+  }
+
+  /// IA-007 (Student Model, U9 du cahier maître) : persiste une preuve d'apprentissage réelle.
+  /// Exclut 'flashcard'/'manuscrit_scan' : aucune réponse n'y est réellement soumise (retourner une
+  /// carte / voir un corrigé de référence n'est pas une tentative mesurable).
+  void _recordAttempt(Exercise ex, bool isQcmCorrect) {
+    if (ex.format == 'flashcard' || ex.format == 'manuscrit_scan') return;
+    final profileId = ref.read(studentAuthProvider).activeProfile?.id;
+    if (profileId == null) return;
+    final service = ref.read(studentSupabaseServiceProvider);
+    if (ex.format == 'qcm') {
+      service.recordExerciseAttempt(
+        profileId: profileId,
+        exerciseId: ex.id,
+        isCorrect: isQcmCorrect,
+        submittedAnswer: {'selected_index': _selectedOptionIndex},
+      );
+    } else {
+      // reponse_courte / redaction : pas de correction automatique — is_correct reste null (état
+      // honnête : "non évalué", pas une fausse réussite).
+      service.recordExerciseAttempt(
+        profileId: profileId,
+        exerciseId: ex.id,
+        submittedAnswer: {'text': _freeTextCtrl.text.trim()},
+      );
+    }
   }
 
   void _goToNext(List<Exercise> exercises) {
@@ -548,14 +575,16 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
             ? null
             : () {
                 if (!_isRevealed) {
+                  final isQcmCorrect = currentEx.format == 'qcm' && _selectedOptionIndex == currentEx.correctIndex;
                   setState(() {
                     _isRevealed = true;
-                    if (currentEx.format == 'qcm' && _selectedOptionIndex == currentEx.correctIndex) {
+                    if (currentEx.format == 'qcm' && isQcmCorrect) {
                       _totalScore += currentEx.points;
                     } else if (currentEx.format != 'qcm') {
                       _totalScore += currentEx.points;
                     }
                   });
+                  _recordAttempt(currentEx, isQcmCorrect);
                 } else {
                   _goToNext(exercises);
                 }

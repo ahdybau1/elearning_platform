@@ -210,6 +210,30 @@ class StudentSupabaseService {
     }
   }
 
+  /// IA-007 (Student Model, U9 du cahier maître) : persistance réelle d'une tentative d'exercice —
+  /// n'existait pas du tout avant cette migration (aucune table, exercise_runner_screen.dart ne
+  /// sauvegardait rien). `isCorrect` reste `null` pour les formats sans correction automatique
+  /// (rédaction/réponse courte, auto-évaluées par l'élève) — seul le QCM a un signal déterministe.
+  /// Best-effort : une erreur ici ne doit jamais bloquer l'élève dans son quiz, juste être ignorée.
+  Future<void> recordExerciseAttempt({
+    required String profileId,
+    required String exerciseId,
+    bool? isCorrect,
+    Map<String, dynamic>? submittedAnswer,
+  }) async {
+    try {
+      await client.from('exercise_attempts').insert({
+        'profile_id': profileId,
+        'exercise_id': exerciseId,
+        'is_correct': isCorrect,
+        'submitted_answer': submittedAnswer,
+      });
+    } catch (_) {
+      // Silencieux et volontaire : le Student Model est une donnée de suivi, pas un prérequis pour
+      // que l'élève continue son quiz (même principe que log_gateway_call côté Gateway).
+    }
+  }
+
   /// §2.5 du cahier des charges : profils archivés, consultables séparément (jamais mêlés à la
   /// liste active utilisée par le sélecteur de profils/la barre latérale).
   Future<List<StudentProfile>> fetchArchivedProfiles(String accountId) async {

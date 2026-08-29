@@ -6,19 +6,23 @@
 import { createClient } from "npm:@supabase/supabase-js@2.39.0";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
+  "";
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 // CF-004 : contrat de sortie minimal §4 du cahier des charges Agents IA — additif uniquement.
-const AGENT_VERSION = "1.0.0";
+// 1.1.0 (IA-007) : accepte en plus rag_context/student_model_summary/tool_context, fournis par
+// gateway/app/agents/tutor_agent.py — voir ai_agent_versions (migration 66) pour le contrat complet.
+const AGENT_VERSION = "1.1.0";
 const MODEL = "gemini-3.6-flash";
 
 Deno.serve(async (req: Request) => {
@@ -47,27 +51,50 @@ Deno.serve(async (req: Request) => {
   };
 
   try {
-    const { message, subject_name, class_name, history } = await req.json();
+    // rag_context/student_model_summary/tool_context : ajoutés pour IA-007 (vertical slice), fournis
+    // uniquement par gateway/app/agents/tutor_agent.py — absents (undefined) pour tout appel direct
+    // existant depuis ai_tutor_chat_screen.dart, qui continue de fonctionner à l'identique.
+    const {
+      message,
+      subject_name,
+      class_name,
+      history,
+      rag_context,
+      student_model_summary,
+      tool_context,
+    } = await req.json();
 
-    if (!message || typeof message !== "string" || message.trim().length === 0) {
+    if (
+      !message || typeof message !== "string" || message.trim().length === 0
+    ) {
       return new Response(
         JSON.stringify({ error: "Message manquant." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
     if (!GEMINI_API_KEY) {
       // Jamais de réponse simulée en secours (voir 06_ai_pipeline.md) : une erreur claire côté
       // client vaut mieux qu'une fausse réussite.
-      const errorMessage = "Le Tuteur Numérique n'est pas encore configuré (clé Gemini absente côté serveur).";
+      const errorMessage =
+        "Le Tuteur Numérique n'est pas encore configuré (clé Gemini absente côté serveur).";
       await logFailure(errorMessage);
       return new Response(
         JSON.stringify({ error: errorMessage, _request_id: requestId }),
-        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 503,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
-    const systemPrompt = `Tu es un tuteur pédagogique bienveillant pour un(e) élève de ${class_name ?? "l'enseignement secondaire"}, en ${subject_name ?? "toutes matières"}.
+    const systemPrompt =
+      `Tu es un tuteur pédagogique bienveillant pour un(e) élève de ${
+        class_name ?? "l'enseignement secondaire"
+      }, en ${subject_name ?? "toutes matières"}.
 Règles strictes :
 - Maïeutique uniquement : guide l'élève pas à pas vers la réponse, ne donne JAMAIS directement la solution finale d'un exercice.
 - Reste toujours dans le programme officiel de sa classe, sans bloquer totalement le hors-programme si l'élève insiste.
@@ -75,6 +102,29 @@ Règles strictes :
 - Public mineur : langage toujours approprié, aucun sujet inapproprié, refuse poliment et détourne vers l'aide scolaire si l'élève dévie du cadre pédagogique.
 - Réponses courtes et claires, en français, formules mathématiques entre $...$ si besoin.
 - Tu es un outil d'aide, jamais une autorité absolue : encourage à vérifier avec son professeur en cas de doute.`;
+
+    // IA-007 : contexte additif, uniquement si fourni par la Gateway (tutor_agent.py) — sections
+    // absentes du prompt pour tout appel direct existant (rag_context/student_model_summary/
+    // tool_context tous undefined dans ce cas).
+    const contextSections: string[] = [];
+    if (typeof rag_context === "string" && rag_context.trim()) {
+      contextSections.push(
+        `Extraits de cours validés à utiliser en priorité pour les faits pédagogiques (cite la source entre crochets si tu t'en sers) :\n${rag_context}`,
+      );
+    }
+    if (
+      typeof student_model_summary === "string" && student_model_summary.trim()
+    ) {
+      contextSections.push(student_model_summary);
+    }
+    if (typeof tool_context === "string" && tool_context.trim()) {
+      contextSections.push(
+        `Outil de calcul exact (fais confiance à ce résultat plutôt que de recalculer toi-même) :\n${tool_context}`,
+      );
+    }
+    const fullSystemPrompt = contextSections.length > 0
+      ? `${systemPrompt}\n\n${contextSections.join("\n\n")}`
+      : systemPrompt;
 
     const contents = [];
     if (Array.isArray(history)) {
@@ -98,24 +148,28 @@ Règles strictes :
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
+          systemInstruction: { parts: [{ text: fullSystemPrompt }] },
           contents,
           // gemini-3.6-flash consomme des jetons de "réflexion" internes avant la réponse visible
           // (confirmé en test direct : ~140 jetons de réflexion pour "OK") — budget généreux pour
           // ne jamais tronquer une explication pédagogique complète derrière ce coût caché.
           generationConfig: { maxOutputTokens: 4096 },
         }),
-      }
+      },
     );
 
     if (!geminiRes.ok) {
       const errText = await geminiRes.text();
       console.error("Gemini API error:", geminiRes.status, errText);
-      const errorMessage = "Le Tuteur Numérique est momentanément indisponible (quota atteint ou erreur du fournisseur).";
+      const errorMessage =
+        "Le Tuteur Numérique est momentanément indisponible (quota atteint ou erreur du fournisseur).";
       await logFailure(errorMessage);
       return new Response(
         JSON.stringify({ error: errorMessage, _request_id: requestId }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -124,11 +178,15 @@ Règles strictes :
     const tokensUsed = geminiData.usageMetadata?.totalTokenCount ?? 0;
 
     if (!reply) {
-      const errorMessage = "Le Tuteur Numérique n'a pas pu générer de réponse. Réessayez avec une question différente.";
+      const errorMessage =
+        "Le Tuteur Numérique n'a pas pu générer de réponse. Réessayez avec une question différente.";
       await logFailure(errorMessage);
       return new Response(
         JSON.stringify({ error: errorMessage, _request_id: requestId }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -149,21 +207,27 @@ Règles strictes :
       console.error("Échec d'enregistrement ai_agent_calls:", insertErr);
     }
 
-    return new Response(JSON.stringify({
-      reply,
-      _request_id: requestId,
-      _agent_version: AGENT_VERSION,
-      _model: MODEL,
-      _duration_ms: durationMs,
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        reply,
+        _request_id: requestId,
+        _agent_version: AGENT_VERSION,
+        _model: MODEL,
+        _duration_ms: durationMs,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
     console.error("AI Tutor Chat Error:", error);
     return new Response(
       JSON.stringify({ error: (error as Error).message ?? String(error) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
 });

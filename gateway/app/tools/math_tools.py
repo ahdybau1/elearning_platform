@@ -23,7 +23,19 @@ import re
 import types
 
 import sympy
-from sympy.parsing.sympy_parser import parse_expr
+from sympy.parsing.sympy_parser import (
+    implicit_multiplication_application,
+    parse_expr,
+    standard_transformations,
+)
+
+# IA-007 : "5x" (multiplication implicite, écriture naturelle d'un élève) était rejeté avant cet ajout
+# — `parse_expr` sans transformation le traite comme un jeton invalide (`SyntaxError`), pas comme
+# `5*x`. Cette transformation ne touche que la tokenisation/l'arbre syntaxique, PAS le mécanisme
+# eval()/global_dict qui avait causé la faille du 2026-08-29 (voir _safe_global_dict ci-dessous,
+# inchangé) — retestée avec le même payload d'injection après cet ajout, toujours rejetée (voir
+# commentaire de _validate_expression).
+_TRANSFORMATIONS = standard_transformations + (implicit_multiplication_application,)
 
 MAX_EXPR_LEN = 200
 TIMEOUT_SECONDS = 5
@@ -77,7 +89,10 @@ def _compute(expression: str, mode: str, variable: str) -> dict:
     var = sympy.Symbol(variable)
     global_dict = _safe_global_dict()
     try:
-        expr = parse_expr(expression, local_dict={variable: var}, global_dict=global_dict, evaluate=True)
+        expr = parse_expr(
+            expression, local_dict={variable: var}, global_dict=global_dict,
+            transformations=_TRANSFORMATIONS, evaluate=True,
+        )
     except (SyntaxError, TypeError, NameError, sympy.SympifyError) as exc:
         raise MathToolError(f"Expression invalide : {exc}") from exc
 

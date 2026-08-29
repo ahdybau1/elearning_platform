@@ -13,7 +13,7 @@
 | Exercise Factory — cœur (génération → admin → élève) | X | | | `exercises_manager_screen.dart`, `ai-exercise-generation`, `Exercise.fromJson` (student_app) | `exercises` (`instructions_json`/`solution_json`) | Aucune — vérifié réellement câblé de bout en bout (CF-003, 2026-08-28), pas de bug comme sur les leçons | Faible |
 | Exercise Factory — enrichissement U2.4 (hints/skills/prerequisites/provenance/duplicate detector) | | | X | — | — | Choix produit à trancher avec le porteur de projet avant migration (taxonomie compétences, seuil doublon) | Faible — reporter, pas de dette cachée |
 | Agents IA — DocumentStructuringAgent / ExerciseAgent / ModerationAgent (versions basiques) | X | | | `ai-course-structuring`, `ai-exercise-generation`, `ai-moderation` (edge functions) | `ai_agent_calls`, `ai_content_review` | Faire évoluer vers le contrat standard (§4 cahier Agents IA) plutôt que remplacer | Faible si additif |
-| TutorAgent complet (RAG + Student Model + tools + enveloppe standard) | | X | | `ai-tutor-chat`, `ai_tutor_chat_screen.dart` | aucune table Student Model dédiée confirmée | Chantier RAG + contrat requis avant d'appeler ça un « agent » au sens du cahier | Moyen |
+| TutorAgent complet (RAG + Student Model + tools + enveloppe standard) [IA-007, FAIT 2026-08-29] | X | | | `gateway/app/agents/tutor_agent.py`, `gateway/app/student_model/`, `ai-tutor-chat` v1.1.0 (étendu additivement) | `skills`, `skill_prerequisites`, `exercise_skills`, `exercise_attempts`, `ai_tutor_cache` (migration 64), seed du chapitre test (migration 65), registre v1.1.0 (migration 66) | Aucune — voir note IA-007 ci-dessous pour le détail de ce qui est réellement vérifié vs bloqué par un quota externe | Faible |
 | RAG — pipeline complet (ingestion + recherche par similarité) [IA-004, FAIT 2026-08-29] | X | | | `gateway/app/rag/`, `supabase/functions/ai-embeddings-generate` | `ai_rag_sources`, `ai_rag_ingestions`, `ai_rag_chunks`, `vector` (migration 56), RPC `match_rag_chunks` (migration 59), tool `rag_search` (migration 60) | Aucune — vérifié bout en bout : ingestion réelle de la leçon publiée (6 chunks, 768 dims), recherche sémantique correcte (similarité 0.78 sur la requête la plus pertinente), filtrage de périmètre confirmé | Faible — tout tourne dans la stack Supabase + Gateway locale déjà en place |
 | Agent Registry / Tool Registry (ADM-AI-001/002) [IA-001, FAIT 2026-08-29] | X | | | `ai_agent_registry_screen.dart`, `fetchAiAgents` | `ai_agents`, `ai_agent_versions`, `ai_tools`, `ai_agent_tools` (migration 55) | Aucune — 5 agents réels enregistrés avec leur vrai contrat I/O | Faible |
 | Tool Gateway — curriculum/contenu/math (§12) [IA-003, FAIT 2026-08-29] | X | | | `gateway/app/tools/` (`get_curriculum_context`, `search_validated_content`, `sympy_solve`) | `ai_tools` (migration 57) | Aucune — 3 tools réels testés avec de vraies données. `ai_agent_tools` reste vide : aucun agent réel n'appelle encore ces tools (branchement = IA-007) | Faible — voir note sécurité ci-dessous |
@@ -48,6 +48,50 @@ Aucun plafond n'est encore appliqué — `allowance_units` reste NULL sur les 7 
 benchmark réel n'a fixé de chiffre, conformément à l'interdiction explicite du cahier (§2 règle 10).
 Prochaine étape naturelle du §22 : IA-007 (premier vertical slice, TutorAgent complet avec RAG + tool
 math + lecture Student Model + cache + quota + observabilité — les briques existent déjà séparément).
+
+**IA-007 (2026-08-29) — TutorAgent, vertical slice complet.** Choix explicite du porteur de projet :
+construire le Student Model **complet** (U9 : Competency Graph + Student Model + Learning Orchestrator +
+Mastery Engine), pas une version minimale ni un report. Constat honnête avant de coder : AUCUNE table de
+tentative d'exercice n'existait (`exercise_runner_screen.dart` ne persistait rien), et les 6 seuls
+exercices + la seule leçon déjà en base sont des fixtures de développement CF-003/CF-001 (« Énoncé généré
+factice », `content_json._mock = true`) — le Mastery Engine est donc réel et fonctionnel, mais sans corpus
+pédagogique réel pour l'instant (même situation que le RAG en IA-004).
+
+Construit : `skills`/`skill_prerequisites` (Competency Graph), `exercise_attempts` (preuve d'apprentissage
+— comblait un vrai trou), `get_student_skill_mastery` (Mastery Engine, RPC recalculée à la demande,
+jamais stockée), `gateway/app/student_model/orchestrator.py` (Learning Orchestrator, règle déterministe :
+prochaine compétence non maîtrisée dont les prérequis le sont), `gateway/app/agents/tutor_agent.py`
+(orchestration RAG + math tool heuristique + Student Model + cache `ai_tutor_cache`, branchée dans
+`POST /v1/agents/AIA-AGT-001/invoke`), `ai-tutor-chat` étendu de façon additive (rétrocompatible avec
+l'écran élève existant) pour accepter le contexte construit par la Gateway.
+
+**Corrections de sécurité faites au passage** (pas différées) : `verify_profile_access` (nouveau, dans
+`gateway/app/auth.py`) — avant IA-007, rien ne vérifiait qu'un `profile_id` fourni dans une requête
+appartenait réellement au compte authentifié (touchait déjà IA-006 silencieusement) ; testé et confirmé
+bloquant (403) pour un profil d'un autre compte, sur `/invoke` et sur les nouveaux endpoints Student
+Model. `math_tools.py` a aussi été corrigé pour accepter la multiplication implicite (« 5x », écriture
+naturelle d'un élève) via `implicit_multiplication_application` de SymPy — re-testé avec le payload
+d'injection original après ce changement, toujours rejeté (voir [[feedback_test_eval_tools_for_injection]]).
+
+**Vérifié réellement, pas supposé :**
+- Tool math déclenché par heuristique dans un vrai message ("Comment resoudre 5x-4=16...") → `sympy_solve`
+  appelé, résultat exact (x=4) injecté dans `tool_trace_summary` de l'enveloppe.
+- Cache : 2ᵉ appel identique → `usage.route="cache"`, aucun nouvel appel Gemini, `hit_count`
+  incrémenté en base.
+- Student Model + Learning Orchestrator : 2 vraies tentatives insérées (RLS élève réelle, pas
+  service_role) → `mastery_level=0.5` correctement recalculé ; 3 tentatives supplémentaires →
+  `mastery_level=0.8`, et la recommandation de compétence suivante bascule automatiquement de
+  DEFINITIONS vers THEOREMES (son prérequis) — la chaîne Competency Graph → Student Model → Learning
+  Orchestrator fonctionne de bout en bout avec de vraies données.
+- RAG scopé matière/classe : `rag_search` direct confirmé (3 citations réelles, similarité 0.57-0.57 sur
+  la leçon test).
+- **Bloqué par un vrai quota externe, pas un bug** : le seul test non complété est le round-trip complet
+  RAG-augmenté → réponse Gemini (le tool math ET le RAG fonctionnent séparément, mais le quota gratuit
+  Gemini `gemini-3.6-flash` — 20 requêtes/jour — a été épuisé par le volume de tests de cette session
+  avant que ce test précis n'ait pu tourner). Chaque brique est prouvée séparément ; le seul point non
+  prouvé est leur combinaison exacte en un seul appel, bloquée par Google, pas par le code. À revérifier
+  dès que le quota se régénère (retenter `POST /v1/agents/AIA-AGT-001/invoke` avec `academic_context`
+  rempli).
 
 **Note sécurité (IA-003, 2026-08-29)** : la première implémentation de `sympy_solve` s'est révélée être
 une vraie exécution de code arbitraire (testé et confirmé : une commande shell s'est réellement
