@@ -41,6 +41,24 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <!--
+    Auto-nettoyage : un ancien service worker (enregistré lors d'une visite précédente, avant qu'on
+    ne bascule cette build en --pwa-strategy=none) continue de servir un build en cache tant qu'il
+    n'est pas désinscrit explicitement — reconstruire le site ne suffit PAS à l'effacer côté
+    navigateur d'un visiteur déjà passé. Constaté réellement le 2026-08-30 : une correction responsive
+    déployée restait invisible sur un téléphone déjà venu une fois. Ce script s'exécute AVANT Flutter,
+    désinscrit tout service worker existant et vide le cache qu'il a pu créer, une fois pour toutes.
+  -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((reg) => reg.unregister());
+      });
+    }
+    if (window.caches) {
+      caches.keys().then((keys) => keys.forEach((key) => caches.delete(key)));
+    }
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
