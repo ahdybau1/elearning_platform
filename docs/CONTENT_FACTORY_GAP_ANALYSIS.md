@@ -19,10 +19,41 @@
 | Tool Gateway — curriculum/contenu/math (§12) [IA-003, FAIT 2026-08-29] | X | | | `gateway/app/tools/` (`get_curriculum_context`, `search_validated_content`, `sympy_solve`) | `ai_tools` (migration 57) | Aucune — 3 tools réels testés avec de vraies données. `ai_agent_tools` reste vide : aucun agent réel n'appelle encore ces tools (branchement = IA-007) | Faible — voir note sécurité ci-dessous |
 | Model Router — abstraction par capability (§5) [IA-005, FAIT 2026-08-29] | X | | | `gateway/app/model_router/`, `supabase/functions/ai-generate-text` | `ai_agents`/`ai_agent_versions` (migration 61) | Aucune — vérifié réellement (pedagogy_small : Gemini, réponse correcte) | Faible |
 | **Claude retiré du projet [2026-08-29, décision explicite du porteur de projet].** `ANTHROPIC_API_KEY` n'avait jamais été configurée — Claude n'a donc jamais réellement fonctionné, malgré ce que le code et l'UI admin affichaient (« Structurer avec l'IA (Claude) »). Code mort supprimé dans les 4 fonctions concernées + Model Router ; libellés admin corrigés ; registre IA-001 mis à jour (migration 62). Gemini est désormais le seul fournisseur réel du projet, partout, honnêtement affiché comme tel. | | | | | | | |
+| Content Factory agents (§7) [IA-008, FAIT partiellement 2026-08-29] | | X | | `gateway/app/agents/{curriculum_mapping,pedagogical_validation}.py`, `ai-document-structuring` | `ai_agents` (AIA-AGT-014/015/016/017/024, migration 67) | Aucune pour les 3 construits (016/017/024) — vérifiés réellement. OCRAgent/FormulaRecognitionAgent (014/015) différés faute d'infra vision (`status='draft'`, honnête) | Faible pour ce qui est construit ; OCR reste un vrai pivot d'infra si activé un jour |
 | Quota Engine / Entitlements IA (§6, U7) [IA-006, FAIT 2026-08-29] | X | | | `gateway/app/quota.py` | `ai_policies`, `ai_entitlements`, `ai_usage_ledger` (migration 63) | Aucune — vérifié bout en bout : invocation réelle de AIA-AGT-001 (profil `b519ff5d-...`, tier `gratuit`) → vraie ligne `ai_usage_ledger` avec `policy_key='FREE'`, `units_consumed=1002` (tokens réels lus dans `ai_agent_calls`, pas estimés). Toujours pas d'application de plafond — `allowance_units` reste NULL partout, conforme à l'interdiction du cahier de fixer un chiffre avant benchmark | Faible — traçage seulement, aucun risque de blocage utilisateur prématuré |
 | Sovereign AI Gateway minimal (auth/permissions/request IDs/observabilité) [IA-002, FAIT 2026-08-29] | X | | | `gateway/` (FastAPI, Python — premier service Python du projet, Python installé sur la machine développeur pour l'occasion) | `ai_agent_calls` (réutilisée, `provider='gateway'`) | Aucune — vérifié end-to-end en local avec un vrai appel proxié vers AIA-AGT-001 (Tuteur Numérique) | Faible — tourne en local, pas encore d'hébergement dédié |
 | Agent Orchestrator (LangGraph) / modèles auto-hébergés (vLLM/Ollama) / Compute Scheduler | | | X | aucun | aucune | **C'est la partie qui exige réellement un nouvel hébergement durable** (service persistant, potentiellement GPU pour un modèle local) — distinct de la Gateway elle-même (IA-002, faite, tourne en local sans GPU). U6 du cahier autorise « machine développeur » comme premier nœud légitime, mais une exécution ad hoc via un process en arrière-plan n'est pas une dépendance de production garantie (le cahier le dit explicitement) | Élevé si présenté comme une solution de production sans decision d'hébergement durable explicite |
 | Observabilité IA (traces, coûts, latence par run) (§15) | | X | | `ai_agent_calls` capture au moins un usage basique | `ai_agent_calls` | Étendre progressivement plutôt que construire tout `ai_runs`/`ai_tool_calls` d'un coup | Faible |
+
+**IA-008 (2026-08-29) — Content Factory agents.** Décision explicite du porteur de projet : différer
+OCRAgent (AIA-AGT-014) et FormulaRecognitionAgent (AIA-AGT-015) — exigent un vrai moteur de vision
+(OpenCV/PaddleOCR auto-hébergé, nommés par le cahier), aucune infra de ce type n'existe ; enregistrés en
+`status='draft'` dans le registre (honnête : catalogués, pas construits) plutôt que silencieusement
+absents. Construits et vérifiés réellement :
+
+- **DocumentStructuringAgent (AIA-AGT-016)** — nouvelle Edge Function `ai-document-structuring`.
+  Différence volontaire avec `course_structuring` (existant) : celui-ci SEGMENTE un texte source déjà
+  écrit sans inventer de contenu (chaque bloc porte un `source_excerpt` littéral, vérifié mécaniquement
+  contre le texte source — un bloc non traçable est rétrogradé en ambiguïté, pas silencieusement gardé).
+  Testé avec un vrai texte SVT (relief terrestre) : 4 blocs corrects (paragraph/definition/
+  theoreme/piege), tous traçables, confidence 0.98, 0 ambiguïté.
+- **CurriculumMappingAgent (AIA-AGT-017)** — `gateway/app/agents/curriculum_mapping.py`, Gateway-native
+  (pas d'appel LLM : recherche sémantique sur le corpus RAG déjà ingéré + matcher lexical sur
+  chapters/skills, échelle réelle du projet). Bug trouvé et corrigé en testant : la comparaison lexicale
+  ignorait les accents ("theoremes" ne matchait pas "théorèmes") — corrigé par normalisation Unicode
+  (NFD + suppression des marques diacritiques) appliquée symétriquement à l'entrée et aux stopwords.
+  Re-testé après correction : rattachement correct au chapitre réel avec confidence 1.0, compétences
+  correctement identifiées.
+- **PedagogicalValidationAgent (AIA-AGT-024)** — `gateway/app/agents/pedagogical_validation.py`,
+  Gateway-native, déterministe (structure des blocs, rattachement curriculaire, détection de contenu
+  factice/mock, vérification symbolique best-effort des formules). Testé sur la leçon test réelle : a
+  correctement détecté `_mock: true` et l'a remonté en `blocking_issue` car la leçon est publiée —
+  un vrai problème que rien ne signalait avant.
+- Sécurité : les deux agents Gateway-native sont réservés admin (`user.is_admin`) — testé et confirmé
+  (403 pour un compte élève).
+
+Registre : migration 67, `ai_agent_tools` lié (`rag_search` pour AIA-AGT-017, `sympy_solve` pour
+AIA-AGT-024).
 
 ## Lecture
 
@@ -85,13 +116,11 @@ d'injection original après ce changement, toujours rejeté (voir [[feedback_tes
   Orchestrator fonctionne de bout en bout avec de vraies données.
 - RAG scopé matière/classe : `rag_search` direct confirmé (3 citations réelles, similarité 0.57-0.57 sur
   la leçon test).
-- **Bloqué par un vrai quota externe, pas un bug** : le seul test non complété est le round-trip complet
-  RAG-augmenté → réponse Gemini (le tool math ET le RAG fonctionnent séparément, mais le quota gratuit
-  Gemini `gemini-3.6-flash` — 20 requêtes/jour — a été épuisé par le volume de tests de cette session
-  avant que ce test précis n'ait pu tourner). Chaque brique est prouvée séparément ; le seul point non
-  prouvé est leur combinaison exacte en un seul appel, bloquée par Google, pas par le code. À revérifier
-  dès que le quota se régénère (retenter `POST /v1/agents/AIA-AGT-001/invoke` avec `academic_context`
-  rempli).
+- **Round-trip RAG-augmenté → réponse Gemini, re-testé avec succès après régénération du quota** (même
+  session, plus tard) : citations réelles (3, similarité 0.57-0.59) + réponse Gemini qui utilise
+  effectivement le contexte RAG injecté (a remarqué que le contenu ingéré porte en réalité sur les
+  équations du second degré malgré l'étiquette SVT — preuve qu'il lit vraiment le contexte fourni, pas
+  un artefact). Les 6 briques d'IA-007 sont donc toutes prouvées, y compris leur combinaison complète.
 
 **Note sécurité (IA-003, 2026-08-29)** : la première implémentation de `sympy_solve` s'est révélée être
 une vraie exécution de code arbitraire (testé et confirmé : une commande shell s'est réellement

@@ -17,6 +17,8 @@ import httpx
 from fastapi import Body, Depends, FastAPI, HTTPException
 from pydantic import BaseModel
 
+from .agents.curriculum_mapping import map_content
+from .agents.pedagogical_validation import validate_lesson
 from .agents.tutor_agent import run_tutor_agent
 from .auth import AuthenticatedUser, get_current_user, verify_profile_access
 from .config import settings
@@ -68,6 +70,32 @@ async def invoke_agent(
 
     version = await get_agent_version(agent_id)
     edge_function_name = version["edge_function_name"]
+
+    # IA-008 : CurriculumMappingAgent et PedagogicalValidationAgent sont "gateway_native" (aucune
+    # Edge Function Deno — pure orchestration Python, pas de génération LLM nécessaire). Agents de la
+    # chaîne Content Factory, réservés à l'équipe contenu/admin — jamais un appel élève.
+    if agent_id in ("AIA-AGT-017", "AIA-AGT-024"):
+        if not user.is_admin:
+            raise HTTPException(status_code=403, detail="Réservé aux comptes admin (agent Content Factory).")
+        try:
+            if agent_id == "AIA-AGT-017":
+                result = await map_content(text=str(request.payload.get("text", "")))
+            else:
+                result = await validate_lesson(lesson_id=str(request.payload.get("lesson_id", "")))
+        except Exception as exc:
+            duration_ms = int((time.monotonic() - started) * 1000)
+            await log_gateway_call(
+                request_id=request_id, agent_type=agent_id, status="failed",
+                duration_ms=duration_ms, error_message=str(exc),
+            )
+            raise HTTPException(status_code=502, detail=f"{agent_id} en échec : {exc}") from exc
+        duration_ms = int((time.monotonic() - started) * 1000)
+        await log_gateway_call(request_id=request_id, agent_type=agent_id, status="success", duration_ms=duration_ms)
+        return AgentResponse(
+            request_id=request_id, status="success", result=result,
+            usage=UsageInfo(route="server", compute_units=0),
+            agent_version=version["version"], model_version=None, safety=SafetyInfo(),
+        )
 
     # IA-007 : TutorAgent (AIA-AGT-001) a une vraie orchestration (RAG + math tool + Student Model +
     # cache) — voir gateway/app/agents/tutor_agent.py. Tous les autres agents restent un simple proxy
