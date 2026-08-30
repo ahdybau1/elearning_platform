@@ -30,27 +30,32 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Gestion des Bannières d\'Annonces',
-                    style: GoogleFonts.outfit(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+              // Expanded : titre 26pt + sous-titre débordait hors de l'écran sur mobile à côté du
+              // bouton (retour utilisateur réel, 2026-08-30).
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Gestion des Bannières d\'Annonces',
+                      style: GoogleFonts.outfit(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Diffusion de messages ciblés par pays/classe avec affichage temporisé automatique',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: AppTheme.textMuted,
+                    const SizedBox(height: 4),
+                    Text(
+                      'Diffusion de messages ciblés par pays/classe avec affichage temporisé automatique',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: AppTheme.textMuted,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 12),
               ElevatedButton.icon(
                 onPressed: () => _showAnnouncementModal(context),
                 icon: const Icon(Icons.campaign_rounded, size: 18),

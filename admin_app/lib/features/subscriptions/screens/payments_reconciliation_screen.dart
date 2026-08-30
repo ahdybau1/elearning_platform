@@ -35,27 +35,32 @@ class _PaymentsReconciliationScreenState
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Réconciliation Paiements & Remboursements',
-                    style: GoogleFonts.outfit(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+              // Expanded : titre 26pt + sous-titre débordait hors de l'écran sur mobile (retour
+              // utilisateur réel, 2026-08-30).
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Réconciliation Paiements & Remboursements',
+                      style: GoogleFonts.outfit(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Gestion des échecs réseau Mobile Money (Orange/MTN) et des litiges financiers',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: AppTheme.textMuted,
+                    const SizedBox(height: 4),
+                    Text(
+                      'Gestion des échecs réseau Mobile Money (Orange/MTN) et des litiges financiers',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: AppTheme.textMuted,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              if (!canViewFinancials) const SizedBox(width: 12),
               if (!canViewFinancials)
                 Container(
                   padding: const EdgeInsets.symmetric(

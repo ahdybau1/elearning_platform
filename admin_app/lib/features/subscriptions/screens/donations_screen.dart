@@ -347,8 +347,9 @@ class _DonationsScreenState extends ConsumerState<DonationsScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              runSpacing: 4,
               children: [
                 Text(
                   'Collecté: ${c.collectedAmount.toStringAsFixed(0)} XAF',

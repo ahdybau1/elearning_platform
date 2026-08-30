@@ -115,9 +115,15 @@ class SystemSettingsScreen extends ConsumerWidget {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(tpl.eventKey,
-                                      style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.accentBlue)),
+                                  Expanded(
+                                    child: Text(tpl.eventKey,
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                        style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.accentBlue)),
+                                  ),
+                                  const SizedBox(width: 8),
                                   Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(tpl.channel, style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted)),
                                       IconButton(

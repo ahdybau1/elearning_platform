@@ -36,43 +36,50 @@ class _SchoolYearPromotionScreenState
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accentEmerald.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.calendar_month_rounded,
-                        color: AppTheme.accentEmerald,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Année Scolaire & Campagne de Passage',
-                          style: GoogleFonts.inter(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
+                // Expanded : titre 24pt + longue phrase de sous-titre débordait hors de l'écran
+                // sur mobile à côté du bouton (retour utilisateur réel, 2026-08-30).
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.accentEmerald.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        Text(
-                          'Calendrier trimestriel et bascule annuelle des profils élèves (Cas A: Passage / Cas B: Redoublement)',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: AppTheme.textSecondary,
-                          ),
+                        child: const Icon(
+                          Icons.calendar_month_rounded,
+                          color: AppTheme.accentEmerald,
+                          size: 24,
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Année Scolaire & Campagne de Passage',
+                              style: GoogleFonts.inter(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              'Calendrier trimestriel et bascule annuelle des profils élèves (Cas A: Passage / Cas B: Redoublement)',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 12),
                 ElevatedButton.icon(
                   onPressed: () => _showAddYearDialog(context),
                   icon: const Icon(Icons.add_rounded, size: 18),
@@ -297,8 +304,12 @@ class _SchoolYearPromotionScreenState
                   const SizedBox(height: 16),
                   const Divider(color: AppTheme.borderColor),
                   const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  // Wrap plutôt que Row : titre long + bouton ne tenaient pas côte à côte sur
+                  // mobile (retour utilisateur réel, 2026-08-30).
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    runSpacing: 4,
                     children: [
                       Text(
                         'Découpage Temporel & Déblocage Invisible :',

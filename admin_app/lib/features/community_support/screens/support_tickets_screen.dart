@@ -62,20 +62,25 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Centre de Traitement des Tickets Support',
-                    style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Distinction explicite des requêtes venant des élèves vs des parents payeurs',
-                    style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMuted),
-                  ),
-                ],
+              // Expanded : titre 26pt + sous-titre débordait hors de l'écran sur mobile (retour
+              // utilisateur réel, 2026-08-30).
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Centre de Traitement des Tickets Support',
+                      style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Distinction explicite des requêtes venant des élèves vs des parents payeurs',
+                      style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMuted),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 12),
               ticketsAsync.when(
                 data: (tickets) => Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -222,8 +227,14 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                           const SizedBox(height: 6),
                           Text(tick.description, style: GoogleFonts.inter(fontSize: 13, color: Colors.white70)),
                           const SizedBox(height: 14),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          // Wrap plutôt que Row : le texte d'assignation (nom potentiellement long)
+                          // + les boutons ne tenaient pas côte à côte sur mobile — ils passent
+                          // maintenant à la ligne au lieu de déborder (retour utilisateur réel,
+                          // 2026-08-30).
+                          Wrap(
+                            alignment: WrapAlignment.spaceBetween,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            runSpacing: 8,
                             children: [
                               Text(
                                 tick.assignedTo == null

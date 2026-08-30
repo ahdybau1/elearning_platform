@@ -29,27 +29,32 @@ class _SubscriptionTiersScreenState
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Paliers d\'Abonnement & Grille Tarifaire',
-                    style: GoogleFonts.outfit(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+              // Expanded : titre 26pt + sous-titre débordait hors de l'écran sur mobile à côté
+              // du bouton (retour utilisateur réel, 2026-08-30).
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Paliers d\'Abonnement & Grille Tarifaire',
+                      style: GoogleFonts.outfit(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Configuration des tarifs par classe et par durée',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: AppTheme.textMuted,
+                    const SizedBox(height: 4),
+                    Text(
+                      'Configuration des tarifs par classe et par durée',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: AppTheme.textMuted,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 12),
               ElevatedButton.icon(
                 onPressed: () => _showEditTierModal(context),
                 icon: const Icon(Icons.add_rounded, size: 18),
@@ -125,14 +130,19 @@ class _SubscriptionTiersScreenState
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                tier.name,
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              Expanded(
+                child: Text(
+                  tier.name,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(

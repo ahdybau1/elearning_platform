@@ -42,28 +42,34 @@ class _ValidationQueueScreenState
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'File de Validation des Contenus',
-                    style: GoogleFonts.outfit(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+              // Expanded : titre 26pt + longue phrase de sous-titre, sans contrainte de largeur,
+              // débordait hors de l'écran sur mobile à côté du badge de compteur (retour
+              // utilisateur réel, 2026-08-30).
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'File de Validation des Contenus',
+                      style: GoogleFonts.outfit(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Workflow : Brouillon → En attente → Approuvé/Rejeté/À corriger '
-                    '(le contenu du super admin saute directement à Approuvé)',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: AppTheme.textMuted,
+                    const SizedBox(height: 4),
+                    Text(
+                      'Workflow : Brouillon → En attente → Approuvé/Rejeté/À corriger '
+                      '(le contenu du super admin saute directement à Approuvé)',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: AppTheme.textMuted,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 12),
               queueAsync.when(
                 data: (items) {
                   // Le compteur d'en-tête doit refléter ce qui attend RÉELLEMENT une décision, pas
@@ -254,11 +260,15 @@ class _ValidationQueueScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Header row — Wrap plutôt que Row : 2 badges + horodatage ne tenaient pas côte à côte
+          // sur mobile (retour utilisateur réel, 2026-08-30), passent à la ligne au besoin.
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            runSpacing: 6,
             children: [
-              Row(
+              Wrap(
+                spacing: 10,
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -276,7 +286,6 @@ class _ValidationQueueScreenState
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 4),

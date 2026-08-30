@@ -205,14 +205,19 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            subject.name,
-                            style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                          Expanded(
+                            child: Text(
+                              subject.name,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              style: GoogleFonts.outfit(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
+                          const SizedBox(width: 8),
                           const Icon(
                             Icons.category_rounded,
                             size: 18,
@@ -497,8 +502,13 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(labels[e.key] ?? e.key,
-                          style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
+                      Expanded(
+                        child: Text(labels[e.key] ?? e.key,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
+                      ),
+                      const SizedBox(width: 8),
                       Text('${e.value.length} appel${e.value.length > 1 ? 's' : ''} · \$${cost.toStringAsFixed(4)}',
                           style: GoogleFonts.inter(fontSize: 11, color: Colors.white38)),
                     ],
