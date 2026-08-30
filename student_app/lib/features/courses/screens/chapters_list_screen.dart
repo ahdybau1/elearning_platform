@@ -317,13 +317,18 @@ class ChaptersListScreen extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          '${chapter.lessonsCount} leçons • ${chapter.exercisesCount} exercices',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: context.colors.textMuted,
+                        Expanded(
+                          child: Text(
+                            '${chapter.lessonsCount} leçons • ${chapter.exercisesCount} exercices',
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: context.colors.textMuted,
+                            ),
                           ),
                         ),
+                        if (isUnlocked) const SizedBox(width: 8),
                         if (isUnlocked)
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(

@@ -141,11 +141,17 @@ class ParentDashboardScreen extends ConsumerWidget {
 
             const SizedBox(height: 24),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // spaceBetween sans Expanded débordait sur mobile (titre 18pt + 2 boutons — retour
+            // utilisateur réel, 2026-08-30) : titre contraint + boutons dans un Wrap (passent à la
+            // ligne au lieu de déborder hors de l'écran si la place manque).
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              runSpacing: 8,
               children: [
                 Text(
                   'Suivi Individuel des Enfants',
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -153,6 +159,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                   ),
                 ),
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     TextButton.icon(
                       onPressed: () => _showMyInviteCodeDialog(context, ref),
@@ -236,50 +243,62 @@ class ParentDashboardScreen extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 38,
-                                height: 38,
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: StudentTheme.primaryGradient,
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    child.displayName.isNotEmpty
-                                        ? child.displayName[0].toUpperCase()
-                                        : '?',
-                                    style: GoogleFonts.outfit(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                          // Expanded : le nom/classe de l'enfant est dynamique (potentiellement
+                          // long) — sans contrainte de largeur, débordait hors de l'écran sur mobile
+                          // à côté du badge de statut (retour utilisateur réel, 2026-08-30).
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: StudentTheme.primaryGradient,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      child.displayName.isNotEmpty
+                                          ? child.displayName[0].toUpperCase()
+                                          : '?',
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    child.displayName,
-                                    style: GoogleFonts.inter(
-                                      fontWeight: FontWeight.bold,
-                                      color: context.colors.textPrimary,
-                                      fontSize: 15,
-                                    ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        child.displayName,
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                        style: GoogleFonts.inter(
+                                          fontWeight: FontWeight.bold,
+                                          color: context.colors.textPrimary,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${child.className} • Année ${child.schoolYear}',
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          color: context.colors.textSecondary,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  Text(
-                                    '${child.className} • Année ${child.schoolYear}',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      color: context.colors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                                ),
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -410,19 +429,24 @@ class ParentDashboardScreen extends ConsumerWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '$dateStr • ${tx.operator}',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: context.colors.textPrimary,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$dateStr • ${tx.operator}',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: context.colors.textPrimary,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+          const SizedBox(width: 8),
           Text(
             '${tx.amount.toStringAsFixed(0)} FCFA',
             style: GoogleFonts.firaCode(

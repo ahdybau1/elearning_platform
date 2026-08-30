@@ -338,12 +338,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             color: context.colors.textSecondary,
           ),
         ),
-        Text(
-          value,
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: context.colors.textPrimary,
+        const SizedBox(width: 8),
+        // `value` peut être long (email, "Non renseigné"...) — sans Expanded, débordait hors de
+        // l'écran sur mobile à côté du libellé (retour utilisateur réel, 2026-08-30).
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: context.colors.textPrimary,
+            ),
           ),
         ),
       ],

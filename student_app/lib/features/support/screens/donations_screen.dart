@@ -172,11 +172,15 @@ class DonationsScreen extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              '${c.collectedAmount.toStringAsFixed(0)} / ${c.targetAmount.toStringAsFixed(0)} FCFA',
-                              style: GoogleFonts.firaCode(
-                                fontSize: 11,
-                                color: context.colors.textMuted,
+                            Expanded(
+                              child: Text(
+                                '${c.collectedAmount.toStringAsFixed(0)} / ${c.targetAmount.toStringAsFixed(0)} FCFA',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                style: GoogleFonts.firaCode(
+                                  fontSize: 11,
+                                  color: context.colors.textMuted,
+                                ),
                               ),
                             ),
                             TextButton(
