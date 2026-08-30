@@ -78,39 +78,38 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          // Column plutôt que Row : un Wrap placé comme simple frère d'un Expanded dans un Row ne
+          // rétrécit jamais (il calcule sa largeur "tout sur une ligne" en space illimité avant que
+          // le Row ne distribue quoi que ce soit) — avec 3 boutons ici, ça affamait complètement le
+          // titre jusqu'à l'écraser à une lettre par ligne sur mobile (retour utilisateur réel très
+          // insistant, 2026-08-30 : "son responsive est tel nul"). Titre/sous-titre toujours en haut
+          // sur toute la largeur, boutons dans leur propre Wrap en dessous, chacun avec sa pleine
+          // largeur disponible — plus jamais de compétition pour l'espace entre les deux.
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Gestion de l\'Arbre Académique',
-                      style: GoogleFonts.outfit(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Structure générique à profondeur variable (Pays → Section → Enseignement → Classe → Série)',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                  ],
+              Text(
+                'Gestion de l\'Arbre Académique',
+                style: GoogleFonts.outfit(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(height: 4),
+              Text(
+                'Structure générique à profondeur variable (Pays → Section → Enseignement → Classe → Série)',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppTheme.textMuted,
+                ),
+              ),
+              const SizedBox(height: 14),
               Wrap(
                 spacing: 12,
                 runSpacing: 12,
-                alignment: WrapAlignment.end,
                 children: [
                   ElevatedButton.icon(
                     onPressed: () => _showAddNodeModal(

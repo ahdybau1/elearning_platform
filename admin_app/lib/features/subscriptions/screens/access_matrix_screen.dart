@@ -61,46 +61,39 @@ class _AccessMatrixScreenState extends ConsumerState<AccessMatrixScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Row(
+          // Header — Column plutôt que Row : un Wrap de plusieurs boutons comme simple frère d'un
+          // Expanded ne rétrécit jamais (même bug que academic_tree_screen.dart, retour utilisateur
+          // réel très insistant, 2026-08-30) — le Column(crossAxisAlignment.end) intermédiaire qui
+          // enveloppait déjà le Wrap n'y changeait rien, un Column non contraint hérite du même
+          // problème que le Wrap qu'il contient.
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Matrice de Droits Dynamique (Access Matrix)',
-                      style: GoogleFonts.outfit(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      // Vrai seulement pour les fonctionnalités marquées "Appliqué" ci-dessous — voir
-                      // le badge d'avertissement sur les lignes non encore appliquées.
-                      'Configuration des règles de restriction par palier (contrôle réellement l\'accès côté élève pour les fonctionnalités marquées "Appliqué")',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                  ],
+              Text(
+                'Matrice de Droits Dynamique (Access Matrix)',
+                style: GoogleFonts.outfit(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              const SizedBox(height: 4),
+              Text(
+                // Vrai seulement pour les fonctionnalités marquées "Appliqué" ci-dessous — voir
+                // le badge d'avertissement sur les lignes non encore appliquées.
+                'Configuration des règles de restriction par palier (contrôle réellement l\'accès côté élève pour les fonctionnalités marquées "Appliqué")',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppTheme.textMuted,
+                ),
+              ),
+              const SizedBox(height: 14),
+              // Wrap plutôt que Row : deux boutons au libellé long côte à côte débordaient hors de
+              // l'écran ("RenderFlex overflowed").
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
                 children: [
-                  // Wrap plutôt que Row : deux boutons au libellé long côte à côte débordaient
-                  // hors de l'écran sur une fenêtre de largeur normale ("RenderFlex overflowed").
-                  Wrap(
-                    alignment: WrapAlignment.end,
-                    spacing: 12,
-                    runSpacing: 8,
-                    children: [
                       OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white,
@@ -128,15 +121,13 @@ class _AccessMatrixScreenState extends ConsumerState<AccessMatrixScreen> {
                       ),
                     ],
                   ),
-                  if (_dirtyKeys.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      '${_dirtyKeys.length} modification(s) non enregistrée(s)',
-                      style: GoogleFonts.inter(fontSize: 11, color: AppTheme.accentAmber, fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ],
-              ),
+              if (_dirtyKeys.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  '${_dirtyKeys.length} modification(s) non enregistrée(s)',
+                  style: GoogleFonts.inter(fontSize: 11, color: AppTheme.accentAmber, fontWeight: FontWeight.w600),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 24),

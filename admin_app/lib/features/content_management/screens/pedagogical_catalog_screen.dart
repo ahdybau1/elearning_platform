@@ -101,63 +101,59 @@ class _PedagogicalCatalogScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // Header — Column plutôt que Row : un Wrap de PLUSIEURS boutons placé comme simple frère
+            // d'un Expanded ne rétrécit jamais (largeur "tout sur une ligne" calculée en espace
+            // illimité avant que le Row ne distribue quoi que ce soit) — avec 3 boutons ici, ça
+            // affamait le titre jusqu'à l'écraser lettre par lettre sur mobile, même protégé par
+            // Expanded (même bug que academic_tree_screen.dart, retour utilisateur réel très
+            // insistant, 2026-08-30). Titre/icône en haut sur toute la largeur, boutons dans leur
+            // propre Wrap en dessous.
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Expanded : titre 24pt + sous-titre débordait hors de l'écran sur mobile à côté
-                // des boutons (retour utilisateur réel, 2026-08-30).
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentEmerald.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.auto_stories_rounded,
+                        color: AppTheme.accentEmerald,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: AppTheme.accentEmerald.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.auto_stories_rounded,
-                              color: AppTheme.accentEmerald,
-                              size: 24,
+                          Text(
+                            'Catalogue Pédagogique',
+                            style: GoogleFonts.inter(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
                           ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Catalogue Pédagogique',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                Text(
-                                  'Structure type des cours et typologie d\'éléments pour l\'Assistant IA',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    color: AppTheme.textSecondary,
-                                  ),
-                                ),
-                              ],
+                          Text(
+                            'Structure type des cours et typologie d\'éléments pour l\'Assistant IA',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: AppTheme.textSecondary,
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(height: 14),
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
-                  alignment: WrapAlignment.end,
                   children: [
                     ElevatedButton.icon(
                       onPressed: () => _showCreateOrEditSubjectModal(context),

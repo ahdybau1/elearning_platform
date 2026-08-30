@@ -57,40 +57,34 @@ class _ExercisesManagerScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header title & Action bar
-          Row(
+          // Header title & Action bar — Column plutôt que Row : un Wrap de plusieurs boutons comme
+          // simple frère d'un Expanded ne rétrécit jamais (même bug que academic_tree_screen.dart/
+          // pedagogical_catalog_screen.dart, retour utilisateur réel très insistant, 2026-08-30).
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Banque d\'Exercices Pédagogiques',
-                      style: GoogleFonts.outfit(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Structure à 3 niveaux d\'indépendance (Leçon, Chapitre, Indépendant type examen)',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                  ],
+              Text(
+                'Banque d\'Exercices Pédagogiques',
+                style: GoogleFonts.outfit(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(height: 4),
+              Text(
+                'Structure à 3 niveaux d\'indépendance (Leçon, Chapitre, Indépendant type examen)',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppTheme.textMuted,
+                ),
+              ),
+              const SizedBox(height: 14),
               Wrap(
                 spacing: 12,
                 runSpacing: 12,
-                alignment: WrapAlignment.end,
                 children: [
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentCyan),
