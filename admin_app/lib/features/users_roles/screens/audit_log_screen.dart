@@ -110,6 +110,17 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
                     ),
                   );
                 }
+                // Sous 700px, le DataTable dense (5 colonnes) est remplacé par
+                // une liste de cartes : même logique que
+                // student_accounts_screen.dart, conforme au retour utilisateur
+                // (restructurer, pas juste rendre scrollable).
+                if (MediaQuery.of(context).size.width < 700) {
+                  return ListView.builder(
+                    itemCount: logs.length,
+                    itemBuilder: (context, index) =>
+                        _buildMobileLogCard(context, logs[index], adminNames),
+                  );
+                }
                 return Container(
                   decoration: BoxDecoration(
                     color: AppTheme.primarySurface,
@@ -335,6 +346,70 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
             style: TextButton.styleFrom(foregroundColor: AppTheme.textMuted),
           ),
       ],
+    );
+  }
+
+  Widget _buildMobileLogCard(
+    BuildContext context,
+    AuditLog log,
+    Map<String, String> adminNames,
+  ) {
+    final adminName = log.adminUserId != null
+        ? (adminNames[log.adminUserId] ?? 'Admin inconnu')
+        : 'Système';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.primarySurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.primaryBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  adminName,
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(
+                  Icons.code_rounded,
+                  size: 18,
+                  color: AppTheme.accentBlue,
+                ),
+                tooltip: 'Voir le diff JSON',
+                onPressed: () => _showJsonDiffModal(context, log),
+              ),
+            ],
+          ),
+          Text(
+            log.createdAt.toLocal().toString().split('.').first,
+            style: GoogleFonts.inter(fontSize: 12, color: Colors.white38),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _buildActionBadge(log.actionType),
+              Text(
+                log.entityType,
+                style: GoogleFonts.inter(color: AppTheme.accentCyan),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
