@@ -459,6 +459,10 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
   /// login_code_entry_screen.dart). Migration 48 : chiffrement réversible (plus un hash à sens
   /// unique) précisément pour permettre cette consultation par le propriétaire.
   Widget _buildLoginCodeCard(StudentAccount account) {
+    // Restructuré (2026-08-30, retour utilisateur réel) : icône + texte + 2 boutons tenaient tous
+    // dans une seule Row sans aucune protection — débordait forcément sur mobile (aucun élément ne
+    // pouvait rétrécir suffisamment). Icône+texte au-dessus, boutons dans un Wrap en dessous (passent
+    // à la ligne au besoin plutôt que de déborder hors de l'écran).
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -466,43 +470,53 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.colors.border),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.pin_outlined, color: context.colors.accentIndigo, size: 22),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Sécurité — Mon code',
-                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+          Row(
+            children: [
+              Icon(Icons.pin_outlined, color: context.colors.accentIndigo, size: 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Sécurité — Mon code',
+                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Code personnel (lettres, chiffres, caractères) pour vous reconnecter rapidement sur cet appareil.',
+                      style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Code personnel (lettres, chiffres, caractères) pour vous reconnecter rapidement sur cet appareil.',
-                  style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton(
+                onPressed: () => _showMyLoginCodeDialog(),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: context.colors.textSecondary,
+                  side: BorderSide(color: context.colors.border),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          OutlinedButton(
-            onPressed: () => _showMyLoginCodeDialog(),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: context.colors.textSecondary,
-              side: BorderSide(color: context.colors.border),
-            ),
-            child: const Text('Voir'),
-          ),
-          const SizedBox(width: 8),
-          OutlinedButton(
-            onPressed: () => _showSetLoginCodeDialog(),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: context.colors.accentIndigo,
-              side: BorderSide(color: context.colors.accentIndigo),
-            ),
-            child: const Text('Définir / Changer'),
+                child: const Text('Voir'),
+              ),
+              OutlinedButton(
+                onPressed: () => _showSetLoginCodeDialog(),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: context.colors.accentIndigo,
+                  side: BorderSide(color: context.colors.accentIndigo),
+                ),
+                child: const Text('Définir / Changer'),
+              ),
+            ],
           ),
         ],
       ),
