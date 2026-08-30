@@ -72,10 +72,10 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
                 onPressed: logsAsync.valueOrNull == null
                     ? null
                     : () => _exportCsv(
-                          context,
-                          _applyFilters(logsAsync.valueOrNull!),
-                          adminNames,
-                        ),
+                        context,
+                        _applyFilters(logsAsync.valueOrNull!),
+                        adminNames,
+                      ),
                 icon: const Icon(Icons.download_rounded, size: 18),
                 label: const Text('Exporter la Vue (CSV)'),
               ),
@@ -118,50 +118,115 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
+                    // Défilement horizontal ajouté (2026-08-30) : même bug que
+                    // student_accounts_screen.dart — sans lui, le DataTable était rogné sur mobile.
                     child: SingleChildScrollView(
-                      child: DataTable(
-                        headingRowColor: WidgetStateProperty.all(AppTheme.primaryDark),
-                        columns: [
-                          DataColumn(
-                              label: Text('Horodatage',
-                                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white))),
-                          DataColumn(
-                              label: Text('Administrateur',
-                                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white))),
-                          DataColumn(
-                              label: Text('Action',
-                                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white))),
-                          DataColumn(
-                              label: Text('Table / Entité',
-                                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white))),
-                          DataColumn(
-                              label: Text('Diff JSON',
-                                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white))),
-                        ],
-                        rows: logs.map((log) {
-                          final adminName = log.adminUserId != null
-                              ? (adminNames[log.adminUserId] ?? 'Admin inconnu')
-                              : 'Système';
-                          return DataRow(
-                            cells: [
-                              DataCell(Text(
-                                log.createdAt.toLocal().toString().split('.').first,
-                                style: GoogleFonts.inter(fontSize: 12, color: Colors.white38),
-                              )),
-                              DataCell(Text(adminName,
-                                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white))),
-                              DataCell(_buildActionBadge(log.actionType)),
-                              DataCell(Text(log.entityType,
-                                  style: GoogleFonts.inter(color: AppTheme.accentCyan))),
-                              DataCell(
-                                IconButton(
-                                  icon: const Icon(Icons.code_rounded, size: 18, color: AppTheme.accentBlue),
-                                  onPressed: () => _showJsonDiffModal(context, log),
+                      scrollDirection: Axis.horizontal,
+                      child: SingleChildScrollView(
+                        child: DataTable(
+                          headingRowColor: WidgetStateProperty.all(
+                            AppTheme.primaryDark,
+                          ),
+                          columns: [
+                            DataColumn(
+                              label: Text(
+                                'Horodatage',
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
                                 ),
                               ),
-                            ],
-                          );
-                        }).toList(),
+                            ),
+                            DataColumn(
+                              label: Text(
+                                'Administrateur',
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                            DataColumn(
+                              label: Text(
+                                'Action',
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                            DataColumn(
+                              label: Text(
+                                'Table / Entité',
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                            DataColumn(
+                              label: Text(
+                                'Diff JSON',
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                          rows: logs.map((log) {
+                            final adminName = log.adminUserId != null
+                                ? (adminNames[log.adminUserId] ??
+                                      'Admin inconnu')
+                                : 'Système';
+                            return DataRow(
+                              cells: [
+                                DataCell(
+                                  Text(
+                                    log.createdAt
+                                        .toLocal()
+                                        .toString()
+                                        .split('.')
+                                        .first,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: Colors.white38,
+                                    ),
+                                  ),
+                                ),
+                                DataCell(
+                                  Text(
+                                    adminName,
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                DataCell(_buildActionBadge(log.actionType)),
+                                DataCell(
+                                  Text(
+                                    log.entityType,
+                                    style: GoogleFonts.inter(
+                                      color: AppTheme.accentCyan,
+                                    ),
+                                  ),
+                                ),
+                                DataCell(
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.code_rounded,
+                                      size: 18,
+                                      color: AppTheme.accentBlue,
+                                    ),
+                                    onPressed: () =>
+                                        _showJsonDiffModal(context, log),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }).toList(),
+                        ),
                       ),
                     ),
                   ),
@@ -169,7 +234,10 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
               },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, _) => Center(
-                child: Text('Erreur: $err', style: GoogleFonts.inter(color: AppTheme.accentRose)),
+                child: Text(
+                  'Erreur: $err',
+                  style: GoogleFonts.inter(color: AppTheme.accentRose),
+                ),
               ),
             ),
           ),
@@ -187,14 +255,18 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
           return false;
         }
       }
-      if (_actionFilter != _allFilter && log.actionType != _actionFilter) return false;
-      if (_entityFilter != _allFilter && log.entityType != _entityFilter) return false;
+      if (_actionFilter != _allFilter && log.actionType != _actionFilter)
+        return false;
+      if (_entityFilter != _allFilter && log.entityType != _entityFilter)
+        return false;
       return true;
     }).toList();
   }
 
   Widget _buildFilterRow(List<AuditLog> logs, Map<String, String> adminNames) {
-    final adminIds = logs.map((l) => l.adminUserId).whereType<String>().toSet().toList()..sort();
+    final adminIds =
+        logs.map((l) => l.adminUserId).whereType<String>().toSet().toList()
+          ..sort();
     final actions = logs.map((l) => l.actionType).toSet().toList()..sort();
     final entities = logs.map((l) => l.entityType).toSet().toList()..sort();
 
@@ -208,9 +280,20 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
           label: 'Administrateur',
           value: _adminFilter,
           items: [
-            const DropdownMenuItem(value: _allFilter, child: Text('Tous les administrateurs')),
-            const DropdownMenuItem(value: 'system', child: Text('Système (auto)')),
-            ...adminIds.map((id) => DropdownMenuItem(value: id, child: Text(adminNames[id] ?? 'Admin inconnu'))),
+            const DropdownMenuItem(
+              value: _allFilter,
+              child: Text('Tous les administrateurs'),
+            ),
+            const DropdownMenuItem(
+              value: 'system',
+              child: Text('Système (auto)'),
+            ),
+            ...adminIds.map(
+              (id) => DropdownMenuItem(
+                value: id,
+                child: Text(adminNames[id] ?? 'Admin inconnu'),
+              ),
+            ),
           ],
           onChanged: (v) => setState(() => _adminFilter = v ?? _allFilter),
         ),
@@ -218,7 +301,10 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
           label: 'Action',
           value: _actionFilter,
           items: [
-            const DropdownMenuItem(value: _allFilter, child: Text('Toutes les actions')),
+            const DropdownMenuItem(
+              value: _allFilter,
+              child: Text('Toutes les actions'),
+            ),
             ...actions.map((a) => DropdownMenuItem(value: a, child: Text(a))),
           ],
           onChanged: (v) => setState(() => _actionFilter = v ?? _allFilter),
@@ -227,12 +313,17 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
           label: 'Entité',
           value: _entityFilter,
           items: [
-            const DropdownMenuItem(value: _allFilter, child: Text('Toutes les entités')),
+            const DropdownMenuItem(
+              value: _allFilter,
+              child: Text('Toutes les entités'),
+            ),
             ...entities.map((e) => DropdownMenuItem(value: e, child: Text(e))),
           ],
           onChanged: (v) => setState(() => _entityFilter = v ?? _allFilter),
         ),
-        if (_adminFilter != _allFilter || _actionFilter != _allFilter || _entityFilter != _allFilter)
+        if (_adminFilter != _allFilter ||
+            _actionFilter != _allFilter ||
+            _entityFilter != _allFilter)
           TextButton.icon(
             onPressed: () => setState(() {
               _adminFilter = _allFilter;
@@ -264,8 +355,14 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
         decoration: InputDecoration(
           isDense: true,
           labelText: label,
-          labelStyle: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          labelStyle: GoogleFonts.inter(
+            fontSize: 11,
+            color: AppTheme.textMuted,
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 10,
+          ),
         ),
         items: items,
         onChanged: onChanged,
@@ -304,18 +401,29 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+      ),
       child: Text(
         action,
-        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: fg),
+        style: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: fg,
+        ),
       ),
     );
   }
 
   void _showJsonDiffModal(BuildContext context, AuditLog log) {
     const encoder = JsonEncoder.withIndent('  ');
-    final before = log.beforeJson != null ? encoder.convert(log.beforeJson) : '(aucun)';
-    final after = log.afterJson != null ? encoder.convert(log.afterJson) : '(aucun)';
+    final before = log.beforeJson != null
+        ? encoder.convert(log.beforeJson)
+        : '(aucun)';
+    final after = log.afterJson != null
+        ? encoder.convert(log.afterJson)
+        : '(aucun)';
 
     showDialog(
       context: context,
@@ -333,22 +441,44 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Avant (Before) :',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.accentRose)),
+                Text(
+                  'Avant (Before) :',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.accentRose,
+                  ),
+                ),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   color: AppTheme.primaryDark,
-                  child: Text(before, style: GoogleFonts.robotoMono(color: Colors.white70, fontSize: 12)),
+                  child: Text(
+                    before,
+                    style: GoogleFonts.robotoMono(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
-                Text('Après (After) :',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.accentEmerald)),
+                Text(
+                  'Après (After) :',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.accentEmerald,
+                  ),
+                ),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   color: AppTheme.primaryDark,
-                  child: Text(after, style: GoogleFonts.robotoMono(color: Colors.white70, fontSize: 12)),
+                  child: Text(
+                    after,
+                    style: GoogleFonts.robotoMono(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -365,8 +495,14 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
   }
 
   // Export web uniquement (dart:html) — l'app admin est une cible Flutter Web (CDC section 1.3).
-  void _exportCsv(BuildContext context, List<AuditLog> logs, Map<String, String> adminNames) {
-    final buffer = StringBuffer('Horodatage,Administrateur,Action,Entité,ID Entité\n');
+  void _exportCsv(
+    BuildContext context,
+    List<AuditLog> logs,
+    Map<String, String> adminNames,
+  ) {
+    final buffer = StringBuffer(
+      'Horodatage,Administrateur,Action,Entité,ID Entité\n',
+    );
     for (final log in logs) {
       final adminName = log.adminUserId != null
           ? (adminNames[log.adminUserId] ?? 'Admin inconnu')
@@ -386,14 +522,20 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
     final blob = html.Blob([bytes], 'text/csv');
     final url = html.Url.createObjectUrlFromBlob(blob);
     html.AnchorElement(href: url)
-      ..setAttribute('download', 'audit_log_${DateTime.now().millisecondsSinceEpoch}.csv')
+      ..setAttribute(
+        'download',
+        'audit_log_${DateTime.now().millisecondsSinceEpoch}.csv',
+      )
       ..click();
     html.Url.revokeObjectUrl(url);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: AppTheme.accentEmerald,
-        content: Text('${logs.length} entrées exportées.', style: GoogleFonts.inter(color: Colors.white)),
+        content: Text(
+          '${logs.length} entrées exportées.',
+          style: GoogleFonts.inter(color: Colors.white),
+        ),
       ),
     );
   }

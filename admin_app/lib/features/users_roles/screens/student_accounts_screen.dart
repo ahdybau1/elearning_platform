@@ -10,7 +10,8 @@ class StudentAccountsScreen extends ConsumerStatefulWidget {
   const StudentAccountsScreen({super.key});
 
   @override
-  ConsumerState<StudentAccountsScreen> createState() => _StudentAccountsScreenState();
+  ConsumerState<StudentAccountsScreen> createState() =>
+      _StudentAccountsScreenState();
 }
 
 class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
@@ -19,7 +20,9 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final accountsAsync = ref.watch(accountsProvider(_search.isEmpty ? null : _search));
+    final accountsAsync = ref.watch(
+      accountsProvider(_search.isEmpty ? null : _search),
+    );
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -68,11 +71,18 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
             decoration: InputDecoration(
               hintText: 'Rechercher par nom, prénom ou email...',
               hintStyle: GoogleFonts.inter(color: AppTheme.textMuted),
-              prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.textMuted),
+              prefixIcon: const Icon(
+                Icons.search_rounded,
+                color: AppTheme.textMuted,
+              ),
               suffixIcon: _search.isEmpty
                   ? null
                   : IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 18, color: AppTheme.textMuted),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                        color: AppTheme.textMuted,
+                      ),
                       onPressed: () => setState(() {
                         _searchController.clear();
                         _search = '';
@@ -100,6 +110,16 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                     ),
                   );
                 }
+                // Sur mobile, une vraie liste de cartes plutôt qu'un DataTable qu'on ferait défiler
+                // horizontalement — retour utilisateur réel (2026-08-30) : un tableau à faire
+                // défiler reste une mauvaise expérience mobile, certains éléments doivent
+                // s'adapter/se réorganiser, pas juste devenir scrollables dans les deux sens.
+                if (MediaQuery.of(context).size.width < 700) {
+                  return ListView.builder(
+                    itemCount: accounts.length,
+                    itemBuilder: (context, idx) => _buildMobileAccountCard(context, accounts[idx]),
+                  );
+                }
                 return Container(
                   decoration: BoxDecoration(
                     color: AppTheme.primarySurface,
@@ -108,85 +128,162 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
+                    // Défilement horizontal ajouté (2026-08-30, retour utilisateur réel) : sans lui,
+                    // un DataTable plus large que l'écran était simplement ROGNÉ par le ClipRRect —
+                    // des colonnes entières (ex: numéro de téléphone) devenaient illisibles sur
+                    // mobile, pas juste "serré". Le SingleChildScrollView vertical existant reste à
+                    // l'intérieur (défilement des lignes), celui-ci gère la largeur.
                     child: SingleChildScrollView(
-                      child: DataTable(
-                        headingRowColor: WidgetStateProperty.all(AppTheme.primaryDark),
-                        columns: [
-                          DataColumn(
-                            label: Text('Élève (Identité)',
-                                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
+                      scrollDirection: Axis.horizontal,
+                      child: SingleChildScrollView(
+                        child: DataTable(
+                          headingRowColor: WidgetStateProperty.all(
+                            AppTheme.primaryDark,
                           ),
-                          DataColumn(
-                            label: Text('Contact',
-                                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
-                          ),
-                          DataColumn(
-                            label: Text('Créé le',
-                                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
-                          ),
-                          DataColumn(
-                            label: Text('Actions',
-                                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
-                          ),
-                        ],
-                        rows: accounts.map((account) {
-                          return DataRow(
-                            cells: [
-                              DataCell(
-                                Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('${account.firstName} ${account.lastName}',
-                                        style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white)),
-                                    Text(account.email,
-                                        style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted)),
-                                  ],
+                          columns: [
+                            DataColumn(
+                              label: Text(
+                                'Élève (Identité)',
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
                                 ),
                               ),
-                              DataCell(Text(account.phone ?? '—',
-                                  style: GoogleFonts.inter(color: Colors.white70))),
-                              DataCell(Text(
-                                account.createdAt.toLocal().toString().split(' ').first,
-                                style: GoogleFonts.inter(fontSize: 12, color: Colors.white60),
-                              )),
-                              DataCell(
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit_rounded, size: 18, color: AppTheme.accentBlue),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      visualDensity: VisualDensity.compact,
-                                      tooltip: 'Modifier le compte',
-                                      onPressed: () => _showEditAccountModal(context, account),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    IconButton(
-                                      icon: const Icon(Icons.badge_rounded, size: 18, color: AppTheme.accentBlue),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      visualDensity: VisualDensity.compact,
-                                      tooltip: 'Voir les Profils du compte',
-                                      onPressed: () => _showProfilesDialog(context, account),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    IconButton(
-                                      icon: const Icon(Icons.phonelink_erase_rounded,
-                                          size: 18, color: AppTheme.accentAmber),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      visualDensity: VisualDensity.compact,
-                                      tooltip: 'Gérer les sessions (déconnexion forcée)',
-                                      onPressed: () => _showSessionsDialog(context, account),
-                                    ),
-                                  ],
+                            ),
+                            DataColumn(
+                              label: Text(
+                                'Contact',
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
                                 ),
                               ),
-                            ],
-                          );
-                        }).toList(),
+                            ),
+                            DataColumn(
+                              label: Text(
+                                'Créé le',
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                            DataColumn(
+                              label: Text(
+                                'Actions',
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                          rows: accounts.map((account) {
+                            return DataRow(
+                              cells: [
+                                DataCell(
+                                  Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${account.firstName} ${account.lastName}',
+                                        style: GoogleFonts.inter(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      Text(
+                                        account.email,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          color: AppTheme.textMuted,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                DataCell(
+                                  Text(
+                                    account.phone ?? '—',
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                ),
+                                DataCell(
+                                  Text(
+                                    account.createdAt
+                                        .toLocal()
+                                        .toString()
+                                        .split(' ')
+                                        .first,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: Colors.white60,
+                                    ),
+                                  ),
+                                ),
+                                DataCell(
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.edit_rounded,
+                                          size: 18,
+                                          color: AppTheme.accentBlue,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        visualDensity: VisualDensity.compact,
+                                        tooltip: 'Modifier le compte',
+                                        onPressed: () => _showEditAccountModal(
+                                          context,
+                                          account,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.badge_rounded,
+                                          size: 18,
+                                          color: AppTheme.accentBlue,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        visualDensity: VisualDensity.compact,
+                                        tooltip: 'Voir les Profils du compte',
+                                        onPressed: () => _showProfilesDialog(
+                                          context,
+                                          account,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.phonelink_erase_rounded,
+                                          size: 18,
+                                          color: AppTheme.accentAmber,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        visualDensity: VisualDensity.compact,
+                                        tooltip:
+                                            'Gérer les sessions (déconnexion forcée)',
+                                        onPressed: () => _showSessionsDialog(
+                                          context,
+                                          account,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            );
+                          }).toList(),
+                        ),
                       ),
                     ),
                   ),
@@ -194,9 +291,77 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
               },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, _) => Center(
-                child: Text('Erreur: $err', style: GoogleFonts.inter(color: AppTheme.accentRose)),
+                child: Text(
+                  'Erreur: $err',
+                  style: GoogleFonts.inter(color: AppTheme.accentRose),
+                ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Équivalent mobile d'une ligne de DataTable — même information (identité, contact, date,
+  /// actions), réorganisée verticalement au lieu de colonnes fixes. Les 3 IconButton d'actions
+  /// restent identiques (mêmes tooltips/callbacks), juste disposés en Wrap plutôt qu'en Row pour ne
+  /// jamais déborder même sur un très petit écran.
+  Widget _buildMobileAccountCard(BuildContext context, Account account) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.primarySurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.primaryBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${account.firstName} ${account.lastName}',
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          Text(
+            account.email,
+            style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 16,
+            runSpacing: 4,
+            children: [
+              Text(
+                account.phone ?? 'Téléphone non renseigné',
+                style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
+              ),
+              Text(
+                'Créé le ${account.createdAt.toLocal().toString().split(' ').first}',
+                style: GoogleFonts.inter(fontSize: 12, color: Colors.white60),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 4,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.edit_rounded, size: 18, color: AppTheme.accentBlue),
+                tooltip: 'Modifier le compte',
+                onPressed: () => _showEditAccountModal(context, account),
+              ),
+              IconButton(
+                icon: const Icon(Icons.badge_rounded, size: 18, color: AppTheme.accentBlue),
+                tooltip: 'Voir les Profils du compte',
+                onPressed: () => _showProfilesDialog(context, account),
+              ),
+              IconButton(
+                icon: const Icon(Icons.phonelink_erase_rounded, size: 18, color: AppTheme.accentAmber),
+                tooltip: 'Gérer les sessions (déconnexion forcée)',
+                onPressed: () => _showSessionsDialog(context, account),
+              ),
+            ],
           ),
         ],
       ),
@@ -215,7 +380,9 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => AlertDialog(
           backgroundColor: AppTheme.primarySurface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: AppDialogTitle(
             icon: Icons.edit_rounded,
             text: 'Modifier le Compte',
@@ -227,8 +394,13 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Email (non modifiable) : ${account.email}',
-                    style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted)),
+                Text(
+                  'Email (non modifiable) : ${account.email}',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: AppTheme.textMuted,
+                  ),
+                ),
                 const SizedBox(height: 14),
                 TextField(
                   controller: firstNameCtrl,
@@ -245,11 +417,19 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                 TextField(
                   controller: phoneCtrl,
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Téléphone (optionnel)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Téléphone (optionnel)',
+                  ),
                 ),
                 if (formError != null) ...[
                   const SizedBox(height: 12),
-                  Text(formError!, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                  Text(
+                    formError!,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AppTheme.accentRose,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -257,14 +437,21 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
           actions: [
             TextButton(
               onPressed: isLoading ? null : () => Navigator.pop(ctx),
-              child: Text('Annuler', style: GoogleFonts.inter(color: AppTheme.textMuted)),
+              child: Text(
+                'Annuler',
+                style: GoogleFonts.inter(color: AppTheme.textMuted),
+              ),
             ),
             ElevatedButton(
               onPressed: isLoading
                   ? null
                   : () async {
-                      if (firstNameCtrl.text.trim().isEmpty || lastNameCtrl.text.trim().isEmpty) {
-                        setModalState(() => formError = 'Le prénom et le nom sont obligatoires.');
+                      if (firstNameCtrl.text.trim().isEmpty ||
+                          lastNameCtrl.text.trim().isEmpty) {
+                        setModalState(
+                          () => formError =
+                              'Le prénom et le nom sont obligatoires.',
+                        );
                         return;
                       }
                       setModalState(() {
@@ -277,9 +464,13 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                           account.id,
                           firstName: firstNameCtrl.text.trim(),
                           lastName: lastNameCtrl.text.trim(),
-                          phone: phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
+                          phone: phoneCtrl.text.trim().isEmpty
+                              ? null
+                              : phoneCtrl.text.trim(),
                         );
-                        ref.invalidate(accountsProvider(_search.isEmpty ? null : _search));
+                        ref.invalidate(
+                          accountsProvider(_search.isEmpty ? null : _search),
+                        );
                         if (ctx.mounted) Navigator.pop(ctx);
                       } catch (e) {
                         setModalState(() {
@@ -290,7 +481,13 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                     },
               child: isLoading
                   ? const SizedBox(
-                      width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Text('Enregistrer'),
             ),
           ],
@@ -314,11 +511,17 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
           height: MediaQuery.of(context).size.height * 0.5,
           child: Consumer(
             builder: (context, ref, _) {
-              final profilesAsync = ref.watch(profilesForAccountProvider(account.id));
+              final profilesAsync = ref.watch(
+                profilesForAccountProvider(account.id),
+              );
               return profilesAsync.when(
                 data: (profiles) {
-                  final allActive = profiles.isNotEmpty && profiles.every((p) => p.status == 'actif');
-                  final allArchived = profiles.isNotEmpty && profiles.every((p) => p.status == 'archive');
+                  final allActive =
+                      profiles.isNotEmpty &&
+                      profiles.every((p) => p.status == 'actif');
+                  final allArchived =
+                      profiles.isNotEmpty &&
+                      profiles.every((p) => p.status == 'archive');
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -329,32 +532,51 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                             onPressed: () async {
                               final messenger = ScaffoldMessenger.of(context);
                               try {
-                                final service = ref.read(supabaseServiceProvider);
+                                final service = ref.read(
+                                  supabaseServiceProvider,
+                                );
                                 if (allActive) {
                                   await service.suspendAccount(account.id);
                                 } else {
                                   await service.unsuspendAccount(account.id);
                                 }
-                                ref.invalidate(profilesForAccountProvider(account.id));
+                                ref.invalidate(
+                                  profilesForAccountProvider(account.id),
+                                );
                                 messenger.showSnackBar(
                                   SnackBar(
                                     backgroundColor: AppTheme.accentEmerald,
-                                    content: Text(allActive
-                                        ? 'Tous les profils ont été archivés.'
-                                        : 'Tous les profils ont été désarchivés.'),
+                                    content: Text(
+                                      allActive
+                                          ? 'Tous les profils ont été archivés.'
+                                          : 'Tous les profils ont été désarchivés.',
+                                    ),
                                   ),
                                 );
                               } catch (e) {
                                 messenger.showSnackBar(
-                                  SnackBar(backgroundColor: AppTheme.accentRose, content: Text('Erreur : $e')),
+                                  SnackBar(
+                                    backgroundColor: AppTheme.accentRose,
+                                    content: Text('Erreur : $e'),
+                                  ),
                                 );
                               }
                             },
-                            icon: Icon(allActive ? Icons.archive_rounded : Icons.unarchive_rounded,
-                                size: 16, color: AppTheme.accentAmber),
+                            icon: Icon(
+                              allActive
+                                  ? Icons.archive_rounded
+                                  : Icons.unarchive_rounded,
+                              size: 16,
+                              color: AppTheme.accentAmber,
+                            ),
                             label: Text(
-                              allActive ? 'Archiver tous les profils' : 'Désarchiver tous les profils',
-                              style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentAmber),
+                              allActive
+                                  ? 'Archiver tous les profils'
+                                  : 'Désarchiver tous les profils',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: AppTheme.accentAmber,
+                              ),
                             ),
                           ),
                         ),
@@ -362,13 +584,24 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                       Expanded(
                         child: profiles.isEmpty
                             ? Center(
-                                child: Text('Aucun profil — utilisez "Ajouter un profil" ci-dessous.',
-                                    style: GoogleFonts.inter(color: AppTheme.textMuted)),
+                                child: Text(
+                                  'Aucun profil — utilisez "Ajouter un profil" ci-dessous.',
+                                  style: GoogleFonts.inter(
+                                    color: AppTheme.textMuted,
+                                  ),
+                                ),
                               )
                             : ListView(
                                 shrinkWrap: true,
                                 children: profiles
-                                    .map((p) => _buildProfileTile(context, ref, account, p))
+                                    .map(
+                                      (p) => _buildProfileTile(
+                                        context,
+                                        ref,
+                                        account,
+                                        p,
+                                      ),
+                                    )
                                     .toList(),
                               ),
                       ),
@@ -377,16 +610,22 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: OutlinedButton.icon(
-                          onPressed: () => _showAddProfileDialog(context, account),
+                          onPressed: () =>
+                              _showAddProfileDialog(context, account),
                           icon: const Icon(Icons.add_rounded, size: 18),
-                          label: const Text('Ajouter un profil (ré-inscription)'),
+                          label: const Text(
+                            'Ajouter un profil (ré-inscription)',
+                          ),
                         ),
                       ),
                     ],
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) => Text('Erreur: $err', style: GoogleFonts.inter(color: AppTheme.accentRose)),
+                error: (err, _) => Text(
+                  'Erreur: $err',
+                  style: GoogleFonts.inter(color: AppTheme.accentRose),
+                ),
               );
             },
           ),
@@ -394,14 +633,22 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Fermer', style: GoogleFonts.inter(color: AppTheme.textMuted)),
+            child: Text(
+              'Fermer',
+              style: GoogleFonts.inter(color: AppTheme.textMuted),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildProfileTile(BuildContext context, WidgetRef ref, Account account, StudentProfile p) {
+  Widget _buildProfileTile(
+    BuildContext context,
+    WidgetRef ref,
+    Account account,
+    StudentProfile p,
+  ) {
     final isActive = p.status == 'actif';
     return ListTile(
       dense: true,
@@ -409,9 +656,14 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
         isActive ? Icons.check_circle_rounded : Icons.archive_rounded,
         color: isActive ? AppTheme.accentEmerald : Colors.white38,
       ),
-      title: Text('Année ${p.schoolYear}', style: GoogleFonts.inter(color: Colors.white)),
-      subtitle: Text('Palier: ${p.subscriptionTier} · ${p.status}',
-          style: GoogleFonts.inter(color: AppTheme.textMuted, fontSize: 12)),
+      title: Text(
+        'Année ${p.schoolYear}',
+        style: GoogleFonts.inter(color: Colors.white),
+      ),
+      subtitle: Text(
+        'Palier: ${p.subscriptionTier} · ${p.status}',
+        style: GoogleFonts.inter(color: AppTheme.textMuted, fontSize: 12),
+      ),
       trailing: IconButton(
         icon: Icon(
           isActive ? Icons.archive_rounded : Icons.unarchive_rounded,
@@ -423,17 +675,25 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
           final messenger = ScaffoldMessenger.of(context);
           try {
             final service = ref.read(supabaseServiceProvider);
-            await service.setProfileStatus(p.id, isActive ? 'archive' : 'actif');
+            await service.setProfileStatus(
+              p.id,
+              isActive ? 'archive' : 'actif',
+            );
             ref.invalidate(profilesForAccountProvider(account.id));
             messenger.showSnackBar(
               SnackBar(
                 backgroundColor: AppTheme.accentEmerald,
-                content: Text(isActive ? 'Profil archivé.' : 'Profil désarchivé.'),
+                content: Text(
+                  isActive ? 'Profil archivé.' : 'Profil désarchivé.',
+                ),
               ),
             );
           } catch (e) {
             messenger.showSnackBar(
-              SnackBar(backgroundColor: AppTheme.accentRose, content: Text('Erreur : $e')),
+              SnackBar(
+                backgroundColor: AppTheme.accentRose,
+                content: Text('Erreur : $e'),
+              ),
             );
           }
         },
@@ -452,7 +712,9 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => AlertDialog(
           backgroundColor: AppTheme.primarySurface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: AppDialogTitle(
             icon: Icons.add_rounded,
             text: 'Ajouter un Profil',
@@ -466,23 +728,39 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
               children: [
                 Consumer(
                   builder: (context, ref, _) {
-                    final classesAsync = ref.watch(nodesByTypeProvider('class'));
+                    final classesAsync = ref.watch(
+                      nodesByTypeProvider('class'),
+                    );
                     return classesAsync.when(
                       data: (classes) {
-                        selectedClassId ??= classes.isNotEmpty ? classes.first.id : null;
+                        selectedClassId ??= classes.isNotEmpty
+                            ? classes.first.id
+                            : null;
                         return DropdownButtonFormField<String>(
                           // ignore: deprecated_member_use
                           value: selectedClassId,
                           dropdownColor: AppTheme.primaryDark,
                           style: const TextStyle(color: Colors.white),
-                          decoration: const InputDecoration(labelText: 'Classe'),
-                          items: classes.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-                          onChanged: (v) => setModalState(() => selectedClassId = v),
+                          decoration: const InputDecoration(
+                            labelText: 'Classe',
+                          ),
+                          items: classes
+                              .map(
+                                (c) => DropdownMenuItem(
+                                  value: c.id,
+                                  child: Text(c.name),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) =>
+                              setModalState(() => selectedClassId = v),
                         );
                       },
                       loading: () => const LinearProgressIndicator(),
-                      error: (err, _) =>
-                          Text('Erreur: $err', style: GoogleFonts.inter(color: AppTheme.accentRose)),
+                      error: (err, _) => Text(
+                        'Erreur: $err',
+                        style: GoogleFonts.inter(color: AppTheme.accentRose),
+                      ),
                     );
                   },
                 ),
@@ -490,11 +768,19 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                 TextField(
                   controller: schoolYearCtrl,
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Année scolaire (ex: 2026-2027)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Année scolaire (ex: 2026-2027)',
+                  ),
                 ),
                 if (formError != null) ...[
                   const SizedBox(height: 12),
-                  Text(formError!, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                  Text(
+                    formError!,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AppTheme.accentRose,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -502,18 +788,26 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
           actions: [
             TextButton(
               onPressed: isLoading ? null : () => Navigator.pop(ctx),
-              child: Text('Annuler', style: GoogleFonts.inter(color: AppTheme.textMuted)),
+              child: Text(
+                'Annuler',
+                style: GoogleFonts.inter(color: AppTheme.textMuted),
+              ),
             ),
             ElevatedButton(
               onPressed: isLoading
                   ? null
                   : () async {
                       if (selectedClassId == null) {
-                        setModalState(() => formError = 'Sélectionnez une classe.');
+                        setModalState(
+                          () => formError = 'Sélectionnez une classe.',
+                        );
                         return;
                       }
                       if (schoolYearCtrl.text.trim().isEmpty) {
-                        setModalState(() => formError = 'L\'année scolaire est obligatoire.');
+                        setModalState(
+                          () =>
+                              formError = 'L\'année scolaire est obligatoire.',
+                        );
                         return;
                       }
                       setModalState(() {
@@ -538,7 +832,13 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                     },
               child: isLoading
                   ? const SizedBox(
-                      width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Text('Ajouter'),
             ),
           ],
@@ -564,12 +864,16 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
             height: MediaQuery.of(context).size.height * 0.5,
             child: Consumer(
               builder: (context, ref, _) {
-                final sessionsAsync = ref.watch(sessionsForAccountProvider(account.id));
+                final sessionsAsync = ref.watch(
+                  sessionsForAccountProvider(account.id),
+                );
                 return sessionsAsync.when(
                   data: (sessions) {
                     if (sessions.isEmpty) {
-                      return Text('Aucune session enregistrée.',
-                          style: GoogleFonts.inter(color: AppTheme.textMuted));
+                      return Text(
+                        'Aucune session enregistrée.',
+                        style: GoogleFonts.inter(color: AppTheme.textMuted),
+                      );
                     }
                     return ListView(
                       shrinkWrap: true,
@@ -577,31 +881,53 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                         return ListTile(
                           dense: true,
                           leading: Icon(
-                            s.isActive ? Icons.smartphone_rounded : Icons.phonelink_off_rounded,
-                            color: s.isActive ? AppTheme.accentEmerald : Colors.white38,
+                            s.isActive
+                                ? Icons.smartphone_rounded
+                                : Icons.phonelink_off_rounded,
+                            color: s.isActive
+                                ? AppTheme.accentEmerald
+                                : Colors.white38,
                           ),
-                          title: Text(s.platform, style: GoogleFonts.inter(color: Colors.white)),
+                          title: Text(
+                            s.platform,
+                            style: GoogleFonts.inter(color: Colors.white),
+                          ),
                           subtitle: Text(
                             'Dernière activité : ${s.lastActiveAt.toLocal().toString().split('.').first}',
-                            style: GoogleFonts.inter(color: AppTheme.textMuted, fontSize: 12),
+                            style: GoogleFonts.inter(
+                              color: AppTheme.textMuted,
+                              fontSize: 12,
+                            ),
                           ),
                           trailing: s.isActive
                               ? TextButton(
                                   onPressed: () async {
-                                    final service = ref.read(supabaseServiceProvider);
+                                    final service = ref.read(
+                                      supabaseServiceProvider,
+                                    );
                                     await service.revokeSession(s.id);
-                                    ref.invalidate(sessionsForAccountProvider(account.id));
+                                    ref.invalidate(
+                                      sessionsForAccountProvider(account.id),
+                                    );
                                   },
-                                  child: Text('Déconnecter',
-                                      style: GoogleFonts.inter(color: AppTheme.accentRose)),
+                                  child: Text(
+                                    'Déconnecter',
+                                    style: GoogleFonts.inter(
+                                      color: AppTheme.accentRose,
+                                    ),
+                                  ),
                                 )
                               : null,
                         );
                       }).toList(),
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (err, _) => Text('Erreur: $err', style: GoogleFonts.inter(color: AppTheme.accentRose)),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => Text(
+                    'Erreur: $err',
+                    style: GoogleFonts.inter(color: AppTheme.accentRose),
+                  ),
                 );
               },
             ),
@@ -609,7 +935,10 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Fermer', style: GoogleFonts.inter(color: AppTheme.textMuted)),
+              child: Text(
+                'Fermer',
+                style: GoogleFonts.inter(color: AppTheme.textMuted),
+              ),
             ),
           ],
         ),
@@ -633,7 +962,9 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => AlertDialog(
           backgroundColor: AppTheme.primarySurface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: AppDialogTitle(
             icon: Icons.person_add_rounded,
             text: 'Créer un Compte Élève',
@@ -668,36 +999,54 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                     obscureText: true,
                     style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
-                        labelText: 'Mot de passe initial', helperText: 'Au moins 6 caractères'),
+                      labelText: 'Mot de passe initial',
+                      helperText: 'Au moins 6 caractères',
+                    ),
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: phoneCtrl,
                     style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(labelText: 'Téléphone (optionnel)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Téléphone (optionnel)',
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Consumer(
                     builder: (context, ref, _) {
-                      final classesAsync = ref.watch(nodesByTypeProvider('class'));
+                      final classesAsync = ref.watch(
+                        nodesByTypeProvider('class'),
+                      );
                       return classesAsync.when(
                         data: (classes) {
-                          selectedClassId ??= classes.isNotEmpty ? classes.first.id : null;
+                          selectedClassId ??= classes.isNotEmpty
+                              ? classes.first.id
+                              : null;
                           return DropdownButtonFormField<String>(
                             // ignore: deprecated_member_use
                             value: selectedClassId,
                             dropdownColor: AppTheme.primaryDark,
                             style: const TextStyle(color: Colors.white),
-                            decoration: const InputDecoration(labelText: 'Classe'),
+                            decoration: const InputDecoration(
+                              labelText: 'Classe',
+                            ),
                             items: classes
-                                .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
+                                .map(
+                                  (c) => DropdownMenuItem(
+                                    value: c.id,
+                                    child: Text(c.name),
+                                  ),
+                                )
                                 .toList(),
-                            onChanged: (v) => setModalState(() => selectedClassId = v),
+                            onChanged: (v) =>
+                                setModalState(() => selectedClassId = v),
                           );
                         },
                         loading: () => const LinearProgressIndicator(),
-                        error: (err, _) => Text('Erreur: $err',
-                            style: GoogleFonts.inter(color: AppTheme.accentRose)),
+                        error: (err, _) => Text(
+                          'Erreur: $err',
+                          style: GoogleFonts.inter(color: AppTheme.accentRose),
+                        ),
                       );
                     },
                   ),
@@ -705,7 +1054,9 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                   TextField(
                     controller: schoolYearCtrl,
                     style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(labelText: 'Année scolaire (ex: 2026-2027)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Année scolaire (ex: 2026-2027)',
+                    ),
                   ),
                   if (formError != null) ...[
                     const SizedBox(height: 14),
@@ -715,8 +1066,13 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                         color: AppTheme.accentRose.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(formError!,
-                          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                      child: Text(
+                        formError!,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppTheme.accentRose,
+                        ),
+                      ),
                     ),
                   ],
                 ],
@@ -726,26 +1082,40 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
           actions: [
             TextButton(
               onPressed: isLoading ? null : () => Navigator.pop(ctx),
-              child: Text('Annuler', style: GoogleFonts.inter(color: AppTheme.textMuted)),
+              child: Text(
+                'Annuler',
+                style: GoogleFonts.inter(color: AppTheme.textMuted),
+              ),
             ),
             ElevatedButton(
               onPressed: isLoading
                   ? null
                   : () async {
-                      if (firstNameCtrl.text.trim().isEmpty || lastNameCtrl.text.trim().isEmpty) {
-                        setModalState(() => formError = 'Le prénom et le nom sont obligatoires.');
+                      if (firstNameCtrl.text.trim().isEmpty ||
+                          lastNameCtrl.text.trim().isEmpty) {
+                        setModalState(
+                          () => formError =
+                              'Le prénom et le nom sont obligatoires.',
+                        );
                         return;
                       }
                       if (emailCtrl.text.trim().isEmpty) {
-                        setModalState(() => formError = 'L\'email est obligatoire.');
+                        setModalState(
+                          () => formError = 'L\'email est obligatoire.',
+                        );
                         return;
                       }
                       if (passwordCtrl.text.trim().length < 6) {
-                        setModalState(() => formError = 'Le mot de passe doit contenir au moins 6 caractères.');
+                        setModalState(
+                          () => formError =
+                              'Le mot de passe doit contenir au moins 6 caractères.',
+                        );
                         return;
                       }
                       if (selectedClassId == null) {
-                        setModalState(() => formError = 'Sélectionnez une classe.');
+                        setModalState(
+                          () => formError = 'Sélectionnez une classe.',
+                        );
                         return;
                       }
                       setModalState(() {
@@ -759,11 +1129,15 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                           password: passwordCtrl.text.trim(),
                           firstName: firstNameCtrl.text.trim(),
                           lastName: lastNameCtrl.text.trim(),
-                          phone: phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
+                          phone: phoneCtrl.text.trim().isEmpty
+                              ? null
+                              : phoneCtrl.text.trim(),
                           classNodeId: selectedClassId!,
                           schoolYear: schoolYearCtrl.text.trim(),
                         );
-                        ref.invalidate(accountsProvider(_search.isEmpty ? null : _search));
+                        ref.invalidate(
+                          accountsProvider(_search.isEmpty ? null : _search),
+                        );
                         if (ctx.mounted) Navigator.pop(ctx);
                         if (context.mounted) {
                           // ignore: use_build_context_synchronously
@@ -788,7 +1162,10 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Text('Créer le compte'),
             ),
