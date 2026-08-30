@@ -29,7 +29,7 @@ class _SchoolPapersScreenState extends ConsumerState<SchoolPapersScreen> {
     final establishmentsAsync = ref.watch(establishmentsProvider);
 
     return Padding(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

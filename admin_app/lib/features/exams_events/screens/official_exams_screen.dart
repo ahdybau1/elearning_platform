@@ -49,7 +49,7 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
     final examsAsync = ref.watch(officialExamsProvider(const {}));
 
     return Padding(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

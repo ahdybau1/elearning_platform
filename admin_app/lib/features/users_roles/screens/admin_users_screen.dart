@@ -20,7 +20,7 @@ class AdminUsersScreen extends ConsumerWidget {
     final adminsAsync = ref.watch(adminUsersProvider);
 
     return Padding(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

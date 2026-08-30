@@ -29,7 +29,7 @@ class _TeacherManagementScreenState extends ConsumerState<TeacherManagementScree
     final adminsAsync = ref.watch(adminUsersProvider);
 
     return Padding(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

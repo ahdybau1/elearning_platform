@@ -27,7 +27,7 @@ class _OlympiadsMockExamsScreenState extends ConsumerState<OlympiadsMockExamsScr
     final disputesAsync = ref.watch(gradeDisputesProvider);
 
     return Padding(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

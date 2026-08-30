@@ -55,7 +55,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
     };
 
     return Padding(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

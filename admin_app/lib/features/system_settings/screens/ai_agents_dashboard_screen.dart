@@ -46,7 +46,7 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
     final callsAsync = ref.watch(aiAgentCallsProvider(_periodDays));
 
     return Padding(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -94,7 +94,11 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
           // Modèles réellement utilisés aujourd'hui (voir le registre IA-001, écran « Registre des
           // Agents IA ») — Claude retiré le 2026-08-29 : ANTHROPIC_API_KEY n'a jamais été configurée
           // sur ce projet, donc jamais réellement utilisé malgré ce qu'affichait cet écran avant.
-          Row(
+          // Wrap (au lieu de Row) : 2 cartes de largeur intrinsèque ne tenaient pas côte à côte sur
+          // mobile (retour utilisateur réel, 2026-08-30) — passent à la ligne au besoin.
+          Wrap(
+            spacing: 16,
+            runSpacing: 16,
             children: [
               _buildModelCard(
                 'Gemini 3.6 Flash (Google)',
@@ -103,7 +107,6 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
                 '0 \$ (free tier)',
                 AppTheme.accentEmerald,
               ),
-              const SizedBox(width: 16),
               _buildModelCard(
                 'Gemini Embedding 001 (Google)',
                 'Recherche RAG (ai_rag_chunks)',
@@ -539,7 +542,11 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
     String rate,
     Color color,
   ) {
-    return Expanded(
+    // Largeur explicite (pas Expanded) : cette carte vit maintenant dans un Wrap (voir l'appelant),
+    // où Expanded n'est pas valide (uniquement autorisé comme enfant direct d'un Row/Column) —
+    // aurait planté au premier rendu.
+    return SizedBox(
+      width: 280,
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(

@@ -28,7 +28,7 @@ class _ParentAccountsScreenState extends ConsumerState<ParentAccountsScreen> {
     final parentsAsync = ref.watch(parentAccountsProvider(_search.isEmpty ? null : _search));
 
     return Padding(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

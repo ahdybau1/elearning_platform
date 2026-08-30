@@ -23,7 +23,7 @@ class _WhatsappGroupsScreenState extends ConsumerState<WhatsappGroupsScreen> {
     final communitiesAsync = ref.watch(whatsappCommunitiesProvider(null));
 
     return Padding(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

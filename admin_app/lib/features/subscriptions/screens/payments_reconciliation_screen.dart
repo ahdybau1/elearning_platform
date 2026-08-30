@@ -28,7 +28,7 @@ class _PaymentsReconciliationScreenState
     final refundAsync = ref.watch(refundRequestsProvider);
 
     return Padding(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

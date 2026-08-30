@@ -34,7 +34,7 @@ class _ValidationQueueScreenState
     final adminUsers = adminUsersAsync.valueOrNull ?? [];
 
     return Padding(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

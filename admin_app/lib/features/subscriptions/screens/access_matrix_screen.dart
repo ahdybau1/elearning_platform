@@ -57,7 +57,7 @@ class _AccessMatrixScreenState extends ConsumerState<AccessMatrixScreen> {
     final featuresAsync = ref.watch(matrixFeaturesProvider);
 
     return Padding(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

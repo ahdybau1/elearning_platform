@@ -22,7 +22,7 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
     final accountsAsync = ref.watch(accountsProvider(_search.isEmpty ? null : _search));
 
     return Padding(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

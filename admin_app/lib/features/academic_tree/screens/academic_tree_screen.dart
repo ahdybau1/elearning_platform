@@ -74,7 +74,7 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
     final treeAsync = ref.watch(academicTreeStreamProvider(_showInactive));
 
     return Padding(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
