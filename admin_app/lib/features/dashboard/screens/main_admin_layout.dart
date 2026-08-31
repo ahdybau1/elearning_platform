@@ -676,6 +676,7 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
     required String title,
     required bool showBack,
     required VoidCallback onBack,
+    required VoidCallback onMenu,
   }) {
     return Container(
       height: 56,
@@ -686,12 +687,14 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
       ),
       child: Row(
         children: [
-          if (showBack)
-            IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white70),
-              tooltip: 'Retour',
-              onPressed: onBack,
+          IconButton(
+            icon: Icon(
+              showBack ? Icons.arrow_back_rounded : Icons.menu_rounded,
+              color: Colors.white70,
             ),
+            tooltip: showBack ? 'Retour' : 'Menu',
+            onPressed: showBack ? onBack : onMenu,
+          ),
           Expanded(
             child: Text(
               title,
@@ -803,43 +806,118 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
     return _buildMobileHubBody(tab);
   }
 
-  Widget _buildMobileBottomNav(List<_MobileTab> tabs, int currentIndex) {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
+  /// Tiroir mobile — remplace la barre de navigation en bas (retour utilisateur réel, 2026-08-31 :
+  /// une barre à 5 onglets restait mal exploitable sur son téléphone). Toujours 5 destinations au
+  /// maximum (au lieu des 27 items à plat de l'ancien Drawer desktop-reflué), chacune assez grande
+  /// pour le doigt — juste ouverte via un bouton burger au lieu d'être fixée en bas de l'écran.
+  Widget _buildMobileDrawer(List<_MobileTab> tabs, int currentIndex) {
+    return Drawer(
       backgroundColor: AppTheme.primarySurface,
-      selectedItemColor: AppTheme.accentBlue,
-      unselectedItemColor: AppTheme.textMuted,
-      currentIndex: currentIndex,
-      onTap: (idx) => setState(() {
-        _mobileTabIndex = idx;
-        _mobileDrilledItemId = null;
-        final single = tabs[idx].singleItem;
-        if (single != null) {
-          ref.read(selectedNavIndexProvider.notifier).state = single.id;
-        }
-      }),
-      items: [
-        for (final t in tabs)
-          BottomNavigationBarItem(
-            icon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(t.icon),
-                if (t.hasBadge)
-                  Positioned(
-                    right: -4,
-                    top: -2,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(color: AppTheme.accentRose, shape: BoxShape.circle),
+      width: 280,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppTheme.accentBlue, AppTheme.accentIndigo],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.school_rounded, color: Colors.white, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'E-LEARNING',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.white,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        Text(
+                          'Administration HQ',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: AppTheme.accentBlue,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-              ],
+                ],
+              ),
             ),
-            label: t.label,
+            const Divider(height: 1),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                children: [
+                  for (var i = 0; i < tabs.length; i++)
+                    _buildMobileDrawerTile(tabs[i], isSelected: i == currentIndex, onTap: () {
+                      setState(() {
+                        _mobileTabIndex = i;
+                        _mobileDrilledItemId = null;
+                        final single = tabs[i].singleItem;
+                        if (single != null) {
+                          ref.read(selectedNavIndexProvider.notifier).state = single.id;
+                        }
+                      });
+                      Navigator.of(context).pop();
+                    }),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileDrawerTile(_MobileTab tab, {required bool isSelected, required VoidCallback onTap}) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: isSelected ? AppTheme.accentBlue.withValues(alpha: 0.15) : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          onTap: onTap,
+          leading: Icon(tab.icon, color: isSelected ? AppTheme.accentBlue : Colors.white70),
+          title: Text(
+            tab.label,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              color: isSelected ? Colors.white : Colors.white70,
+            ),
           ),
-      ],
+          trailing: tab.hasBadge
+              ? Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(color: AppTheme.accentRose, shape: BoxShape.circle),
+                )
+              : null,
+        ),
+      ),
     );
   }
 
@@ -861,7 +939,9 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
     }
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: AppTheme.primaryDark,
+      drawer: _buildMobileDrawer(tabs, safeTabIndex),
       body: SafeArea(
         child: Column(
           children: [
@@ -869,12 +949,12 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
               title: title,
               showBack: showBack,
               onBack: () => setState(() => _mobileDrilledItemId = null),
+              onMenu: () => _scaffoldKey.currentState?.openDrawer(),
             ),
             Expanded(child: _buildMobileBody(activeTab)),
           ],
         ),
       ),
-      bottomNavigationBar: _buildMobileBottomNav(tabs, safeTabIndex),
     );
   }
 
