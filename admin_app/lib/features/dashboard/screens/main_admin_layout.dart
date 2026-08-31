@@ -50,6 +50,18 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
   bool _expansionInitialized = false;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  // Navigation mobile — état local séparé du provider desktop. Retour utilisateur explicite
+  // (2026-08-31) : un Drawer qui reprend tel quel un menu desktop à 8 catégories/27 items n'est
+  // pas une "interface mobile", juste une réorganisation de la même interface (comme WhatsApp Web
+  // vs WhatsApp mobile : deux structures de navigation différentes, pas la même repliée). Sur
+  // mobile, on passe donc à un vrai modèle d'app : barre de navigation en bas à quelques
+  // destinations, chaque destination ouvrant un "hub" de grosses cartes tactiles, qui ouvrent à
+  // leur tour l'écran demandé en plein écran avec un bouton retour — jamais 27 items visibles
+  // à la fois. `_mobileDrilledItemId` est nul quand on est sur un hub, non-nul quand on a
+  // "plongé" dans un écran précis depuis ce hub.
+  int _mobileTabIndex = 0;
+  int? _mobileDrilledItemId;
+
   // En dessous de cette largeur, une barre latérale permanente ne tient plus (retour utilisateur
   // réel sur téléphone, 2026-08-29 : "le responsive est très nulle" — vérifié visuellement, la barre
   // de 280px ne laissait qu'un filet de contenu sur un écran de 390px). Même seuil que
@@ -623,6 +635,249 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
     );
   }
 
+  /// Regroupe les catégories du menu desktop en au plus 5 destinations de barre de navigation
+  /// mobile (Accueil + jusqu'à 4 autres). "Aperçu Général" (1 seul item : Tableau de Bord) mène
+  /// directement à l'écran, sans hub intermédiaire à un seul choix — inutile.
+  List<_MobileTab> _buildMobileTabs(List<NavGroup> filteredGroups) {
+    NavGroup? find(String title) =>
+        filteredGroups.where((g) => g.title == title).firstOrNull;
+    const knownTitles = {
+      'Aperçu Général',
+      'Gestion Pédagogique',
+      'Comptes & Sécurité',
+      'Offres & Tarification',
+    };
+    final tabs = <_MobileTab>[];
+    final apercu = find('Aperçu Général');
+    if (apercu != null) {
+      tabs.add(_MobileTab(label: 'Accueil', icon: Icons.dashboard_rounded, groups: [apercu]));
+    }
+    final pedago = find('Gestion Pédagogique');
+    if (pedago != null) {
+      tabs.add(_MobileTab(label: 'Pédagogie', icon: Icons.menu_book_rounded, groups: [pedago]));
+    }
+    final comptes = find('Comptes & Sécurité');
+    if (comptes != null) {
+      tabs.add(_MobileTab(label: 'Comptes', icon: Icons.people_alt_rounded, groups: [comptes]));
+    }
+    final offres = find('Offres & Tarification');
+    if (offres != null) {
+      tabs.add(_MobileTab(label: 'Offres', icon: Icons.sell_rounded, groups: [offres]));
+    }
+    final plusGroups =
+        filteredGroups.where((g) => !knownTitles.contains(g.title)).toList();
+    if (plusGroups.isNotEmpty) {
+      tabs.add(_MobileTab(label: 'Plus', icon: Icons.more_horiz_rounded, groups: plusGroups));
+    }
+    return tabs;
+  }
+
+  Widget _buildMobileTopBar({
+    required String title,
+    required bool showBack,
+    required VoidCallback onBack,
+  }) {
+    return Container(
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: const BoxDecoration(
+        color: AppTheme.primarySurface,
+        border: Border(bottom: BorderSide(color: AppTheme.primaryBorder, width: 1)),
+      ),
+      child: Row(
+        children: [
+          if (showBack)
+            IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white70),
+              tooltip: 'Retour',
+              onPressed: onBack,
+            ),
+          Expanded(
+            child: Text(
+              title,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
+            ),
+          ),
+          const _CountryScopeSelector(compact: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileHubTile(NavItem item) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.primarySurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.primaryBorder),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => setState(() {
+            _mobileDrilledItemId = item.id;
+            ref.read(selectedNavIndexProvider.notifier).state = item.id;
+          }),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentBlue.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(item.icon, color: AppTheme.accentBlue, size: 20),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+                  ),
+                ),
+                if (item.badgeCount != null)
+                  Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accentRose,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${item.badgeCount}',
+                      style: GoogleFonts.inter(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted, size: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileHubBody(_MobileTab tab) {
+    final showSectionHeaders = tab.groups.length > 1;
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        for (final group in tab.groups) ...[
+          if (showSectionHeaders)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10, top: 6),
+              child: Text(
+                group.title.toUpperCase(),
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textMuted,
+                  letterSpacing: 1,
+                ),
+              ),
+            ),
+          ...group.items.map(_buildMobileHubTile),
+          if (showSectionHeaders) const SizedBox(height: 10),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildMobileBody(_MobileTab tab) {
+    final single = tab.singleItem;
+    final itemId = single?.id ?? _mobileDrilledItemId;
+    if (itemId != null &&
+        (single != null || tab.groups.any((g) => g.items.any((i) => i.id == itemId)))) {
+      return _KeyboardScrollBridge(
+        key: ValueKey('kb-scroll-mobile-$itemId'),
+        child: _getSelectedScreen(itemId),
+      );
+    }
+    return _buildMobileHubBody(tab);
+  }
+
+  Widget _buildMobileBottomNav(List<_MobileTab> tabs, int currentIndex) {
+    return BottomNavigationBar(
+      type: BottomNavigationBarType.fixed,
+      backgroundColor: AppTheme.primarySurface,
+      selectedItemColor: AppTheme.accentBlue,
+      unselectedItemColor: AppTheme.textMuted,
+      currentIndex: currentIndex,
+      onTap: (idx) => setState(() {
+        _mobileTabIndex = idx;
+        _mobileDrilledItemId = null;
+        final single = tabs[idx].singleItem;
+        if (single != null) {
+          ref.read(selectedNavIndexProvider.notifier).state = single.id;
+        }
+      }),
+      items: [
+        for (final t in tabs)
+          BottomNavigationBarItem(
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(t.icon),
+                if (t.hasBadge)
+                  Positioned(
+                    right: -4,
+                    top: -2,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(color: AppTheme.accentRose, shape: BoxShape.circle),
+                    ),
+                  ),
+              ],
+            ),
+            label: t.label,
+          ),
+      ],
+    );
+  }
+
+  Widget _buildMobileScaffold(List<NavGroup> filteredGroups) {
+    final tabs = _buildMobileTabs(filteredGroups);
+    final safeTabIndex = _mobileTabIndex < tabs.length ? _mobileTabIndex : 0;
+    final activeTab = tabs[safeTabIndex];
+    final single = activeTab.singleItem;
+    final showBack = single == null && _mobileDrilledItemId != null;
+    String title = activeTab.label;
+    if (single != null) {
+      title = single.title;
+    } else if (_mobileDrilledItemId != null) {
+      final drilled = activeTab.groups
+          .expand((g) => g.items)
+          .where((i) => i.id == _mobileDrilledItemId)
+          .firstOrNull;
+      if (drilled != null) title = drilled.title;
+    }
+
+    return Scaffold(
+      backgroundColor: AppTheme.primaryDark,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildMobileTopBar(
+              title: title,
+              showBack: showBack,
+              onBack: () => setState(() => _mobileDrilledItemId = null),
+            ),
+            Expanded(child: _buildMobileBody(activeTab)),
+          ],
+        ),
+      ),
+      bottomNavigationBar: _buildMobileBottomNav(tabs, safeTabIndex),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authAsync = ref.watch(authProvider);
@@ -669,46 +924,68 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
       _expansionInitialized = true;
       final activeGroup = groupTitleFor(selectedIndex);
       if (activeGroup != null) _expandedGroups.add(activeGroup);
+      // Équivalent mobile : place l'onglet + l'écran plongé initiaux sur ceux qui correspondent
+      // à selectedIndex (ex: après un retour au premier plan sur un écran précis).
+      final initialTabs = _buildMobileTabs(filteredGroups);
+      for (var i = 0; i < initialTabs.length; i++) {
+        final t = initialTabs[i];
+        final matches = t.singleItem?.id == selectedIndex ||
+            t.groups.any((g) => g.items.any((it) => it.id == selectedIndex));
+        if (matches) {
+          _mobileTabIndex = i;
+          _mobileDrilledItemId = t.singleItem != null ? null : selectedIndex;
+          break;
+        }
+      }
     }
 
     // Une navigation déclenchée ailleurs (ex: raccourci du tableau de bord) doit aussi
-    // dérouler automatiquement le groupe correspondant, même s'il était replié.
+    // dérouler automatiquement le groupe correspondant, même s'il était replié, et faire
+    // "plonger" la vue mobile sur le bon onglet/écran.
     ref.listen<int>(selectedNavIndexProvider, (previous, next) {
       final group = groupTitleFor(next);
       if (group != null && !_expandedGroups.contains(group)) {
         setState(() => _expandedGroups.add(group));
       }
+      final tabsNow = _buildMobileTabs(filteredGroups);
+      for (var i = 0; i < tabsNow.length; i++) {
+        final t = tabsNow[i];
+        final matches = t.singleItem?.id == next ||
+            t.groups.any((g) => g.items.any((it) => it.id == next));
+        if (matches) {
+          setState(() {
+            _mobileTabIndex = i;
+            _mobileDrilledItemId = t.singleItem != null ? null : next;
+          });
+          break;
+        }
+      }
     });
 
     final isMobile = MediaQuery.of(context).size.width < _kMobileBreakpoint;
 
+    if (isMobile) {
+      return _buildMobileScaffold(filteredGroups);
+    }
+
+    // Ce point n'est plus atteint que pour l'affichage desktop/tablette (voir le retour anticipé
+    // `_buildMobileScaffold` ci-dessus) — le Drawer et le bouton burger mobiles ont donc disparu
+    // d'ici, remplacés par la navigation mobile dédiée.
     return Scaffold(
       key: _scaffoldKey,
-      drawer: isMobile
-          ? Drawer(
-              backgroundColor: AppTheme.primarySurface,
-              width: 280,
-              child: SafeArea(
-                child: _buildSidebarColumn(filteredGroups, selectedIndex, isDrawer: true),
-              ),
-            )
-          : null,
       body: Row(
         children: [
-          // Sidebar Left Navigation — uniquement en permanence au-delà du seuil mobile (voir
-          // `drawer` ci-dessus pour l'équivalent en dessous, même contenu de navigation).
-          if (!isMobile)
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: _isSidebarCollapsed ? 80 : 280,
-              decoration: const BoxDecoration(
-                color: AppTheme.primarySurface,
-                border: Border(
-                  right: BorderSide(color: AppTheme.primaryBorder, width: 1),
-                ),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: _isSidebarCollapsed ? 80 : 280,
+            decoration: const BoxDecoration(
+              color: AppTheme.primarySurface,
+              border: Border(
+                right: BorderSide(color: AppTheme.primaryBorder, width: 1),
               ),
-              child: _buildSidebarColumn(filteredGroups, selectedIndex, isDrawer: false),
             ),
+            child: _buildSidebarColumn(filteredGroups, selectedIndex, isDrawer: false),
+          ),
 
           // Main Screen Right Workspace
           Expanded(
@@ -1037,6 +1314,23 @@ class _CountryScopeSelector extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Une destination de la barre de navigation mobile — regroupe une ou plusieurs [NavGroup] du
+/// menu desktop. Si elle ne contient au total qu'un seul [NavItem] (ex: Accueil), l'appui ouvre
+/// directement l'écran plutôt qu'un hub à un seul choix.
+class _MobileTab {
+  final String label;
+  final IconData icon;
+  final List<NavGroup> groups;
+  _MobileTab({required this.label, required this.icon, required this.groups});
+
+  NavItem? get singleItem {
+    final allItems = groups.expand((g) => g.items).toList();
+    return allItems.length == 1 ? allItems.first : null;
+  }
+
+  bool get hasBadge => groups.any((g) => g.items.any((i) => i.badgeCount != null));
 }
 
 class NavGroup {
