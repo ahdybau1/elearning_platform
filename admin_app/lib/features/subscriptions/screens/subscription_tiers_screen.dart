@@ -26,35 +26,30 @@ class _SubscriptionTiersScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Column plutôt que Row(Expanded(titre), bouton) : le bouton au libellé long
+          // ("Nouveau Palier Tarifaire") comme simple frère de l'Expanded affamait quand même le
+          // titre sur mobile (retour utilisateur réel, capture d'écran, 2026-08-30 — le premier
+          // correctif avec Expanded seul ne suffisait pas, même bug que les autres écrans).
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Expanded : titre 26pt + sous-titre débordait hors de l'écran sur mobile à côté
-              // du bouton (retour utilisateur réel, 2026-08-30).
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Paliers d\'Abonnement & Grille Tarifaire',
-                      style: GoogleFonts.outfit(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Configuration des tarifs par classe et par durée',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                  ],
+              Text(
+                'Paliers d\'Abonnement & Grille Tarifaire',
+                style: GoogleFonts.outfit(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(height: 4),
+              Text(
+                'Configuration des tarifs par classe et par durée',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppTheme.textMuted,
+                ),
+              ),
+              const SizedBox(height: 14),
               ElevatedButton.icon(
                 onPressed: () => _showEditTierModal(context),
                 icon: const Icon(Icons.add_rounded, size: 18),
@@ -94,7 +89,11 @@ class _SubscriptionTiersScreenState
                         crossAxisCount: crossAxisCount,
                         crossAxisSpacing: 16,
                         mainAxisSpacing: 16,
-                        childAspectRatio: crossAxisCount == 1 ? 2.0 : 1.4,
+                        // 2.0 restait encore trop court en 1 colonne : nom+badge, prix 28pt,
+                        // durée+classe et le bouton "Modifier Tarif" ne tenaient pas dans la
+                        // hauteur donnée, le texte chevauchait visuellement la carte suivante
+                        // (retour utilisateur réel, captures d'écran, 2026-08-30).
+                        childAspectRatio: crossAxisCount == 1 ? 1.1 : 1.4,
                       ),
                       itemCount: tiers.length,
                       itemBuilder: (context, idx) {

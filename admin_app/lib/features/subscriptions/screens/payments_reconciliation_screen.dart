@@ -32,36 +32,31 @@ class _PaymentsReconciliationScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Column plutôt que Row(Expanded(titre), badge conditionnel) : le badge "Montants
+          // masqués" comme simple frère de l'Expanded affamait quand même le titre sur mobile
+          // pour un admin non Super-Admin (retour utilisateur réel, capture d'écran, 2026-08-30 —
+          // le premier correctif avec Expanded seul ne suffisait pas).
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Expanded : titre 26pt + sous-titre débordait hors de l'écran sur mobile (retour
-              // utilisateur réel, 2026-08-30).
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Réconciliation Paiements & Remboursements',
-                      style: GoogleFonts.outfit(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Gestion des échecs réseau Mobile Money (Orange/MTN) et des litiges financiers',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                  ],
+              Text(
+                'Réconciliation Paiements & Remboursements',
+                style: GoogleFonts.outfit(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
-              if (!canViewFinancials) const SizedBox(width: 12),
-              if (!canViewFinancials)
+              const SizedBox(height: 4),
+              Text(
+                'Gestion des échecs réseau Mobile Money (Orange/MTN) et des litiges financiers',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppTheme.textMuted,
+                ),
+              ),
+              if (!canViewFinancials) ...[
+                const SizedBox(height: 10),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -73,6 +68,7 @@ class _PaymentsReconciliationScreenState
                     border: Border.all(color: AppTheme.accentRose),
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(
                         Icons.lock_rounded,
@@ -80,17 +76,20 @@ class _PaymentsReconciliationScreenState
                         color: AppTheme.accentRose,
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        'Montants masqués (Seul Super-Admin voit les chiffres)',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.accentRose,
+                      Flexible(
+                        child: Text(
+                          'Montants masqués (Seul Super-Admin voit les chiffres)',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.accentRose,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
+              ],
             ],
           ),
           const SizedBox(height: 24),

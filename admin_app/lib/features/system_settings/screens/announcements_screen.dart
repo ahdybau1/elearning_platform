@@ -27,35 +27,29 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Column plutôt que Row(Expanded(titre), bouton) : le bouton comme simple frère de
+          // l'Expanded affamait quand même le titre sur mobile (retour utilisateur réel, capture
+          // d'écran, 2026-08-30 — le premier correctif avec Expanded seul ne suffisait pas).
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Expanded : titre 26pt + sous-titre débordait hors de l'écran sur mobile à côté du
-              // bouton (retour utilisateur réel, 2026-08-30).
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Gestion des Bannières d\'Annonces',
-                      style: GoogleFonts.outfit(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Diffusion de messages ciblés par pays/classe avec affichage temporisé automatique',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                  ],
+              Text(
+                'Gestion des Bannières d\'Annonces',
+                style: GoogleFonts.outfit(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(height: 4),
+              Text(
+                'Diffusion de messages ciblés par pays/classe avec affichage temporisé automatique',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppTheme.textMuted,
+                ),
+              ),
+              const SizedBox(height: 14),
               ElevatedButton.icon(
                 onPressed: () => _showAnnouncementModal(context),
                 icon: const Icon(Icons.campaign_rounded, size: 18),

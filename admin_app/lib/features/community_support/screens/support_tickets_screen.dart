@@ -59,28 +59,22 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Column plutôt que Row(Expanded(titre), badge) : le badge comme simple frère de
+          // l'Expanded affamait quand même le titre sur mobile (retour utilisateur réel, capture
+          // d'écran, 2026-08-30 — le premier correctif avec Expanded seul ne suffisait pas).
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Expanded : titre 26pt + sous-titre débordait hors de l'écran sur mobile (retour
-              // utilisateur réel, 2026-08-30).
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Centre de Traitement des Tickets Support',
-                      style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Distinction explicite des requêtes venant des élèves vs des parents payeurs',
-                      style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMuted),
-                    ),
-                  ],
-                ),
+              Text(
+                'Centre de Traitement des Tickets Support',
+                style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(height: 4),
+              Text(
+                'Distinction explicite des requêtes venant des élèves vs des parents payeurs',
+                style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMuted),
+              ),
+              const SizedBox(height: 10),
               ticketsAsync.when(
                 data: (tickets) => Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

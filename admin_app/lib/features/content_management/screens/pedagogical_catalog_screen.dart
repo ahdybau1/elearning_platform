@@ -496,8 +496,13 @@ class _PedagogicalCatalogScreenState
                                         crossAxisCount: crossAxisCount,
                                         crossAxisSpacing: 16,
                                         mainAxisSpacing: 16,
+                                        // 2.4 restait trop court en 1 colonne : le contenu réel
+                                        // (icône+titre, 3 lignes de description, badge "Injecté
+                                        // dans Prompt IA") dépassait la hauteur de la carte et
+                                        // débordait visuellement sur la carte suivante (retour
+                                        // utilisateur réel, captures d'écran, 2026-08-30).
                                         childAspectRatio: crossAxisCount == 1
-                                            ? 2.4
+                                            ? 1.3
                                             : 1.6,
                                       ),
                                   itemCount: items.length,
