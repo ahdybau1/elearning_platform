@@ -28,46 +28,56 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Row(
+            // Header — Column plutôt que Row : le bouton "Actualiser les Sessions" comme simple
+            // frère d'un Expanded ne rétrécissait jamais lui-même, il affamait le titre jusqu'à
+            // le faire couper au milieu des mots sur mobile (retour utilisateur réel, capture
+            // sur le vrai tunnel confirmant "Sessi/ons Uniq/ues", 2026-08-31 — même bug que
+            // school_year_promotion_screen.dart, manqué lors du premier passage sur ce fichier
+            // qui n'avait corrigé que les 3 cartes stats plus bas).
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppTheme.accentEmerald.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.devices_rounded,
-                    color: AppTheme.accentEmerald,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Sessions Uniques & Anti-Partage',
-                        style: GoogleFonts.inter(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentEmerald.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      Text(
-                        'Gestion de la session concurrente unique par compte élève et traçabilité des appareils',
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: AppTheme.textSecondary,
-                        ),
+                      child: const Icon(
+                        Icons.devices_rounded,
+                        color: AppTheme.accentEmerald,
+                        size: 24,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Sessions Uniques & Anti-Partage',
+                            style: GoogleFonts.inter(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            'Gestion de la session concurrente unique par compte élève et traçabilité des appareils',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(height: 14),
                 ElevatedButton.icon(
                   onPressed: () {
                     ref.invalidate(activeSessionsProvider);
@@ -92,47 +102,75 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Summary Stats Cards
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
+            // Summary Stats Cards — 3 cartes Expanded dans un Row ne laissaient plus qu'une
+            // quarantaine de pixels de large par carte sur mobile (texte écrit lettre par
+            // lettre, retour utilisateur réel 2026-08-30). Sous 700px, elles s'empilent.
+            Builder(
+              builder: (context) {
+                final suspiciousCard = suspiciousAsync.when(
+                  data: (flagged) => _buildStatCard(
+                    'Partage Suspect Aujourd\'hui',
+                    flagged.isEmpty
+                        ? 'Aucun compte'
+                        : '${flagged.length} compte(s)',
+                    Icons.warning_amber_rounded,
+                    flagged.isEmpty ? AppTheme.accentEmerald : Colors.amber,
+                    flagged.isEmpty
+                        ? 'Aucune bascule d\'appareil suspecte (seuil : 3 / jour)'
+                        : '≥ 3 bascules d\'appareil — à vérifier ci-dessous',
+                  ),
+                  loading: () => _buildStatCard(
+                    'Partage Suspect Aujourd\'hui',
+                    '...',
+                    Icons.warning_amber_rounded,
+                    Colors.amber,
+                    'Calcul en cours...',
+                  ),
+                  error: (err, _) => _buildStatCard(
+                    'Partage Suspect Aujourd\'hui',
+                    'Erreur',
+                    Icons.warning_amber_rounded,
+                    AppTheme.accentRose,
+                    '$err',
+                  ),
+                );
+                final cards = [
+                  _buildStatCard(
                     'Règle Session Unique',
                     '1 Appareil / Compte',
                     Icons.security_rounded,
                     AppTheme.accentEmerald,
                     'Déconnexion automatique de l\'ancien appareil',
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildStatCard(
+                  _buildStatCard(
                     'Empreinte Numérique',
                     'Device Fingerprinting',
                     Icons.fingerprint_rounded,
                     AppTheme.accentCyan,
                     'Vérification matérielle & OS',
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: suspiciousAsync.when(
-                    data: (flagged) => _buildStatCard(
-                      'Partage Suspect Aujourd\'hui',
-                      flagged.isEmpty ? 'Aucun compte' : '${flagged.length} compte(s)',
-                      Icons.warning_amber_rounded,
-                      flagged.isEmpty ? AppTheme.accentEmerald : Colors.amber,
-                      flagged.isEmpty
-                          ? 'Aucune bascule d\'appareil suspecte (seuil : 3 / jour)'
-                          : '≥ 3 bascules d\'appareil — à vérifier ci-dessous',
-                    ),
-                    loading: () => _buildStatCard('Partage Suspect Aujourd\'hui', '...', Icons.warning_amber_rounded,
-                        Colors.amber, 'Calcul en cours...'),
-                    error: (err, _) => _buildStatCard('Partage Suspect Aujourd\'hui', 'Erreur',
-                        Icons.warning_amber_rounded, AppTheme.accentRose, '$err'),
-                  ),
-                ),
-              ],
+                  suspiciousCard,
+                ];
+                if (MediaQuery.of(context).size.width < 700) {
+                  return Column(
+                    children: [
+                      for (final card in cards) ...[
+                        card,
+                        if (card != cards.last) const SizedBox(height: 12),
+                      ],
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: cards[0]),
+                    const SizedBox(width: 16),
+                    Expanded(child: cards[1]),
+                    const SizedBox(width: 16),
+                    Expanded(child: cards[2]),
+                  ],
+                );
+              },
             ),
 
             suspiciousAsync.maybeWhen(
@@ -146,17 +184,29 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
                         decoration: BoxDecoration(
                           color: Colors.amber.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.amber.withValues(alpha: 0.35)),
+                          border: Border.all(
+                            color: Colors.amber.withValues(alpha: 0.35),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.warning_amber_rounded, size: 16, color: Colors.amber),
+                                const Icon(
+                                  Icons.warning_amber_rounded,
+                                  size: 16,
+                                  color: Colors.amber,
+                                ),
                                 const SizedBox(width: 8),
-                                Text('Comptes à investiguer (bascules d\'appareil aujourd\'hui)',
-                                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.amber)),
+                                Text(
+                                  'Comptes à investiguer (bascules d\'appareil aujourd\'hui)',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.amber,
+                                  ),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 10),
@@ -165,15 +215,23 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
                               runSpacing: 8,
                               children: flagged.map((f) {
                                 return Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: AppTheme.cardBackground,
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: AppTheme.borderColor),
+                                    border: Border.all(
+                                      color: AppTheme.borderColor,
+                                    ),
                                   ),
                                   child: Text(
                                     '${f.firstName} ${f.lastName} (${f.email}) — ${f.switchCount} bascules',
-                                    style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: Colors.white70,
+                                    ),
                                   ),
                                 );
                               }).toList(),
@@ -191,7 +249,10 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
               child: sessionsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (err, _) => Center(
-                  child: Text('Erreur: $err', style: const TextStyle(color: Colors.red)),
+                  child: Text(
+                    'Erreur: $err',
+                    style: const TextStyle(color: Colors.red),
+                  ),
                 ),
                 data: (sessions) {
                   if (sessions.isEmpty) {
@@ -199,15 +260,28 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.devices_other_rounded, size: 48, color: AppTheme.textSecondary),
+                          Icon(
+                            Icons.devices_other_rounded,
+                            size: 48,
+                            color: AppTheme.textSecondary,
+                          ),
                           const SizedBox(height: 12),
-                          Text('Aucune session active pour le moment',
-                              style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+                          Text(
+                            'Aucune session active pour le moment',
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
                           const SizedBox(height: 4),
                           Text(
                             'Les connexions élèves apparaîtront ici dès que l\'application élève écrira dans la\ntable des sessions.',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary),
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: AppTheme.textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -222,15 +296,21 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
                     ),
                     child: ListView.separated(
                       itemCount: sessions.length,
-                      separatorBuilder: (_, _) => const Divider(color: AppTheme.borderColor, height: 1),
+                      separatorBuilder: (_, _) =>
+                          const Divider(color: AppTheme.borderColor, height: 1),
                       itemBuilder: (context, index) {
                         final s = sessions[index];
                         return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 8,
+                          ),
                           leading: Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: AppTheme.accentCyan.withValues(alpha: 0.15),
+                              color: AppTheme.accentCyan.withValues(
+                                alpha: 0.15,
+                              ),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
@@ -253,15 +333,23 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
                               ),
                               const SizedBox(width: 10),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
                                   color: AppTheme.surfaceDark,
                                   borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: AppTheme.borderColor),
+                                  border: Border.all(
+                                    color: AppTheme.borderColor,
+                                  ),
                                 ),
                                 child: Text(
                                   s.platform,
-                                  style: GoogleFonts.inter(fontSize: 11, color: AppTheme.accentCyan),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: AppTheme.accentCyan,
+                                  ),
                                 ),
                               ),
                             ],
@@ -271,26 +359,40 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
                             children: [
                               const SizedBox(height: 4),
                               if (s.accountEmail != null)
-                                Text(s.accountEmail!,
-                                    style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary)),
+                                Text(
+                                  s.accountEmail!,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: AppTheme.textSecondary,
+                                  ),
+                                ),
                               Text(
                                 'Empreinte: ${s.deviceFingerprint}',
-                                style: GoogleFonts.firaCode(fontSize: 11, color: AppTheme.textSecondary),
+                                style: GoogleFonts.firaCode(
+                                  fontSize: 11,
+                                  color: AppTheme.textSecondary,
+                                ),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 'Dernière activité: ${DateFormat('dd/MM/yyyy HH:mm:ss').format(s.lastActiveAt)}',
-                                style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary),
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: AppTheme.textSecondary,
+                                ),
                               ),
                             ],
                           ),
                           trailing: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.redAccent.withValues(alpha: 0.15),
+                              backgroundColor: Colors.redAccent.withValues(
+                                alpha: 0.15,
+                              ),
                               foregroundColor: Colors.redAccent,
                               side: const BorderSide(color: Colors.redAccent),
                             ),
-                            onPressed: () => _showRevokeConfirmation(context, s),
+                            onPressed: () =>
+                                _showRevokeConfirmation(context, s),
                             icon: const Icon(Icons.logout_rounded, size: 14),
                             label: const Text('Déconnecter à distance'),
                           ),
@@ -322,10 +424,17 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
         content: Text(
           '${session.accountDisplayName} sera immédiatement déconnecté de ${session.platform}. '
           'L\'élève devra se reconnecter pour reprendre l\'accès.',
-          style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.4),
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            color: Colors.white70,
+            height: 1.4,
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Annuler'),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () async {
@@ -336,11 +445,17 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
                 await service.revokeSession(session.id);
                 ref.invalidate(activeSessionsProvider);
                 messenger.showSnackBar(
-                  const SnackBar(backgroundColor: AppTheme.accentEmerald, content: Text('Session révoquée avec succès.')),
+                  const SnackBar(
+                    backgroundColor: AppTheme.accentEmerald,
+                    content: Text('Session révoquée avec succès.'),
+                  ),
                 );
               } catch (e) {
                 messenger.showSnackBar(
-                  SnackBar(backgroundColor: AppTheme.accentRose, content: Text('Erreur : $e')),
+                  SnackBar(
+                    backgroundColor: AppTheme.accentRose,
+                    content: Text('Erreur : $e'),
+                  ),
                 );
               }
             },
@@ -389,7 +504,10 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -403,7 +521,10 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
               ],
             ),

@@ -34,52 +34,53 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Row(
+            // Header — Column plutôt que Row : un bouton au libellé long ("Mettre en Vente un
+            // Document") comme simple frère d'un Expanded affamait le titre (retour utilisateur
+            // réel, texte écrit à la verticale lettre par lettre, 2026-08-30 — même bug que
+            // school_year_promotion_screen.dart).
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppTheme.accentEmerald.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.storefront_rounded,
-                          color: AppTheme.accentEmerald,
-                          size: 24,
-                        ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentEmerald.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Boutique & Documents Payants',
-                              style: GoogleFonts.inter(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            Text(
-                              'Vente de fiches synthèses, annales corrigées et livrets, avec filigrane forensique à l\'affichage',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
+                      child: const Icon(
+                        Icons.storefront_rounded,
+                        color: AppTheme.accentEmerald,
+                        size: 24,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Boutique & Documents Payants',
+                            style: GoogleFonts.inter(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            'Vente de fiches synthèses, annales corrigées et livrets, avec filigrane forensique à l\'affichage',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(height: 14),
                 ElevatedButton.icon(
                   onPressed: () => _showDocDialog(context),
                   icon: const Icon(Icons.add_rounded, size: 18),

@@ -26,41 +26,101 @@ class _PedagogicalCatalogScreenState
     {
       'subject': 'Mathématiques',
       'types': [
-        {'name': 'Définition', 'desc': 'Notion fondamentale avec notations rigoureuses'},
-        {'name': 'Théorème', 'desc': 'Énoncé mathématique majeur avec démonstration type'},
-        {'name': 'Propriété / Corollaire', 'desc': 'Conséquence directe d\'un théorème'},
-        {'name': 'Formule & Identité', 'desc': 'Expression algébrique ou trigonométrique essentielle'},
-        {'name': 'Méthode / Savoir-Faire', 'desc': 'Guide pas-à-pas pour résoudre un problème type'},
-        {'name': 'Piège & Erreur Classique', 'desc': 'Mise en garde contre les confusions fréquentes'},
+        {
+          'name': 'Définition',
+          'desc': 'Notion fondamentale avec notations rigoureuses',
+        },
+        {
+          'name': 'Théorème',
+          'desc': 'Énoncé mathématique majeur avec démonstration type',
+        },
+        {
+          'name': 'Propriété / Corollaire',
+          'desc': 'Conséquence directe d\'un théorème',
+        },
+        {
+          'name': 'Formule & Identité',
+          'desc': 'Expression algébrique ou trigonométrique essentielle',
+        },
+        {
+          'name': 'Méthode / Savoir-Faire',
+          'desc': 'Guide pas-à-pas pour résoudre un problème type',
+        },
+        {
+          'name': 'Piège & Erreur Classique',
+          'desc': 'Mise en garde contre les confusions fréquentes',
+        },
       ],
     },
     {
       'subject': 'Physique - Chimie',
       'types': [
-        {'name': 'Loi Physique', 'desc': 'Lois de Newton, thermodynamique, électromagnétisme...'},
-        {'name': 'Formule & Unités SI', 'desc': 'Grandeurs physiques avec unités normalisées'},
-        {'name': 'Protocole Expérimental', 'desc': 'Schéma de montage et étapes de laboratoire'},
-        {'name': 'Équation-Bilan & Réaction', 'desc': 'Équilibrage stœchiométrique et états de la matière'},
-        {'name': 'Interprétation Microscopique', 'desc': 'Explication au niveau atomique ou moléculaire'},
+        {
+          'name': 'Loi Physique',
+          'desc': 'Lois de Newton, thermodynamique, électromagnétisme...',
+        },
+        {
+          'name': 'Formule & Unités SI',
+          'desc': 'Grandeurs physiques avec unités normalisées',
+        },
+        {
+          'name': 'Protocole Expérimental',
+          'desc': 'Schéma de montage et étapes de laboratoire',
+        },
+        {
+          'name': 'Équation-Bilan & Réaction',
+          'desc': 'Équilibrage stœchiométrique et états de la matière',
+        },
+        {
+          'name': 'Interprétation Microscopique',
+          'desc': 'Explication au niveau atomique ou moléculaire',
+        },
       ],
     },
     {
       'subject': 'Français & Littérature',
       'types': [
-        {'name': 'Règle de Grammaire', 'desc': 'Accords, syntaxe et conjugaison avancée'},
-        {'name': 'Figure de Style', 'desc': 'Métaphore, allégorie, oxymore avec exemples'},
-        {'name': 'Texte Support / Extrait', 'desc': 'Passage littéraire pour commentaire composé'},
-        {'name': 'Plan Dialectique', 'desc': 'Structure de dissertation (Thèse, Antithèse, Synthèse)'},
-        {'name': 'Fiche Auteur & Mouvement', 'desc': 'Contexte historique et biographie littéraire'},
+        {
+          'name': 'Règle de Grammaire',
+          'desc': 'Accords, syntaxe et conjugaison avancée',
+        },
+        {
+          'name': 'Figure de Style',
+          'desc': 'Métaphore, allégorie, oxymore avec exemples',
+        },
+        {
+          'name': 'Texte Support / Extrait',
+          'desc': 'Passage littéraire pour commentaire composé',
+        },
+        {
+          'name': 'Plan Dialectique',
+          'desc': 'Structure de dissertation (Thèse, Antithèse, Synthèse)',
+        },
+        {
+          'name': 'Fiche Auteur & Mouvement',
+          'desc': 'Contexte historique et biographie littéraire',
+        },
       ],
     },
     {
       'subject': 'Sciences de la Vie et de la Terre',
       'types': [
-        {'name': 'Schéma Fonctionnel', 'desc': 'Diagramme anatomique ou géologique légendé'},
-        {'name': 'Mécanisme Biologique', 'desc': 'Cycle cellulaire, génétique, photosynthèse...'},
-        {'name': 'Vocabulaire Clé', 'desc': 'Terminologie scientifique spécialisée'},
-        {'name': 'Démarche d\'Investigation', 'desc': 'Hypothèse, expérience, observation, conclusion'},
+        {
+          'name': 'Schéma Fonctionnel',
+          'desc': 'Diagramme anatomique ou géologique légendé',
+        },
+        {
+          'name': 'Mécanisme Biologique',
+          'desc': 'Cycle cellulaire, génétique, photosynthèse...',
+        },
+        {
+          'name': 'Vocabulaire Clé',
+          'desc': 'Terminologie scientifique spécialisée',
+        },
+        {
+          'name': 'Démarche d\'Investigation',
+          'desc': 'Hypothèse, expérience, observation, conclusion',
+        },
       ],
     },
   ];
@@ -70,7 +130,8 @@ class _PedagogicalCatalogScreenState
   /// si c'était déjà injecté dans le prompt IA tant que ce n'est pas réellement enregistré.
   List<Map<String, String>>? _suggestionsFor(String subjectName) {
     for (final entry in _defaultCatalog) {
-      if ((entry['subject'] as String).toLowerCase() == subjectName.toLowerCase()) {
+      if ((entry['subject'] as String).toLowerCase() ==
+          subjectName.toLowerCase()) {
         return (entry['types'] as List).cast<Map<String, String>>();
       }
     }
@@ -79,8 +140,12 @@ class _PedagogicalCatalogScreenState
 
   @override
   Widget build(BuildContext context) {
-    final subjectsAsync =
-        ref.watch(subjectsProvider((countryId: null, includeInactive: _showInactiveSubjects)));
+    final subjectsAsync = ref.watch(
+      subjectsProvider((
+        countryId: null,
+        includeInactive: _showInactiveSubjects,
+      )),
+    );
     final subjects = subjectsAsync.valueOrNull ?? [];
     if (subjects.isNotEmpty && _selectedSubjectId == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -162,30 +227,49 @@ class _PedagogicalCatalogScreenState
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.accentIndigo,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 14,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                     ),
                     ElevatedButton.icon(
-                      onPressed: _selectedSubjectId == null ? null : () => _showAiCatalogGenerationModal(context),
+                      onPressed: _selectedSubjectId == null
+                          ? null
+                          : () => _showAiCatalogGenerationModal(context),
                       icon: const Icon(Icons.psychology_rounded, size: 18),
                       label: const Text('Générer par IA'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.accentCyan,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 14,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                     ),
                     ElevatedButton.icon(
-                      onPressed: _selectedSubjectId == null ? null : () => _showAddTypeDialog(context),
+                      onPressed: _selectedSubjectId == null
+                          ? null
+                          : () => _showAddTypeDialog(context),
                       icon: const Icon(Icons.add_rounded, size: 18),
                       label: const Text('Ajouter un Type d\'Élément'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.accentEmerald,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 14,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                     ),
                   ],
@@ -197,11 +281,17 @@ class _PedagogicalCatalogScreenState
             // Subject Selector Bar
             subjectsAsync.when(
               loading: () => const LinearProgressIndicator(),
-              error: (err, _) => Text('Erreur: $err', style: const TextStyle(color: Colors.red)),
+              error: (err, _) => Text(
+                'Erreur: $err',
+                style: const TextStyle(color: Colors.red),
+              ),
               data: (_) => subjects.isEmpty
                   ? Text(
                       'Aucune matière créée. Cliquez sur "Nouvelle Matière" pour commencer.',
-                      style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textMuted),
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: AppTheme.textMuted,
+                      ),
                     )
                   // Wrap plutôt qu'un Row+SingleChildScrollView horizontal : les puces passaient à
                   // la ligne à l'infini sans aucun indice visuel de défilement — techniquement
@@ -213,27 +303,37 @@ class _PedagogicalCatalogScreenState
                       children: subjects.map((s) {
                         final isSelected = s.id == _selectedSubjectId;
                         return ChoiceChip(
-                          label: Text(s.isActive ? s.name : '${s.name} (archivée)'),
+                          label: Text(
+                            s.isActive ? s.name : '${s.name} (archivée)',
+                          ),
                           selected: isSelected,
                           onSelected: (selected) {
                             if (selected) {
                               setState(() => _selectedSubjectId = s.id);
                             }
                           },
-                          selectedColor: AppTheme.accentEmerald.withValues(alpha: 0.2),
+                          selectedColor: AppTheme.accentEmerald.withValues(
+                            alpha: 0.2,
+                          ),
                           backgroundColor: s.isActive
                               ? AppTheme.cardBackground
                               : AppTheme.accentAmber.withValues(alpha: 0.08),
                           labelStyle: GoogleFonts.inter(
                             color: !s.isActive
                                 ? AppTheme.accentAmber
-                                : (isSelected ? AppTheme.accentEmerald : AppTheme.textSecondary),
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                : (isSelected
+                                      ? AppTheme.accentEmerald
+                                      : AppTheme.textSecondary),
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                             side: BorderSide(
-                              color: isSelected ? AppTheme.accentEmerald : AppTheme.borderColor,
+                              color: isSelected
+                                  ? AppTheme.accentEmerald
+                                  : AppTheme.borderColor,
                             ),
                           ),
                         );
@@ -248,50 +348,104 @@ class _PedagogicalCatalogScreenState
                   activeThumbColor: AppTheme.accentAmber,
                   onChanged: (v) => setState(() => _showInactiveSubjects = v),
                 ),
-                Text('Afficher les matières archivées',
-                    style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted)),
+                Text(
+                  'Afficher les matières archivées',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: AppTheme.textMuted,
+                  ),
+                ),
                 if (_selectedSubjectId != null) ...[
                   const SizedBox(width: 20),
                   TextButton.icon(
                     onPressed: () {
-                      final subject = subjects.where((s) => s.id == _selectedSubjectId).firstOrNull;
-                      if (subject != null) _showCreateOrEditSubjectModal(context, existing: subject);
+                      final subject = subjects
+                          .where((s) => s.id == _selectedSubjectId)
+                          .firstOrNull;
+                      if (subject != null)
+                        _showCreateOrEditSubjectModal(
+                          context,
+                          existing: subject,
+                        );
                     },
-                    icon: const Icon(Icons.edit_rounded, size: 14, color: AppTheme.accentBlue),
-                    label: Text('Modifier la matière', style: GoogleFonts.inter(color: AppTheme.accentBlue, fontSize: 12)),
+                    icon: const Icon(
+                      Icons.edit_rounded,
+                      size: 14,
+                      color: AppTheme.accentBlue,
+                    ),
+                    label: Text(
+                      'Modifier la matière',
+                      style: GoogleFonts.inter(
+                        color: AppTheme.accentBlue,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
                   TextButton.icon(
                     onPressed: () {
-                      final subject = subjects.where((s) => s.id == _selectedSubjectId).firstOrNull;
+                      final subject = subjects
+                          .where((s) => s.id == _selectedSubjectId)
+                          .firstOrNull;
                       if (subject == null) return;
                       subject.isActive
                           ? _showDeactivateSubjectConfirmation(context, subject)
-                          : _showReactivateSubjectConfirmation(context, subject);
+                          : _showReactivateSubjectConfirmation(
+                              context,
+                              subject,
+                            );
                     },
                     icon: Icon(
-                      subjects.where((s) => s.id == _selectedSubjectId).firstOrNull?.isActive ?? true
+                      subjects
+                                  .where((s) => s.id == _selectedSubjectId)
+                                  .firstOrNull
+                                  ?.isActive ??
+                              true
                           ? Icons.archive_rounded
                           : Icons.unarchive_rounded,
                       size: 14,
                       color: AppTheme.accentAmber,
                     ),
                     label: Text(
-                      subjects.where((s) => s.id == _selectedSubjectId).firstOrNull?.isActive ?? true
+                      subjects
+                                  .where((s) => s.id == _selectedSubjectId)
+                                  .firstOrNull
+                                  ?.isActive ??
+                              true
                           ? 'Archiver la matière'
                           : 'Désarchiver la matière',
-                      style: GoogleFonts.inter(color: AppTheme.accentAmber, fontSize: 12),
+                      style: GoogleFonts.inter(
+                        color: AppTheme.accentAmber,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
-                  if (!(subjects.where((s) => s.id == _selectedSubjectId).firstOrNull?.isActive ?? true))
+                  if (!(subjects
+                          .where((s) => s.id == _selectedSubjectId)
+                          .firstOrNull
+                          ?.isActive ??
+                      true))
                     TextButton.icon(
                       onPressed: () {
-                        final subject = subjects.where((s) => s.id == _selectedSubjectId).firstOrNull;
-                        if (subject != null) _showPermanentDeleteSubjectConfirmation(context, subject);
+                        final subject = subjects
+                            .where((s) => s.id == _selectedSubjectId)
+                            .firstOrNull;
+                        if (subject != null)
+                          _showPermanentDeleteSubjectConfirmation(
+                            context,
+                            subject,
+                          );
                       },
-                      icon: const Icon(Icons.delete_forever_rounded, size: 14, color: AppTheme.accentRose),
+                      icon: const Icon(
+                        Icons.delete_forever_rounded,
+                        size: 14,
+                        color: AppTheme.accentRose,
+                      ),
                       label: Text(
                         'Supprimer définitivement',
-                        style: GoogleFonts.inter(color: AppTheme.accentRose, fontSize: 12),
+                        style: GoogleFonts.inter(
+                          color: AppTheme.accentRose,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                 ],
@@ -305,13 +459,18 @@ class _PedagogicalCatalogScreenState
                   ? const Center(child: CircularProgressIndicator())
                   : Consumer(
                       builder: (context, ref, _) {
-                        final catalogAsync =
-                            ref.watch(contentCatalogProvider(_selectedSubjectId!));
+                        final catalogAsync = ref.watch(
+                          contentCatalogProvider(_selectedSubjectId!),
+                        );
 
                         return catalogAsync.when(
-                          loading: () => const Center(child: CircularProgressIndicator()),
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
                           error: (err, _) => Center(
-                            child: Text('Erreur: $err', style: const TextStyle(color: Colors.red)),
+                            child: Text(
+                              'Erreur: $err',
+                              style: const TextStyle(color: Colors.red),
+                            ),
                           ),
                           data: (items) {
                             if (items.isEmpty) {
@@ -320,16 +479,32 @@ class _PedagogicalCatalogScreenState
                                   : _suggestionsFor(selectedSubjectName);
                               return _buildEmptyState(suggestions);
                             }
-                            return GridView.builder(
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                crossAxisSpacing: 16,
-                                mainAxisSpacing: 16,
-                                childAspectRatio: 1.6,
-                              ),
-                              itemCount: items.length,
-                              itemBuilder: (context, index) => _buildCatalogCard(items[index]),
+                            // crossAxisCount fixé à 3 sans seuil mobile : chaque carte n'avait
+                            // plus que ~110px de large sur téléphone, le badge "Injecté dans
+                            // Prompt IA" débordait sans retour à la ligne (retour utilisateur
+                            // réel, 2026-08-30). Même logique responsive que la grille KPI du
+                            // tableau de bord (dashboard_overview_screen.dart).
+                            return LayoutBuilder(
+                              builder: (context, constraints) {
+                                final crossAxisCount =
+                                    constraints.maxWidth > 900
+                                    ? 3
+                                    : (constraints.maxWidth > 550 ? 2 : 1);
+                                return GridView.builder(
+                                  gridDelegate:
+                                      SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: crossAxisCount,
+                                        crossAxisSpacing: 16,
+                                        mainAxisSpacing: 16,
+                                        childAspectRatio: crossAxisCount == 1
+                                            ? 2.4
+                                            : 1.6,
+                                      ),
+                                  itemCount: items.length,
+                                  itemBuilder: (context, index) =>
+                                      _buildCatalogCard(items[index]),
+                                );
+                              },
                             );
                           },
                         );
@@ -350,11 +525,18 @@ class _PedagogicalCatalogScreenState
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.inventory_2_outlined, size: 48, color: AppTheme.textMuted.withValues(alpha: 0.5)),
+          Icon(
+            Icons.inventory_2_outlined,
+            size: 48,
+            color: AppTheme.textMuted.withValues(alpha: 0.5),
+          ),
           const SizedBox(height: 16),
           Text(
             'Aucun type d\'élément défini pour cette matière.',
-            style: GoogleFonts.inter(fontSize: 15, color: AppTheme.textSecondary),
+            style: GoogleFonts.inter(
+              fontSize: 15,
+              color: AppTheme.textSecondary,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -364,15 +546,27 @@ class _PedagogicalCatalogScreenState
           if (suggestions != null) ...[
             const SizedBox(height: 20),
             ElevatedButton.icon(
-              onPressed: _isImportingSuggestions ? null : () => _importSuggestions(suggestions),
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentCyan),
+              onPressed: _isImportingSuggestions
+                  ? null
+                  : () => _importSuggestions(suggestions),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentCyan,
+              ),
               icon: _isImportingSuggestions
                   ? const SizedBox(
-                      width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Icon(Icons.download_rounded, size: 18),
-              label: Text(_isImportingSuggestions
-                  ? 'Import en cours...'
-                  : 'Importer les ${suggestions.length} types standards suggérés'),
+              label: Text(
+                _isImportingSuggestions
+                    ? 'Import en cours...'
+                    : 'Importer les ${suggestions.length} types standards suggérés',
+              ),
             ),
           ],
         ],
@@ -414,9 +608,14 @@ class _PedagogicalCatalogScreenState
           style: GoogleFonts.inter(color: Colors.white70),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Annuler'),
+          ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentRose),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accentRose,
+            ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Supprimer'),
           ),
@@ -468,7 +667,11 @@ class _PedagogicalCatalogScreenState
                 ),
               ),
               PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert_rounded, color: AppTheme.textSecondary, size: 18),
+                icon: const Icon(
+                  Icons.more_vert_rounded,
+                  color: AppTheme.textSecondary,
+                  size: 18,
+                ),
                 color: AppTheme.cardBackground,
                 onSelected: (val) {
                   if (val == 'edit') {
@@ -478,8 +681,20 @@ class _PedagogicalCatalogScreenState
                   }
                 },
                 itemBuilder: (context) => [
-                  const PopupMenuItem(value: 'edit', child: Text('Modifier', style: TextStyle(color: Colors.white))),
-                  const PopupMenuItem(value: 'delete', child: Text('Supprimer', style: TextStyle(color: Colors.redAccent))),
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Text(
+                      'Modifier',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Text(
+                      'Supprimer',
+                      style: TextStyle(color: Colors.redAccent),
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -510,7 +725,11 @@ class _PedagogicalCatalogScreenState
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.auto_awesome_rounded, size: 12, color: AppTheme.accentCyan),
+                    const Icon(
+                      Icons.auto_awesome_rounded,
+                      size: 12,
+                      color: AppTheme.accentCyan,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       'Injecté dans Prompt IA',
@@ -559,8 +778,15 @@ class _PedagogicalCatalogScreenState
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => AlertDialog(
           backgroundColor: AppTheme.cardBackground,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: AppDialogTitle(icon: icon, iconColor: iconColor, text: title, onClose: () => Navigator.pop(ctx)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: AppDialogTitle(
+            icon: icon,
+            iconColor: iconColor,
+            text: title,
+            onClose: () => Navigator.pop(ctx),
+          ),
           content: SizedBox(
             width: 460,
             child: SingleChildScrollView(
@@ -573,7 +799,10 @@ class _PedagogicalCatalogScreenState
                     const SizedBox(height: 16),
                     Text(
                       'Tapez "$typedConfirmationTarget" pour confirmer :',
-                      style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     TextField(
@@ -583,7 +812,9 @@ class _PedagogicalCatalogScreenState
                         hintText: typedConfirmationTarget,
                         prefixIcon: const Icon(Icons.edit_rounded, size: 18),
                       ),
-                      onChanged: (v) => setModalState(() => matches = v.trim() == typedConfirmationTarget),
+                      onChanged: (v) => setModalState(
+                        () => matches = v.trim() == typedConfirmationTarget,
+                      ),
                     ),
                   ],
                   if (errorText != null) ...[
@@ -593,16 +824,28 @@ class _PedagogicalCatalogScreenState
                       decoration: BoxDecoration(
                         color: AppTheme.accentRose.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppTheme.accentRose.withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: AppTheme.accentRose.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.error_outline_rounded, color: AppTheme.accentRose, size: 18),
+                          const Icon(
+                            Icons.error_outline_rounded,
+                            color: AppTheme.accentRose,
+                            size: 18,
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
-                            child: Text(errorText!,
-                                style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose, height: 1.4)),
+                            child: Text(
+                              errorText!,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: AppTheme.accentRose,
+                                height: 1.4,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -633,7 +876,10 @@ class _PedagogicalCatalogScreenState
                         ref.invalidate(subjectsProvider);
                         if (ctx.mounted) Navigator.pop(ctx);
                         messenger.showSnackBar(
-                          SnackBar(backgroundColor: AppTheme.accentEmerald, content: Text(successMessage)),
+                          SnackBar(
+                            backgroundColor: AppTheme.accentEmerald,
+                            content: Text(successMessage),
+                          ),
                         );
                       } catch (e) {
                         setModalState(() {
@@ -646,7 +892,10 @@ class _PedagogicalCatalogScreenState
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : Text(confirmLabel),
             ),
@@ -656,7 +905,10 @@ class _PedagogicalCatalogScreenState
     );
   }
 
-  void _showDeactivateSubjectConfirmation(BuildContext context, Subject subject) {
+  void _showDeactivateSubjectConfirmation(
+    BuildContext context,
+    Subject subject,
+  ) {
     final service = ref.read(supabaseServiceProvider);
     _showConfirmActionDialog(
       context,
@@ -666,7 +918,11 @@ class _PedagogicalCatalogScreenState
       content: Text(
         'Cette matière sera masquée par défaut (visible via "Afficher les matières archivées"), '
         'pas supprimée — vous pourrez la désarchiver ou la supprimer définitivement plus tard.',
-        style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.4),
+        style: GoogleFonts.inter(
+          fontSize: 13,
+          color: Colors.white70,
+          height: 1.4,
+        ),
       ),
       confirmLabel: 'Archiver',
       confirmColor: AppTheme.accentAmber,
@@ -680,7 +936,10 @@ class _PedagogicalCatalogScreenState
     );
   }
 
-  void _showReactivateSubjectConfirmation(BuildContext context, Subject subject) {
+  void _showReactivateSubjectConfirmation(
+    BuildContext context,
+    Subject subject,
+  ) {
     final service = ref.read(supabaseServiceProvider);
     _showConfirmActionDialog(
       context,
@@ -689,7 +948,11 @@ class _PedagogicalCatalogScreenState
       title: 'Désarchiver "${subject.name}" ?',
       content: Text(
         'Cette matière redeviendra active et visible dans l\'application.',
-        style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.4),
+        style: GoogleFonts.inter(
+          fontSize: 13,
+          color: Colors.white70,
+          height: 1.4,
+        ),
       ),
       confirmLabel: 'Désarchiver',
       confirmColor: AppTheme.accentEmerald,
@@ -698,7 +961,10 @@ class _PedagogicalCatalogScreenState
     );
   }
 
-  void _showPermanentDeleteSubjectConfirmation(BuildContext context, Subject subject) {
+  void _showPermanentDeleteSubjectConfirmation(
+    BuildContext context,
+    Subject subject,
+  ) {
     final service = ref.read(supabaseServiceProvider);
     _showConfirmActionDialog(
       context,
@@ -715,12 +981,17 @@ class _PedagogicalCatalogScreenState
         child: Text(
           'IRRÉVERSIBLE : refusé automatiquement s\'il reste des chapitres rattachés à cette '
           'matière (dans n\'importe quelle classe) — supprimez-les d\'abord depuis Leçons & Cours.',
-          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose, height: 1.4),
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: AppTheme.accentRose,
+            height: 1.4,
+          ),
         ),
       ),
       confirmLabel: 'Supprimer définitivement',
       confirmColor: AppTheme.accentRose,
-      onConfirm: () => service.permanentlyDeleteSubject(subject.id, _currentAdminId()),
+      onConfirm: () =>
+          service.permanentlyDeleteSubject(subject.id, _currentAdminId()),
       successMessage: 'Matière "${subject.name}" supprimée définitivement.',
       typedConfirmationTarget: subject.name,
     );
@@ -729,7 +1000,10 @@ class _PedagogicalCatalogScreenState
   /// Création ou édition d'une matière, avec rattachement à une ou plusieurs Classes/Séries —
   /// sans ce rattachement la matière resterait invisible dans le sélecteur "Matière" de
   /// Chapitres & Leçons (voir linkSubjectToClasses).
-  void _showCreateOrEditSubjectModal(BuildContext context, {Subject? existing}) {
+  void _showCreateOrEditSubjectModal(
+    BuildContext context, {
+    Subject? existing,
+  }) {
     final isEditing = existing != null;
     final nameController = TextEditingController(text: existing?.name ?? '');
     final codeController = TextEditingController(text: existing?.code ?? '');
@@ -751,7 +1025,9 @@ class _PedagogicalCatalogScreenState
         builder: (ctx, setModalState) {
           return AlertDialog(
             backgroundColor: AppTheme.cardBackground,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             title: AppDialogTitle(
               icon: Icons.auto_stories_rounded,
               text: isEditing ? 'Modifier la Matière' : 'Nouvelle Matière',
@@ -786,14 +1062,18 @@ class _PedagogicalCatalogScreenState
                     const SizedBox(height: 16),
                     Consumer(
                       builder: (context, ref, _) {
-                        final countriesAsync = ref.watch(nodesByTypeProvider('country'));
+                        final countriesAsync = ref.watch(
+                          nodesByTypeProvider('country'),
+                        );
                         final countries = countriesAsync.valueOrNull ?? [];
                         // Si le pays actuellement rattaché a depuis été archivé dans l'Arbre
                         // Académique, il n'apparaît plus dans `countries` (filtré is_active) —
                         // sans ce garde-fou, DropdownButtonFormField plante (aucun item ne
                         // correspond à la valeur sélectionnée).
                         final safeSelectedCountryId =
-                            countries.any((c) => c.id == selectedCountryId) ? selectedCountryId : null;
+                            countries.any((c) => c.id == selectedCountryId)
+                            ? selectedCountryId
+                            : null;
                         return DropdownButtonFormField<String?>(
                           // ignore: deprecated_member_use
                           value: safeSelectedCountryId,
@@ -805,30 +1085,51 @@ class _PedagogicalCatalogScreenState
                             prefixIcon: Icon(Icons.public_rounded, size: 20),
                           ),
                           items: [
-                            const DropdownMenuItem<String?>(value: null, child: Text('Non spécifié')),
-                            ...countries.map((c) => DropdownMenuItem<String?>(value: c.id, child: Text(c.name))),
+                            const DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text('Non spécifié'),
+                            ),
+                            ...countries.map(
+                              (c) => DropdownMenuItem<String?>(
+                                value: c.id,
+                                child: Text(c.name),
+                              ),
+                            ),
                           ],
-                          onChanged: (v) => setModalState(() => selectedCountryId = v),
+                          onChanged: (v) =>
+                              setModalState(() => selectedCountryId = v),
                         );
                       },
                     ),
                     const SizedBox(height: 16),
-                    Text('Classes / Séries où cette matière est enseignée',
-                        style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
+                    Text(
+                      'Classes / Séries où cette matière est enseignée',
+                      style: GoogleFonts.outfit(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       'Obligatoire pour que la matière apparaisse dans le sélecteur de Chapitres & Leçons.',
-                      style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted),
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: AppTheme.textMuted,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     if (isEditing && !linksInitialized)
                       Builder(
                         builder: (context) {
-                          linksFuture ??= ref.read(supabaseServiceProvider).fetchClassesForSubject(existing.id);
+                          linksFuture ??= ref
+                              .read(supabaseServiceProvider)
+                              .fetchClassesForSubject(existing.id);
                           return FutureBuilder<List<AcademicNode>>(
                             future: linksFuture,
                             builder: (context, snapshot) {
-                              if (snapshot.connectionState != ConnectionState.done) {
+                              if (snapshot.connectionState !=
+                                  ConnectionState.done) {
                                 return const Padding(
                                   padding: EdgeInsets.symmetric(vertical: 12),
                                   child: LinearProgressIndicator(),
@@ -839,9 +1140,13 @@ class _PedagogicalCatalogScreenState
                               WidgetsBinding.instance.addPostFrameCallback((_) {
                                 if (!linksInitialized) {
                                   initialLinkedNodes = snapshot.data ?? [];
-                                  initialClassIds = initialLinkedNodes.map((n) => n.id).toSet();
+                                  initialClassIds = initialLinkedNodes
+                                      .map((n) => n.id)
+                                      .toSet();
                                   setModalState(() {
-                                    selectedClassIds = Set.from(initialClassIds);
+                                    selectedClassIds = Set.from(
+                                      initialClassIds,
+                                    );
                                     linksInitialized = true;
                                   });
                                 }
@@ -854,8 +1159,12 @@ class _PedagogicalCatalogScreenState
                     else
                       Consumer(
                         builder: (context, ref, _) {
-                          final classesAsync = ref.watch(nodesByTypeProvider('class'));
-                          final seriesAsync = ref.watch(nodesByTypeProvider('series'));
+                          final classesAsync = ref.watch(
+                            nodesByTypeProvider('class'),
+                          );
+                          final seriesAsync = ref.watch(
+                            nodesByTypeProvider('series'),
+                          );
                           final options = <AcademicNode>[
                             ...classesAsync.valueOrNull ?? [],
                             ...seriesAsync.valueOrNull ?? [],
@@ -868,42 +1177,67 @@ class _PedagogicalCatalogScreenState
                               .where((n) => !options.any((o) => o.id == n.id))
                               .toList();
                           if (options.isEmpty && archivedButLinked.isEmpty) {
-                            return Text('Aucune classe/série configurée.',
-                                style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose));
+                            return Text(
+                              'Aucune classe/série configurée.',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: AppTheme.accentRose,
+                              ),
+                            );
                           }
                           return Column(
                             children: [
-                              ...options.map((c) => CheckboxListTile(
-                                    dense: true,
-                                    contentPadding: EdgeInsets.zero,
-                                    value: selectedClassIds.contains(c.id),
-                                    activeColor: AppTheme.accentEmerald,
-                                    title: Text(c.name, style: GoogleFonts.inter(fontSize: 13, color: Colors.white)),
-                                    onChanged: (checked) => setModalState(() {
-                                      if (checked == true) {
-                                        selectedClassIds.add(c.id);
-                                      } else {
-                                        selectedClassIds.remove(c.id);
-                                      }
-                                    }),
-                                  )),
-                              ...archivedButLinked.map((c) => CheckboxListTile(
-                                    dense: true,
-                                    contentPadding: EdgeInsets.zero,
-                                    value: selectedClassIds.contains(c.id),
-                                    activeColor: AppTheme.accentAmber,
-                                    title: Text('${c.name} (archivée)',
-                                        style: GoogleFonts.inter(fontSize: 13, color: AppTheme.accentAmber)),
-                                    subtitle: Text('Décochez pour retirer ce lien devenu obsolète',
-                                        style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textMuted)),
-                                    onChanged: (checked) => setModalState(() {
-                                      if (checked == true) {
-                                        selectedClassIds.add(c.id);
-                                      } else {
-                                        selectedClassIds.remove(c.id);
-                                      }
-                                    }),
-                                  )),
+                              ...options.map(
+                                (c) => CheckboxListTile(
+                                  dense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  value: selectedClassIds.contains(c.id),
+                                  activeColor: AppTheme.accentEmerald,
+                                  title: Text(
+                                    c.name,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  onChanged: (checked) => setModalState(() {
+                                    if (checked == true) {
+                                      selectedClassIds.add(c.id);
+                                    } else {
+                                      selectedClassIds.remove(c.id);
+                                    }
+                                  }),
+                                ),
+                              ),
+                              ...archivedButLinked.map(
+                                (c) => CheckboxListTile(
+                                  dense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  value: selectedClassIds.contains(c.id),
+                                  activeColor: AppTheme.accentAmber,
+                                  title: Text(
+                                    '${c.name} (archivée)',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      color: AppTheme.accentAmber,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    'Décochez pour retirer ce lien devenu obsolète',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      color: AppTheme.textMuted,
+                                    ),
+                                  ),
+                                  onChanged: (checked) => setModalState(() {
+                                    if (checked == true) {
+                                      selectedClassIds.add(c.id);
+                                    } else {
+                                      selectedClassIds.remove(c.id);
+                                    }
+                                  }),
+                                ),
+                              ),
                             ],
                           );
                         },
@@ -916,7 +1250,13 @@ class _PedagogicalCatalogScreenState
                           color: AppTheme.accentRose.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Text(submitError!, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                        child: Text(
+                          submitError!,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: AppTheme.accentRose,
+                          ),
+                        ),
                       ),
                     ],
                   ],
@@ -926,17 +1266,25 @@ class _PedagogicalCatalogScreenState
             actions: [
               TextButton(
                 onPressed: isLoading ? null : () => Navigator.pop(ctx),
-                child: const Text('Annuler', style: TextStyle(color: AppTheme.textSecondary)),
+                child: const Text(
+                  'Annuler',
+                  style: TextStyle(color: AppTheme.textSecondary),
+                ),
               ),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentEmerald),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accentEmerald,
+                ),
                 onPressed: isLoading
                     ? null
                     : () async {
                         final name = nameController.text.trim();
                         final code = codeController.text.trim();
                         if (name.isEmpty || code.isEmpty) {
-                          setModalState(() => submitError = 'Le nom et le code sont obligatoires.');
+                          setModalState(
+                            () => submitError =
+                                'Le nom et le code sont obligatoires.',
+                          );
                           return;
                         }
                         setModalState(() {
@@ -955,13 +1303,20 @@ class _PedagogicalCatalogScreenState
                               countryId: selectedCountryId,
                             );
                             subjectId = existing.id;
-                            final toAdd = selectedClassIds.difference(initialClassIds);
-                            final toRemove = initialClassIds.difference(selectedClassIds);
+                            final toAdd = selectedClassIds.difference(
+                              initialClassIds,
+                            );
+                            final toRemove = initialClassIds.difference(
+                              selectedClassIds,
+                            );
                             for (final id in toAdd) {
                               await service.linkSubjectToClass(subjectId, id);
                             }
                             for (final id in toRemove) {
-                              await service.unlinkSubjectFromClass(subjectId, id);
+                              await service.unlinkSubjectFromClass(
+                                subjectId,
+                                id,
+                              );
                             }
                           } else {
                             final created = await service.createSubject(
@@ -969,9 +1324,13 @@ class _PedagogicalCatalogScreenState
                               code: code,
                               countryId: selectedCountryId,
                             );
-                            if (created == null) throw Exception('La création a échoué.');
+                            if (created == null)
+                              throw Exception('La création a échoué.');
                             subjectId = created.id;
-                            await service.linkSubjectToClasses(subjectId, selectedClassIds.toList());
+                            await service.linkSubjectToClasses(
+                              subjectId,
+                              selectedClassIds.toList(),
+                            );
                           }
                           ref.invalidate(subjectsProvider);
                           ref.invalidate(subjectsForClassProvider);
@@ -990,9 +1349,16 @@ class _PedagogicalCatalogScreenState
                     ? const SizedBox(
                         width: 16,
                         height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
-                    : Text(isEditing ? 'Enregistrer les modifications' : 'Créer la matière'),
+                    : Text(
+                        isEditing
+                            ? 'Enregistrer les modifications'
+                            : 'Créer la matière',
+                      ),
               ),
             ],
           );
@@ -1019,7 +1385,9 @@ class _PedagogicalCatalogScreenState
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => AlertDialog(
           backgroundColor: AppTheme.cardBackground,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: AppDialogTitle(
             icon: Icons.psychology_rounded,
             iconColor: AppTheme.accentCyan,
@@ -1047,7 +1415,9 @@ class _PedagogicalCatalogScreenState
                       controller: countController,
                       keyboardType: TextInputType.number,
                       style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(labelText: 'Nombre de types à générer (1-20)'),
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre de types à générer (1-20)',
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextField(
@@ -1061,7 +1431,10 @@ class _PedagogicalCatalogScreenState
                   ] else ...[
                     Text(
                       '${generated!.length} type(s) généré(s) — décochez ceux à ignorer, puis importez la sélection.',
-                      style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     ...List.generate(generated!.length, (i) {
@@ -1083,13 +1456,22 @@ class _PedagogicalCatalogScreenState
                               selectedIndices.remove(i);
                             }
                           }),
-                          title: Text(item['element_type'] as String? ?? '',
-                              style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                          title: Text(
+                            item['element_type'] as String? ?? '',
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
                           subtitle: Text(
                             item['description'] as String? ?? '',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.inter(color: AppTheme.textMuted, fontSize: 11),
+                            style: GoogleFonts.inter(
+                              color: AppTheme.textMuted,
+                              fontSize: 11,
+                            ),
                           ),
                         ),
                       );
@@ -1103,7 +1485,13 @@ class _PedagogicalCatalogScreenState
                         color: AppTheme.accentRose.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(submitError!, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                      child: Text(
+                        submitError!,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppTheme.accentRose,
+                        ),
+                      ),
                     ),
                   ],
                 ],
@@ -1117,30 +1505,41 @@ class _PedagogicalCatalogScreenState
             ),
             if (generated == null)
               ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentCyan),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accentCyan,
+                ),
                 onPressed: isGenerating
                     ? null
                     : () async {
-                        final count = int.tryParse(countController.text.trim()) ?? 8;
+                        final count =
+                            int.tryParse(countController.text.trim()) ?? 8;
                         setModalState(() {
                           isGenerating = true;
                           submitError = null;
                         });
                         try {
                           final service = ref.read(supabaseServiceProvider);
-                          final subject = await service.getSubject(_selectedSubjectId!);
+                          final subject = await service.getSubject(
+                            _selectedSubjectId!,
+                          );
                           final result = await service.generateAiCatalogTypes(
                             subjectId: _selectedSubjectId,
                             subjectName: subject?.name ?? '',
                             countryId: subject?.countryId,
-                            educationLevel: levelController.text.trim().isEmpty ? null : levelController.text.trim(),
+                            educationLevel: levelController.text.trim().isEmpty
+                                ? null
+                                : levelController.text.trim(),
                             count: count,
-                            rawNotes: notesController.text.trim().isEmpty ? null : notesController.text.trim(),
+                            rawNotes: notesController.text.trim().isEmpty
+                                ? null
+                                : notesController.text.trim(),
                           );
                           setModalState(() {
                             isGenerating = false;
                             generated = result;
-                            selectedIndices = Set.from(List.generate(result.length, (i) => i));
+                            selectedIndices = Set.from(
+                              List.generate(result.length, (i) => i),
+                            );
                           });
                         } catch (e) {
                           setModalState(() {
@@ -1150,13 +1549,24 @@ class _PedagogicalCatalogScreenState
                         }
                       },
                 icon: isGenerating
-                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
                     : const Icon(Icons.auto_awesome_rounded, size: 16),
-                label: Text(isGenerating ? 'Génération en cours...' : 'Générer'),
+                label: Text(
+                  isGenerating ? 'Génération en cours...' : 'Générer',
+                ),
               )
             else
               ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentEmerald),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accentEmerald,
+                ),
                 onPressed: isGenerating || selectedIndices.isEmpty
                     ? null
                     : () async {
@@ -1166,12 +1576,17 @@ class _PedagogicalCatalogScreenState
                           // Évite les doublons si "Générer par IA" a déjà été lancé une première
                           // fois pour cette matière (suggestions qui se recoupent) : on ignore
                           // silencieusement tout type dont le nom existe déjà dans le catalogue.
-                          final existing = await ref.read(contentCatalogProvider(_selectedSubjectId!).future);
-                          final existingNames = existing.map((e) => e.elementType.toLowerCase().trim()).toSet();
+                          final existing = await ref.read(
+                            contentCatalogProvider(_selectedSubjectId!).future,
+                          );
+                          final existingNames = existing
+                              .map((e) => e.elementType.toLowerCase().trim())
+                              .toSet();
                           var skipped = 0;
                           for (final i in selectedIndices) {
                             final item = generated![i];
-                            final name = (item['element_type'] as String? ?? '').trim();
+                            final name = (item['element_type'] as String? ?? '')
+                                .trim();
                             if (existingNames.contains(name.toLowerCase())) {
                               skipped++;
                               continue;
@@ -1183,14 +1598,18 @@ class _PedagogicalCatalogScreenState
                             );
                             existingNames.add(name.toLowerCase());
                           }
-                          ref.invalidate(contentCatalogProvider(_selectedSubjectId!));
+                          ref.invalidate(
+                            contentCatalogProvider(_selectedSubjectId!),
+                          );
                           if (ctx.mounted) Navigator.pop(ctx);
                           if (skipped > 0 && context.mounted) {
                             // ignore: use_build_context_synchronously
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 backgroundColor: AppTheme.accentAmber,
-                                content: Text('$skipped type(s) déjà existant(s) ignoré(s).'),
+                                content: Text(
+                                  '$skipped type(s) déjà existant(s) ignoré(s).',
+                                ),
                               ),
                             );
                           }
@@ -1202,7 +1621,14 @@ class _PedagogicalCatalogScreenState
                         }
                       },
                 icon: isGenerating
-                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
                     : const Icon(Icons.check_rounded, size: 16),
                 label: Text('Importer ${selectedIndices.length} type(s)'),
               ),
@@ -1212,7 +1638,10 @@ class _PedagogicalCatalogScreenState
     );
   }
 
-  void _showAddTypeDialog(BuildContext context, {ContentCatalogItem? existing}) {
+  void _showAddTypeDialog(
+    BuildContext context, {
+    ContentCatalogItem? existing,
+  }) {
     final isEditing = existing != null;
     final typeCtrl = TextEditingController(text: existing?.elementType ?? '');
     final descCtrl = TextEditingController(text: existing?.description ?? '');
@@ -1224,7 +1653,9 @@ class _PedagogicalCatalogScreenState
         title: AppDialogTitle(
           icon: Icons.bookmark_outline_rounded,
           iconColor: AppTheme.accentPurple,
-          text: isEditing ? 'Modifier le type d\'élément' : 'Ajouter un type d\'élément',
+          text: isEditing
+              ? 'Modifier le type d\'élément'
+              : 'Ajouter un type d\'élément',
           onClose: () => Navigator.pop(ctx),
         ),
         content: SizedBox(
@@ -1236,7 +1667,8 @@ class _PedagogicalCatalogScreenState
                 controller: typeCtrl,
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
-                  labelText: 'Nom du type (ex: Théorème, Définition, Schéma...)',
+                  labelText:
+                      'Nom du type (ex: Théorème, Définition, Schéma...)',
                   labelStyle: TextStyle(color: AppTheme.textSecondary),
                 ),
               ),
@@ -1256,12 +1688,18 @@ class _PedagogicalCatalogScreenState
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler', style: TextStyle(color: AppTheme.textSecondary)),
+            child: const Text(
+              'Annuler',
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentEmerald),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accentEmerald,
+            ),
             onPressed: () async {
-              if (typeCtrl.text.trim().isEmpty || _selectedSubjectId == null) return;
+              if (typeCtrl.text.trim().isEmpty || _selectedSubjectId == null)
+                return;
               final service = ref.read(supabaseServiceProvider);
               if (isEditing) {
                 await service.updateContentCatalogItem(
@@ -1279,7 +1717,10 @@ class _PedagogicalCatalogScreenState
               ref.invalidate(contentCatalogProvider(_selectedSubjectId!));
               if (ctx.mounted) Navigator.pop(ctx);
             },
-            child: Text(isEditing ? 'Enregistrer les modifications' : 'Enregistrer', style: const TextStyle(color: Colors.white)),
+            child: Text(
+              isEditing ? 'Enregistrer les modifications' : 'Enregistrer',
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),

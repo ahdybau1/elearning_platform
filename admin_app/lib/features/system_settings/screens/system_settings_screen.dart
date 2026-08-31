@@ -324,39 +324,28 @@ class _GeneralSettingsFormState extends ConsumerState<_GeneralSettingsForm> {
             children: [
               _sectionLabel('Identité de l\'application'),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: _field(_appNameCtrl, 'Nom de l\'application')),
-                  const SizedBox(width: 16),
-                  Expanded(child: _field(_taglineCtrl, 'Slogan (tagline)')),
-                ],
-              ),
+              _fieldsRow(context, [
+                _field(_appNameCtrl, 'Nom de l\'application'),
+                _field(_taglineCtrl, 'Slogan (tagline)'),
+              ]),
               const SizedBox(height: 24),
 
               _sectionLabel('Contact Support (élèves & parents)'),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: _field(_supportEmailCtrl, 'Email de support')),
-                  const SizedBox(width: 16),
-                  Expanded(child: _field(_supportPhoneCtrl, 'Téléphone de support')),
-                  const SizedBox(width: 16),
-                  Expanded(child: _field(_supportWhatsappCtrl, 'Lien WhatsApp de support')),
-                ],
-              ),
+              _fieldsRow(context, [
+                _field(_supportEmailCtrl, 'Email de support'),
+                _field(_supportPhoneCtrl, 'Téléphone de support'),
+                _field(_supportWhatsappCtrl, 'Lien WhatsApp de support'),
+              ]),
               const SizedBox(height: 24),
 
               _sectionLabel('Textes Légaux (liens vers documents publiés)'),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: _field(_termsUrlCtrl, 'CGU (URL)')),
-                  const SizedBox(width: 16),
-                  Expanded(child: _field(_privacyUrlCtrl, 'Politique de confidentialité (URL)')),
-                  const SizedBox(width: 16),
-                  Expanded(child: _field(_legalUrlCtrl, 'Mentions légales (URL)')),
-                ],
-              ),
+              _fieldsRow(context, [
+                _field(_termsUrlCtrl, 'CGU (URL)'),
+                _field(_privacyUrlCtrl, 'Politique de confidentialité (URL)'),
+                _field(_legalUrlCtrl, 'Mentions légales (URL)'),
+              ]),
               const SizedBox(height: 24),
 
               _sectionLabel('Langues Activées (préparation internationalisation)'),
@@ -513,6 +502,30 @@ class _GeneralSettingsFormState extends ConsumerState<_GeneralSettingsForm> {
       maxLines: maxLines,
       style: const TextStyle(color: Colors.white, fontSize: 13),
       decoration: InputDecoration(labelText: label),
+    );
+  }
+
+  /// 2 ou 3 champs côte à côte via Expanded ne laissaient plus que quelques dizaines de pixels
+  /// par champ sur mobile — labels et valeurs totalement tronqués (retour utilisateur réel,
+  /// 2026-08-30). Sous 700px, les champs s'empilent en pleine largeur.
+  Widget _fieldsRow(BuildContext context, List<Widget> fields) {
+    if (MediaQuery.of(context).size.width < 700) {
+      return Column(
+        children: [
+          for (final f in fields) ...[
+            f,
+            if (f != fields.last) const SizedBox(height: 12),
+          ],
+        ],
+      );
+    }
+    return Row(
+      children: [
+        for (final f in fields) ...[
+          Expanded(child: f),
+          if (f != fields.last) const SizedBox(width: 16),
+        ],
+      ],
     );
   }
 

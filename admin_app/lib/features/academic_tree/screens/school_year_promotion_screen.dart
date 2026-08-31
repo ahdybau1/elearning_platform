@@ -18,7 +18,8 @@ class SchoolYearPromotionScreen extends ConsumerStatefulWidget {
 
 class _SchoolYearPromotionScreenState
     extends ConsumerState<SchoolYearPromotionScreen> {
-  int _activeTab = 0; // 0: Années Scolaires & Trimestres, 1: Campagne de Passage
+  int _activeTab =
+      0; // 0: Années Scolaires & Trimestres, 1: Campagne de Passage
 
   @override
   Widget build(BuildContext context) {
@@ -32,54 +33,53 @@ class _SchoolYearPromotionScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // Header — Column plutôt que Row : un bouton au libellé long ("Nouvelle Année
+            // Scolaire") comme simple frère d'un Expanded ne rétrécit jamais lui-même, il
+            // affamait le titre jusqu'à ~40px de large (retour utilisateur réel, texte écrit
+            // à la verticale lettre par lettre, 2026-08-30 — même bug que academic_tree_screen.dart).
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Expanded : titre 24pt + longue phrase de sous-titre débordait hors de l'écran
-                // sur mobile à côté du bouton (retour utilisateur réel, 2026-08-30).
-                Expanded(
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppTheme.accentEmerald.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.calendar_month_rounded,
-                          color: AppTheme.accentEmerald,
-                          size: 24,
-                        ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentEmerald.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Année Scolaire & Campagne de Passage',
-                              style: GoogleFonts.inter(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            Text(
-                              'Calendrier trimestriel et bascule annuelle des profils élèves (Cas A: Passage / Cas B: Redoublement)',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
+                      child: const Icon(
+                        Icons.calendar_month_rounded,
+                        color: AppTheme.accentEmerald,
+                        size: 24,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Année Scolaire & Campagne de Passage',
+                            style: GoogleFonts.inter(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            'Calendrier trimestriel et bascule annuelle des profils élèves (Cas A: Passage / Cas B: Redoublement)',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(height: 14),
                 ElevatedButton.icon(
                   onPressed: () => _showAddYearDialog(context),
                   icon: const Icon(Icons.add_rounded, size: 18),
@@ -100,11 +100,13 @@ class _SchoolYearPromotionScreenState
             ),
             const SizedBox(height: 24),
 
-            // Tab bar
-            Row(
+            // Tab bar — Wrap plutôt que Row : les 2 onglets côte à côte débordaient hors de
+            // l'écran sur mobile (2e onglet coupé, retour utilisateur réel, 2026-08-30).
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
               children: [
                 _buildTabButton('Années & Calendrier Trimestriel', 0),
-                const SizedBox(width: 12),
                 _buildTabButton('Campagne de Passage de Classe', 1),
               ],
             ),
@@ -130,7 +132,9 @@ class _SchoolYearPromotionScreenState
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         decoration: BoxDecoration(
-          color: isSel ? AppTheme.accentEmerald.withValues(alpha: 0.15) : AppTheme.cardBackground,
+          color: isSel
+              ? AppTheme.accentEmerald.withValues(alpha: 0.15)
+              : AppTheme.cardBackground,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSel ? AppTheme.accentEmerald : AppTheme.borderColor,
@@ -160,17 +164,26 @@ class _SchoolYearPromotionScreenState
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.calendar_month_rounded,
-                    size: 48, color: AppTheme.textMuted.withValues(alpha: 0.5)),
+                Icon(
+                  Icons.calendar_month_rounded,
+                  size: 48,
+                  color: AppTheme.textMuted.withValues(alpha: 0.5),
+                ),
                 const SizedBox(height: 16),
                 Text(
                   'Aucune année scolaire configurée.',
-                  style: GoogleFonts.inter(fontSize: 15, color: AppTheme.textSecondary),
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Cliquez sur "Nouvelle Année Scolaire" pour commencer.',
-                  style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: AppTheme.textMuted,
+                  ),
                 ),
               ],
             ),
@@ -188,118 +201,154 @@ class _SchoolYearPromotionScreenState
                 color: AppTheme.cardBackground,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: y.isCurrent ? AppTheme.accentEmerald : AppTheme.borderColor,
+                  color: y.isCurrent
+                      ? AppTheme.accentEmerald
+                      : AppTheme.borderColor,
                 ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  // Column plutôt que Row(spaceBetween, [Expanded(Wrap), Wrap]) : un Wrap de 3
+                  // boutons comme simple frère d'un Expanded ne rétrécit jamais lui-même — il
+                  // affamait le nom de l'année jusqu'à quelques pixels de large (retour
+                  // utilisateur réel, "2026-2026" écrit à la verticale chiffre par chiffre,
+                  // 2026-08-30 — même bug que academic_tree_screen.dart).
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 12,
+                    runSpacing: 6,
                     children: [
-                      Expanded(
-                        child: Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          spacing: 12,
-                          runSpacing: 6,
-                          children: [
-                            Text(
-                              y.name,
-                              style: GoogleFonts.inter(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: y.isActive ? Colors.white : Colors.white38,
-                                decoration: y.isActive ? null : TextDecoration.lineThrough,
-                              ),
-                            ),
-                            if (y.isCurrent)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.accentEmerald.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  'ACTIVE',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppTheme.accentEmerald,
-                                  ),
-                                ),
-                              ),
-                            if (!y.isActive)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.accentAmber.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  'ARCHIVÉE',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppTheme.accentAmber,
-                                  ),
-                                ),
-                              ),
-                          ],
+                      Text(
+                        y.name,
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: y.isActive ? Colors.white : Colors.white38,
+                          decoration: y.isActive
+                              ? null
+                              : TextDecoration.lineThrough,
                         ),
                       ),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              side: const BorderSide(color: AppTheme.borderColor),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            ),
-                            onPressed: () => _showEditYearDialog(context, y),
-                            icon: const Icon(Icons.edit_rounded, size: 16),
-                            label: Text('Modifier', style: GoogleFonts.inter(fontSize: 12)),
+                      if (y.isCurrent)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
                           ),
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppTheme.accentAmber,
-                              side: const BorderSide(color: AppTheme.accentAmber),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppTheme.accentEmerald.withValues(
+                              alpha: 0.15,
                             ),
-                            onPressed: () => _showToggleYearActiveConfirmation(context, y),
-                            icon: Icon(y.isActive ? Icons.archive_rounded : Icons.unarchive_rounded, size: 16),
-                            label: Text(y.isActive ? 'Archiver' : 'Désarchiver', style: GoogleFonts.inter(fontSize: 12)),
+                            borderRadius: BorderRadius.circular(6),
                           ),
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: y.promotionCampaignOpen
-                                  ? Colors.redAccent
-                                  : AppTheme.accentCyan,
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            ),
-                            onPressed: () => _showToggleCampaignConfirmation(context, y),
-                            icon: Icon(
-                              y.promotionCampaignOpen
-                                  ? Icons.lock_clock_rounded
-                                  : Icons.campaign_rounded,
-                              size: 16,
-                            ),
-                            label: Text(
-                              y.promotionCampaignOpen
-                                  ? 'Fermer la Campagne'
-                                  : 'Ouvrir Campagne de Passage',
-                              style: GoogleFonts.inter(fontSize: 12),
+                          child: Text(
+                            'ACTIVE',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.accentEmerald,
                             ),
                           ),
-                        ],
+                        ),
+                      if (!y.isActive)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.accentAmber.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'ARCHIVÉE',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.accentAmber,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(color: AppTheme.borderColor),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                        ),
+                        onPressed: () => _showEditYearDialog(context, y),
+                        icon: const Icon(Icons.edit_rounded, size: 16),
+                        label: Text(
+                          'Modifier',
+                          style: GoogleFonts.inter(fontSize: 12),
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.accentAmber,
+                          side: const BorderSide(color: AppTheme.accentAmber),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                        ),
+                        onPressed: () =>
+                            _showToggleYearActiveConfirmation(context, y),
+                        icon: Icon(
+                          y.isActive
+                              ? Icons.archive_rounded
+                              : Icons.unarchive_rounded,
+                          size: 16,
+                        ),
+                        label: Text(
+                          y.isActive ? 'Archiver' : 'Désarchiver',
+                          style: GoogleFonts.inter(fontSize: 12),
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: y.promotionCampaignOpen
+                              ? Colors.redAccent
+                              : AppTheme.accentCyan,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                        ),
+                        onPressed: () =>
+                            _showToggleCampaignConfirmation(context, y),
+                        icon: Icon(
+                          y.promotionCampaignOpen
+                              ? Icons.lock_clock_rounded
+                              : Icons.campaign_rounded,
+                          size: 16,
+                        ),
+                        label: Text(
+                          y.promotionCampaignOpen
+                              ? 'Fermer la Campagne'
+                              : 'Ouvrir Campagne de Passage',
+                          style: GoogleFonts.inter(fontSize: 12),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'Période: du ${DateFormat('dd MMMM yyyy').format(y.startDate)} au ${DateFormat('dd MMMM yyyy').format(y.endDate)}',
-                    style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary),
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   const Divider(color: AppTheme.borderColor),
@@ -321,9 +370,18 @@ class _SchoolYearPromotionScreenState
                       ),
                       TextButton.icon(
                         onPressed: () => _showAddTermDialog(context, y),
-                        icon: const Icon(Icons.add_rounded, size: 16, color: AppTheme.accentEmerald),
-                        label: Text('Ajouter un Trimestre',
-                            style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentEmerald)),
+                        icon: const Icon(
+                          Icons.add_rounded,
+                          size: 16,
+                          color: AppTheme.accentEmerald,
+                        ),
+                        label: Text(
+                          'Ajouter un Trimestre',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: AppTheme.accentEmerald,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -331,14 +389,20 @@ class _SchoolYearPromotionScreenState
                   Consumer(
                     builder: (context, ref, _) {
                       final termsAsync = ref.watch(termsProvider(y.countryId));
-                      final terms = (termsAsync.valueOrNull ?? [])
-                          .where((t) => t.schoolYear == y.name)
-                          .toList()
-                        ..sort((a, b) => a.startDate.compareTo(b.startDate));
+                      final terms =
+                          (termsAsync.valueOrNull ?? [])
+                              .where((t) => t.schoolYear == y.name)
+                              .toList()
+                            ..sort(
+                              (a, b) => a.startDate.compareTo(b.startDate),
+                            );
                       if (terms.isEmpty) {
                         return Text(
                           'Aucun trimestre défini pour cette année scolaire — cliquez sur "Ajouter un Trimestre".',
-                          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted),
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: AppTheme.textMuted,
+                          ),
                         );
                       }
                       final now = DateTime.now();
@@ -346,7 +410,13 @@ class _SchoolYearPromotionScreenState
                         spacing: 12,
                         runSpacing: 10,
                         children: terms
-                            .map((t) => _buildTermBadge(context, t, !t.startDate.isAfter(now)))
+                            .map(
+                              (t) => _buildTermBadge(
+                                context,
+                                t,
+                                !t.startDate.isAfter(now),
+                              ),
+                            )
                             .toList(),
                       );
                     },
@@ -384,11 +454,15 @@ class _SchoolYearPromotionScreenState
             Icon(
               !active
                   ? Icons.inventory_2_rounded
-                  : (isUnlocked ? Icons.lock_open_rounded : Icons.lock_outline_rounded),
+                  : (isUnlocked
+                        ? Icons.lock_open_rounded
+                        : Icons.lock_outline_rounded),
               size: 14,
               color: !active
                   ? AppTheme.accentAmber
-                  : (isUnlocked ? AppTheme.accentEmerald : AppTheme.textSecondary),
+                  : (isUnlocked
+                        ? AppTheme.accentEmerald
+                        : AppTheme.textSecondary),
             ),
             const SizedBox(width: 8),
             Column(
@@ -407,7 +481,10 @@ class _SchoolYearPromotionScreenState
                 ),
                 Text(
                   dates,
-                  style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textSecondary),
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -419,7 +496,9 @@ class _SchoolYearPromotionScreenState
     );
   }
 
-  Widget _buildPromotionsTab(AsyncValue<List<PromotionRecord>> promotionsAsync) {
+  Widget _buildPromotionsTab(
+    AsyncValue<List<PromotionRecord>> promotionsAsync,
+  ) {
     return promotionsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, _) => Center(
@@ -431,11 +510,18 @@ class _SchoolYearPromotionScreenState
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.history_edu_rounded, size: 48, color: AppTheme.textMuted.withValues(alpha: 0.5)),
+                Icon(
+                  Icons.history_edu_rounded,
+                  size: 48,
+                  color: AppTheme.textMuted.withValues(alpha: 0.5),
+                ),
                 const SizedBox(height: 16),
                 Text(
                   'Aucun historique de passage de classe pour le moment.',
-                  style: GoogleFonts.inter(fontSize: 15, color: AppTheme.textSecondary),
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -450,7 +536,8 @@ class _SchoolYearPromotionScreenState
           ),
           child: ListView.separated(
             itemCount: records.length,
-            separatorBuilder: (_, _) => const Divider(color: AppTheme.borderColor, height: 1),
+            separatorBuilder: (_, _) =>
+                const Divider(color: AppTheme.borderColor, height: 1),
             itemBuilder: (context, index) {
               final r = records[index];
               final isPromotion = r.status == 'valide';
@@ -476,24 +563,37 @@ class _SchoolYearPromotionScreenState
                   // bruts, illisibles pour un admin.
                   future: Future.wait([
                     service.getNode(r.fromClassNodeId),
-                    if (r.toClassNodeId != null) service.getNode(r.toClassNodeId) else Future.value(null),
+                    if (r.toClassNodeId != null)
+                      service.getNode(r.toClassNodeId)
+                    else
+                      Future.value(null),
                   ]),
                   builder: (context, snapshot) {
                     final fromName = snapshot.data?[0]?.name ?? '…';
-                    final toName =
-                        r.toClassNodeId == null ? 'Même classe' : (snapshot.data?[1]?.name ?? '…');
+                    final toName = r.toClassNodeId == null
+                        ? 'Même classe'
+                        : (snapshot.data?[1]?.name ?? '…');
                     return Text(
                       'Élève : $fromName ➔ $toName',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     );
                   },
                 ),
                 subtitle: Text(
                   'Année scolaire: ${r.schoolYear} • Traité le ${DateFormat('dd/MM/yyyy').format(r.processedAt)}',
-                  style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
                 trailing: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: isPromotion
                         ? AppTheme.accentEmerald.withValues(alpha: 0.15)
@@ -501,11 +601,15 @@ class _SchoolYearPromotionScreenState
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    isPromotion ? 'Cas A: Passage Validé' : 'Cas B: Redoublement',
+                    isPromotion
+                        ? 'Cas A: Passage Validé'
+                        : 'Cas B: Redoublement',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: isPromotion ? AppTheme.accentEmerald : Colors.amber,
+                      color: isPromotion
+                          ? AppTheme.accentEmerald
+                          : Colors.amber,
                     ),
                   ),
                 ),
@@ -532,7 +636,9 @@ class _SchoolYearPromotionScreenState
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => AlertDialog(
           backgroundColor: AppTheme.cardBackground,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: AppDialogTitle(
             icon: Icons.calendar_month_rounded,
             text: 'Créer une Année Scolaire',
@@ -551,14 +657,18 @@ class _SchoolYearPromotionScreenState
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: 'Nom de l\'année (ex: 2027 - 2028)',
-                      labelStyle: const TextStyle(color: AppTheme.textSecondary),
+                      labelStyle: const TextStyle(
+                        color: AppTheme.textSecondary,
+                      ),
                       errorText: fieldError,
                     ),
                   ),
                   const SizedBox(height: 16),
                   Consumer(
                     builder: (context, ref, _) {
-                      final countriesAsync = ref.watch(nodesByTypeProvider('country'));
+                      final countriesAsync = ref.watch(
+                        nodesByTypeProvider('country'),
+                      );
                       final countries = countriesAsync.valueOrNull ?? [];
                       return DropdownButtonFormField<String?>(
                         // ignore: deprecated_member_use
@@ -571,9 +681,15 @@ class _SchoolYearPromotionScreenState
                           prefixIcon: Icon(Icons.public_rounded, size: 20),
                         ),
                         items: countries
-                            .map((c) => DropdownMenuItem<String?>(value: c.id, child: Text(c.name)))
+                            .map(
+                              (c) => DropdownMenuItem<String?>(
+                                value: c.id,
+                                child: Text(c.name),
+                              ),
+                            )
                             .toList(),
-                        onChanged: (v) => setModalState(() => selectedCountryId = v),
+                        onChanged: (v) =>
+                            setModalState(() => selectedCountryId = v),
                       );
                     },
                   ),
@@ -586,15 +702,22 @@ class _SchoolYearPromotionScreenState
                             final picked = await showDatePicker(
                               context: ctx,
                               initialDate: DateTime.now(),
-                              firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                              lastDate: DateTime.now().add(const Duration(days: 1825)),
+                              firstDate: DateTime.now().subtract(
+                                const Duration(days: 365),
+                              ),
+                              lastDate: DateTime.now().add(
+                                const Duration(days: 1825),
+                              ),
                             );
-                            if (picked != null) setModalState(() => startDate = picked);
+                            if (picked != null)
+                              setModalState(() => startDate = picked);
                           },
                           icon: const Icon(Icons.event_rounded, size: 16),
-                          label: Text(startDate == null
-                              ? 'Début'
-                              : DateFormat('dd/MM/yyyy').format(startDate!)),
+                          label: Text(
+                            startDate == null
+                                ? 'Début'
+                                : DateFormat('dd/MM/yyyy').format(startDate!),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -603,15 +726,25 @@ class _SchoolYearPromotionScreenState
                           onPressed: () async {
                             final picked = await showDatePicker(
                               context: ctx,
-                              initialDate: startDate?.add(const Duration(days: 300)) ?? DateTime.now(),
-                              firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                              lastDate: DateTime.now().add(const Duration(days: 1825)),
+                              initialDate:
+                                  startDate?.add(const Duration(days: 300)) ??
+                                  DateTime.now(),
+                              firstDate: DateTime.now().subtract(
+                                const Duration(days: 365),
+                              ),
+                              lastDate: DateTime.now().add(
+                                const Duration(days: 1825),
+                              ),
                             );
-                            if (picked != null) setModalState(() => endDate = picked);
+                            if (picked != null)
+                              setModalState(() => endDate = picked);
                           },
                           icon: const Icon(Icons.event_rounded, size: 16),
                           label: Text(
-                              endDate == null ? 'Fin' : DateFormat('dd/MM/yyyy').format(endDate!)),
+                            endDate == null
+                                ? 'Fin'
+                                : DateFormat('dd/MM/yyyy').format(endDate!),
+                          ),
                         ),
                       ),
                     ],
@@ -623,9 +756,15 @@ class _SchoolYearPromotionScreenState
                     controlAffinity: ListTileControlAffinity.leading,
                     value: isCurrent,
                     activeColor: AppTheme.accentEmerald,
-                    title: Text('Marquer comme année scolaire en cours',
-                        style: GoogleFonts.inter(fontSize: 13, color: Colors.white)),
-                    onChanged: (v) => setModalState(() => isCurrent = v ?? false),
+                    title: Text(
+                      'Marquer comme année scolaire en cours',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: Colors.white,
+                      ),
+                    ),
+                    onChanged: (v) =>
+                        setModalState(() => isCurrent = v ?? false),
                   ),
                   if (submitError != null) ...[
                     const SizedBox(height: 12),
@@ -635,8 +774,13 @@ class _SchoolYearPromotionScreenState
                         color: AppTheme.accentRose.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(submitError!,
-                          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                      child: Text(
+                        submitError!,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppTheme.accentRose,
+                        ),
+                      ),
                     ),
                   ],
                 ],
@@ -646,24 +790,39 @@ class _SchoolYearPromotionScreenState
           actions: [
             TextButton(
               onPressed: isLoading ? null : () => Navigator.pop(ctx),
-              child: const Text('Annuler', style: TextStyle(color: AppTheme.textSecondary)),
+              child: const Text(
+                'Annuler',
+                style: TextStyle(color: AppTheme.textSecondary),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentEmerald),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentEmerald,
+              ),
               onPressed: isLoading
                   ? null
                   : () async {
                       final name = nameCtrl.text.trim();
                       if (name.isEmpty) {
-                        setModalState(() => fieldError = 'Le nom est obligatoire');
+                        setModalState(
+                          () => fieldError = 'Le nom est obligatoire',
+                        );
                         return;
                       }
-                      if (selectedCountryId == null || startDate == null || endDate == null) {
-                        setModalState(() => submitError = 'Pays, date de début et date de fin sont obligatoires.');
+                      if (selectedCountryId == null ||
+                          startDate == null ||
+                          endDate == null) {
+                        setModalState(
+                          () => submitError =
+                              'Pays, date de début et date de fin sont obligatoires.',
+                        );
                         return;
                       }
                       if (!endDate!.isAfter(startDate!)) {
-                        setModalState(() => submitError = 'La date de fin doit être après la date de début.');
+                        setModalState(
+                          () => submitError =
+                              'La date de fin doit être après la date de début.',
+                        );
                         return;
                       }
                       setModalState(() {
@@ -693,7 +852,10 @@ class _SchoolYearPromotionScreenState
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Text('Créer', style: TextStyle(color: Colors.white)),
             ),
@@ -713,7 +875,9 @@ class _SchoolYearPromotionScreenState
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => AlertDialog(
           backgroundColor: AppTheme.cardBackground,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: AppDialogTitle(
             icon: isOpen ? Icons.lock_clock_rounded : Icons.campaign_rounded,
             iconColor: isOpen ? Colors.redAccent : AppTheme.accentCyan,
@@ -732,10 +896,14 @@ class _SchoolYearPromotionScreenState
                   isOpen
                       ? 'La campagne de passage de classe pour cette année sera marquée comme fermée.'
                       : 'La campagne de passage de classe pour cette année sera marquée comme '
-                          'ouverte. Ce bouton ne fait que basculer ce statut — il ne déclenche '
-                          'aucune promotion automatique des élèves (cette fonctionnalité n\'est pas '
-                          'encore implémentée).',
-                  style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.4),
+                            'ouverte. Ce bouton ne fait que basculer ce statut — il ne déclenche '
+                            'aucune promotion automatique des élèves (cette fonctionnalité n\'est pas '
+                            'encore implémentée).',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: Colors.white70,
+                    height: 1.4,
+                  ),
                 ),
                 if (errorText != null) ...[
                   const SizedBox(height: 16),
@@ -745,8 +913,13 @@ class _SchoolYearPromotionScreenState
                       color: AppTheme.accentRose.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text(errorText!,
-                        style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                    child: Text(
+                      errorText!,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: AppTheme.accentRose,
+                      ),
+                    ),
                   ),
                 ],
               ],
@@ -759,7 +932,9 @@ class _SchoolYearPromotionScreenState
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: isOpen ? Colors.redAccent : AppTheme.accentCyan,
+                backgroundColor: isOpen
+                    ? Colors.redAccent
+                    : AppTheme.accentCyan,
               ),
               onPressed: isLoading
                   ? null
@@ -777,9 +952,11 @@ class _SchoolYearPromotionScreenState
                         messenger.showSnackBar(
                           SnackBar(
                             backgroundColor: AppTheme.accentEmerald,
-                            content: Text(isOpen
-                                ? 'Campagne de "${year.name}" fermée.'
-                                : 'Campagne de "${year.name}" ouverte.'),
+                            content: Text(
+                              isOpen
+                                  ? 'Campagne de "${year.name}" fermée.'
+                                  : 'Campagne de "${year.name}" ouverte.',
+                            ),
                           ),
                         );
                       } catch (e) {
@@ -793,7 +970,10 @@ class _SchoolYearPromotionScreenState
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : Text(isOpen ? 'Fermer' : 'Ouvrir'),
             ),
@@ -820,7 +1000,9 @@ class _SchoolYearPromotionScreenState
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => AlertDialog(
           backgroundColor: AppTheme.cardBackground,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: AppDialogTitle(
             icon: Icons.edit_calendar_rounded,
             text: 'Modifier "${year.name}"',
@@ -839,7 +1021,9 @@ class _SchoolYearPromotionScreenState
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: 'Nom de l\'année (ex: 2027 - 2028)',
-                      labelStyle: const TextStyle(color: AppTheme.textSecondary),
+                      labelStyle: const TextStyle(
+                        color: AppTheme.textSecondary,
+                      ),
                       errorText: fieldError,
                     ),
                   ),
@@ -852,13 +1036,20 @@ class _SchoolYearPromotionScreenState
                             final picked = await showDatePicker(
                               context: ctx,
                               initialDate: startDate,
-                              firstDate: DateTime.now().subtract(const Duration(days: 1825)),
-                              lastDate: DateTime.now().add(const Duration(days: 1825)),
+                              firstDate: DateTime.now().subtract(
+                                const Duration(days: 1825),
+                              ),
+                              lastDate: DateTime.now().add(
+                                const Duration(days: 1825),
+                              ),
                             );
-                            if (picked != null) setModalState(() => startDate = picked);
+                            if (picked != null)
+                              setModalState(() => startDate = picked);
                           },
                           icon: const Icon(Icons.event_rounded, size: 16),
-                          label: Text(DateFormat('dd/MM/yyyy').format(startDate)),
+                          label: Text(
+                            DateFormat('dd/MM/yyyy').format(startDate),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -868,10 +1059,15 @@ class _SchoolYearPromotionScreenState
                             final picked = await showDatePicker(
                               context: ctx,
                               initialDate: endDate,
-                              firstDate: DateTime.now().subtract(const Duration(days: 1825)),
-                              lastDate: DateTime.now().add(const Duration(days: 1825)),
+                              firstDate: DateTime.now().subtract(
+                                const Duration(days: 1825),
+                              ),
+                              lastDate: DateTime.now().add(
+                                const Duration(days: 1825),
+                              ),
                             );
-                            if (picked != null) setModalState(() => endDate = picked);
+                            if (picked != null)
+                              setModalState(() => endDate = picked);
                           },
                           icon: const Icon(Icons.event_rounded, size: 16),
                           label: Text(DateFormat('dd/MM/yyyy').format(endDate)),
@@ -886,11 +1082,22 @@ class _SchoolYearPromotionScreenState
                     controlAffinity: ListTileControlAffinity.leading,
                     value: isCurrent,
                     activeColor: AppTheme.accentEmerald,
-                    title: Text('Marquer comme année scolaire en cours',
-                        style: GoogleFonts.inter(fontSize: 13, color: Colors.white)),
-                    subtitle: Text('Désactive ce statut sur les autres années de ce pays',
-                        style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted)),
-                    onChanged: (v) => setModalState(() => isCurrent = v ?? false),
+                    title: Text(
+                      'Marquer comme année scolaire en cours',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: Colors.white,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Désactive ce statut sur les autres années de ce pays',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: AppTheme.textMuted,
+                      ),
+                    ),
+                    onChanged: (v) =>
+                        setModalState(() => isCurrent = v ?? false),
                   ),
                   if (submitError != null) ...[
                     const SizedBox(height: 12),
@@ -900,8 +1107,13 @@ class _SchoolYearPromotionScreenState
                         color: AppTheme.accentRose.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(submitError!,
-                          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                      child: Text(
+                        submitError!,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppTheme.accentRose,
+                        ),
+                      ),
                     ),
                   ],
                 ],
@@ -911,20 +1123,30 @@ class _SchoolYearPromotionScreenState
           actions: [
             TextButton(
               onPressed: isLoading ? null : () => Navigator.pop(ctx),
-              child: const Text('Annuler', style: TextStyle(color: AppTheme.textSecondary)),
+              child: const Text(
+                'Annuler',
+                style: TextStyle(color: AppTheme.textSecondary),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentEmerald),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentEmerald,
+              ),
               onPressed: isLoading
                   ? null
                   : () async {
                       final name = nameCtrl.text.trim();
                       if (name.isEmpty) {
-                        setModalState(() => fieldError = 'Le nom est obligatoire');
+                        setModalState(
+                          () => fieldError = 'Le nom est obligatoire',
+                        );
                         return;
                       }
                       if (!endDate.isAfter(startDate)) {
-                        setModalState(() => submitError = 'La date de fin doit être après la date de début.');
+                        setModalState(
+                          () => submitError =
+                              'La date de fin doit être après la date de début.',
+                        );
                         return;
                       }
                       setModalState(() {
@@ -955,9 +1177,15 @@ class _SchoolYearPromotionScreenState
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
-                  : const Text('Enregistrer', style: TextStyle(color: Colors.white)),
+                  : const Text(
+                      'Enregistrer',
+                      style: TextStyle(color: Colors.white),
+                    ),
             ),
           ],
         ),
@@ -965,7 +1193,10 @@ class _SchoolYearPromotionScreenState
     );
   }
 
-  void _showToggleYearActiveConfirmation(BuildContext context, SchoolYear year) {
+  void _showToggleYearActiveConfirmation(
+    BuildContext context,
+    SchoolYear year,
+  ) {
     final isActive = year.isActive;
     bool isLoading = false;
     String? errorText;
@@ -975,11 +1206,15 @@ class _SchoolYearPromotionScreenState
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => AlertDialog(
           backgroundColor: AppTheme.cardBackground,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: AppDialogTitle(
             icon: isActive ? Icons.archive_rounded : Icons.unarchive_rounded,
             iconColor: AppTheme.accentAmber,
-            text: isActive ? 'Archiver "${year.name}" ?' : 'Désarchiver "${year.name}" ?',
+            text: isActive
+                ? 'Archiver "${year.name}" ?'
+                : 'Désarchiver "${year.name}" ?',
             onClose: () => Navigator.pop(ctx),
           ),
           content: SizedBox(
@@ -992,7 +1227,11 @@ class _SchoolYearPromotionScreenState
                   isActive
                       ? 'Cette année scolaire sera masquée par défaut, pas supprimée — ses trimestres et son historique de passage restent intacts.'
                       : 'Cette année scolaire redeviendra pleinement visible.',
-                  style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.4),
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: Colors.white70,
+                    height: 1.4,
+                  ),
                 ),
                 if (errorText != null) ...[
                   const SizedBox(height: 16),
@@ -1002,8 +1241,13 @@ class _SchoolYearPromotionScreenState
                       color: AppTheme.accentRose.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text(errorText!,
-                        style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                    child: Text(
+                      errorText!,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: AppTheme.accentRose,
+                      ),
+                    ),
                   ),
                 ],
               ],
@@ -1015,7 +1259,9 @@ class _SchoolYearPromotionScreenState
               child: const Text('Annuler'),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentAmber),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentAmber,
+              ),
               onPressed: isLoading
                   ? null
                   : () async {
@@ -1036,9 +1282,11 @@ class _SchoolYearPromotionScreenState
                         messenger.showSnackBar(
                           SnackBar(
                             backgroundColor: AppTheme.accentEmerald,
-                            content: Text(isActive
-                                ? 'Année "${year.name}" archivée.'
-                                : 'Année "${year.name}" désarchivée.'),
+                            content: Text(
+                              isActive
+                                  ? 'Année "${year.name}" archivée.'
+                                  : 'Année "${year.name}" désarchivée.',
+                            ),
                           ),
                         );
                       } catch (e) {
@@ -1052,7 +1300,10 @@ class _SchoolYearPromotionScreenState
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : Text(isActive ? 'Archiver' : 'Désarchiver'),
             ),
@@ -1078,7 +1329,9 @@ class _SchoolYearPromotionScreenState
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => AlertDialog(
           backgroundColor: AppTheme.cardBackground,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: AppDialogTitle(
             icon: Icons.calendar_month_rounded,
             iconColor: AppTheme.accentEmerald,
@@ -1110,15 +1363,22 @@ class _SchoolYearPromotionScreenState
                             final picked = await showDatePicker(
                               context: ctx,
                               initialDate: year.startDate,
-                              firstDate: year.startDate.subtract(const Duration(days: 30)),
-                              lastDate: year.endDate.add(const Duration(days: 30)),
+                              firstDate: year.startDate.subtract(
+                                const Duration(days: 30),
+                              ),
+                              lastDate: year.endDate.add(
+                                const Duration(days: 30),
+                              ),
                             );
-                            if (picked != null) setModalState(() => startDate = picked);
+                            if (picked != null)
+                              setModalState(() => startDate = picked);
                           },
                           icon: const Icon(Icons.event_rounded, size: 16),
-                          label: Text(startDate == null
-                              ? 'Début'
-                              : DateFormat('dd/MM/yyyy').format(startDate!)),
+                          label: Text(
+                            startDate == null
+                                ? 'Début'
+                                : DateFormat('dd/MM/yyyy').format(startDate!),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1128,14 +1388,22 @@ class _SchoolYearPromotionScreenState
                             final picked = await showDatePicker(
                               context: ctx,
                               initialDate: startDate ?? year.startDate,
-                              firstDate: year.startDate.subtract(const Duration(days: 30)),
-                              lastDate: year.endDate.add(const Duration(days: 30)),
+                              firstDate: year.startDate.subtract(
+                                const Duration(days: 30),
+                              ),
+                              lastDate: year.endDate.add(
+                                const Duration(days: 30),
+                              ),
                             );
-                            if (picked != null) setModalState(() => endDate = picked);
+                            if (picked != null)
+                              setModalState(() => endDate = picked);
                           },
                           icon: const Icon(Icons.event_rounded, size: 16),
                           label: Text(
-                              endDate == null ? 'Fin' : DateFormat('dd/MM/yyyy').format(endDate!)),
+                            endDate == null
+                                ? 'Fin'
+                                : DateFormat('dd/MM/yyyy').format(endDate!),
+                          ),
                         ),
                       ),
                     ],
@@ -1148,8 +1416,13 @@ class _SchoolYearPromotionScreenState
                         color: AppTheme.accentRose.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(submitError!,
-                          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                      child: Text(
+                        submitError!,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppTheme.accentRose,
+                        ),
+                      ),
                     ),
                   ],
                 ],
@@ -1159,24 +1432,37 @@ class _SchoolYearPromotionScreenState
           actions: [
             TextButton(
               onPressed: isLoading ? null : () => Navigator.pop(ctx),
-              child: const Text('Annuler', style: TextStyle(color: AppTheme.textSecondary)),
+              child: const Text(
+                'Annuler',
+                style: TextStyle(color: AppTheme.textSecondary),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentEmerald),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentEmerald,
+              ),
               onPressed: isLoading
                   ? null
                   : () async {
                       final name = nameCtrl.text.trim();
                       if (name.isEmpty) {
-                        setModalState(() => fieldError = 'Le nom est obligatoire');
+                        setModalState(
+                          () => fieldError = 'Le nom est obligatoire',
+                        );
                         return;
                       }
                       if (startDate == null || endDate == null) {
-                        setModalState(() => submitError = 'Les deux dates sont obligatoires.');
+                        setModalState(
+                          () =>
+                              submitError = 'Les deux dates sont obligatoires.',
+                        );
                         return;
                       }
                       if (!endDate!.isAfter(startDate!)) {
-                        setModalState(() => submitError = 'La date de fin doit être après la date de début.');
+                        setModalState(
+                          () => submitError =
+                              'La date de fin doit être après la date de début.',
+                        );
                         return;
                       }
                       setModalState(() {
@@ -1206,7 +1492,10 @@ class _SchoolYearPromotionScreenState
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Text('Créer', style: TextStyle(color: Colors.white)),
             ),
@@ -1232,7 +1521,9 @@ class _SchoolYearPromotionScreenState
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => AlertDialog(
           backgroundColor: AppTheme.cardBackground,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: AppDialogTitle(
             icon: Icons.edit_calendar_rounded,
             text: 'Modifier "${term.name}"',
@@ -1263,13 +1554,20 @@ class _SchoolYearPromotionScreenState
                             final picked = await showDatePicker(
                               context: ctx,
                               initialDate: startDate,
-                              firstDate: DateTime.now().subtract(const Duration(days: 1825)),
-                              lastDate: DateTime.now().add(const Duration(days: 1825)),
+                              firstDate: DateTime.now().subtract(
+                                const Duration(days: 1825),
+                              ),
+                              lastDate: DateTime.now().add(
+                                const Duration(days: 1825),
+                              ),
                             );
-                            if (picked != null) setModalState(() => startDate = picked);
+                            if (picked != null)
+                              setModalState(() => startDate = picked);
                           },
                           icon: const Icon(Icons.event_rounded, size: 16),
-                          label: Text(DateFormat('dd/MM/yyyy').format(startDate)),
+                          label: Text(
+                            DateFormat('dd/MM/yyyy').format(startDate),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1279,10 +1577,15 @@ class _SchoolYearPromotionScreenState
                             final picked = await showDatePicker(
                               context: ctx,
                               initialDate: endDate,
-                              firstDate: DateTime.now().subtract(const Duration(days: 1825)),
-                              lastDate: DateTime.now().add(const Duration(days: 1825)),
+                              firstDate: DateTime.now().subtract(
+                                const Duration(days: 1825),
+                              ),
+                              lastDate: DateTime.now().add(
+                                const Duration(days: 1825),
+                              ),
                             );
-                            if (picked != null) setModalState(() => endDate = picked);
+                            if (picked != null)
+                              setModalState(() => endDate = picked);
                           },
                           icon: const Icon(Icons.event_rounded, size: 16),
                           label: Text(DateFormat('dd/MM/yyyy').format(endDate)),
@@ -1297,10 +1600,21 @@ class _SchoolYearPromotionScreenState
                     controlAffinity: ListTileControlAffinity.leading,
                     value: isActive,
                     activeColor: AppTheme.accentEmerald,
-                    title: Text('Trimestre actif', style: GoogleFonts.inter(fontSize: 13, color: Colors.white)),
+                    title: Text(
+                      'Trimestre actif',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: Colors.white,
+                      ),
+                    ),
                     subtitle: Text(
-                      isActive ? 'Visible et sélectionnable' : 'Archivé — masqué des sélecteurs de création',
-                      style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted),
+                      isActive
+                          ? 'Visible et sélectionnable'
+                          : 'Archivé — masqué des sélecteurs de création',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: AppTheme.textMuted,
+                      ),
                     ),
                     onChanged: (v) => setModalState(() => isActive = v ?? true),
                   ),
@@ -1312,8 +1626,13 @@ class _SchoolYearPromotionScreenState
                         color: AppTheme.accentRose.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(submitError!,
-                          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                      child: Text(
+                        submitError!,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppTheme.accentRose,
+                        ),
+                      ),
                     ),
                   ],
                 ],
@@ -1323,20 +1642,30 @@ class _SchoolYearPromotionScreenState
           actions: [
             TextButton(
               onPressed: isLoading ? null : () => Navigator.pop(ctx),
-              child: const Text('Annuler', style: TextStyle(color: AppTheme.textSecondary)),
+              child: const Text(
+                'Annuler',
+                style: TextStyle(color: AppTheme.textSecondary),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentEmerald),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentEmerald,
+              ),
               onPressed: isLoading
                   ? null
                   : () async {
                       final name = nameCtrl.text.trim();
                       if (name.isEmpty) {
-                        setModalState(() => fieldError = 'Le nom est obligatoire');
+                        setModalState(
+                          () => fieldError = 'Le nom est obligatoire',
+                        );
                         return;
                       }
                       if (!endDate.isAfter(startDate)) {
-                        setModalState(() => submitError = 'La date de fin doit être après la date de début.');
+                        setModalState(
+                          () => submitError =
+                              'La date de fin doit être après la date de début.',
+                        );
                         return;
                       }
                       setModalState(() {
@@ -1366,9 +1695,15 @@ class _SchoolYearPromotionScreenState
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
-                  : const Text('Enregistrer', style: TextStyle(color: Colors.white)),
+                  : const Text(
+                      'Enregistrer',
+                      style: TextStyle(color: Colors.white),
+                    ),
             ),
           ],
         ),

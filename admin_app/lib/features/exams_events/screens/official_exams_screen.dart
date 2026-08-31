@@ -53,26 +53,22 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          // Column plutôt que Row : un Wrap de boutons comme simple frère d'un Expanded ne
+          // rétrécit jamais lui-même — il affamait le titre sur mobile (même bug que
+          // academic_tree_screen.dart, 2026-08-30).
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Gestion des Examens Officiels Nationaux',
-                      style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Sujets et corrigés d\'examens officiels (BEPC, Probatoire, Baccalauréat Cameroun)',
-                      style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMuted),
-                    ),
-                  ],
-                ),
+              Text(
+                'Gestion des Examens Officiels Nationaux',
+                style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(height: 4),
+              Text(
+                'Sujets et corrigés d\'examens officiels (BEPC, Probatoire, Baccalauréat Cameroun)',
+                style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMuted),
+              ),
+              const SizedBox(height: 14),
               Wrap(
                 spacing: 12,
                 runSpacing: 12,

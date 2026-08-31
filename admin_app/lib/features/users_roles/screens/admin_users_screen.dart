@@ -24,34 +24,30 @@ class AdminUsersScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          // Column plutôt que Row : un bouton comme simple frère d'un Expanded ne rétrécit
+          // jamais lui-même — il affamait le titre sur mobile (même bug que
+          // school_year_promotion_screen.dart, 2026-08-30).
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Comptes Administrateurs & Matrice de Permissions',
-                      style: GoogleFonts.outfit(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Attribution des rôles fixes et permissions nommées (Super-admin dispose du contrôle total)',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                  ],
+              Text(
+                'Comptes Administrateurs & Matrice de Permissions',
+                style: GoogleFonts.outfit(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
-              const SizedBox(width: 14),
-              if (isSuperAdmin)
+              const SizedBox(height: 4),
+              Text(
+                'Attribution des rôles fixes et permissions nommées (Super-admin dispose du contrôle total)',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppTheme.textMuted,
+                ),
+              ),
+              if (isSuperAdmin) ...[
+                const SizedBox(height: 14),
                 ElevatedButton.icon(
                   onPressed: () => _showAddAdminModal(context, ref),
                   icon: const Icon(
@@ -60,6 +56,7 @@ class AdminUsersScreen extends ConsumerWidget {
                   ),
                   label: const Text('Créer un Compte Administrateur'),
                 ),
+              ],
             ],
           ),
           const SizedBox(height: 24),

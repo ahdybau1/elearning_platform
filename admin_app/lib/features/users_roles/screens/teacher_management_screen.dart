@@ -33,26 +33,22 @@ class _TeacherManagementScreenState extends ConsumerState<TeacherManagementScree
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          // Column plutôt que Row : un bouton comme simple frère d'un Expanded ne rétrécit
+          // jamais lui-même — sur un titre aussi long, il l'affamait presque totalement sur
+          // mobile (même bug que school_year_promotion_screen.dart, 2026-08-30).
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Gestion des Enseignants & Rattachements Multi-Établissements',
-                      style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Un compte enseignant peut être rattaché à plusieurs établissements simultanément sans recréer de compte',
-                      style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMuted),
-                    ),
-                  ],
-                ),
+              Text(
+                'Gestion des Enseignants & Rattachements Multi-Établissements',
+                style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(height: 4),
+              Text(
+                'Un compte enseignant peut être rattaché à plusieurs établissements simultanément sans recréer de compte',
+                style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMuted),
+              ),
+              const SizedBox(height: 14),
               ElevatedButton.icon(
                 onPressed: () => _showCreateTeacherModal(context),
                 icon: const Icon(Icons.person_add_rounded, size: 18),

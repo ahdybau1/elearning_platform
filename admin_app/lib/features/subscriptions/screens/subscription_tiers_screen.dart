@@ -79,20 +79,32 @@ class _SubscriptionTiersScreenState
                     ),
                   );
                 }
-                return GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 1.4,
-                  ),
-                  itemCount: tiers.length,
-                  itemBuilder: (context, idx) {
-                    final tier = tiers[idx];
-                    return _buildTierCard(
-                      context,
-                      tier,
-                      _getTierColor(tier.name),
+                // crossAxisCount fixé à 3 sans seuil mobile : sur téléphone chaque carte
+                // n'avait plus que ~110px de large pour ~77px de haut (aspectRatio 1.4 conservé),
+                // largement insuffisant pour son contenu (titre, prix, durée, classe, bouton) —
+                // le texte débordait et chevauchait visuellement la carte suivante (retour
+                // utilisateur réel, 2026-08-30).
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    final crossAxisCount = constraints.maxWidth > 900
+                        ? 3
+                        : (constraints.maxWidth > 550 ? 2 : 1);
+                    return GridView.builder(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: crossAxisCount == 1 ? 2.0 : 1.4,
+                      ),
+                      itemCount: tiers.length,
+                      itemBuilder: (context, idx) {
+                        final tier = tiers[idx];
+                        return _buildTierCard(
+                          context,
+                          tier,
+                          _getTierColor(tier.name),
+                        );
+                      },
                     );
                   },
                 );
@@ -179,10 +191,15 @@ class _SubscriptionTiersScreenState
               // La classe/le pays rattachés n'étaient affichés nulle part — le concept "tarif PAR
               // classe" annoncé par le sous-titre de la page était donc invisible depuis cet écran.
               FutureBuilder<AcademicNode?>(
-                future: ref.read(supabaseServiceProvider).getNode(tier.classNodeId),
+                future: ref
+                    .read(supabaseServiceProvider)
+                    .getNode(tier.classNodeId),
                 builder: (context, snapshot) => Text(
                   'Classe : ${snapshot.data?.name ?? '…'}',
-                  style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: AppTheme.textMuted,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -243,10 +260,14 @@ class _SubscriptionTiersScreenState
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => AlertDialog(
           backgroundColor: AppTheme.primarySurface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: AppDialogTitle(
             icon: Icons.price_change_rounded,
-            text: tier == null ? 'Créer un Palier Tarifaire' : 'Modifier ${tier.name}',
+            text: tier == null
+                ? 'Créer un Palier Tarifaire'
+                : 'Modifier ${tier.name}',
             onClose: () => Navigator.pop(ctx),
           ),
           content: SizedBox(
@@ -268,7 +289,9 @@ class _SubscriptionTiersScreenState
                   TextField(
                     controller: priceController,
                     style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(labelText: 'Prix en FCFA'),
+                    decoration: const InputDecoration(
+                      labelText: 'Prix en FCFA',
+                    ),
                     keyboardType: TextInputType.number,
                   ),
                   const SizedBox(height: 12),
@@ -289,8 +312,11 @@ class _SubscriptionTiersScreenState
                     const SizedBox(height: 12),
                     Consumer(
                       builder: (context, ref, _) {
-                        final scopedCountryIds = ref.watch(selectedCountryIdsProvider);
-                        if (scopedCountryIds == null || scopedCountryIds.length != 1) {
+                        final scopedCountryIds = ref.watch(
+                          selectedCountryIdsProvider,
+                        );
+                        if (scopedCountryIds == null ||
+                            scopedCountryIds.length != 1) {
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             if (selectedCountryId != null) {
                               setModalState(() => selectedCountryId = null);
@@ -299,22 +325,34 @@ class _SubscriptionTiersScreenState
                           return Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppTheme.accentAmber.withValues(alpha: 0.1),
+                              color: AppTheme.accentAmber.withValues(
+                                alpha: 0.1,
+                              ),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppTheme.accentAmber.withValues(alpha: 0.3)),
+                              border: Border.all(
+                                color: AppTheme.accentAmber.withValues(
+                                  alpha: 0.3,
+                                ),
+                              ),
                             ),
                             child: Text(
                               'Sélectionnez un seul pays précis dans la barre de navigation en haut '
                               'de l\'écran avant de créer un palier ("Tous les pays" ou plusieurs '
                               'pays sélectionnés ne permettent pas de savoir à quel pays rattacher ce palier).',
-                              style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentAmber, height: 1.4),
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: AppTheme.accentAmber,
+                                height: 1.4,
+                              ),
                             ),
                           );
                         }
                         final resolvedCountryId = scopedCountryIds.first;
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           if (selectedCountryId != resolvedCountryId) {
-                            setModalState(() => selectedCountryId = resolvedCountryId);
+                            setModalState(
+                              () => selectedCountryId = resolvedCountryId,
+                            );
                           }
                         });
                         final countryName = ref
@@ -325,11 +363,18 @@ class _SubscriptionTiersScreenState
                             ?.name;
                         return Row(
                           children: [
-                            const Icon(Icons.public_rounded, size: 16, color: AppTheme.textMuted),
+                            const Icon(
+                              Icons.public_rounded,
+                              size: 16,
+                              color: AppTheme.textMuted,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               'Pays : ${countryName ?? '…'} (sélectionné dans la barre de navigation)',
-                              style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted),
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: AppTheme.textMuted,
+                              ),
                             ),
                           ],
                         );
@@ -338,15 +383,24 @@ class _SubscriptionTiersScreenState
                     const SizedBox(height: 12),
                     Consumer(
                       builder: (context, ref, _) {
-                        final classesAsync = ref.watch(nodesByTypeProvider('class'));
-                        final seriesAsync = ref.watch(nodesByTypeProvider('series'));
-                        final options = <AcademicNode>[
-                          ...classesAsync.valueOrNull ?? [],
-                          ...seriesAsync.valueOrNull ?? [],
-                        ]
-                            .where((c) => selectedCountryId == null || c.countryId == selectedCountryId)
-                            .toList()
-                          ..sort((a, b) => a.name.compareTo(b.name));
+                        final classesAsync = ref.watch(
+                          nodesByTypeProvider('class'),
+                        );
+                        final seriesAsync = ref.watch(
+                          nodesByTypeProvider('series'),
+                        );
+                        final options =
+                            <AcademicNode>[
+                                  ...classesAsync.valueOrNull ?? [],
+                                  ...seriesAsync.valueOrNull ?? [],
+                                ]
+                                .where(
+                                  (c) =>
+                                      selectedCountryId == null ||
+                                      c.countryId == selectedCountryId,
+                                )
+                                .toList()
+                              ..sort((a, b) => a.name.compareTo(b.name));
                         return DropdownButtonFormField<String?>(
                           // ignore: deprecated_member_use
                           value: selectedClassNodeId,
@@ -358,12 +412,21 @@ class _SubscriptionTiersScreenState
                             prefixIcon: Icon(Icons.school_rounded, size: 20),
                           ),
                           items: options
-                              .map((c) => DropdownMenuItem<String?>(
-                                  value: c.id, child: Text(c.name, overflow: TextOverflow.ellipsis)))
+                              .map(
+                                (c) => DropdownMenuItem<String?>(
+                                  value: c.id,
+                                  child: Text(
+                                    c.name,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              )
                               .toList(),
                           onChanged: selectedCountryId == null
                               ? null
-                              : (v) => setModalState(() => selectedClassNodeId = v),
+                              : (v) => setModalState(
+                                  () => selectedClassNodeId = v,
+                                ),
                         );
                       },
                     ),
@@ -376,8 +439,13 @@ class _SubscriptionTiersScreenState
                         color: AppTheme.accentRose.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(submitError!,
-                          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                      child: Text(
+                        submitError!,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppTheme.accentRose,
+                        ),
+                      ),
                     ),
                   ],
                 ],
@@ -387,28 +455,47 @@ class _SubscriptionTiersScreenState
           actions: [
             if (tier != null)
               IconButton(
-                icon: const Icon(Icons.delete_forever_rounded, color: AppTheme.accentRose),
+                icon: const Icon(
+                  Icons.delete_forever_rounded,
+                  color: AppTheme.accentRose,
+                ),
                 tooltip: 'Supprimer définitivement',
-                onPressed: isLoading ? null : () => _showDeleteTierConfirmation(context, ctx, tier),
+                onPressed: isLoading
+                    ? null
+                    : () => _showDeleteTierConfirmation(context, ctx, tier),
               ),
             TextButton(
               onPressed: isLoading ? null : () => Navigator.pop(ctx),
-              child: Text('Annuler', style: GoogleFonts.inter(color: AppTheme.textMuted)),
+              child: Text(
+                'Annuler',
+                style: GoogleFonts.inter(color: AppTheme.textMuted),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentEmerald),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentEmerald,
+              ),
               onPressed: isLoading
                   ? null
                   : () async {
                       final name = nameController.text.trim();
-                      final price = double.tryParse(priceController.text.trim()) ?? 0.0;
-                      final duration = int.tryParse(durationController.text.trim()) ?? 30;
+                      final price =
+                          double.tryParse(priceController.text.trim()) ?? 0.0;
+                      final duration =
+                          int.tryParse(durationController.text.trim()) ?? 30;
                       if (name.isEmpty) {
-                        setModalState(() => fieldError = 'Le nom est obligatoire');
+                        setModalState(
+                          () => fieldError = 'Le nom est obligatoire',
+                        );
                         return;
                       }
-                      if (tier == null && (selectedCountryId == null || selectedClassNodeId == null)) {
-                        setModalState(() => submitError = 'Pays et Classe/Série sont obligatoires.');
+                      if (tier == null &&
+                          (selectedCountryId == null ||
+                              selectedClassNodeId == null)) {
+                        setModalState(
+                          () => submitError =
+                              'Pays et Classe/Série sont obligatoires.',
+                        );
                         return;
                       }
 
@@ -443,7 +530,9 @@ class _SubscriptionTiersScreenState
                             SnackBar(
                               backgroundColor: AppTheme.accentEmerald,
                               content: Text(
-                                tier == null ? 'Palier "$name" créé avec succès !' : 'Palier "$name" mis à jour !',
+                                tier == null
+                                    ? 'Palier "$name" créé avec succès !'
+                                    : 'Palier "$name" mis à jour !',
                                 style: GoogleFonts.inter(color: Colors.white),
                               ),
                             ),
@@ -460,7 +549,10 @@ class _SubscriptionTiersScreenState
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Text('Enregistrer'),
             ),
@@ -472,7 +564,11 @@ class _SubscriptionTiersScreenState
 
   /// Suppression jusqu'ici sans AUCUNE confirmation (un clic sur l'icône poubelle supprimait
   /// immédiatement) — irréversible, contrairement à tous les autres flux de suppression de l'app.
-  void _showDeleteTierConfirmation(BuildContext context, BuildContext editModalCtx, SubscriptionTier tier) {
+  void _showDeleteTierConfirmation(
+    BuildContext context,
+    BuildContext editModalCtx,
+    SubscriptionTier tier,
+  ) {
     bool isLoading = false;
 
     showDialog(
@@ -480,7 +576,9 @@ class _SubscriptionTiersScreenState
       builder: (dialogCtx) => StatefulBuilder(
         builder: (dialogCtx, setModalState) => AlertDialog(
           backgroundColor: AppTheme.primarySurface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: AppDialogTitle(
             icon: Icons.delete_forever_rounded,
             iconColor: AppTheme.accentRose,
@@ -491,7 +589,11 @@ class _SubscriptionTiersScreenState
             width: 420,
             child: Text(
               'IRRÉVERSIBLE : les élèves abonnés à ce palier ne seront plus rattachés à aucun tarif actif.',
-              style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.4),
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: Colors.white70,
+                height: 1.4,
+              ),
             ),
           ),
           actions: [
@@ -500,7 +602,9 @@ class _SubscriptionTiersScreenState
               child: const Text('Annuler'),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentRose),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentRose,
+              ),
               onPressed: isLoading
                   ? null
                   : () async {
@@ -521,7 +625,10 @@ class _SubscriptionTiersScreenState
                       } catch (e) {
                         setModalState(() => isLoading = false);
                         messenger.showSnackBar(
-                          SnackBar(backgroundColor: AppTheme.accentRose, content: Text('Erreur : $e')),
+                          SnackBar(
+                            backgroundColor: AppTheme.accentRose,
+                            content: Text('Erreur : $e'),
+                          ),
                         );
                       }
                     },
@@ -529,7 +636,10 @@ class _SubscriptionTiersScreenState
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Text('Supprimer'),
             ),

@@ -32,26 +32,22 @@ class _ParentAccountsScreenState extends ConsumerState<ParentAccountsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          // Column plutôt que Row : un bouton comme simple frère d'un Expanded ne rétrécit
+          // jamais lui-même — il affamait le titre sur mobile (même bug que
+          // school_year_promotion_screen.dart, 2026-08-30).
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Gestion des Comptes Parents',
-                      style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Compte distinct lié à un ou plusieurs profils élèves (Payeur principal & Suivi académique)',
-                      style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMuted),
-                    ),
-                  ],
-                ),
+              Text(
+                'Gestion des Comptes Parents',
+                style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(height: 4),
+              Text(
+                'Compte distinct lié à un ou plusieurs profils élèves (Payeur principal & Suivi académique)',
+                style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMuted),
+              ),
+              const SizedBox(height: 14),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.accentBlue,

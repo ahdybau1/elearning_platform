@@ -31,33 +31,29 @@ class _OlympiadsMockExamsScreenState extends ConsumerState<OlympiadsMockExamsScr
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          // Column plutôt que Row : un bouton comme simple frère d'un Expanded ne rétrécit
+          // jamais lui-même — il affamait le titre sur mobile (même bug que
+          // school_year_promotion_screen.dart, 2026-08-30).
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Olympiades & Contestations de Notes',
-                      style: GoogleFonts.outfit(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Gestion des événements compétitifs et file des réclamations avec 2nd correcteur obligatoire',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                  ],
+              Text(
+                'Olympiades & Contestations de Notes',
+                style: GoogleFonts.outfit(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(height: 4),
+              Text(
+                'Gestion des événements compétitifs et file des réclamations avec 2nd correcteur obligatoire',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppTheme.textMuted,
+                ),
+              ),
+              const SizedBox(height: 14),
               ElevatedButton.icon(
                 onPressed: () => _showEventModal(context),
                 icon: const Icon(Icons.add_rounded, size: 18),
@@ -67,11 +63,13 @@ class _OlympiadsMockExamsScreenState extends ConsumerState<OlympiadsMockExamsScr
           ),
           const SizedBox(height: 24),
 
-          // Sub tabs
-          Row(
+          // Sub tabs — Wrap plutôt que Row : les 2 onglets côte à côte débordaient hors de
+          // l'écran sur mobile (retour utilisateur réel, 2026-08-30).
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
             children: [
               _buildSubTab(0, 'Événements & Concours (${eventsAsync.valueOrNull?.length ?? 0})'),
-              const SizedBox(width: 12),
               _buildSubTab(1, 'Contestations de Notes (${disputesAsync.valueOrNull?.length ?? 0})'),
             ],
           ),

@@ -27,8 +27,12 @@ class DashboardOverviewScreen extends ConsumerWidget {
     final countryScopeLabel = selectedCountryIds == null
         ? 'Tous les pays'
         : selectedCountryIds.length == 1
-            ? (countries.where((c) => c.id == selectedCountryIds.first).firstOrNull?.name ?? '1 pays')
-            : '${selectedCountryIds.length} pays';
+        ? (countries
+                  .where((c) => c.id == selectedCountryIds.first)
+                  .firstOrNull
+                  ?.name ??
+              '1 pays')
+        : '${selectedCountryIds.length} pays';
 
     final validationAsync = ref.watch(validationQueueProvider);
     final aiCallsAsync = ref.watch(aiAgentCallsProvider(30));
@@ -182,210 +186,219 @@ class DashboardOverviewScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 28),
 
-
-          // System Activity & Validation Workflow Status Row
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Pending Validation Queue Box
-              Expanded(
-                flex: 3,
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primarySurface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.primaryBorder),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Contenus en Attente de Validation',
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.outfit(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.accentAmber.withValues(
-                                alpha: 0.2,
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              '$validationCount en attente',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.accentAmber,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      const Divider(),
-                      validationAsync.when(
-                        data: (items) => items.isEmpty
-                            ? Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 20,
-                                  ),
-                                  child: Text(
-                                    'Aucun contenu en attente de validation.',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      color: AppTheme.textMuted,
-                                    ),
-                                  ),
-                                ),
-                              )
-                            : Column(
-                                children: items
-                                    .map((item) => _buildValidationItem(ref, item))
-                                    .toList(),
-                              ),
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
-                        error: (err, _) => Center(
+          // System Activity & Validation Workflow Status Row — 2 colonnes fixes (flex 3/2)
+          // sans seuil mobile : sur téléphone chaque boîte n'avait plus que ~50% de largeur,
+          // en-têtes tronqués ("Conte...", "Agent...", retour utilisateur réel, 2026-08-30).
+          // Sous 900px, elles s'empilent en pleine largeur.
+          Builder(
+            builder: (context) {
+              final isMobile = MediaQuery.of(context).size.width < 900;
+              final validationBox = Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppTheme.primarySurface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppTheme.primaryBorder),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
                           child: Text(
-                            'Erreur: $err',
-                            style: GoogleFonts.inter(
-                              color: AppTheme.accentRose,
+                            'Contenus en Attente de Validation',
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.outfit(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              // Absente entièrement sans la permission viewAiCosts — même principe que la carte
-              // KPI : pas de fuite du détail des coûts/appels IA à un admin non autorisé.
-              if (authState.canViewAiCosts) ...[
-              const SizedBox(width: 24),
-
-              // AI Usage & Cost Tracker Summary
-              Expanded(
-                flex: 2,
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primarySurface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.primaryBorder),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.psychology_rounded,
-                            color: AppTheme.accentCyan,
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Agents IA - Consommation API',
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.outfit(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.accentAmber.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '$validationCount en attente',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.accentAmber,
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      const Divider(),
-                      const SizedBox(height: 12),
-                      aiCallsAsync.when(
-                        data: (calls) => calls.isEmpty
-                            ? Center(
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    validationAsync.when(
+                      data: (items) => items.isEmpty
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 20,
+                                ),
                                 child: Text(
-                                  'Aucun appel IA enregistré.',
+                                  'Aucun contenu en attente de validation.',
                                   style: GoogleFonts.inter(
                                     fontSize: 13,
                                     color: AppTheme.textMuted,
                                   ),
                                 ),
-                              )
-                            : Column(
-                                children: calls
-                                    .map(
-                                      (call) => _buildAiUsageRow(
-                                        call.agentType,
-                                        '${call.tokensUsed} tokens',
-                                        '\$${call.costEstimate.toStringAsFixed(2)}',
-                                      ),
-                                    )
-                                    .toList(),
                               ),
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
-                        error: (err, _) => Center(
+                            )
+                          : Column(
+                              children: items
+                                  .map(
+                                    (item) => _buildValidationItem(ref, item),
+                                  )
+                                  .toList(),
+                            ),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (err, _) => Center(
+                        child: Text(
+                          'Erreur: $err',
+                          style: GoogleFonts.inter(color: AppTheme.accentRose),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+              // Absente entièrement sans la permission viewAiCosts — même principe que la carte
+              // KPI : pas de fuite du détail des coûts/appels IA à un admin non autorisé.
+              if (!authState.canViewAiCosts) {
+                return validationBox;
+              }
+
+              final aiUsageBox = Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppTheme.primarySurface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppTheme.primaryBorder),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.psychology_rounded,
+                          color: AppTheme.accentCyan,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
                           child: Text(
-                            'Erreur: $err',
-                            style: GoogleFonts.inter(
-                              color: AppTheme.accentRose,
+                            'Agents IA - Consommation API',
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.outfit(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryDark,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppTheme.primaryBorder),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 12),
+                    aiCallsAsync.when(
+                      data: (calls) => calls.isEmpty
+                          ? Center(
                               child: Text(
-                                'Coût Total Estimé (30j) :',
-                                overflow: TextOverflow.ellipsis,
+                                'Aucun appel IA enregistré.',
                                 style: GoogleFonts.inter(
                                   fontSize: 13,
-                                  color: Colors.white70,
+                                  color: AppTheme.textMuted,
                                 ),
                               ),
+                            )
+                          : Column(
+                              children: calls
+                                  .map(
+                                    (call) => _buildAiUsageRow(
+                                      call.agentType,
+                                      '${call.tokensUsed} tokens',
+                                      '\$${call.costEstimate.toStringAsFixed(2)}',
+                                    ),
+                                  )
+                                  .toList(),
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '${totalAiCost.toStringAsFixed(2)} \$',
-                              style: GoogleFonts.outfit(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.accentCyan,
-                              ),
-                            ),
-                          ],
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (err, _) => Center(
+                        child: Text(
+                          'Erreur: $err',
+                          style: GoogleFonts.inter(color: AppTheme.accentRose),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryDark,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppTheme.primaryBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Coût Total Estimé (30j) :',
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${totalAiCost.toStringAsFixed(2)} \$',
+                            style: GoogleFonts.outfit(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.accentCyan,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              ],
-            ],
+              );
+
+              if (isMobile) {
+                return Column(
+                  children: [
+                    validationBox,
+                    const SizedBox(height: 24),
+                    aiUsageBox,
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(flex: 3, child: validationBox),
+                  const SizedBox(width: 24),
+                  Expanded(flex: 2, child: aiUsageBox),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -444,10 +457,7 @@ class DashboardOverviewScreen extends ConsumerWidget {
             SizedBox(
               width: 24,
               height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                color: color,
-              ),
+              child: CircularProgressIndicator(strokeWidth: 2.5, color: color),
             )
           else
             Text(
@@ -527,7 +537,8 @@ class DashboardOverviewScreen extends ConsumerWidget {
             tooltip: 'Aller à la File de Validation',
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-            onPressed: () => ref.read(selectedNavIndexProvider.notifier).state = 4,
+            onPressed: () =>
+                ref.read(selectedNavIndexProvider.notifier).state = 4,
           ),
         ],
       ),

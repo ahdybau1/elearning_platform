@@ -57,46 +57,54 @@ class _DonationsScreenState extends ConsumerState<DonationsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Row(
+            // Header — Column plutôt que Row : un bouton comme simple frère d'un Expanded ne
+            // rétrécit jamais lui-même — il affamait le titre sur mobile (retour utilisateur
+            // réel, texte coupé au milieu des mots, 2026-08-30 — même bug que
+            // school_year_promotion_screen.dart).
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppTheme.accentEmerald.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.volunteer_activism_rounded,
-                    color: AppTheme.accentEmerald,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Dons & Œuvres Caritatives',
-                        style: GoogleFonts.inter(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentEmerald.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      Text(
-                        'Financement participatif de bourses et d\'équipements scolaires pour élèves défavorisés',
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: AppTheme.textSecondary,
-                        ),
+                      child: const Icon(
+                        Icons.volunteer_activism_rounded,
+                        color: AppTheme.accentEmerald,
+                        size: 24,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Dons & Œuvres Caritatives',
+                            style: GoogleFonts.inter(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            'Financement participatif de bourses et d\'équipements scolaires pour élèves défavorisés',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(height: 14),
                 ElevatedButton.icon(
                   onPressed: () => _activeTab == 0
                       ? _showCampaignDialog(context)

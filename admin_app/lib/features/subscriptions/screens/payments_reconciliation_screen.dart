@@ -95,13 +95,16 @@ class _PaymentsReconciliationScreenState
           ),
           const SizedBox(height: 24),
 
-          // Tabs Switcher Bar
-          Row(
+          // Tabs Switcher Bar — Wrap plutôt que Row(..., Spacer(), icône) : les 2 onglets +
+          // l'icône actualiser côte à côte débordaient hors de l'écran sur mobile (2e onglet
+          // coupé, retour utilisateur réel, 2026-08-30).
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
+            runSpacing: 8,
             children: [
               _buildTabButton(0, 'Paiements Ambiguës', ambiguousTxAsync),
-              const SizedBox(width: 12),
               _buildTabButton(1, 'Demandes de Remboursement', refundAsync),
-              const Spacer(),
               // Ni l'un ni l'autre onglet n'est en temps réel (streams disponibles côté service
               // mais jamais branchés ici) : sans ce bouton, une nouvelle transaction ambiguë ou
               // demande de remboursement arrivée pendant que l'admin est sur cette page
