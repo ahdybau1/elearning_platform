@@ -110,12 +110,84 @@ class DashboardOverviewScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 28),
 
-          // Overview KPI Cards Grid
+          // Overview KPI Cards Grid — sur mobile (une seule colonne), 5-6 cartes bordées
+          // pleine largeur empilées n'apportaient aucune séparation utile (elles étaient déjà
+          // seules sur leur ligne) : juste des cadres en plus les uns sous les autres. Retour
+          // utilisateur réel très explicite, 2026-09-01 : "trop de box et d'élément dans un
+          // même interface". Sous 700px, on passe donc à une simple grille 2 colonnes de
+          // chiffres nus (comme les tuiles de stats d'iOS/WhatsApp), sans cadre ni fond.
           LayoutBuilder(
             builder: (context, constraints) {
-              final crossAxisCount = constraints.maxWidth > 1100
-                  ? 4
-                  : (constraints.maxWidth > 700 ? 2 : 1);
+              final kpis = [
+                _KpiData(
+                  title: 'Contenus en Attente de Validation',
+                  value: validationCount.toString(),
+                  subtitle: '$validationCount leçons/exercices',
+                  icon: Icons.fact_check_rounded,
+                  color: AppTheme.accentAmber,
+                  isLoading: validationAsync.isLoading,
+                ),
+                _KpiData(
+                  title: 'Élèves Actifs',
+                  value: activeProfiles > 0
+                      ? _formatCount(activeProfiles)
+                      : '—',
+                  subtitle: '$activeProfiles profils actifs',
+                  icon: Icons.school_rounded,
+                  color: AppTheme.accentBlue,
+                  isLoading: activeProfilesAsync.isLoading,
+                ),
+                _KpiData(
+                  title: 'Cours & Leçons Publiés',
+                  value: publishedLessons > 0
+                      ? _formatCount(publishedLessons)
+                      : '—',
+                  subtitle: '$publishedLessons leçons publiées',
+                  icon: Icons.menu_book_rounded,
+                  color: AppTheme.accentEmerald,
+                  isLoading: publishedLessonsAsync.isLoading,
+                ),
+                _KpiData(
+                  title: 'Exercices en Banque',
+                  value: exercisesCount > 0 ? _formatCount(exercisesCount) : '—',
+                  subtitle: '$exercisesCount exercices au total',
+                  icon: Icons.quiz_rounded,
+                  color: AppTheme.accentIndigo,
+                  isLoading: exercisesAsync.isLoading,
+                ),
+                _KpiData(
+                  title: 'Tickets Support Ouverts',
+                  value: openTickets.toString(),
+                  subtitle: '$openTickets en attente de traitement',
+                  icon: Icons.support_agent_rounded,
+                  color: AppTheme.accentRose,
+                  isLoading: openTicketsAsync.isLoading,
+                ),
+                // Absente entièrement pour un admin sans la permission viewAiCosts — pas de
+                // carte verrouillée qui trahirait l'existence de cette donnée.
+                if (authState.canViewAiCosts)
+                  _KpiData(
+                    title: 'Coût IA (30 derniers jours)',
+                    value: '${totalAiCost.toStringAsFixed(2)} \$',
+                    subtitle: '${aiCalls.length} appels API',
+                    icon: Icons.psychology_rounded,
+                    color: AppTheme.accentCyan,
+                  ),
+              ];
+
+              if (constraints.maxWidth <= 700) {
+                return GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 20,
+                  mainAxisSpacing: 20,
+                  childAspectRatio: 1.7,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: kpis.map((k) => _buildKpiFlat(k)).toList(),
+                );
+              }
+
+              final crossAxisCount = constraints.maxWidth > 1100 ? 4 : 2;
               return GridView.count(
                 crossAxisCount: crossAxisCount,
                 crossAxisSpacing: 16,
@@ -123,64 +195,18 @@ class DashboardOverviewScreen extends ConsumerWidget {
                 childAspectRatio: 1.8,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _buildKpiCard(
-                    title: 'Contenus en Attente de Validation',
-                    value: validationCount.toString(),
-                    subtitle: '$validationCount leçons/exercices',
-                    icon: Icons.fact_check_rounded,
-                    color: AppTheme.accentAmber,
-                    isLoading: validationAsync.isLoading,
-                  ),
-                  _buildKpiCard(
-                    title: 'Élèves Actifs',
-                    value: activeProfiles > 0
-                        ? _formatCount(activeProfiles)
-                        : '—',
-                    subtitle: '$activeProfiles profils actifs',
-                    icon: Icons.school_rounded,
-                    color: AppTheme.accentBlue,
-                    isLoading: activeProfilesAsync.isLoading,
-                  ),
-                  _buildKpiCard(
-                    title: 'Cours & Leçons Publiés',
-                    value: publishedLessons > 0
-                        ? _formatCount(publishedLessons)
-                        : '—',
-                    subtitle: '$publishedLessons leçons publiées',
-                    icon: Icons.menu_book_rounded,
-                    color: AppTheme.accentEmerald,
-                    isLoading: publishedLessonsAsync.isLoading,
-                  ),
-                  _buildKpiCard(
-                    title: 'Exercices en Banque',
-                    value: exercisesCount > 0
-                        ? _formatCount(exercisesCount)
-                        : '—',
-                    subtitle: '$exercisesCount exercices au total',
-                    icon: Icons.quiz_rounded,
-                    color: AppTheme.accentIndigo,
-                    isLoading: exercisesAsync.isLoading,
-                  ),
-                  _buildKpiCard(
-                    title: 'Tickets Support Ouverts',
-                    value: openTickets.toString(),
-                    subtitle: '$openTickets en attente de traitement',
-                    icon: Icons.support_agent_rounded,
-                    color: AppTheme.accentRose,
-                    isLoading: openTicketsAsync.isLoading,
-                  ),
-                  // Absente entièrement pour un admin sans la permission viewAiCosts — pas de
-                  // carte verrouillée qui trahirait l'existence de cette donnée.
-                  if (authState.canViewAiCosts)
-                    _buildKpiCard(
-                      title: 'Coût IA (30 derniers jours)',
-                      value: '${totalAiCost.toStringAsFixed(2)} \$',
-                      subtitle: '${aiCalls.length} appels API',
-                      icon: Icons.psychology_rounded,
-                      color: AppTheme.accentCyan,
-                    ),
-                ],
+                children: kpis
+                    .map(
+                      (k) => _buildKpiCard(
+                        title: k.title,
+                        value: k.value,
+                        subtitle: k.subtitle,
+                        icon: k.icon,
+                        color: k.color,
+                        isLoading: k.isLoading,
+                      ),
+                    )
+                    .toList(),
               );
             },
           ),
@@ -189,18 +215,14 @@ class DashboardOverviewScreen extends ConsumerWidget {
           // System Activity & Validation Workflow Status Row — 2 colonnes fixes (flex 3/2)
           // sans seuil mobile : sur téléphone chaque boîte n'avait plus que ~50% de largeur,
           // en-têtes tronqués ("Conte...", "Agent...", retour utilisateur réel, 2026-08-30).
-          // Sous 900px, elles s'empilent en pleine largeur.
+          // Sous 900px, elles s'empilent en pleine largeur — et sur mobile, sans cadre du
+          // tout : deux Container bordés empilés n'étaient que des bordures redondantes
+          // autour de sections déjà seules sur l'écran (retour utilisateur réel très
+          // explicite, "trop de box et d'élément dans un même interface", 2026-09-01).
           Builder(
             builder: (context) {
               final isMobile = MediaQuery.of(context).size.width < 900;
-              final validationBox = Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: AppTheme.primarySurface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppTheme.primaryBorder),
-                ),
-                child: Column(
+              final validationInner = Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
@@ -272,8 +294,18 @@ class DashboardOverviewScreen extends ConsumerWidget {
                       ),
                     ),
                   ],
-                ),
-              );
+                );
+              final validationBox = isMobile
+                  ? validationInner
+                  : Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primarySurface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppTheme.primaryBorder),
+                      ),
+                      child: validationInner,
+                    );
 
               // Absente entièrement sans la permission viewAiCosts — même principe que la carte
               // KPI : pas de fuite du détail des coûts/appels IA à un admin non autorisé.
@@ -281,14 +313,7 @@ class DashboardOverviewScreen extends ConsumerWidget {
                 return validationBox;
               }
 
-              final aiUsageBox = Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: AppTheme.primarySurface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppTheme.primaryBorder),
-                ),
-                child: Column(
+              final aiUsageInner = Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
@@ -378,8 +403,18 @@ class DashboardOverviewScreen extends ConsumerWidget {
                       ),
                     ),
                   ],
-                ),
-              );
+                );
+              final aiUsageBox = isMobile
+                  ? aiUsageInner
+                  : Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primarySurface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppTheme.primaryBorder),
+                      ),
+                      child: aiUsageInner,
+                    );
 
               if (isMobile) {
                 return Column(
@@ -482,6 +517,40 @@ class DashboardOverviewScreen extends ConsumerWidget {
     );
   }
 
+  /// Rendu plat sur mobile : une simple tuile chiffre + libellé, sans cadre ni fond — 6
+  /// cartes bordées pleine largeur empilées n'ajoutaient qu'une répétition de bordures sans
+  /// séparer quoi que ce soit (retour utilisateur réel, 2026-09-01).
+  Widget _buildKpiFlat(_KpiData k) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(k.icon, color: k.color, size: 18),
+        const SizedBox(height: 8),
+        k.isLoading
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2.5, color: k.color),
+              )
+            : Text(
+                k.value,
+                style: GoogleFonts.outfit(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+        const SizedBox(height: 2),
+        Text(
+          k.title,
+          style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 2,
+        ),
+      ],
+    );
+  }
+
   Widget _buildValidationItem(WidgetRef ref, dynamic item) {
     final title = item.title ?? 'Titre inconnu';
     final author = item.authorId ?? '';
@@ -577,4 +646,22 @@ class DashboardOverviewScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _KpiData {
+  final String title;
+  final String value;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final bool isLoading;
+
+  _KpiData({
+    required this.title,
+    required this.value,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    this.isLoading = false,
+  });
 }
