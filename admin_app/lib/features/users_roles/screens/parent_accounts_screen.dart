@@ -5,6 +5,7 @@ import '../../../core/models/admin_models.dart';
 import '../../../core/providers/data_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_dialog_title.dart';
+import '../../../core/widgets/adaptive_card.dart';
 
 class ParentAccountsScreen extends ConsumerStatefulWidget {
   const ParentAccountsScreen({super.key});
@@ -114,13 +115,13 @@ class _ParentAccountsScreenState extends ConsumerState<ParentAccountsScreen> {
                     ),
                   );
                 }
-                return Container(
+                // AdaptiveCard : la liste entière était doublement encadrée sur mobile — un
+                // cadre autour de la liste ET un cadre par carte parent à l'intérieur (retour
+                // utilisateur réel, "trop de box", 2026-09-01). Seul le cadre extérieur, redondant
+                // une fois empilé en pleine largeur, disparaît sur mobile ; chaque carte parent
+                // reste encadrée (ce sont de vraies entités distinctes dans la liste).
+                return AdaptiveCard(
                   padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primarySurface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.primaryBorder),
-                  ),
                   child: ListView.separated(
                     itemCount: parents.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 12),

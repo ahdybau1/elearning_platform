@@ -6,6 +6,7 @@ import '../../../core/models/system_models.dart';
 import '../../../core/providers/data_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_dialog_title.dart';
+import '../../../core/widgets/adaptive_card.dart';
 
 const _availableLanguages = <String, String>{
   'fr': 'Français',
@@ -312,13 +313,11 @@ class _GeneralSettingsFormState extends ConsumerState<_GeneralSettingsForm> {
         if (_loadedFrom == null || _loadedFrom!.id != settings.id) {
           _loadFrom(settings);
         }
-        return Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AppTheme.primarySurface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.primaryBorder),
-          ),
+        // AdaptiveCard : ce formulaire entier restait dans un Container bordé même sur mobile,
+        // où il est déjà seul dans la liste — une bordure en plus qui ne sépare plus rien
+        // (retour utilisateur réel, "trop de box", 2026-09-01). Le cadre reste sur
+        // desktop/tablette où il aide à distinguer cette section des autres.
+        return AdaptiveCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
