@@ -250,192 +250,251 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
           // Row (les deux sont des Flex) — sous 900px, on passe donc en pile verticale plutôt
           // qu'en 2 colonnes écrasées à ~40% de large chacune (retour utilisateur réel, arbre et
           // fiche détail illisibles sur mobile, 2026-08-30), sans dupliquer le contenu.
+          // Sous 900px, l'arbre et le panneau détail n'étaient plus deux colonnes côte à côte
+          // mais deux CARTES bordées empilées — visuellement une boîte dans une boîte, sans
+          // raison de l'être puisqu'elles sont déjà seules sur un écran borné (retour
+          // utilisateur réel très explicite, 2026-09-01 : "trop de box et d'élément dans un
+          // même interface" — même principe que WhatsApp mobile vs desktop : pas la même
+          // structure repliée, une structure différente). Sur mobile : plus de Container
+          // bordé du tout, juste un intitulé de section + un Divider, tout dans UNE seule
+          // liste qui défile — jamais de scroll imbriqué. Le layout desktop (deux panneaux
+          // encadrés côte à côte) reste inchangé, la séparation visuelle s'y justifie.
           Expanded(
             child: Builder(
               builder: (context) {
                 final isMobile = MediaQuery.of(context).size.width < 900;
-                final children = [
-                  Expanded(
-                    flex: 3,
-                    child: treeAsync.when(
-                      data: (tree) {
-                        final byId = _flattenById(tree);
-                        // Resynchronise la fiche sélectionnée avec les données fraîches du stream
-                        // (ex: après un renommage) sans perdre la sélection.
-                        if (_selectedNodeId != null &&
-                            byId.containsKey(_selectedNodeId)) {
-                          _selectedNode = byId[_selectedNodeId];
-                        } else if (_selectedNodeId != null) {
-                          _selectedNodeId = null;
-                          _selectedNode = null;
-                        }
 
-                        final visibleRoots = tree
-                            .where((n) => _matchesSearch(n, _searchQuery))
-                            .toList();
+                return treeAsync.when(
+                  data: (tree) {
+                    final byId = _flattenById(tree);
+                    // Resynchronise la fiche sélectionnée avec les données fraîches du stream
+                    // (ex: après un renommage) sans perdre la sélection.
+                    if (_selectedNodeId != null &&
+                        byId.containsKey(_selectedNodeId)) {
+                      _selectedNode = byId[_selectedNodeId];
+                    } else if (_selectedNodeId != null) {
+                      _selectedNodeId = null;
+                      _selectedNode = null;
+                    }
 
-                        return Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primarySurface,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppTheme.primaryBorder),
+                    final visibleRoots = tree
+                        .where((n) => _matchesSearch(n, _searchQuery))
+                        .toList();
+
+                    final treeHeader = Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Arborescence Académique',
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: GoogleFonts.outfit(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${byId.length} nœud(s)',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                      ],
+                    );
+                    final typeLegend = Wrap(
+                      spacing: 14,
+                      runSpacing: 6,
+                      children: NodeType.values
+                          .map(
+                            (t) => Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: nodeTypeColors[t] ?? AppTheme.textMuted,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  nodeTypeLabels[t] ?? t.name,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: AppTheme.textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                          .toList(),
+                    );
+                    final treeEmptyMessage = tree.isEmpty
+                        ? 'Aucun pays configuré. Cliquez sur "Ajouter un Pays" pour commencer.'
+                        : visibleRoots.isEmpty
+                        ? 'Aucun résultat pour "$_searchQuery".'
+                        : null;
+                    final treeNodeWidgets = visibleRoots
+                        .map((node) => _buildTreeNodeWidget(node, level: 0))
+                        .toList();
+
+                    final detailWhenEmpty = isMobile
+                        // Mobile : un indice tenant sur une ligne, pas un grand encadré vide
+                        // qui occupe la moitié de l'écran pour ne rien dire.
+                        ? Row(
                             children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      'Arborescence Académique',
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '${byId.length} nœud(s)',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11,
-                                      color: AppTheme.textMuted,
-                                    ),
-                                  ),
-                                ],
+                              const Icon(
+                                Icons.touch_app_rounded,
+                                size: 18,
+                                color: AppTheme.textMuted,
                               ),
-                              const SizedBox(height: 10),
-                              Wrap(
-                                spacing: 14,
-                                runSpacing: 6,
-                                children: NodeType.values
-                                    .map(
-                                      (t) => Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Container(
-                                            width: 8,
-                                            height: 8,
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  nodeTypeColors[t] ??
-                                                  AppTheme.textMuted,
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            nodeTypeLabels[t] ?? t.name,
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Touchez un nœud ci-dessus pour voir ses détails.',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: AppTheme.textMuted,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.touch_app_rounded,
+                                  size: 48,
+                                  color: AppTheme.textMuted,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Sélectionnez un nœud dans l\'arbre pour afficher ses détails et effectuer des opérations (Créer enfant, Modifier, Dupliquer, Supprimer).',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    color: AppTheme.textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                    final detailContent = _selectedNode == null
+                        ? detailWhenEmpty
+                        : _buildNodeDetailsInspector(_selectedNode!, tree);
+
+                    if (isMobile) {
+                      return ListView(
+                        children: [
+                          treeHeader,
+                          const SizedBox(height: 10),
+                          typeLegend,
+                          const SizedBox(height: 12),
+                          const Divider(),
+                          const SizedBox(height: 4),
+                          if (treeEmptyMessage != null)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              child: Text(
+                                treeEmptyMessage,
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: AppTheme.textMuted,
+                                ),
+                              ),
+                            )
+                          else
+                            ...treeNodeWidgets,
+                          const SizedBox(height: 12),
+                          const Divider(),
+                          const SizedBox(height: 12),
+                          Text(
+                            _selectedNode == null
+                                ? 'DÉTAILS'
+                                : _selectedNode!.name.toUpperCase(),
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.6,
+                              color: AppTheme.textMuted,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          detailContent,
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primarySurface,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppTheme.primaryBorder),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                treeHeader,
+                                const SizedBox(height: 10),
+                                typeLegend,
+                                const SizedBox(height: 12),
+                                const Divider(),
+                                Expanded(
+                                  child: treeEmptyMessage != null
+                                      ? Center(
+                                          child: Text(
+                                            treeEmptyMessage,
                                             style: GoogleFonts.inter(
-                                              fontSize: 11,
+                                              fontSize: 13,
                                               color: AppTheme.textMuted,
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    )
-                                    .toList(),
-                              ),
-                              const SizedBox(height: 12),
-                              const Divider(),
-                              Expanded(
-                                child: tree.isEmpty
-                                    ? Center(
-                                        child: Text(
-                                          'Aucun pays configuré. Cliquez sur "Ajouter un Pays" pour commencer.',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 13,
-                                            color: AppTheme.textMuted,
-                                          ),
-                                        ),
-                                      )
-                                    : visibleRoots.isEmpty
-                                    ? Center(
-                                        child: Text(
-                                          'Aucun résultat pour "$_searchQuery".',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 13,
-                                            color: AppTheme.textMuted,
-                                          ),
-                                        ),
-                                      )
-                                    : ListView(
-                                        children: visibleRoots
-                                            .map(
-                                              (node) => _buildTreeNodeWidget(
-                                                node,
-                                                level: 0,
-                                              ),
-                                            )
-                                            .toList(),
-                                      ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (err, _) => Center(
-                        child: Text(
-                          'Erreur: $err',
-                          style: GoogleFonts.inter(color: AppTheme.accentRose),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: isMobile ? 0 : 24, height: isMobile ? 24 : 0),
-
-                  Expanded(
-                    flex: 2,
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primarySurface,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppTheme.primaryBorder),
-                      ),
-                      child: _selectedNode == null
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.touch_app_rounded,
-                                    size: 48,
-                                    color: AppTheme.textMuted,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'Sélectionnez un nœud dans l\'arbre pour afficher ses détails et effectuer des opérations (Créer enfant, Modifier, Dupliquer, Supprimer).',
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      color: AppTheme.textMuted,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : _buildNodeDetailsInspector(
-                              _selectedNode!,
-                              treeAsync.valueOrNull ?? const [],
+                                        )
+                                      : ListView(children: treeNodeWidgets),
+                                ),
+                              ],
                             ),
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                        Expanded(
+                          flex: 2,
+                          child: Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primarySurface,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppTheme.primaryBorder),
+                            ),
+                            child: detailContent,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => Center(
+                    child: Text(
+                      'Erreur: $err',
+                      style: GoogleFonts.inter(color: AppTheme.accentRose),
                     ),
                   ),
-                ];
-                return isMobile
-                    ? Column(children: children)
-                    : Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: children,
-                      );
+                );
               },
             ),
           ),
