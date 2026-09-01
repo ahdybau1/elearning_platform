@@ -687,13 +687,21 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
       ),
       child: Row(
         children: [
-          IconButton(
-            icon: Icon(
-              showBack ? Icons.arrow_back_rounded : Icons.menu_rounded,
-              color: Colors.white70,
+          // Sur un écran plongé, seule la flèche retour était visible ici — aucun moyen visible
+          // de rouvrir le tiroir pour sauter directement vers une autre section sans d'abord
+          // revenir au hub (constaté réellement : un tap au même endroit pour "changer d'onglet"
+          // déclenchait un retour, pas l'ouverture du menu, 2026-08-31). Le bouton menu reste donc
+          // toujours accessible, la flèche retour s'ajoute devant lui quand on est plongé.
+          if (showBack)
+            IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white70),
+              tooltip: 'Retour',
+              onPressed: onBack,
             ),
-            tooltip: showBack ? 'Retour' : 'Menu',
-            onPressed: showBack ? onBack : onMenu,
+          IconButton(
+            icon: const Icon(Icons.menu_rounded, color: Colors.white70),
+            tooltip: 'Menu',
+            onPressed: onMenu,
           ),
           Expanded(
             child: Text(

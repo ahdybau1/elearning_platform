@@ -341,7 +341,13 @@ class _PedagogicalCatalogScreenState
                     ),
             ),
             const SizedBox(height: 12),
-            Row(
+            // Wrap plutôt que Row : jusqu'à 4 boutons (Modifier/Archiver/Supprimer) après le
+            // switch débordaient hors de l'écran sur mobile, "Modifier la matière" coupé (retour
+            // utilisateur réel, captures d'écran, 2026-08-31).
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 4,
+              runSpacing: 8,
               children: [
                 Switch(
                   value: _showInactiveSubjects,
