@@ -34,15 +34,19 @@ class AiAgentsDashboardScreen extends ConsumerStatefulWidget {
   const AiAgentsDashboardScreen({super.key});
 
   @override
-  ConsumerState<AiAgentsDashboardScreen> createState() => _AiAgentsDashboardScreenState();
+  ConsumerState<AiAgentsDashboardScreen> createState() =>
+      _AiAgentsDashboardScreenState();
 }
 
-class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScreen> {
+class _AiAgentsDashboardScreenState
+    extends ConsumerState<AiAgentsDashboardScreen> {
   int _periodDays = 30;
 
   @override
   Widget build(BuildContext context) {
-    final subjectsAsync = ref.watch(subjectsProvider((countryId: null, includeInactive: false)));
+    final subjectsAsync = ref.watch(
+      subjectsProvider((countryId: null, includeInactive: false)),
+    );
     final callsAsync = ref.watch(aiAgentCallsProvider(_periodDays));
 
     return Padding(
@@ -83,7 +87,8 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
                 ),
                 // Renvoie vers l'écran dédié plutôt que de dupliquer sa logique de création ici
                 // (voir 05_flutter_architecture.md, règle 4 : pas de logique dupliquée).
-                onPressed: () => ref.read(selectedNavIndexProvider.notifier).state = 22,
+                onPressed: () =>
+                    ref.read(selectedNavIndexProvider.notifier).state = 22,
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: const Text('Gérer le Catalogue Pédagogique'),
               ),
@@ -118,14 +123,20 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
           ),
           const SizedBox(height: 28),
 
-          // Real cost/usage tracking (ai_agent_calls)
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // Real cost/usage tracking (ai_agent_calls) — Wrap plutôt que Row(Expanded titre, Wrap
+          // puces) : même piège que partout ailleurs dans l'app, un Wrap comme simple frère d'un
+          // Expanded ne rétrécit jamais lui-même (retour utilisateur réel, 2026-09-02).
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
-                child: Text(
-                  'Suivi Réel de la Consommation IA',
-                  style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+              Text(
+                'Suivi Réel de la Consommation IA',
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
               Wrap(
@@ -159,7 +170,10 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
             ),
             error: (err, _) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Text('Erreur: $err', style: GoogleFonts.inter(color: AppTheme.accentRose)),
+              child: Text(
+                'Erreur: $err',
+                style: GoogleFonts.inter(color: AppTheme.accentRose),
+              ),
             ),
           ),
           const SizedBox(height: 28),
@@ -174,110 +188,131 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
           ),
           const SizedBox(height: 14),
 
-          // Catalog Grid — données réelles (content_catalog), un onglet par matière
+          // Catalog Grid — données réelles (content_catalog), un onglet par matière. Sous
+          // 700px, 2 colonnes fixes n'avaient plus que ~170px chacune : titre et puces de
+          // catalogue écrasés (retour utilisateur réel, 2026-09-02).
           Expanded(
             child: subjectsAsync.when(
               data: (subjects) {
                 if (subjects.isEmpty) {
                   return Center(
-                    child: Text('Aucune matière créée.',
-                        style: GoogleFonts.inter(color: AppTheme.textMuted)),
+                    child: Text(
+                      'Aucune matière créée.',
+                      style: GoogleFonts.inter(color: AppTheme.textMuted),
+                    ),
                   );
                 }
-                return GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 2.5,
-                  ),
-                  itemCount: subjects.length,
-                  itemBuilder: (context, idx) {
-                final subject = subjects[idx];
-                final catalogAsync = ref.watch(contentCatalogProvider(subject.id));
-                return Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primarySurface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.primaryBorder),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              subject.name,
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                              style: GoogleFonts.outfit(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
+                return LayoutBuilder(
+                  builder: (context, constraints) => GridView.builder(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: constraints.maxWidth < 700 ? 1 : 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: constraints.maxWidth < 700 ? 1.6 : 2.5,
+                    ),
+                    itemCount: subjects.length,
+                    itemBuilder: (context, idx) {
+                      final subject = subjects[idx];
+                      final catalogAsync = ref.watch(
+                        contentCatalogProvider(subject.id),
+                      );
+                      return Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primarySurface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.primaryBorder),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    subject.name,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Icon(
+                                  Icons.category_rounded,
+                                  size: 18,
+                                  color: AppTheme.accentCyan,
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Icon(
-                            Icons.category_rounded,
-                            size: 18,
-                            color: AppTheme.accentCyan,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Expanded(
-                        child: catalogAsync.when(
-                          data: (items) {
-                            if (items.isEmpty) {
-                              return Text(
-                                'Aucun élément de catalogue pour cette matière.',
-                                style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted),
-                              );
-                            }
-                            return SingleChildScrollView(
-                              child: Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                children: items.map((item) {
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.primaryDark,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      item.elementType,
+                            const SizedBox(height: 10),
+                            Expanded(
+                              child: catalogAsync.when(
+                                data: (items) {
+                                  if (items.isEmpty) {
+                                    return Text(
+                                      'Aucun élément de catalogue pour cette matière.',
                                       style: GoogleFonts.inter(
                                         fontSize: 11,
-                                        color: Colors.white70,
+                                        color: AppTheme.textMuted,
                                       ),
+                                    );
+                                  }
+                                  return SingleChildScrollView(
+                                    child: Wrap(
+                                      spacing: 6,
+                                      runSpacing: 6,
+                                      children: items.map((item) {
+                                        return Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.primaryDark,
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            item.elementType,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              color: Colors.white70,
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
                                     ),
                                   );
-                                }).toList(),
+                                },
+                                loading: () => const LinearProgressIndicator(),
+                                error: (err, _) => Text(
+                                  'Erreur: $err',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: AppTheme.accentRose,
+                                  ),
+                                ),
                               ),
-                            );
-                          },
-                          loading: () => const LinearProgressIndicator(),
-                          error: (err, _) => Text('Erreur: $err',
-                              style: GoogleFonts.inter(fontSize: 11, color: AppTheme.accentRose)),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                );
-                  },
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, _) => Center(
-                child: Text('Erreur: $err', style: GoogleFonts.inter(color: AppTheme.accentRose)),
+                child: Text(
+                  'Erreur: $err',
+                  style: GoogleFonts.inter(color: AppTheme.accentRose),
+                ),
               ),
             ),
           ),
@@ -308,10 +343,16 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
     // CF-004 : avant la migration 53, un appel échoué n'était même pas enregistré — ce taux
     // d'échec n'était donc jamais mesurable, même approximativement.
     final failedCalls = calls.where((c) => c.isFailed).toList();
-    final failureRate = calls.isNotEmpty ? failedCalls.length / calls.length : 0.0;
-    final durationsMs = calls.map((c) => c.durationMs).whereType<int>().toList();
-    final avgDurationMs =
-        durationsMs.isNotEmpty ? durationsMs.reduce((a, b) => a + b) / durationsMs.length : null;
+    final failureRate = calls.isNotEmpty
+        ? failedCalls.length / calls.length
+        : 0.0;
+    final durationsMs = calls
+        .map((c) => c.durationMs)
+        .whereType<int>()
+        .toList();
+    final avgDurationMs = durationsMs.isNotEmpty
+        ? durationsMs.reduce((a, b) => a + b) / durationsMs.length
+        : null;
 
     final byAgent = <String, List<AiAgentCall>>{};
     final byProvider = <String, List<AiAgentCall>>{};
@@ -323,24 +364,37 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // KPI row
-        Row(
+        // KPI row — Wrap plutôt que Row : 5 cartes à largeur fixe reflouent naturellement sur
+        // plusieurs lignes quand la largeur manque, au lieu d'être écrasées à quelques pixels
+        // chacune (retour utilisateur réel, 2026-09-02).
+        Wrap(
+          spacing: 16,
+          runSpacing: 16,
           children: [
-            _buildKpiCard('Appels IA', '${calls.length}', Icons.bolt_rounded, AppTheme.accentCyan),
-            const SizedBox(width: 16),
-            _buildKpiCard('Tokens consommés', NumberFormat.decimalPattern('fr').format(totalTokens),
-                Icons.data_usage_rounded, AppTheme.accentBlue),
-            const SizedBox(width: 16),
-            _buildKpiCard('Coût estimé', '\$${totalCost.toStringAsFixed(4)}', Icons.payments_rounded,
-                AppTheme.accentEmerald),
-            const SizedBox(width: 16),
+            _buildKpiCard(
+              'Appels IA',
+              '${calls.length}',
+              Icons.bolt_rounded,
+              AppTheme.accentCyan,
+            ),
+            _buildKpiCard(
+              'Tokens consommés',
+              NumberFormat.decimalPattern('fr').format(totalTokens),
+              Icons.data_usage_rounded,
+              AppTheme.accentBlue,
+            ),
+            _buildKpiCard(
+              'Coût estimé',
+              '\$${totalCost.toStringAsFixed(4)}',
+              Icons.payments_rounded,
+              AppTheme.accentEmerald,
+            ),
             _buildKpiCard(
               'Taux d\'échec',
               '${(failureRate * 100).toStringAsFixed(1)}% (${failedCalls.length})',
               Icons.error_outline_rounded,
               failedCalls.isEmpty ? AppTheme.textMuted : AppTheme.accentRose,
             ),
-            const SizedBox(width: 16),
             _buildKpiCard(
               'Durée moyenne',
               avgDurationMs != null ? '${avgDurationMs.round()} ms' : '—',
@@ -351,13 +405,39 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
         ),
         const SizedBox(height: 16),
 
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: _buildBreakdownCard('Par Agent', byAgent, totalCost, _agentTypeLabels, null)),
-            const SizedBox(width: 16),
-            Expanded(child: _buildBreakdownCard('Par Fournisseur', byProvider, totalCost, _providerLabels, _providerColors)),
-          ],
+        // 2 panneaux Expanded côte à côte sans seuil mobile : sous 700px, chacun n'avait plus
+        // que ~50% de large — sous 700px, ils s'empilent en pleine largeur (retour utilisateur
+        // réel, 2026-09-02).
+        Builder(
+          builder: (context) {
+            final agentCard = _buildBreakdownCard(
+              'Par Agent',
+              byAgent,
+              totalCost,
+              _agentTypeLabels,
+              null,
+            );
+            final providerCard = _buildBreakdownCard(
+              'Par Fournisseur',
+              byProvider,
+              totalCost,
+              _providerLabels,
+              _providerColors,
+            );
+            if (MediaQuery.of(context).size.width < 700) {
+              return Column(
+                children: [agentCard, const SizedBox(height: 16), providerCard],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: agentCard),
+                const SizedBox(width: 16),
+                Expanded(child: providerCard),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 16),
 
@@ -372,71 +452,129 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Derniers Appels', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+              Text(
+                'Derniers Appels',
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
               const SizedBox(height: 4),
               Text(
                 'Un appel en échec (jamais visible avant le 2026-08-28 — voir CF-004) reste journalisé ici, en rouge, avec son motif.',
-                style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted, fontStyle: FontStyle.italic),
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: AppTheme.textMuted,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
               const SizedBox(height: 10),
-              ...calls.take(15).map((c) => Tooltip(
-                    message: c.isFailed
-                        ? (c.errorMessage ?? 'Échec sans message enregistré.')
-                        : (c.model != null ? 'Modèle : ${c.model}' : ''),
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: c.isFailed ? AppTheme.accentRose.withValues(alpha: 0.08) : null,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            c.isFailed ? Icons.error_rounded : Icons.check_circle_rounded,
-                            size: 13,
-                            color: c.isFailed ? AppTheme.accentRose : AppTheme.accentEmerald,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            flex: 3,
-                            child: Text(_agentTypeLabels[c.agentType] ?? c.agentType,
-                                style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Text(c.model ?? (_providerLabels[c.provider] ?? c.provider),
+              ...calls
+                  .take(15)
+                  .map(
+                    (c) => Tooltip(
+                      message: c.isFailed
+                          ? (c.errorMessage ?? 'Échec sans message enregistré.')
+                          : (c.model != null ? 'Modèle : ${c.model}' : ''),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: c.isFailed
+                              ? AppTheme.accentRose.withValues(alpha: 0.08)
+                              : null,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              c.isFailed
+                                  ? Icons.error_rounded
+                                  : Icons.check_circle_rounded,
+                              size: 13,
+                              color: c.isFailed
+                                  ? AppTheme.accentRose
+                                  : AppTheme.accentEmerald,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 3,
+                              child: Text(
+                                _agentTypeLabels[c.agentType] ?? c.agentType,
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                c.model ??
+                                    (_providerLabels[c.provider] ?? c.provider),
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.inter(
-                                    fontSize: 12, color: _providerColors[c.provider] ?? Colors.white38)),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Text('${c.tokensUsed} tok.',
-                                style: GoogleFonts.inter(fontSize: 12, color: Colors.white38)),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Text(c.durationMs != null ? '${c.durationMs} ms' : '—',
-                                style: GoogleFonts.inter(fontSize: 12, color: Colors.white38)),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Text('\$${c.costEstimate.toStringAsFixed(5)}',
-                                style: GoogleFonts.inter(fontSize: 12, color: Colors.white38)),
-                          ),
-                          Expanded(
-                            flex: 3,
-                            child: Text(
-                              DateFormat('dd/MM/yyyy HH:mm').format(c.createdAt.toLocal()),
-                              textAlign: TextAlign.end,
-                              style: GoogleFonts.inter(fontSize: 11, color: Colors.white24),
+                                  fontSize: 12,
+                                  color:
+                                      _providerColors[c.provider] ??
+                                      Colors.white38,
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                '${c.tokensUsed} tok.',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Colors.white38,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                c.durationMs != null
+                                    ? '${c.durationMs} ms'
+                                    : '—',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Colors.white38,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                '\$${c.costEstimate.toStringAsFixed(5)}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Colors.white38,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 3,
+                              child: Text(
+                                DateFormat(
+                                  'dd/MM/yyyy HH:mm',
+                                ).format(c.createdAt.toLocal()),
+                                textAlign: TextAlign.end,
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: Colors.white24,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  )),
+                  ),
             ],
           ),
         ),
@@ -444,8 +582,14 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
     );
   }
 
+  // SizedBox plutôt qu'Expanded : ce widget est maintenant utilisé dans un Wrap (voir
+  // _buildUsageSection), pas un Row — Expanded n'y a pas de sens et fait planter le rendu.
+  // 5 cartes Expanded dans un Row fixe, sans seuil mobile, n'avaient plus que ~25px pour leur
+  // texte sur téléphone (retour utilisateur réel, "toujours pas bon", 2026-09-02 — même piège
+  // que les autres écrans déjà corrigés cette session).
   Widget _buildKpiCard(String label, String value, IconData icon, Color color) {
-    return Expanded(
+    return SizedBox(
+      width: 170,
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
@@ -457,12 +601,29 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
           children: [
             Icon(icon, color: color, size: 22),
             const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(value, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                Text(label, style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted)),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -478,8 +639,11 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
     Map<String, Color>? colors,
   ) {
     final entries = grouped.entries.toList()
-      ..sort((a, b) =>
-          b.value.fold<double>(0, (s, c) => s + c.costEstimate).compareTo(a.value.fold<double>(0, (s, c) => s + c.costEstimate)));
+      ..sort(
+        (a, b) => b.value
+            .fold<double>(0, (s, c) => s + c.costEstimate)
+            .compareTo(a.value.fold<double>(0, (s, c) => s + c.costEstimate)),
+      );
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -491,11 +655,20 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text(
+            title,
+            style: GoogleFonts.outfit(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
           const SizedBox(height: 12),
           ...entries.map((e) {
             final cost = e.value.fold<double>(0, (s, c) => s + c.costEstimate);
-            final ratio = totalCost > 0 ? (cost / totalCost).clamp(0.0, 1.0) : 0.0;
+            final ratio = totalCost > 0
+                ? (cost / totalCost).clamp(0.0, 1.0)
+                : 0.0;
             final color = colors?[e.key] ?? AppTheme.accentCyan;
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -506,14 +679,24 @@ class _AiAgentsDashboardScreenState extends ConsumerState<AiAgentsDashboardScree
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
-                        child: Text(labels[e.key] ?? e.key,
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                            style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
+                        child: Text(
+                          labels[e.key] ?? e.key,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Colors.white70,
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 8),
-                      Text('${e.value.length} appel${e.value.length > 1 ? 's' : ''} · \$${cost.toStringAsFixed(4)}',
-                          style: GoogleFonts.inter(fontSize: 11, color: Colors.white38)),
+                      Text(
+                        '${e.value.length} appel${e.value.length > 1 ? 's' : ''} · \$${cost.toStringAsFixed(4)}',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: Colors.white38,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 4),
