@@ -109,18 +109,28 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
               decoration: BoxDecoration(
                 color: AppTheme.accentCyan.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.accentCyan.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: AppTheme.accentCyan.withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline_rounded, size: 16, color: AppTheme.accentCyan),
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    size: 16,
+                    color: AppTheme.accentCyan,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Un document n\'est visible que pour les élèves dont le palier d\'abonnement '
                       'donne accès à "Boutique de Documents" (voir Matrice de Droits) — le prix '
                       'ci-dessous s\'applique en plus de cette condition, pas à sa place.',
-                      style: GoogleFonts.inter(fontSize: 11, color: AppTheme.accentCyan, height: 1.3),
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: AppTheme.accentCyan,
+                        height: 1.3,
+                      ),
                     ),
                   ),
                 ],
@@ -143,11 +153,16 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                         child: FilterChip(
                           label: const Text('Toutes les classes'),
                           selected: _selectedClassId == null,
-                          onSelected: (_) => setState(() => _selectedClassId = null),
-                          selectedColor: AppTheme.accentEmerald.withValues(alpha: 0.2),
+                          onSelected: (_) =>
+                              setState(() => _selectedClassId = null),
+                          selectedColor: AppTheme.accentEmerald.withValues(
+                            alpha: 0.2,
+                          ),
                           backgroundColor: AppTheme.cardBackground,
                           labelStyle: GoogleFonts.inter(
-                            color: _selectedClassId == null ? AppTheme.accentEmerald : AppTheme.textSecondary,
+                            color: _selectedClassId == null
+                                ? AppTheme.accentEmerald
+                                : AppTheme.textSecondary,
                           ),
                         ),
                       ),
@@ -158,11 +173,16 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                           child: FilterChip(
                             label: Text(c.name),
                             selected: isSel,
-                            onSelected: (_) => setState(() => _selectedClassId = c.id),
-                            selectedColor: AppTheme.accentEmerald.withValues(alpha: 0.2),
+                            onSelected: (_) =>
+                                setState(() => _selectedClassId = c.id),
+                            selectedColor: AppTheme.accentEmerald.withValues(
+                              alpha: 0.2,
+                            ),
                             backgroundColor: AppTheme.cardBackground,
                             labelStyle: GoogleFonts.inter(
-                              color: isSel ? AppTheme.accentEmerald : AppTheme.textSecondary,
+                              color: isSel
+                                  ? AppTheme.accentEmerald
+                                  : AppTheme.textSecondary,
                             ),
                           ),
                         );
@@ -181,7 +201,10 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
               child: shopDocsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (err, _) => Center(
-                  child: Text('Erreur: $err', style: const TextStyle(color: Colors.red)),
+                  child: Text(
+                    'Erreur: $err',
+                    style: const TextStyle(color: Colors.red),
+                  ),
                 ),
                 data: (docs) {
                   if (docs.isEmpty) {
@@ -189,10 +212,16 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                   }
                   return Consumer(
                     builder: (context, ref, _) {
-                      final subjectsAsync =
-                          ref.watch(subjectsProvider((countryId: null, includeInactive: true)));
+                      final subjectsAsync = ref.watch(
+                        subjectsProvider((
+                          countryId: null,
+                          includeInactive: true,
+                        )),
+                      );
                       final subjectNames = <String, String>{
-                        for (final s in subjectsAsync.valueOrNull ?? <Subject>[]) s.id: s.name,
+                        for (final s
+                            in subjectsAsync.valueOrNull ?? <Subject>[])
+                          s.id: s.name,
                       };
                       final bySubject = <String?, List<ShopDocument>>{};
                       for (final doc in docs) {
@@ -202,7 +231,9 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                         ..sort((a, b) {
                           if (a == null) return 1;
                           if (b == null) return -1;
-                          return (subjectNames[a] ?? a).compareTo(subjectNames[b] ?? b);
+                          return (subjectNames[a] ?? a).compareTo(
+                            subjectNames[b] ?? b,
+                          );
                         });
                       return ListView.builder(
                         itemCount: subjectIds.length,
@@ -210,7 +241,9 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                           final subjectId = subjectIds[idx];
                           final subjectDocs = bySubject[subjectId]!;
                           return _buildSubjectFolder(
-                            subjectId == null ? 'Sans matière assignée' : (subjectNames[subjectId] ?? '...'),
+                            subjectId == null
+                                ? 'Sans matière assignée'
+                                : (subjectNames[subjectId] ?? '...'),
                             subjectDocs,
                           );
                         },
@@ -237,7 +270,8 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
   List<AcademicNode> _extractClassNodes(List<AcademicNode> nodes) {
     final result = <AcademicNode>[];
     for (final node in nodes) {
-      if (node.nodeType == NodeType.classType || node.nodeType == NodeType.series) {
+      if (node.nodeType == NodeType.classType ||
+          node.nodeType == NodeType.series) {
         result.add(node);
       }
       if (node.children.isNotEmpty) {
@@ -260,10 +294,17 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
         child: ExpansionTile(
           key: PageStorageKey('shop-subject-$subjectName'),
           initiallyExpanded: true,
-          leading: const Icon(Icons.folder_rounded, color: AppTheme.accentEmerald),
+          leading: const Icon(
+            Icons.folder_rounded,
+            color: AppTheme.accentEmerald,
+          ),
           title: Text(
             subjectName,
-            style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+            style: GoogleFonts.inter(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
           trailing: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -271,22 +312,38 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
               color: AppTheme.accentEmerald.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Text('${docs.length}',
-                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.accentEmerald)),
+            child: Text(
+              '${docs.length}',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.accentEmerald,
+              ),
+            ),
           ),
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           children: [
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 1.15,
-              ),
-              itemCount: docs.length,
-              itemBuilder: (context, index) => _buildShopDocCard(docs[index]),
+            // crossAxisCount fixé à 3 sans seuil mobile : chaque carte de document n'avait plus
+            // que ~110px de large sur téléphone (retour utilisateur réel, 2026-09-02).
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final crossAxisCount = constraints.maxWidth > 900
+                    ? 3
+                    : (constraints.maxWidth > 550 ? 2 : 1);
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: crossAxisCount == 1 ? 1.6 : 1.15,
+                  ),
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) =>
+                      _buildShopDocCard(docs[index]),
+                );
+              },
             ),
           ],
         ),
@@ -299,16 +356,26 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.inventory_2_outlined, size: 64, color: AppTheme.textSecondary.withValues(alpha: 0.4)),
+          Icon(
+            Icons.inventory_2_outlined,
+            size: 64,
+            color: AppTheme.textSecondary.withValues(alpha: 0.4),
+          ),
           const SizedBox(height: 16),
           Text(
             'Aucun document en vente pour cette sélection',
-            style: GoogleFonts.inter(fontSize: 16, color: AppTheme.textSecondary),
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              color: AppTheme.textSecondary,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             'Ajoutez des livrets d\'exercices ou fiches de révision à la carte.',
-            style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary.withValues(alpha: 0.6)),
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: AppTheme.textSecondary.withValues(alpha: 0.6),
+            ),
           ),
         ],
       ),
@@ -322,7 +389,9 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
         color: AppTheme.cardBackground,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: doc.isActive ? AppTheme.borderColor : AppTheme.accentAmber.withValues(alpha: 0.4),
+          color: doc.isActive
+              ? AppTheme.borderColor
+              : AppTheme.accentAmber.withValues(alpha: 0.4),
         ),
       ),
       child: Column(
@@ -331,7 +400,10 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.accentEmerald.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6),
@@ -348,14 +420,21 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
               const Spacer(),
               if (!doc.isActive)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.accentAmber.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     'ARCHIVÉ',
-                    style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.accentAmber),
+                    style: GoogleFonts.inter(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.accentAmber,
+                    ),
                   ),
                 ),
             ],
@@ -363,11 +442,18 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
           const SizedBox(height: 10),
           Row(
             children: [
-              const Icon(Icons.download_rounded, size: 14, color: AppTheme.textSecondary),
+              const Icon(
+                Icons.download_rounded,
+                size: 14,
+                color: AppTheme.textSecondary,
+              ),
               const SizedBox(width: 4),
               Text(
                 '${doc.downloadsCount} ventes',
-                style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: AppTheme.textSecondary,
+                ),
               ),
             ],
           ),
@@ -398,7 +484,11 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
           const SizedBox(height: 10),
           Row(
             children: [
-              const Icon(Icons.security_rounded, size: 14, color: AppTheme.accentCyan),
+              const Icon(
+                Icons.security_rounded,
+                size: 14,
+                color: AppTheme.accentCyan,
+              ),
               const SizedBox(width: 4),
               Text(
                 'Filigrane forensique',
@@ -417,7 +507,11 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
             runSpacing: 4,
             children: [
               IconButton(
-                icon: const Icon(Icons.edit_rounded, size: 18, color: AppTheme.accentBlue),
+                icon: const Icon(
+                  Icons.edit_rounded,
+                  size: 18,
+                  color: AppTheme.accentBlue,
+                ),
                 tooltip: 'Modifier',
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -425,7 +519,9 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
               ),
               IconButton(
                 icon: Icon(
-                  doc.isActive ? Icons.archive_rounded : Icons.unarchive_rounded,
+                  doc.isActive
+                      ? Icons.archive_rounded
+                      : Icons.unarchive_rounded,
                   size: 18,
                   color: AppTheme.accentAmber,
                 ),
@@ -438,10 +534,17 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
               ),
               if (!doc.isActive)
                 IconButton(
-                  icon: const Icon(Icons.delete_forever_rounded, size: 18, color: AppTheme.accentRose),
+                  icon: const Icon(
+                    Icons.delete_forever_rounded,
+                    size: 18,
+                    color: AppTheme.accentRose,
+                  ),
                   tooltip: 'Supprimer définitivement',
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
                   onPressed: () => _showDeleteConfirmation(context, doc),
                 ),
             ],
@@ -460,12 +563,17 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
       messenger.showSnackBar(
         SnackBar(
           backgroundColor: AppTheme.accentEmerald,
-          content: Text(isActive ? 'Document désarchivé.' : 'Document archivé.'),
+          content: Text(
+            isActive ? 'Document désarchivé.' : 'Document archivé.',
+          ),
         ),
       );
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(backgroundColor: AppTheme.accentRose, content: Text('Erreur : $e')),
+        SnackBar(
+          backgroundColor: AppTheme.accentRose,
+          content: Text('Erreur : $e'),
+        ),
       );
     }
   }
@@ -490,13 +598,22 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
           child: Text(
             'Le document ne sera plus visible ni achetable, mais pas supprimé — vous pourrez le '
             'désarchiver ou le supprimer définitivement plus tard.',
-            style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.4),
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: Colors.white70,
+              height: 1.4,
+            ),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Annuler'),
+          ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentAmber),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accentAmber,
+            ),
             onPressed: () {
               Navigator.pop(ctx);
               _toggleActive(doc, false);
@@ -519,7 +636,9 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => AlertDialog(
           backgroundColor: AppTheme.cardBackground,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: AppDialogTitle(
             icon: Icons.delete_forever_rounded,
             iconColor: AppTheme.accentRose,
@@ -537,27 +656,42 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                   decoration: BoxDecoration(
                     color: AppTheme.accentRose.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTheme.accentRose.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: AppTheme.accentRose.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Text(
                     'IRRÉVERSIBLE : le document et son historique de ${doc.downloadsCount} vente(s) '
                     'seront définitivement supprimés.',
-                    style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose, height: 1.4),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AppTheme.accentRose,
+                      height: 1.4,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text('Tapez "${doc.title}" pour confirmer :',
-                    style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
+                Text(
+                  'Tapez "${doc.title}" pour confirmer :',
+                  style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
+                ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: confirmController,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(hintText: doc.title),
-                  onChanged: (v) => setModalState(() => nameMatches = v.trim() == doc.title),
+                  onChanged: (v) =>
+                      setModalState(() => nameMatches = v.trim() == doc.title),
                 ),
                 if (errorText != null) ...[
                   const SizedBox(height: 12),
-                  Text(errorText!, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                  Text(
+                    errorText!,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AppTheme.accentRose,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -568,7 +702,9 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
               child: const Text('Annuler'),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentRose),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentRose,
+              ),
               onPressed: (isLoading || !nameMatches)
                   ? null
                   : () async {
@@ -582,7 +718,9 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                         messenger.showSnackBar(
                           SnackBar(
                             backgroundColor: AppTheme.accentRose,
-                            content: Text('Document "${doc.title}" supprimé définitivement.'),
+                            content: Text(
+                              'Document "${doc.title}" supprimé définitivement.',
+                            ),
                           ),
                         );
                       } catch (e) {
@@ -596,7 +734,10 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Text('Supprimer'),
             ),
@@ -615,13 +756,19 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
     final isEditing = existing != null;
     final titleCtrl = TextEditingController(text: existing?.title ?? '');
     final descCtrl = TextEditingController(text: existing?.description ?? '');
-    final priceCtrl = TextEditingController(text: existing?.price.toStringAsFixed(0) ?? '500');
+    final priceCtrl = TextEditingController(
+      text: existing?.price.toStringAsFixed(0) ?? '500',
+    );
     String? selectedClassId = existing?.classNodeId ?? _selectedClassId;
     String? selectedSubjectId = existing?.subjectId;
     String? documentUrl = existing?.documentUrl;
-    String? documentFilename = existing?.documentUrl != null ? existing!.documentUrl.split('/').last : null;
+    String? documentFilename = existing?.documentUrl != null
+        ? existing!.documentUrl.split('/').last
+        : null;
     String? previewUrl = existing?.previewUrl;
-    String? previewFilename = existing?.previewUrl != null ? existing!.previewUrl!.split('/').last : null;
+    String? previewFilename = existing?.previewUrl != null
+        ? existing!.previewUrl!.split('/').last
+        : null;
     bool isUploadingDoc = false;
     bool isUploadingPreview = false;
     String? docUploadError;
@@ -659,8 +806,14 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
           return;
         }
         final service = ref.read(supabaseServiceProvider);
-        final uploadedBy = ref.read(authProvider).valueOrNull?.id ?? '00000000-0000-0000-0000-000000000001';
-        final asset = await service.uploadMedia(bytes: bytes, filename: file.name, uploadedBy: uploadedBy);
+        final uploadedBy =
+            ref.read(authProvider).valueOrNull?.id ??
+            '00000000-0000-0000-0000-000000000001';
+        final asset = await service.uploadMedia(
+          bytes: bytes,
+          filename: file.name,
+          uploadedBy: uploadedBy,
+        );
         setDlgState(() {
           if (isPreview) {
             previewUrl = asset.url;
@@ -690,10 +843,14 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDlgState) => AlertDialog(
           backgroundColor: AppTheme.cardBackground,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: AppDialogTitle(
             icon: Icons.sell_rounded,
-            text: isEditing ? 'Modifier "${existing.title}"' : 'Mettre en Vente un Document',
+            text: isEditing
+                ? 'Modifier "${existing.title}"'
+                : 'Mettre en Vente un Document',
             onClose: () => Navigator.pop(ctx),
           ),
           content: SizedBox(
@@ -709,7 +866,9 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: 'Titre du document',
-                      labelStyle: const TextStyle(color: AppTheme.textSecondary),
+                      labelStyle: const TextStyle(
+                        color: AppTheme.textSecondary,
+                      ),
                       errorText: fieldError,
                     ),
                   ),
@@ -734,9 +893,14 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  Text('Document PDF',
-                      style: GoogleFonts.inter(
-                          fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+                  Text(
+                    'Document PDF',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   Consumer(
                     builder: (context, ref, _) => Row(
@@ -744,23 +908,39 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                         OutlinedButton.icon(
                           onPressed: isUploadingDoc
                               ? null
-                              : () => pickAndUpload(isPreview: false, setDlgState: setDlgState, ref: ref),
+                              : () => pickAndUpload(
+                                  isPreview: false,
+                                  setDlgState: setDlgState,
+                                  ref: ref,
+                                ),
                           icon: isUploadingDoc
                               ? const SizedBox(
                                   width: 14,
                                   height: 14,
-                                  child: CircularProgressIndicator(strokeWidth: 2))
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
                               : const Icon(Icons.upload_file_rounded, size: 16),
-                          label: Text(isUploadingDoc
-                              ? 'Envoi en cours...'
-                              : (documentUrl != null ? 'Remplacer le fichier' : 'Choisir un fichier')),
+                          label: Text(
+                            isUploadingDoc
+                                ? 'Envoi en cours...'
+                                : (documentUrl != null
+                                      ? 'Remplacer le fichier'
+                                      : 'Choisir un fichier'),
+                          ),
                         ),
                         const SizedBox(width: 10),
                         if (documentFilename != null)
                           Expanded(
-                            child: Text(documentFilename!,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.inter(fontSize: 12, color: Colors.white)),
+                            child: Text(
+                              documentFilename!,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                       ],
                     ),
@@ -768,13 +948,23 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                   if (docUploadError != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
-                      child: Text(docUploadError!,
-                          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                      child: Text(
+                        docUploadError!,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppTheme.accentRose,
+                        ),
+                      ),
                     ),
                   const SizedBox(height: 18),
-                  Text('Aperçu (optionnel)',
-                      style: GoogleFonts.inter(
-                          fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+                  Text(
+                    'Aperçu (optionnel)',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   Consumer(
                     builder: (context, ref, _) => Row(
@@ -782,23 +972,39 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                         OutlinedButton.icon(
                           onPressed: isUploadingPreview
                               ? null
-                              : () => pickAndUpload(isPreview: true, setDlgState: setDlgState, ref: ref),
+                              : () => pickAndUpload(
+                                  isPreview: true,
+                                  setDlgState: setDlgState,
+                                  ref: ref,
+                                ),
                           icon: isUploadingPreview
                               ? const SizedBox(
                                   width: 14,
                                   height: 14,
-                                  child: CircularProgressIndicator(strokeWidth: 2))
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
                               : const Icon(Icons.upload_file_rounded, size: 16),
-                          label: Text(isUploadingPreview
-                              ? 'Envoi en cours...'
-                              : (previewUrl != null ? 'Remplacer le fichier' : 'Choisir un fichier')),
+                          label: Text(
+                            isUploadingPreview
+                                ? 'Envoi en cours...'
+                                : (previewUrl != null
+                                      ? 'Remplacer le fichier'
+                                      : 'Choisir un fichier'),
+                          ),
                         ),
                         const SizedBox(width: 10),
                         if (previewFilename != null)
                           Expanded(
-                            child: Text(previewFilename!,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.inter(fontSize: 12, color: Colors.white)),
+                            child: Text(
+                              previewFilename!,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                       ],
                     ),
@@ -806,8 +1012,13 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                   if (previewUploadError != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
-                      child: Text(previewUploadError!,
-                          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                      child: Text(
+                        previewUploadError!,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppTheme.accentRose,
+                        ),
+                      ),
                     ),
                   const SizedBox(height: 14),
                   Consumer(
@@ -828,7 +1039,12 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                           prefixIcon: Icon(Icons.school_rounded, size: 20),
                         ),
                         items: classNodes
-                            .map((c) => DropdownMenuItem<String?>(value: c.id, child: Text(c.name)))
+                            .map(
+                              (c) => DropdownMenuItem<String?>(
+                                value: c.id,
+                                child: Text(c.name),
+                              ),
+                            )
                             .toList(),
                         onChanged: (v) => setDlgState(() {
                           selectedClassId = v;
@@ -843,24 +1059,38 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                       if (selectedClassId == null) {
                         return const SizedBox.shrink();
                       }
-                      final subjectsAsync = ref.watch(subjectsForClassProvider(selectedClassId!));
+                      final subjectsAsync = ref.watch(
+                        subjectsForClassProvider(selectedClassId!),
+                      );
                       final subjects = subjectsAsync.valueOrNull ?? <Subject>[];
                       return DropdownButtonFormField<String?>(
                         // ignore: deprecated_member_use
-                        value: subjects.any((s) => s.id == selectedSubjectId) ? selectedSubjectId : null,
+                        value: subjects.any((s) => s.id == selectedSubjectId)
+                            ? selectedSubjectId
+                            : null,
                         dropdownColor: AppTheme.primaryDark,
                         style: const TextStyle(color: Colors.white),
                         isExpanded: true,
                         decoration: const InputDecoration(
-                          labelText: 'Matière (optionnel — pour le classement en dossiers)',
+                          labelText:
+                              'Matière (optionnel — pour le classement en dossiers)',
                           labelStyle: TextStyle(color: AppTheme.textSecondary),
                           prefixIcon: Icon(Icons.menu_book_rounded, size: 20),
                         ),
                         items: [
-                          const DropdownMenuItem<String?>(value: null, child: Text('Sans matière assignée')),
-                          ...subjects.map((s) => DropdownMenuItem<String?>(value: s.id, child: Text(s.name))),
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('Sans matière assignée'),
+                          ),
+                          ...subjects.map(
+                            (s) => DropdownMenuItem<String?>(
+                              value: s.id,
+                              child: Text(s.name),
+                            ),
+                          ),
                         ],
-                        onChanged: (v) => setDlgState(() => selectedSubjectId = v),
+                        onChanged: (v) =>
+                            setDlgState(() => selectedSubjectId = v),
                       );
                     },
                   ),
@@ -872,8 +1102,13 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                         color: AppTheme.accentRose.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(submitError!,
-                          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+                      child: Text(
+                        submitError!,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppTheme.accentRose,
+                        ),
+                      ),
                     ),
                   ],
                 ],
@@ -883,30 +1118,46 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
           actions: [
             TextButton(
               onPressed: isLoading ? null : () => Navigator.pop(ctx),
-              child: const Text('Annuler', style: TextStyle(color: AppTheme.textSecondary)),
+              child: const Text(
+                'Annuler',
+                style: TextStyle(color: AppTheme.textSecondary),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentEmerald),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentEmerald,
+              ),
               onPressed: isLoading
                   ? null
                   : () async {
                       final title = titleCtrl.text.trim();
                       if (title.isEmpty) {
-                        setDlgState(() => fieldError = 'Le titre est obligatoire');
+                        setDlgState(
+                          () => fieldError = 'Le titre est obligatoire',
+                        );
                         return;
                       }
                       final price = double.tryParse(priceCtrl.text.trim());
                       if (price == null || price < 0) {
-                        setDlgState(() => submitError = 'Prix invalide — entrez un nombre valide.');
+                        setDlgState(
+                          () => submitError =
+                              'Prix invalide — entrez un nombre valide.',
+                        );
                         return;
                       }
                       final url = documentUrl;
                       if (url == null || url.isEmpty) {
-                        setDlgState(() => submitError = 'Le document à vendre est obligatoire — choisissez un fichier.');
+                        setDlgState(
+                          () => submitError =
+                              'Le document à vendre est obligatoire — choisissez un fichier.',
+                        );
                         return;
                       }
                       if (selectedClassId == null) {
-                        setDlgState(() => submitError = 'La classe/série ciblée est obligatoire.');
+                        setDlgState(
+                          () => submitError =
+                              'La classe/série ciblée est obligatoire.',
+                        );
                         return;
                       }
                       setDlgState(() {
@@ -951,9 +1202,15 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
-                  : Text(isEditing ? 'Enregistrer' : 'Publier', style: const TextStyle(color: Colors.white)),
+                  : Text(
+                      isEditing ? 'Enregistrer' : 'Publier',
+                      style: const TextStyle(color: Colors.white),
+                    ),
             ),
           ],
         ),

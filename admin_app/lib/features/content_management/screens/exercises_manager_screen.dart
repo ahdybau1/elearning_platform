@@ -379,21 +379,29 @@ class _ExercisesManagerScreenState
                       ),
                     ),
                     const SizedBox(height: 8),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 2.0,
+                    // crossAxisCount fixé à 2 sans seuil mobile : chaque carte d'exercice
+                    // n'avait plus que ~170px de large sur téléphone (retour utilisateur réel,
+                    // 2026-09-02).
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isMobile = constraints.maxWidth < 500;
+                        return GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: isMobile ? 1 : 2,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                                childAspectRatio: isMobile ? 2.6 : 2.0,
+                              ),
+                          itemCount: linkedExercises.length,
+                          itemBuilder: (context, idx) => _buildExerciseCard(
+                            linkedExercises[idx],
+                            classOptions,
                           ),
-                      itemCount: linkedExercises.length,
-                      itemBuilder: (context, idx) => _buildExerciseCard(
-                        linkedExercises[idx],
-                        classOptions,
-                      ),
+                        );
+                      },
                     ),
                     if (independentExercises.isNotEmpty)
                       const SizedBox(height: 20),
@@ -408,21 +416,26 @@ class _ExercisesManagerScreenState
                       ),
                     ),
                     const SizedBox(height: 8),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 2.0,
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isMobile = constraints.maxWidth < 500;
+                        return GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: isMobile ? 1 : 2,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                                childAspectRatio: isMobile ? 2.6 : 2.0,
+                              ),
+                          itemCount: independentExercises.length,
+                          itemBuilder: (context, idx) => _buildExerciseCard(
+                            independentExercises[idx],
+                            classOptions,
                           ),
-                      itemCount: independentExercises.length,
-                      itemBuilder: (context, idx) => _buildExerciseCard(
-                        independentExercises[idx],
-                        classOptions,
-                      ),
+                        );
+                      },
                     ),
                   ],
                 ],
