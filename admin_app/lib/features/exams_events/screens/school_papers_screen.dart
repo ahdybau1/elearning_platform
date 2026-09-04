@@ -9,6 +9,7 @@ import '../../../core/providers/data_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_dialog_title.dart';
 import '../../content_management/widgets/media_attachment_picker.dart';
+import '../widgets/exam_paper_ai_processing_action.dart';
 
 /// Fusionne classes et séries dans une seule liste de sélection (une série est un "classe" plus
 /// précise pour les niveaux qui en ont — même logique que Leçons & Cours).
@@ -556,6 +557,12 @@ class _SchoolPapersScreenState extends ConsumerState<SchoolPapersScreen> {
                                                         ),
                                                       ],
                                                     ),
+                                                  ),
+                                                  ExamPaperAiProcessingAction(
+                                                    establishmentPaperId: paper.id,
+                                                    processingStatus: paper.processingStatus,
+                                                    paperLabel: '${est.name} — ${subjectNames[paper.subjectId] ?? ''} ${paper.year}',
+                                                    onChanged: () => ref.invalidate(establishmentPapersProvider(est.id)),
                                                   ),
                                                   IconButton(
                                                     icon: const Icon(Icons.visibility_rounded, color: AppTheme.accentCyan, size: 18),

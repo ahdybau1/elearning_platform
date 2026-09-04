@@ -288,6 +288,17 @@ final examPapersProvider =
   return service.fetchExamPapers(examId);
 });
 
+/// Exam Resource Factory (Tranche 1) — questions extraites d'un sujet national OU d'établissement
+/// (exactement un des deux champs du record est renseigné).
+final examPaperQuestionsProvider = FutureProvider.family<List<ExamPaperQuestion>,
+    ({String? examPaperId, String? establishmentPaperId})>((ref, ids) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchExamPaperQuestions(
+    examPaperId: ids.examPaperId,
+    establishmentPaperId: ids.establishmentPaperId,
+  );
+});
+
 final officialExamsProvider =
     FutureProvider.family<List<OfficialExam>, Map<String, String>>((ref, filters) async {
   final service = ref.watch(supabaseServiceProvider);

@@ -400,6 +400,7 @@ class ExamPaper {
   final String documentUrl;
   final String? correctionUrl;
   final bool isCorrectionUnlocked;
+  final String processingStatus;
   final DateTime createdAt;
 
   ExamPaper({
@@ -410,6 +411,7 @@ class ExamPaper {
     required this.documentUrl,
     this.correctionUrl,
     this.isCorrectionUnlocked = false,
+    this.processingStatus = 'not_started',
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -423,6 +425,8 @@ class ExamPaper {
       correctionUrl: json['correction_url'] as String?,
       isCorrectionUnlocked:
           (json['is_correction_unlocked'] as bool?) ?? false,
+      processingStatus:
+          (json['processing_status'] as String?) ?? 'not_started',
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
@@ -472,6 +476,7 @@ class EstablishmentPaper {
   final int year;
   final String documentUrl;
   final String? correctionUrl;
+  final String processingStatus;
   final DateTime createdAt;
 
   EstablishmentPaper({
@@ -483,6 +488,7 @@ class EstablishmentPaper {
     required this.year,
     required this.documentUrl,
     this.correctionUrl,
+    this.processingStatus = 'not_started',
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -496,8 +502,63 @@ class EstablishmentPaper {
       year: json['year'] as int,
       documentUrl: json['document_url'] as String,
       correctionUrl: json['correction_url'] as String?,
+      processingStatus:
+          (json['processing_status'] as String?) ?? 'not_started',
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+    );
+  }
+}
+
+/// Question extraite par l'IA (Exam Resource Factory, docs/CAHIER_IA_ZERO_COUT_MASTER.md, Annexe
+/// D.8-D.9) à partir d'un sujet national (`examPaperId`) ou d'établissement
+/// (`establishmentPaperId`) — exactement un des deux est renseigné. Reste `waiting_review` tant
+/// qu'un admin ne l'a pas relue.
+class ExamPaperQuestion {
+  final String id;
+  final String? examPaperId;
+  final String? establishmentPaperId;
+  final int questionOrder;
+  final String statement;
+  final String? proposedAnswer;
+  final double? confidence;
+  final String status;
+  final String? reviewerNotes;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  ExamPaperQuestion({
+    required this.id,
+    this.examPaperId,
+    this.establishmentPaperId,
+    required this.questionOrder,
+    required this.statement,
+    this.proposedAnswer,
+    this.confidence,
+    this.status = 'waiting_review',
+    this.reviewerNotes,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  })  : createdAt = createdAt ?? DateTime.now(),
+        updatedAt = updatedAt ?? DateTime.now();
+
+  factory ExamPaperQuestion.fromJson(Map<String, dynamic> json) {
+    return ExamPaperQuestion(
+      id: json['id'] as String,
+      examPaperId: json['exam_paper_id'] as String?,
+      establishmentPaperId: json['establishment_paper_id'] as String?,
+      questionOrder: (json['question_order'] as int?) ?? 0,
+      statement: json['statement'] as String,
+      proposedAnswer: json['proposed_answer'] as String?,
+      confidence: (json['confidence'] as num?)?.toDouble(),
+      status: (json['status'] as String?) ?? 'waiting_review',
+      reviewerNotes: json['reviewer_notes'] as String?,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
           : DateTime.now(),
     );
   }

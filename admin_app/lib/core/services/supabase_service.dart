@@ -1827,6 +1827,89 @@ class SupabaseService {
     await client.from('exam_papers').delete().eq('id', paperId);
   }
 
+  // ─── Exam Resource Factory (Tranche 1) — docs/CAHIER_IA_ZERO_COUT_MASTER.md Annexe D.8-D.9 ──
+  // Un sujet est national (exam_papers) OU d'établissement (establishment_papers) — exactement
+  // un des deux identifiants est fourni à chacune des méthodes ci-dessous.
+
+  /// Déclenche l'Edge Function ai-exam-paper-processing (OCR vision Gemini + découpage en
+  /// questions) sur un sujet déjà uploadé. Retourne le nombre de questions extraites.
+  Future<int> processExamPaperWithAi({
+    String? examPaperId,
+    String? establishmentPaperId,
+  }) async {
+    assert((examPaperId == null) != (establishmentPaperId == null));
+    final res = await client.functions.invoke(
+      'ai-exam-paper-processing',
+      body: {
+        'exam_paper_id': examPaperId,
+        'establishment_paper_id': establishmentPaperId,
+      },
+    );
+    if (res.status != 200) {
+      final error = (res.data is Map) ? res.data['error'] : res.data;
+      throw Exception(error ?? 'Échec du traitement IA du sujet');
+    }
+    final data = Map<String, dynamic>.from(res.data as Map);
+    return (data['questions_count'] as num?)?.toInt() ?? 0;
+  }
+
+  Future<List<ExamPaperQuestion>> fetchExamPaperQuestions({
+    String? examPaperId,
+    String? establishmentPaperId,
+  }) async {
+    assert((examPaperId == null) != (establishmentPaperId == null));
+    var query = client.from('exam_paper_questions').select();
+    query = examPaperId != null
+        ? query.eq('exam_paper_id', examPaperId)
+        : query.eq('establishment_paper_id', establishmentPaperId as String);
+    final rows =
+        await query.order('question_order', ascending: true).then((r) => r as List);
+    return rows
+        .map((r) => ExamPaperQuestion.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  Future<void> updateExamPaperQuestion({
+    required String id,
+    String? statement,
+    String? proposedAnswer,
+    String? status,
+    String? reviewerNotes,
+  }) async {
+    final data = <String, dynamic>{
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+    if (statement != null) data['statement'] = statement;
+    if (proposedAnswer != null) data['proposed_answer'] = proposedAnswer;
+    if (status != null) data['status'] = status;
+    if (reviewerNotes != null) data['reviewer_notes'] = reviewerNotes;
+    await client.from('exam_paper_questions').update(data).eq('id', id);
+  }
+
+  /// Publie un sujet traité : refuse si au moins une question n'est pas encore `approved` (même
+  /// discipline de workflow que §9 du cahier technique Content Factory).
+  Future<void> publishExamPaper({
+    String? examPaperId,
+    String? establishmentPaperId,
+  }) async {
+    assert((examPaperId == null) != (establishmentPaperId == null));
+    final questions = await fetchExamPaperQuestions(
+      examPaperId: examPaperId,
+      establishmentPaperId: establishmentPaperId,
+    );
+    if (questions.isEmpty || questions.any((q) => q.status != 'approved')) {
+      throw Exception(
+        'Toutes les questions doivent être approuvées avant publication.',
+      );
+    }
+    final table = examPaperId != null ? 'exam_papers' : 'establishment_papers';
+    final id = examPaperId ?? establishmentPaperId;
+    await client
+        .from(table)
+        .update({'processing_status': 'published'})
+        .eq('id', id as String);
+  }
+
   // ─── Subjects CRUD ────────────────────────────────────────────
 
   Future<Subject?> createSubject({

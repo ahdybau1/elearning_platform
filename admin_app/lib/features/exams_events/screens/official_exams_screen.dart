@@ -10,6 +10,7 @@ import '../../../core/providers/data_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_dialog_title.dart';
 import '../../content_management/widgets/media_attachment_picker.dart';
+import '../widgets/exam_paper_ai_processing_action.dart';
 
 /// Fusionne classes et séries dans une seule liste de sélection — un sujet de Bac Série C n'est pas
 /// le même document qu'un sujet de Bac Série D, la série doit donc être sélectionnable ici aussi.
@@ -778,6 +779,12 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
                                                 paper.correctionUrl != null ? 'Sujet & Corrigé' : 'Sujet seul',
                                                 style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
                                               ),
+                                            ),
+                                            ExamPaperAiProcessingAction(
+                                              examPaperId: paper.id,
+                                              processingStatus: paper.processingStatus,
+                                              paperLabel: '${exam.name} — ${subjectNames[paper.subjectId] ?? ''} ${paper.year}',
+                                              onChanged: () => ref.invalidate(examPapersProvider(exam.id)),
                                             ),
                                             IconButton(
                                               icon: const Icon(Icons.visibility_rounded, color: AppTheme.accentCyan, size: 18),
