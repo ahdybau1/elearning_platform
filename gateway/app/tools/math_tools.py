@@ -39,7 +39,7 @@ _TRANSFORMATIONS = standard_transformations + (implicit_multiplication_applicati
 
 MAX_EXPR_LEN = 200
 TIMEOUT_SECONDS = 5
-_VALID_MODES = {"solve", "simplify", "evaluate"}
+_VALID_MODES = {"solve", "simplify", "evaluate", "parse"}
 
 # Uniquement chiffres, opérateurs mathématiques, parenthèses, points, espaces et lettres (pour la
 # variable + les noms de fonctions ci-dessous) — aucun caractère permettant d'écrire un accès
@@ -106,6 +106,10 @@ def _compute(expression: str, mode: str, variable: str) -> dict:
         return {"result": [str(s) for s in solutions]}
     if mode == "simplify":
         return {"result": str(sympy.simplify(expr))}
+    if mode == "parse":
+        # AIA-AGT-015 (FormulaRecognitionAgent) : confirme uniquement que l'expression est
+        # sémantiquement valide pour SymPy, sans la résoudre ni l'évaluer — juste sa forme canonique.
+        return {"result": str(expr)}
     # mode == "evaluate"
     return {"result": str(expr.evalf())}
 
