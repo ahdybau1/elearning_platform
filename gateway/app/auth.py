@@ -16,6 +16,7 @@ class AuthenticatedUser:
         self.admin_role: str | None = None
         self.admin_user_id: str | None = None
         self.account_id: str | None = None
+        self.parent_account_id: str | None = None
 
 
 async def get_current_user(authorization: str = Header(...)) -> AuthenticatedUser:
@@ -61,6 +62,22 @@ async def get_current_user(authorization: str = Header(...)) -> AuthenticatedUse
             )
         if acct_res.status_code == 200 and acct_res.json():
             user.account_id = acct_res.json()[0]["id"]
+        else:
+            # IA-012 : ParentInsightAgent — un compte peut être un parent (parent_accounts.auth_user_id,
+            # migration 11), jamais un élève (accounts) ni un admin. Les deux identités sont
+            # mutuellement exclusives dans ce schéma, donc vérifiées seulement si les précédentes ont
+            # échoué.
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                parent_res = await client.get(
+                    f"{settings.rest_url}/parent_accounts",
+                    params={"auth_user_id": f"eq.{user.auth_user_id}", "is_active": "eq.true", "select": "id"},
+                    headers={
+                        "Authorization": f"Bearer {settings.supabase_service_role_key}",
+                        "apikey": settings.supabase_service_role_key,
+                    },
+                )
+            if parent_res.status_code == 200 and parent_res.json():
+                user.parent_account_id = parent_res.json()[0]["id"]
 
     return user
 
@@ -85,3 +102,27 @@ async def verify_profile_access(user: AuthenticatedUser, profile_id: str | None)
     rows = res.json() if res.status_code == 200 else []
     if not rows or rows[0].get("account_id") != user.account_id:
         raise HTTPException(status_code=403, detail="profile_id ne correspond pas au compte authentifié.")
+
+
+async def verify_parent_child_access(user: AuthenticatedUser, profile_id: str | None) -> None:
+    """IA-012, ParentInsightAgent (AIA-AGT-019) : un compte parent n'a pas de `account_id` (réservé
+    aux élèves) — `verify_profile_access` le rejetterait toujours à tort. Vérifie ici le vrai lien
+    réel dans `parent_profile_links` (migration 01), jamais un profil arbitraire."""
+    if user.is_admin:
+        return
+    if not profile_id:
+        raise HTTPException(status_code=400, detail="profile_id requis.")
+    if not user.parent_account_id:
+        raise HTTPException(status_code=403, detail="Réservé aux comptes parents liés à ce profil.")
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        res = await client.get(
+            f"{settings.rest_url}/parent_profile_links",
+            params={"parent_account_id": f"eq.{user.parent_account_id}", "profile_id": f"eq.{profile_id}", "select": "id"},
+            headers={
+                "Authorization": f"Bearer {settings.supabase_service_role_key}",
+                "apikey": settings.supabase_service_role_key,
+            },
+        )
+    rows = res.json() if res.status_code == 200 else []
+    if not rows:
+        raise HTTPException(status_code=403, detail="Ce profil n'est pas lié à ce compte parent.")

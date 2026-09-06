@@ -24,11 +24,18 @@ from .agents.diagnostic_agent import diagnose
 from .agents.exam_coach_agent import build_exam_prep_plan
 from .agents.formula_recognition_agent import recognize_formula
 from .agents.misconception_agent import detect_misconceptions
+from .agents.parent_insight_agent import build_parent_insight
 from .agents.pedagogical_validation import validate_lesson
 from .agents.recommendation_agent import recommend_activities
 from .agents.revision_agent import build_revision_session
+from .agents.support_triage_agent import SupportTriageError, triage_ticket
 from .agents.tutor_agent import run_tutor_agent
-from .auth import AuthenticatedUser, get_current_user, verify_profile_access
+from .auth import (
+    AuthenticatedUser,
+    get_current_user,
+    verify_parent_child_access,
+    verify_profile_access,
+)
 from .config import settings
 from .envelope import AgentRequest, AgentResponse, SafetyInfo, UsageInfo
 from .model_router.router import route_generate
@@ -75,7 +82,12 @@ async def invoke_agent(
     # IA-007 : un profile_id doit réellement appartenir au compte authentifié — rien ne le vérifiait
     # avant (voir le commentaire de verify_profile_access), et IA-007 lit désormais des données
     # pédagogiques (Student Model) à partir de ce même profile_id.
-    await verify_profile_access(user, request.profile_id)
+    # IA-012, ParentInsightAgent (AIA-AGT-019) : l'appelant est un PARENT, pas l'élève lui-même —
+    # verify_profile_access rejetterait toujours à tort (un compte parent n'a pas de account_id).
+    if agent_id == "AIA-AGT-019":
+        await verify_parent_child_access(user, request.profile_id)
+    else:
+        await verify_profile_access(user, request.profile_id)
 
     request_id = str(uuid.uuid4())
     started = time.monotonic()
@@ -110,6 +122,50 @@ async def invoke_agent(
                 duration_ms=duration_ms, error_message=str(exc),
             )
             raise HTTPException(status_code=502, detail=f"{agent_id} en échec : {exc}") from exc
+        duration_ms = int((time.monotonic() - started) * 1000)
+        await log_gateway_call(request_id=request_id, agent_type=agent_id, status="success", duration_ms=duration_ms)
+        return AgentResponse(
+            request_id=request_id, status="success", result=result,
+            usage=UsageInfo(route="server", compute_units=0),
+            agent_version=version["version"], model_version=None, safety=SafetyInfo(),
+        )
+
+    # IA-012 "Staff/famille" : ParentInsightAgent — profile_id ici est l'ENFANT consulté, pas
+    # l'appelant (déjà vérifié via verify_parent_child_access ci-dessus, avant get_agent_version).
+    if agent_id == "AIA-AGT-019":
+        subject_id = request.payload.get("subject_id") or request.academic_context.subject_id
+        try:
+            result = await build_parent_insight(request.profile_id, subject_id)
+        except Exception as exc:
+            duration_ms = int((time.monotonic() - started) * 1000)
+            await log_gateway_call(
+                request_id=request_id, agent_type=agent_id, status="failed",
+                duration_ms=duration_ms, error_message=str(exc),
+            )
+            raise HTTPException(status_code=502, detail=f"{agent_id} en échec : {exc}") from exc
+        duration_ms = int((time.monotonic() - started) * 1000)
+        await log_gateway_call(request_id=request_id, agent_type=agent_id, status="success", duration_ms=duration_ms)
+        return AgentResponse(
+            request_id=request_id, status="success", result=result,
+            usage=UsageInfo(route="server", compute_units=0),
+            agent_version=version["version"], model_version=None, safety=SafetyInfo(),
+        )
+
+    # IA-013 "Operations" : SupportTriageAgent — outil interne équipe support, aucune donnée élève
+    # (pas de profile_id), réservé admin comme les autres agents d'exploitation.
+    if agent_id == "AIA-AGT-022":
+        if not user.is_admin:
+            raise HTTPException(status_code=403, detail="Réservé aux comptes admin (agent Operations).")
+        ticket_id = str(request.payload.get("ticket_id", ""))
+        try:
+            result = await triage_ticket(ticket_id)
+        except SupportTriageError as exc:
+            duration_ms = int((time.monotonic() - started) * 1000)
+            await log_gateway_call(
+                request_id=request_id, agent_type=agent_id, status="failed",
+                duration_ms=duration_ms, error_message=str(exc),
+            )
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
         duration_ms = int((time.monotonic() - started) * 1000)
         await log_gateway_call(request_id=request_id, agent_type=agent_id, status="success", duration_ms=duration_ms)
         return AgentResponse(
