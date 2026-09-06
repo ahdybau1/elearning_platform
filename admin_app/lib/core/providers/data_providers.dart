@@ -282,6 +282,18 @@ final gradeDisputesProvider = FutureProvider<List<GradeDispute>>((ref) async {
   return service.fetchGradeDisputes();
 });
 
+/// CorrectionAgent (AIA-AGT-005) — tentatives rédigées jamais encore corrigées par l'IA.
+final attemptsPendingCorrectionProvider = FutureProvider<List<ExerciseAttemptForReview>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchAttemptsPendingCorrection();
+});
+
+/// CorrectionAgent (AIA-AGT-005) — corrections IA marquées `needs_human_review`, pas encore validées.
+final attemptsNeedingHumanReviewProvider = FutureProvider<List<ExerciseAttemptForReview>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchAttemptsNeedingHumanReview();
+});
+
 final examPapersProvider =
     FutureProvider.family<List<ExamPaper>, String>((ref, examId) async {
   final service = ref.watch(supabaseServiceProvider);

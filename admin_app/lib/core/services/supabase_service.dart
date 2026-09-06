@@ -1869,21 +1869,23 @@ class SupabaseService {
         .toList();
   }
 
-  Future<void> updateExamPaperQuestion({
+  Future<ExamPaperQuestion> updateExamPaperQuestion({
     required String id,
+    required int expectedRevision,
     String? statement,
     String? proposedAnswer,
     String? status,
     String? reviewerNotes,
   }) async {
-    final data = <String, dynamic>{
-      'updated_at': DateTime.now().toIso8601String(),
-    };
-    if (statement != null) data['statement'] = statement;
-    if (proposedAnswer != null) data['proposed_answer'] = proposedAnswer;
-    if (status != null) data['status'] = status;
-    if (reviewerNotes != null) data['reviewer_notes'] = reviewerNotes;
-    await client.from('exam_paper_questions').update(data).eq('id', id);
+    final data = await client.rpc('review_exam_paper_question', params: {
+      'p_question_id': id,
+      'p_expected_revision': expectedRevision,
+      'p_statement': statement,
+      'p_proposed_answer': proposedAnswer,
+      'p_status': status ?? 'waiting_review',
+      'p_reviewer_notes': reviewerNotes,
+    });
+    return ExamPaperQuestion.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
   /// Publie un sujet traité : refuse si au moins une question n'est pas encore `approved` (même
@@ -1893,21 +1895,10 @@ class SupabaseService {
     String? establishmentPaperId,
   }) async {
     assert((examPaperId == null) != (establishmentPaperId == null));
-    final questions = await fetchExamPaperQuestions(
-      examPaperId: examPaperId,
-      establishmentPaperId: establishmentPaperId,
-    );
-    if (questions.isEmpty || questions.any((q) => q.status != 'approved')) {
-      throw Exception(
-        'Toutes les questions doivent être approuvées avant publication.',
-      );
-    }
-    final table = examPaperId != null ? 'exam_papers' : 'establishment_papers';
-    final id = examPaperId ?? establishmentPaperId;
-    await client
-        .from(table)
-        .update({'processing_status': 'published'})
-        .eq('id', id as String);
+    await client.rpc('publish_exam_paper', params: {
+      'p_exam_paper_id': examPaperId,
+      'p_establishment_paper_id': establishmentPaperId,
+    });
   }
 
   // ─── Subjects CRUD ────────────────────────────────────────────
@@ -3412,5 +3403,64 @@ class SupabaseService {
         .map((r) => MediaAsset.fromJson(Map<String, dynamic>.from(r)))
         .toList();
   }
-}
 
+  // ─── CorrectionAgent (AIA-AGT-005, IA-009) ─────────────────────
+  // Tentatives rédigées (reponse_courte/redaction) — le QCM a déjà une correction déterministe côté
+  // client, jamais listé ici.
+
+  Future<List<ExerciseAttemptForReview>> fetchAttemptsPendingCorrection() async {
+    final rows = await client
+        .from('exercise_attempts')
+        .select('*, exercises!inner(title,format,instructions_json)')
+        .inFilter('exercises.format', ['reponse_courte', 'redaction'])
+        .filter('ai_score', 'is', null)
+        .not('submitted_answer', 'is', null)
+        .order('created_at', ascending: false)
+        .limit(50)
+        .then((r) => r as List);
+    return rows
+        .map((r) => ExerciseAttemptForReview.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  Future<List<ExerciseAttemptForReview>> fetchAttemptsNeedingHumanReview() async {
+    final rows = await client
+        .from('exercise_attempts')
+        .select('*, exercises!inner(title,format,instructions_json)')
+        .eq('needs_human_review', true)
+        .filter('official_correct', 'is', null)
+        .order('created_at', ascending: false)
+        .limit(50)
+        .then((r) => r as List);
+    return rows
+        .map((r) => ExerciseAttemptForReview.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  /// Déclenche CorrectionAgent (Edge Function ai-correction) sur une tentative précise. N'écrit que
+  /// des champs ai_* côté serveur — jamais official_correct (voir reviewAttempt ci-dessous).
+  Future<void> correctAttemptWithAi(String attemptId) async {
+    final res = await client.functions.invoke(
+      'ai-correction',
+      body: {'attempt_id': attemptId},
+    );
+    if (res.status != 200) {
+      final error = (res.data is Map) ? res.data['error'] : res.data;
+      throw Exception(error ?? 'Échec de la correction IA');
+    }
+  }
+
+  /// Seule écriture possible de `official_correct` — réservée admin par RLS (migration 68). C'est
+  /// la validation humaine exigée par le cahier pour un agent de correction.
+  Future<void> reviewAttempt({
+    required String attemptId,
+    required bool officialCorrect,
+    required String reviewerAdminId,
+  }) async {
+    await client.from('exercise_attempts').update({
+      'official_correct': officialCorrect,
+      'reviewed_by': reviewerAdminId,
+      'reviewed_at': DateTime.now().toIso8601String(),
+    }).eq('id', attemptId);
+  }
+}

@@ -516,6 +516,7 @@ class EstablishmentPaper {
 /// (`establishmentPaperId`) — exactement un des deux est renseigné. Reste `waiting_review` tant
 /// qu'un admin ne l'a pas relue.
 class ExamPaperQuestion {
+  final int revision;
   final String id;
   final String? examPaperId;
   final String? establishmentPaperId;
@@ -529,6 +530,7 @@ class ExamPaperQuestion {
   final DateTime updatedAt;
 
   ExamPaperQuestion({
+    this.revision = 1,
     required this.id,
     this.examPaperId,
     this.establishmentPaperId,
@@ -545,6 +547,7 @@ class ExamPaperQuestion {
 
   factory ExamPaperQuestion.fromJson(Map<String, dynamic> json) {
     return ExamPaperQuestion(
+      revision: (json['revision'] as int?) ?? 1,
       id: json['id'] as String,
       examPaperId: json['exam_paper_id'] as String?,
       establishmentPaperId: json['establishment_paper_id'] as String?,
@@ -647,6 +650,64 @@ class AppSettings {
           (json['enabled_languages'] as List?)?.map((e) => e.toString()).toList() ?? const ['fr'],
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
+          : DateTime.now(),
+    );
+  }
+}
+
+/// Tentative d'exercice rédigée (reponse_courte/redaction), avec la proposition de CorrectionAgent
+/// (AIA-AGT-005) si elle a déjà tourné. `officialCorrect` reste `null` tant qu'un admin n'a pas
+/// validé — jamais écrit par l'IA elle-même (voir supabase/functions/ai-correction/index.ts).
+class ExerciseAttemptForReview {
+  final String id;
+  final String exerciseId;
+  final String? exerciseTitle;
+  final String statement;
+  final String submittedText;
+  final double? aiScore;
+  final double? aiConfidence;
+  final String? aiFeedback;
+  final List<String> aiMisconceptions;
+  final bool needsHumanReview;
+  final bool? officialCorrect;
+  final DateTime createdAt;
+
+  ExerciseAttemptForReview({
+    required this.id,
+    required this.exerciseId,
+    this.exerciseTitle,
+    required this.statement,
+    required this.submittedText,
+    this.aiScore,
+    this.aiConfidence,
+    this.aiFeedback,
+    this.aiMisconceptions = const [],
+    this.needsHumanReview = false,
+    this.officialCorrect,
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  bool get isCorrected => aiScore != null;
+
+  factory ExerciseAttemptForReview.fromJson(Map<String, dynamic> json) {
+    final exercise = json['exercises'] as Map<String, dynamic>?;
+    final instructions = exercise?['instructions_json'] as Map<String, dynamic>?;
+    final submitted = json['submitted_answer'] as Map<String, dynamic>?;
+    return ExerciseAttemptForReview(
+      id: json['id'] as String,
+      exerciseId: json['exercise_id'] as String,
+      exerciseTitle: exercise?['title'] as String?,
+      statement: (instructions?['statement'] as String?) ?? '',
+      submittedText: (submitted?['text'] as String?) ?? '',
+      aiScore: (json['ai_score'] as num?)?.toDouble(),
+      aiConfidence: (json['ai_confidence'] as num?)?.toDouble(),
+      aiFeedback: json['ai_feedback'] as String?,
+      aiMisconceptions:
+          (json['ai_misconceptions'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+      needsHumanReview: (json['needs_human_review'] as bool?) ?? false,
+      officialCorrect: json['official_correct'] as bool?,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
     );
   }

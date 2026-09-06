@@ -13,6 +13,7 @@ import '../../academic_tree/screens/academic_tree_screen.dart';
 import '../../content_management/screens/lessons_manager_screen.dart';
 import '../../content_management/screens/exercises_manager_screen.dart';
 import '../../content_management/screens/validation_queue_screen.dart';
+import '../../content_management/screens/exercise_corrections_screen.dart';
 import '../../subscriptions/screens/subscription_tiers_screen.dart';
 import '../../subscriptions/screens/access_matrix_screen.dart';
 import '../../subscriptions/screens/payments_reconciliation_screen.dart';
@@ -115,6 +116,15 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
           title: 'Année & Campagne Passage',
           icon: Icons.calendar_month_rounded,
           allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays],
+        ),
+        NavItem(
+          id: 28,
+          title: 'Corrections IA (AIA-AGT-005)',
+          icon: Icons.rate_review_rounded,
+          // Pas de rôle enseignant : cette v1 liste toutes les tentatives, toutes classes confondues
+          // — un vrai filtrage par scope enseignant (comme TeacherAssistantAgent) serait nécessaire
+          // avant d'ouvrir cet écran à ce rôle.
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu],
         ),
       ],
     ),
@@ -374,6 +384,8 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
         return const ActiveSessionsScreen();
       case 27:
         return const AiAgentRegistryScreen();
+      case 28:
+        return const ExerciseCorrectionsScreen();
       default:
         return const DashboardOverviewScreen();
     }
