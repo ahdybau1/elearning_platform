@@ -113,12 +113,27 @@ async def run_tutor_agent(
     `citations`/`tool_trace_summary`/`usage_route`/`_model`/`_request_id` séparés pour que main.py les
     place aux bons champs de AgentResponse (§4.2)."""
     key = _cache_key(message, subject_id, lesson_id)
-    cached = await _cache_lookup(key)
-    if cached:
-        return {
-            "reply": cached["reply"], "citations": cached.get("citations") or [],
-            "tool_trace_summary": [], "route": "cache", "model": None, "request_id": None,
-        }
+
+    # Student Model read (U9) — jamais un chiffre inventé, uniquement ce que get_mastery_snapshot
+    # renvoie réellement depuis exercise_attempts. Lu AVANT le cache : une réponse personnalisée ne
+    # doit ni être lue ni être écrite dans un cache partagé (voir ci-dessous).
+    student_model_summary = None
+    if profile_id and subject_id:
+        mastery_rows = await get_mastery_snapshot(profile_id, subject_id)
+        student_model_summary = format_mastery_summary(mastery_rows)
+
+    # Correctif 2026-09-06 : la clé de cache ne contient PAS profile_id alors que le prompt contient
+    # le Student Model de l'élève — la réponse personnalisée d'un élève pouvait donc être resservie à
+    # un autre élève posant la même question. Le cache n'est désormais utilisé que pour une réponse
+    # non personnalisée (même règle que le portage Deno, supabase/functions/ai-tutor-chat).
+    cacheable = student_model_summary is None
+    if cacheable:
+        cached = await _cache_lookup(key)
+        if cached:
+            return {
+                "reply": cached["reply"], "citations": cached.get("citations") or [],
+                "tool_trace_summary": [], "route": "cache", "model": None, "request_id": None,
+            }
 
     # RAG (§10 : citations obligatoires pour les faits pédagogiques récupérés) — scopé à la
     # matière/classe actives, jamais tout le corpus.
@@ -129,13 +144,6 @@ async def run_tutor_agent(
         citations = rag_result.get("citations", [])
         if citations:
             rag_context_text = "\n\n".join(f"[{c.get('source_title') or 'Source'}] {c['content']}" for c in citations)
-
-    # Student Model read (U9) — jamais un chiffre inventé, uniquement ce que get_mastery_snapshot
-    # renvoie réellement depuis exercise_attempts.
-    student_model_summary = None
-    if profile_id and subject_id:
-        mastery_rows = await get_mastery_snapshot(profile_id, subject_id)
-        student_model_summary = format_mastery_summary(mastery_rows)
 
     # Tool math (§12 : jamais de calcul exact confié uniquement au LLM) — déclenchement heuristique,
     # échoue silencieusement si le fragment détecté n'est pas une expression valide (c'est attendu :
@@ -171,7 +179,8 @@ async def run_tutor_agent(
         raise RuntimeError(body.get("error", f"HTTP {res.status_code} depuis ai-tutor-chat"))
 
     reply = body.get("reply", "")
-    await _cache_store(key, subject_id, class_node_id, message, reply, citations)
+    if cacheable:
+        await _cache_store(key, subject_id, class_node_id, message, reply, citations)
 
     return {
         "reply": reply, "citations": citations, "tool_trace_summary": tool_trace_summary,
