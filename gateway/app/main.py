@@ -18,17 +18,20 @@ import httpx
 from fastapi import Body, Depends, FastAPI, HTTPException
 from pydantic import BaseModel
 
+from .agents.admin_assistant_agent import build_platform_summary
 from .agents.correction_agent import CorrectionAgentError, correct_attempt
 from .agents.curriculum_mapping import map_content
 from .agents.diagnostic_agent import diagnose
 from .agents.exam_coach_agent import build_exam_prep_plan
 from .agents.formula_recognition_agent import recognize_formula
+from .agents.fraud_risk_agent import detect_shared_device_risk
 from .agents.misconception_agent import detect_misconceptions
 from .agents.parent_insight_agent import build_parent_insight
 from .agents.pedagogical_validation import validate_lesson
 from .agents.recommendation_agent import recommend_activities
 from .agents.revision_agent import build_revision_session
 from .agents.support_triage_agent import SupportTriageError, triage_ticket
+from .agents.teacher_assistant_agent import TeacherScopeError, build_cohort_summary
 from .agents.tutor_agent import run_tutor_agent
 from .auth import (
     AuthenticatedUser,
@@ -122,6 +125,59 @@ async def invoke_agent(
                 duration_ms=duration_ms, error_message=str(exc),
             )
             raise HTTPException(status_code=502, detail=f"{agent_id} en échec : {exc}") from exc
+        duration_ms = int((time.monotonic() - started) * 1000)
+        await log_gateway_call(request_id=request_id, agent_type=agent_id, status="success", duration_ms=duration_ms)
+        return AgentResponse(
+            request_id=request_id, status="success", result=result,
+            usage=UsageInfo(route="server", compute_units=0),
+            agent_version=version["version"], model_version=None, safety=SafetyInfo(),
+        )
+
+    # IA-012, TeacherAssistantAgent : réservé admin (le scope enseignant réel est vérifié DANS
+    # build_cohort_summary, via teacher_establishments — pas juste is_admin ici).
+    if agent_id == "AIA-AGT-018":
+        if not user.is_admin:
+            raise HTTPException(status_code=403, detail="Réservé aux comptes enseignant/admin.")
+        class_node_id = str(request.payload.get("class_node_id") or request.academic_context.class_id or "")
+        subject_id = str(request.payload.get("subject_id") or request.academic_context.subject_id or "")
+        if not class_node_id or not subject_id:
+            raise HTTPException(status_code=400, detail="class_node_id et subject_id requis.")
+        try:
+            result = await build_cohort_summary(user.admin_user_id, user.admin_role, class_node_id, subject_id)
+        except TeacherScopeError as exc:
+            duration_ms = int((time.monotonic() - started) * 1000)
+            await log_gateway_call(
+                request_id=request_id, agent_type=agent_id, status="failed",
+                duration_ms=duration_ms, error_message=str(exc),
+            )
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        duration_ms = int((time.monotonic() - started) * 1000)
+        await log_gateway_call(request_id=request_id, agent_type=agent_id, status="success", duration_ms=duration_ms)
+        return AgentResponse(
+            request_id=request_id, status="success", result=result,
+            usage=UsageInfo(route="server", compute_units=0),
+            agent_version=version["version"], model_version=None, safety=SafetyInfo(),
+        )
+
+    # IA-013, AdminAssistantAgent : lecture seule, réservé admin (tous rôles — aucune mutation).
+    if agent_id == "AIA-AGT-021":
+        if not user.is_admin:
+            raise HTTPException(status_code=403, detail="Réservé aux comptes admin.")
+        result = await build_platform_summary()
+        duration_ms = int((time.monotonic() - started) * 1000)
+        await log_gateway_call(request_id=request_id, agent_type=agent_id, status="success", duration_ms=duration_ms)
+        return AgentResponse(
+            request_id=request_id, status="success", result=result,
+            usage=UsageInfo(route="server", compute_units=0),
+            agent_version=version["version"], model_version=None, safety=SafetyInfo(),
+        )
+
+    # IA-013, FraudRiskAgent : signaux sensibles (implique des comptes précis) — restreint aux rôles
+    # admin les plus larges, pas ouvert à un rôle enseignant/modérateur/support.
+    if agent_id == "AIA-AGT-025":
+        if not user.is_admin or user.admin_role not in ("super_admin", "admin_pays"):
+            raise HTTPException(status_code=403, detail="Réservé aux rôles super_admin/admin_pays.")
+        result = {"signals": await detect_shared_device_risk()}
         duration_ms = int((time.monotonic() - started) * 1000)
         await log_gateway_call(request_id=request_id, agent_type=agent_id, status="success", duration_ms=duration_ms)
         return AgentResponse(
