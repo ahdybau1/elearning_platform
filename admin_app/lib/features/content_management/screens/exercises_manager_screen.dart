@@ -10,6 +10,7 @@ import '../../../core/providers/data_providers.dart';
 import '../widgets/media_attachment_picker.dart';
 import '../utils/exercise_pdf_generator.dart';
 import '../../../core/widgets/app_dialog_title.dart';
+import '../../../core/widgets/math_text.dart';
 
 /// Filtre "exercices non classés" (class_node_id NULL) — sentinelle distincte de `null` (qui
 /// signifie "toutes les classes") pour le filtre Classe de la barre de recherche.
@@ -2161,7 +2162,7 @@ class _ExercisesManagerScreenState
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Text(
+                        MathText(
                           statement.isEmpty
                               ? 'Aucun énoncé rédigé pour le moment.'
                               : statement,
