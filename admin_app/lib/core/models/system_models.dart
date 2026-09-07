@@ -635,7 +635,7 @@ class AppSettings {
   factory AppSettings.fromJson(Map<String, dynamic> json) {
     return AppSettings(
       id: json['id'] as String,
-      appName: json['app_name'] as String? ?? 'E-Learning',
+      appName: json['app_name'] as String? ?? 'pq learn',
       tagline: json['tagline'] as String?,
       supportEmail: json['support_email'] as String?,
       supportPhone: json['support_phone'] as String?,

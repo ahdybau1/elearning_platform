@@ -16,7 +16,7 @@ class ProfileSwitcherScreen extends ConsumerWidget {
       backgroundColor: context.colors.background,
       appBar: AppBar(
         title: Text(
-          'E-Learning National',
+          'pq learn',
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             color: context.colors.textPrimary,

@@ -678,6 +678,6 @@ class StudentSupabaseService {
         return AppSettings.fromJson(Map<String, dynamic>.from(rows.first));
       }
     } catch (_) {}
-    return AppSettings(appName: 'E-Learning');
+    return AppSettings(appName: 'pq learn');
   }
 }

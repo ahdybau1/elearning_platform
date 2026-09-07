@@ -312,7 +312,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Toute l\'équipe d\'E-Learning National vous souhaite une excellente journée.',
+                  'Toute l\'équipe de pq learn vous souhaite une excellente journée.',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: Colors.white.withValues(alpha: 0.9),

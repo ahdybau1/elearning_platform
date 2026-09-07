@@ -150,7 +150,7 @@ class StudentElearningApp extends ConsumerWidget {
     );
 
     return MaterialApp(
-      title: 'E-Learning National Élève',
+      title: 'pq learn Élève',
       debugShowCheckedModeBanner: false,
       theme: theme,
       // `builder` reçoit déjà le Navigator construit par onGenerateRoute ci-dessous : contrairement

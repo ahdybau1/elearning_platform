@@ -188,7 +188,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
               if (!collapsed) ...[
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text('E-Learning National',
+                  child: Text('pq learn',
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
                 ),

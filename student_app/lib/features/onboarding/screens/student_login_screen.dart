@@ -111,7 +111,7 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    'E-Learning National',
+                    'pq learn',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.outfit(
                       fontSize: 26,

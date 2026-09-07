@@ -572,7 +572,7 @@ class _GeneralSettingsFormState extends ConsumerState<_GeneralSettingsForm> {
       final service = ref.read(supabaseServiceProvider);
       await service.updateAppSettings(
         _loadedFrom!.id,
-        appName: _appNameCtrl.text.trim().isEmpty ? 'E-Learning' : _appNameCtrl.text.trim(),
+        appName: _appNameCtrl.text.trim().isEmpty ? 'pq learn' : _appNameCtrl.text.trim(),
         tagline: _taglineCtrl.text.trim(),
         supportEmail: _supportEmailCtrl.text.trim(),
         supportPhone: _supportPhoneCtrl.text.trim(),

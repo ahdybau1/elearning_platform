@@ -540,7 +540,7 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'E-LEARNING',
+                        'pq learn',
                         style: GoogleFonts.outfit(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -895,7 +895,7 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'E-LEARNING',
+                          'pq learn',
                           style: GoogleFonts.outfit(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
