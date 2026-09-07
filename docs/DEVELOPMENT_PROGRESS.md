@@ -326,3 +326,10 @@ Exigences : MASTER U2/U2.3, Content Factory §5/§12, absence de faux succès (A
   Les tests des services utilisent des données de contrôle ; aucune nouvelle validation distante
   de ces parcours n'est revendiquée. Le stockage hors ligne et l'association des références
   administrable par identifiant restent des chantiers distincts. Déploiement non effectué.
+
+## 7 septembre — entraînement contextuel : correction du contenu hors sujet
+
+Audit navigateur connecté : la leçon SVT BONJOUR affichait un exercice de suites et une récompense XP fictive. Plan : limiter la banque locale aux suites reconnues, expliquer son absence ailleurs, préserver le tuteur et vérifier les régressions.
+La requête tuteur utilise maintenant subject_name et les rôles attendus par la fonction existante ; délai porté à 30 secondes, double envoi bloqué et historique conservé entre onglets. Le secours local indique explicitement l’indisponibilité du service et ne donne plus de conseils mathématiques hors contexte. Aucun changement de données ou de permissions.
+
+Vérification : 48 tests élève passants, dont 4 nouveaux (SVT dans les trois modes à 390 pixels et correction locale des suites sans XP fictifs). Analyse ciblée : aucun problème. Limites : la banque locale reste restreinte aux suites, l’association repose sur les titres connus ; le service IA distant et le contexte RAG par identifiant ne sont pas validés par ces tests. Aucun déploiement distant effectué.

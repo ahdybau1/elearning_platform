@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/models/summary_sheet_registry.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/rendering/math_formula_view.dart';
@@ -14,7 +15,7 @@ import '../../pedagogy/widgets/scientific_tools_modal.dart';
 /// Conforme au Cahier des Charges Agents IA (docs/CAHIER_DES_CHARGES_AGENTS_IA.md) :
 /// - Dialogue socratique maïeutique (ne donne pas la solution brute)
 /// - Diagnostic des pièges d'examen (misconceptions)
-/// - Génération d'exercices calibrés
+/// - Entraînement local limité aux notions prises en charge
 /// - Fallback déterministe local sans crash ni dépendance obligatoire à un fournisseur externe.
 class ContextualAiAgentSheet extends StatefulWidget {
   final String topicTitle;
@@ -89,8 +90,7 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
   }
 
   void _initializeMode() {
-    if (_activeMode == 'tutor') {
-      _chatHistory.clear();
+    if (_activeMode == 'tutor' && _chatHistory.isEmpty) {
       _chatHistory.add({
         'sender': 'agent',
         'text':
@@ -105,7 +105,7 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
   // -------------------------------------------------------------
   Future<void> _sendSocraticQuestion(String question) async {
     final clean = question.trim();
-    if (clean.isEmpty) return;
+    if (clean.isEmpty || _isLoading) return;
 
     setState(() {
       _chatHistory.add({'sender': 'user', 'text': clean});
@@ -115,17 +115,28 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
 
     try {
       // Tentative d'appel via Supabase Edge Function ai-tutor-chat
-      final response = await Supabase.instance.client.functions.invoke(
-        'ai-tutor-chat',
-        body: {
-          'message': clean,
-          'topic': widget.topicTitle,
-          'subject': widget.subject,
-          'formula': widget.formulaLatex,
-          'mode': 'socratic',
-          'history': _chatHistory.take(_chatHistory.length - 1).toList(),
-        },
-      ).timeout(const Duration(seconds: 4));
+      final response = await Supabase.instance.client.functions
+          .invoke(
+            'ai-tutor-chat',
+            body: {
+              'message': 'Notion : ${widget.topicTitle}\nQuestion : $clean',
+              'topic': widget.topicTitle,
+              'subject_name': widget.subject,
+              'formula': widget.formulaLatex,
+              'mode': 'socratic',
+              'history': _chatHistory
+                  .skip(1)
+                  .take(_chatHistory.length > 1 ? _chatHistory.length - 2 : 0)
+                  .map(
+                    (turn) => {
+                      'sender': turn['sender'] == 'agent' ? 'ai' : 'user',
+                      'text': turn['text'],
+                    },
+                  )
+                  .toList(),
+            },
+          )
+          .timeout(const Duration(seconds: 30));
 
       final data = response.data;
       final reply = data is Map ? data['reply'] as String? : null;
@@ -145,7 +156,7 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
 
     if (!mounted) return;
 
-    // Réponse maïeutique déterministe experte selon la thématique
+    // Message explicite en cas d’indisponibilité du service distant.
     final fallbackResponse = _generateDeterministicSocraticReply(clean);
     setState(() {
       _isLoading = false;
@@ -154,16 +165,7 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
   }
 
   String _generateDeterministicSocraticReply(String query) {
-    final lower = query.toLowerCase();
-    if (lower.contains('pourquoi') || lower.contains('sens') || lower.contains('signifie')) {
-      return 'Très bonne réflexion ! Avant de regarder la formule brute, demande-toi : quand la grandeur d\'entrée augmente, que doit faire logiquement la grandeur de sortie ? Observe le numérateur et le dénominateur.';
-    } else if (lower.contains('comment') || lower.contains('methode') || lower.contains('calcul')) {
-      return 'Pour appliquer cette relation avec succès à l\'examen, identifie d\'abord les 3 données imposées par l\'énoncé. Quelles sont les grandeurs dont tu disposes directement ?';
-    } else if (lower.contains('piege') || lower.contains('attention') || lower.contains('erreur')) {
-      return 'Le piège n°1 réside dans les unités et les indices de sommation ! As-tu vérifié si la suite commence à U₀ (donc n+1 termes) ou à U₁ (donc n termes) ?';
-    }
-    return 'C\'est une excellente question sur "${widget.topicTitle}".\n'
-        'Rappelle-toi la condition d\'application essentielle : vérifie toujours que les hypothèses sont satisfaites avant de poser le calcul final. Quelle est la première étape de ta démarche ?';
+    return 'Tuteur en ligne indisponible. Conseil local : relis la partie du cours sur « ${widget.topicTitle} », puis relève les mots ou les étapes que tu souhaites éclaircir. Tu peux réessayer ta question.';
   }
 
   @override
@@ -236,17 +238,24 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.calculate_rounded, color: Color(0xFF10B981)),
+                      icon: const Icon(
+                        Icons.calculate_rounded,
+                        color: Color(0xFF10B981),
+                      ),
                       tooltip: 'Calculateur SymPy & Outils Scientifiques',
                       onPressed: () {
                         ScientificToolsModal.show(
                           context,
-                          initialQuery: widget.formulaLatex ?? widget.topicTitle,
+                          initialQuery:
+                              widget.formulaLatex ?? widget.topicTitle,
                         );
                       },
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white70,
+                      ),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
@@ -262,9 +271,21 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
                   ),
                   child: Row(
                     children: [
-                      _buildModeTab('tutor', 'Tuteur Socratique', Icons.psychology_rounded),
-                      _buildModeTab('diagnostic', 'Pièges d\'Examen', Icons.rule_rounded),
-                      _buildModeTab('exercise', 'S\'entraîner', Icons.edit_note_rounded),
+                      _buildModeTab(
+                        'tutor',
+                        'Tuteur Socratique',
+                        Icons.psychology_rounded,
+                      ),
+                      _buildModeTab(
+                        'diagnostic',
+                        'Pièges d\'Examen',
+                        Icons.rule_rounded,
+                      ),
+                      _buildModeTab(
+                        'exercise',
+                        'S\'entraîner',
+                        Icons.edit_note_rounded,
+                      ),
                     ],
                   ),
                 ),
@@ -274,9 +295,7 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
           const Divider(color: Color(0xFF334155), height: 1),
 
           // Contenu du Mode Actif
-          Expanded(
-            child: _buildActiveModeBody(),
-          ),
+          Expanded(child: _buildActiveModeBody()),
         ],
       ),
     );
@@ -296,7 +315,9 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             color: isSelected ? AppColors.primaryCyan : Colors.transparent,
-            borderRadius: BorderRadius.circular(AppRadius.radiusSmall.topLeft.x),
+            borderRadius: BorderRadius.circular(
+              AppRadius.radiusSmall.topLeft.x,
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -307,12 +328,16 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
                 color: isSelected ? const Color(0xFF0F172A) : Colors.white70,
               ),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: isSelected ? const Color(0xFF0F172A) : Colors.white70,
+              Flexible(
+                child: Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected
+                        ? const Color(0xFF0F172A)
+                        : Colors.white70,
+                  ),
                 ),
               ),
             ],
@@ -322,7 +347,22 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
     );
   }
 
+  bool get _hasSequencePractice =>
+      SummarySheetRegistry.findSheetFor(
+        '${widget.subject} ${widget.topicTitle}',
+      )?.id ==
+      'math-suites-reelles';
+
   Widget _buildActiveModeBody() {
+    if (_activeMode != 'tutor' && !_hasSequencePractice) {
+      return const SingleChildScrollView(
+        padding: EdgeInsets.all(24),
+        child: Text(
+          'Aucun entraînement local disponible pour cette notion. Retrouve les exercices publiés dans la rubrique Exercices du chapitre, ou pose une question dans l’onglet Tuteur Socratique.',
+          style: TextStyle(color: Colors.white70, fontSize: 16),
+        ),
+      );
+    }
     switch (_activeMode) {
       case 'diagnostic':
         return _buildDiagnosticBody();
@@ -350,82 +390,103 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
               label: 'CONTEXTE DE LA NOTION',
             ),
           ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: () {
-                    InteractiveFunctionGraph.showModal(
-                      context,
-                      expression: widget.formulaLatex ?? '2x^2 - 4x - 6',
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.cyanAccent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.cyanAccent.withValues(alpha: 0.35)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.show_chart_rounded, size: 15, color: AppColors.cyanAccent),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Tracer la courbe & variations',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+        if (widget.formulaLatex != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      InteractiveFunctionGraph.showModal(
+                        context,
+                        expression: widget.formulaLatex!,
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.cyanAccent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppColors.cyanAccent.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.show_chart_rounded,
+                            size: 15,
                             color: AppColors.cyanAccent,
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: InkWell(
-                  onTap: () {
-                    ScientificToolsModal.show(
-                      context,
-                      initialQuery: widget.formulaLatex ?? widget.topicTitle,
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.35)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.calculate_rounded, size: 15, color: Color(0xFF10B981)),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Calculer avec SymPy',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF10B981),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Tracer la courbe & variations',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.cyanAccent,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 8),
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      ScientificToolsModal.show(
+                        context,
+                        initialQuery: widget.formulaLatex ?? widget.topicTitle,
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: const Color(
+                            0xFF10B981,
+                          ).withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.calculate_rounded,
+                            size: 15,
+                            color: Color(0xFF10B981),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Calculer avec SymPy',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF10B981),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
         Expanded(
           child: ListView.builder(
             controller: _scrollController,
@@ -436,15 +497,24 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
               final isAgent = msg['sender'] == 'agent';
 
               return Align(
-                alignment: isAgent ? Alignment.centerLeft : Alignment.centerRight,
+                alignment: isAgent
+                    ? Alignment.centerLeft
+                    : Alignment.centerRight,
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                   constraints: const BoxConstraints(maxWidth: 360),
                   decoration: BoxDecoration(
-                    color: isAgent ? const Color(0xFF1E293B) : AppColors.primaryCyan,
+                    color: isAgent
+                        ? const Color(0xFF1E293B)
+                        : AppColors.primaryCyan,
                     borderRadius: BorderRadius.circular(14),
-                    border: isAgent ? Border.all(color: const Color(0xFF334155)) : null,
+                    border: isAgent
+                        ? Border.all(color: const Color(0xFF334155))
+                        : null,
                   ),
                   child: AiMessageBubbleRenderer(
                     message: msg['text'] ?? '',
@@ -464,10 +534,16 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
                 SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryCyan),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.primaryCyan,
+                  ),
                 ),
                 SizedBox(width: 8),
-                Text('Le Tuteur Socratique réfléchit...', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                Text(
+                  'Le Tuteur Socratique réfléchit...',
+                  style: TextStyle(color: Colors.white70, fontSize: 11),
+                ),
               ],
             ),
           ),
@@ -486,7 +562,10 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
                   style: const TextStyle(color: Colors.white, fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'Pose une question ou formule ton doute...',
-                    hintStyle: TextStyle(color: Colors.white.withAlpha(120), fontSize: 12),
+                    hintStyle: TextStyle(
+                      color: Colors.white.withAlpha(120),
+                      fontSize: 12,
+                    ),
                     border: InputBorder.none,
                     isDense: true,
                   ),
@@ -494,7 +573,11 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.send_rounded, color: AppColors.primaryCyan, size: 20),
+                icon: const Icon(
+                  Icons.send_rounded,
+                  color: AppColors.primaryCyan,
+                  size: 20,
+                ),
                 onPressed: () => _sendSocraticQuestion(_questionCtrl.text),
               ),
             ],
@@ -510,7 +593,9 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
   Widget _buildDiagnosticBody() {
     final questions = _getDiagnosticQuestions();
     if (questions.isEmpty) {
-      return const Center(child: Text('Aucun piège recensé pour cette notion.'));
+      return const Center(
+        child: Text('Aucun piège recensé pour cette notion.'),
+      );
     }
 
     final q = questions[_diagnosticQuestionIdx];
@@ -528,11 +613,17 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
                 decoration: BoxDecoration(
                   color: AppColors.amberHighlight.withAlpha(30),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: AppColors.amberHighlight.withAlpha(100)),
+                  border: Border.all(
+                    color: AppColors.amberHighlight.withAlpha(100),
+                  ),
                 ),
                 child: const Text(
                   'DÉTECTEUR DE PIÈGES OFFICIELS',
-                  style: TextStyle(color: AppColors.amberHighlight, fontSize: 10, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: AppColors.amberHighlight,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               Text(
@@ -544,7 +635,11 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
           const SizedBox(height: 14),
           InlineLatexText(
             q['question'] as String,
-            style: GoogleFonts.outfit(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 16),
           // Options QCM
@@ -608,7 +703,10 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
                   });
                 },
                 icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                label: const Text('Piège suivant', style: TextStyle(fontWeight: FontWeight.bold)),
+                label: const Text(
+                  'Piège suivant',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               )
             else
               Container(
@@ -622,7 +720,10 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
                 child: Center(
                   child: Text(
                     'Diagnostic terminé ! Score : $_diagnosticScore / ${questions.length}',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -632,7 +733,11 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
     );
   }
 
-  Widget _buildDiagnosticOptionTile({required int index, required String text, required int correctIndex}) {
+  Widget _buildDiagnosticOptionTile({
+    required int index,
+    required String text,
+    required int correctIndex,
+  }) {
     Color borderColor = const Color(0xFF334155);
     Color bgColor = const Color(0xFF1E293B);
 
@@ -665,7 +770,10 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: borderColor, width: 1.2),
         ),
-        child: InlineLatexText(text, style: const TextStyle(color: Colors.white, fontSize: 13)),
+        child: InlineLatexText(
+          text,
+          style: const TextStyle(color: Colors.white, fontSize: 13),
+        ),
       ),
     );
   }
@@ -674,16 +782,30 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
     // Banque calibrée sur les programmes officiels
     return [
       {
-        'question': 'Pour une somme \$S = U_0 + U_1 + \\dots + U_n\$, combien de termes comporte-t-elle ?',
-        'options': ['\$n\$ termes', '\$n + 1\$ termes', '\$n - 1\$ termes', '\$2n\$ termes'],
+        'question':
+            'Pour une somme \$S = U_0 + U_1 + \\dots + U_n\$, combien de termes comporte-t-elle ?',
+        'options': [
+          '\$n\$ termes',
+          '\$n + 1\$ termes',
+          '\$n - 1\$ termes',
+          '\$2n\$ termes',
+        ],
         'correct': 1,
-        'explanation': 'La somme va de 0 à n, donc le nombre de termes est (Indice final - Indice initial + 1) = \$n - 0 + 1 = n + 1\$.',
+        'explanation':
+            'La somme va de 0 à n, donc le nombre de termes est (Indice final - Indice initial + 1) = \$n - 0 + 1 = n + 1\$.',
       },
       {
-        'question': 'Si une suite géométrique a pour raison \$q = -2\$, que vaut sa limite ?',
-        'options': ['0', '+\\infty', '-\\infty', 'Elle n\'a pas de limite (indéterminée)'],
+        'question':
+            'Si une suite géométrique de premier terme non nul a pour raison \$q = -2\$, que vaut sa limite ?',
+        'options': [
+          '0',
+          '+\\infty',
+          '-\\infty',
+          'Elle n\'a pas de limite (indéterminée)',
+        ],
         'correct': 3,
-        'explanation': 'Pour \$q \\le -1\$, la suite \$q^n\$ change de signe à chaque rang et ses valeurs absolues tendent vers \$+\\infty\$ : elle diverge sans limite.',
+        'explanation':
+            'Pour \$q = -2\$, la suite \$q^n\$ change de signe à chaque rang et ses valeurs absolues tendent vers \$+\\infty\$ : elle diverge sans limite.',
       },
     ];
   }
@@ -705,15 +827,23 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
               border: Border.all(color: AppColors.tealSuccess.withAlpha(100)),
             ),
             child: const Text(
-              'EXERCICE D\'APPLICATION DIRECTE',
-              style: TextStyle(color: AppColors.tealSuccess, fontSize: 10, fontWeight: FontWeight.bold),
+              'EXERCICE LOCAL — SUITES ARITHMÉTIQUES',
+              style: TextStyle(
+                color: AppColors.tealSuccess,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           const SizedBox(height: 14),
           InlineLatexText(
             'Soit \$(U_n)\$ une suite arithmétique de premier terme \$U_0 = 3\$ et de raison \$r = 4\$.\n'
             'Calcule la valeur du terme \$U_{10}\$.',
-            style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 16),
           TextField(
@@ -746,11 +876,15 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
               final val = _exerciseAnswerCtrl.text.trim();
               setState(() {
                 _exerciseSubmitted = true;
-                _exerciseCorrect = (val == '43');
+                _exerciseCorrect =
+                    (double.tryParse(val.replaceAll(',', '.')) == 43);
               });
             },
             icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
-            label: const Text('Vérifier avec l\'Agent de Correction', style: TextStyle(fontWeight: FontWeight.bold)),
+            label: const Text(
+              'Vérifier la réponse',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
           if (_exerciseSubmitted) ...[
             const SizedBox(height: 16),
@@ -760,16 +894,22 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
                 color: const Color(0xFF1E293B),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: _exerciseCorrect ? AppColors.tealSuccess : AppColors.roseError,
+                  color: _exerciseCorrect
+                      ? AppColors.tealSuccess
+                      : AppColors.roseError,
                 ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _exerciseCorrect ? 'Excellent résultat ! (+20 XP)' : 'Ce n\'est pas tout à fait ça.',
+                    _exerciseCorrect
+                        ? 'Réponse correcte !'
+                        : 'Ce n\'est pas tout à fait ça.',
                     style: TextStyle(
-                      color: _exerciseCorrect ? AppColors.tealSuccess : AppColors.roseError,
+                      color: _exerciseCorrect
+                          ? AppColors.tealSuccess
+                          : AppColors.roseError,
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
