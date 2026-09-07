@@ -246,6 +246,13 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                                       label: const Text('S\'assigner ce ticket'),
                                     ),
                                   if (!isResolved)
+                                    OutlinedButton.icon(
+                                      onPressed: () => _triageWithAi(context, tick),
+                                      style: OutlinedButton.styleFrom(foregroundColor: AppTheme.accentIndigo),
+                                      icon: const Icon(Icons.auto_awesome_rounded, size: 16),
+                                      label: const Text('Trier avec l\'IA'),
+                                    ),
+                                  if (!isResolved)
                                     ElevatedButton.icon(
                                       style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentBlue),
                                       onPressed: () => _showReplyModal(context, ref, tick, requesterName),
@@ -355,6 +362,40 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
       ref.invalidate(supportTicketsStreamProvider(_statusFilter));
       messenger.showSnackBar(
         const SnackBar(backgroundColor: AppTheme.accentEmerald, content: Text('Ticket assigné à vous-même.')),
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(backgroundColor: AppTheme.accentRose, content: Text('Erreur : $e')));
+    }
+  }
+
+  /// SupportTriageAgent (AIA-AGT-022) — suggestion de priorité/routage, jamais une action prise à
+  /// la place de l'admin (voir supabase/functions/ai-support-triage/index.ts).
+  Future<void> _triageWithAi(BuildContext context, SupportTicket tick) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final result = await ref.read(supabaseServiceProvider).triageTicketWithAi(tick.id);
+      if (!context.mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppTheme.primarySurface,
+          title: AppDialogTitle(
+            icon: Icons.auto_awesome_rounded,
+            iconColor: AppTheme.accentIndigo,
+            text: 'Suggestion IA',
+            onClose: () => Navigator.pop(ctx),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Priorité : ${result['priority']}', style: GoogleFonts.inter(color: Colors.white)),
+              const SizedBox(height: 6),
+              Text('Équipe suggérée : ${result['routing_target']}', style: GoogleFonts.inter(color: Colors.white)),
+            ],
+          ),
+          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Fermer'))],
+        ),
       );
     } catch (e) {
       messenger.showSnackBar(SnackBar(backgroundColor: AppTheme.accentRose, content: Text('Erreur : $e')));

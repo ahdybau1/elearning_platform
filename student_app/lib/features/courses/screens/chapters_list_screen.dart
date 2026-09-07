@@ -6,6 +6,12 @@ import '../../../core/theme/subject_visuals.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../core/models/student_models.dart';
+import '../../../design_system/components/empty_state_view.dart';
+import '../../../design_system/tokens/app_radius.dart';
+import 'chapter_intro_screen.dart';
+import '../../exercises/screens/exercise_path_screen.dart';
+import '../../../core/models/summary_sheet_registry.dart';
+import '../widgets/summary_sheet_viewer_modal.dart';
 
 class ChaptersListScreen extends ConsumerWidget {
   final String subjectId;
@@ -64,38 +70,11 @@ class ChaptersListScreen extends ConsumerWidget {
                 ),
                 data: (chapters) {
                   if (chapters.isEmpty) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.auto_stories_outlined,
-                              size: 46,
-                              color: context.colors.textMuted,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Aucun chapitre publié pour le moment',
-                              style: GoogleFonts.inter(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: context.colors.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Le contenu de $subjectName pour votre classe est en cours de préparation.',
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: context.colors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    return EmptyStateView(
+                      icon: Icons.auto_stories_outlined,
+                      title: 'Aucun chapitre publié pour le moment',
+                      description:
+                          'Le contenu de $subjectName pour votre classe est en cours de préparation.',
                     );
                   }
                   return ListView.separated(
@@ -104,7 +83,12 @@ class ChaptersListScreen extends ConsumerWidget {
                     separatorBuilder: (_, _) => const SizedBox(height: 16),
                     itemBuilder: (context, index) {
                       final chapter = chapters[index];
-                      return _buildChapterCard(context, chapter, index, visual);
+                      return _ChapterItemCard(
+                        chapter: chapter,
+                        index: index,
+                        visual: visual,
+                        subjectName: subjectName,
+                      );
                     },
                   );
                 },
@@ -126,7 +110,7 @@ class ChaptersListScreen extends ConsumerWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: AppRadius.radiusXLarge,
         boxShadow: [
           BoxShadow(
             color: visual.gradient.last.withValues(alpha: 0.3),
@@ -148,7 +132,7 @@ class ChaptersListScreen extends ConsumerWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: AppRadius.radiusMedium,
                 ),
                 child: Icon(visual.icon, color: Colors.white, size: 28),
               ),
@@ -182,21 +166,41 @@ class ChaptersListScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildChapterCard(
-    BuildContext context,
-    Chapter chapter,
-    int index,
-    SubjectVisual visual,
-  ) {
+/// Carte de chapitre interactive avec possibilité de déplier et sélectionner les leçons
+class _ChapterItemCard extends ConsumerStatefulWidget {
+  final Chapter chapter;
+  final int index;
+  final SubjectVisual visual;
+  final String? subjectName;
+
+  const _ChapterItemCard({
+    required this.chapter,
+    required this.index,
+    required this.visual,
+    this.subjectName,
+  });
+
+  @override
+  ConsumerState<_ChapterItemCard> createState() => _ChapterItemCardState();
+}
+
+class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final chapter = widget.chapter;
     final isUnlocked = chapter.isUnlocked;
+
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: isUnlocked
             ? context.colors.card
             : context.colors.surface.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.radiusLarge,
         border: Border.all(
           color: isUnlocked
               ? context.colors.border
@@ -212,7 +216,7 @@ class ChaptersListScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 gradient: isUnlocked
                     ? LinearGradient(
-                        colors: visual.gradient,
+                        colors: widget.visual.gradient,
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                       )
@@ -236,17 +240,17 @@ class ChaptersListScreen extends ConsumerWidget {
                           ),
                           decoration: BoxDecoration(
                             color: isUnlocked
-                                ? visual.gradient.first.withValues(alpha: 0.18)
+                                ? widget.visual.gradient.first.withValues(alpha: 0.18)
                                 : Colors.grey.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: AppRadius.radiusSmall,
                           ),
                           child: Text(
-                            'Chapitre ${index + 1}',
+                            'Chapitre ${widget.index + 1}',
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: isUnlocked
-                                  ? visual.gradient.first
+                                  ? widget.visual.gradient.first
                                   : Colors.grey,
                             ),
                           ),
@@ -328,18 +332,83 @@ class ChaptersListScreen extends ConsumerWidget {
                             ),
                           ),
                         ),
-                        if (isUnlocked) const SizedBox(width: 8),
-                        if (isUnlocked)
+                        if (isUnlocked) ...[
+                          const SizedBox(width: 4),
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(
+                              Icons.history_edu_rounded,
+                              size: 18,
+                              color: Color(0xFF38BDF8),
+                            ),
+                            tooltip: 'Introduction & Applications',
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ChapterIntroScreen(
+                                    subjectName: (widget.subjectName ?? 'MATHEMATIQUES').toUpperCase(),
+                                    chapterTitle: chapter.title,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(
+                              Icons.alt_route_rounded,
+                              size: 18,
+                              color: Color(0xFF10B981),
+                            ),
+                            tooltip: 'Parcours d\'exercices adaptatif',
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ExercisePathScreen(
+                                    subjectName: (widget.subjectName ?? 'MATHEMATIQUES').toUpperCase(),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(
+                              Icons.auto_stories_rounded,
+                              size: 18,
+                              color: Color(0xFFF59E0B),
+                            ),
+                            tooltip: 'Fiche Mémo Synthèse HD',
+                            onPressed: () {
+                              final sheet = SummarySheetRegistry.findSheetFor(chapter.title) ??
+                                  SummarySheetRegistry.sheets.first;
+                              SummarySheetViewerModal.show(context, sheet);
+                            },
+                          ),
+                          if (chapter.lessonsCount > 1)
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              icon: Icon(
+                                _isExpanded
+                                    ? Icons.keyboard_arrow_up_rounded
+                                    : Icons.keyboard_arrow_down_rounded,
+                                color: context.colors.textSecondary,
+                              ),
+                              tooltip: _isExpanded ? 'Masquer les leçons' : 'Voir les leçons',
+                              onPressed: () => setState(() => _isExpanded = !_isExpanded),
+                            ),
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: visual.gradient.first,
+                              backgroundColor: widget.visual.gradient.first,
                               foregroundColor: Colors.black,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 14,
                                 vertical: 8,
                               ),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: AppRadius.radiusSmall,
                               ),
                             ),
                             onPressed: () {
@@ -363,8 +432,8 @@ class ChaptersListScreen extends ConsumerWidget {
                                 fontSize: 12,
                               ),
                             ),
-                          )
-                        else
+                          ),
+                        ] else
                           OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
                               foregroundColor: context.colors.textSecondary,
@@ -396,6 +465,93 @@ class ChaptersListScreen extends ConsumerWidget {
                           ),
                       ],
                     ),
+
+                    // Vue dépliée des leçons du chapitre pour accès 1-clic direct
+                    if (isUnlocked && _isExpanded) ...[
+                      const SizedBox(height: 16),
+                      Divider(color: context.colors.border, height: 1),
+                      const SizedBox(height: 12),
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final lessonsAsync = ref.watch(studentLessonsProvider(chapter.id));
+                          return lessonsAsync.when(
+                            loading: () => const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                            error: (err, _) => Text(
+                              'Erreur: $err',
+                              style: const TextStyle(color: Colors.red, fontSize: 12),
+                            ),
+                            data: (lessons) {
+                              if (lessons.isEmpty) {
+                                return Text(
+                                  'Aucune leçon disponible pour l\'instant.',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: context.colors.textMuted,
+                                  ),
+                                );
+                              }
+                              return Column(
+                                children: lessons.asMap().entries.map((entry) {
+                                  final idx = entry.key;
+                                  final lesson = entry.value;
+                                  return InkWell(
+                                    onTap: () {
+                                      Navigator.pushNamed(
+                                        context,
+                                        '/lesson-reader',
+                                        arguments: {
+                                          'chapterId': chapter.id,
+                                          'chapterTitle': chapter.title,
+                                          'initialLessonId': lesson.id,
+                                        },
+                                      );
+                                    },
+                                    borderRadius: AppRadius.radiusSmall,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                        horizontal: 4,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.play_circle_outline_rounded,
+                                            size: 16,
+                                            color: widget.visual.gradient.first,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              '${idx + 1}. ${lesson.title}',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 13,
+                                                color: context.colors.textPrimary,
+                                              ),
+                                            ),
+                                          ),
+                                          Text(
+                                            '${lesson.readingTimeMinutes} min',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              color: context.colors.textMuted,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),

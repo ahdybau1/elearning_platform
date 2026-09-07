@@ -7,6 +7,11 @@ import '../../../core/providers/student_providers.dart';
 import '../../../core/models/student_models.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../core/widgets/student_screen_header.dart';
+import '../../../design_system/tokens/app_radius.dart';
+import '../../../design_system/tokens/app_colors.dart';
+import '../../../design_system/components/empty_state_view.dart';
+import '../../../core/models/summary_sheet_registry.dart';
+import '../../courses/widgets/summary_sheet_viewer_modal.dart';
 
 /// §32.1 du cahier des charges : documents pédagogiques à la carte. `shop_documents` est une vraie
 /// table, gérée côté admin ; le seul point encore honnêtement indisponible est le paiement lui-même
@@ -32,28 +37,31 @@ class BoutiqueShopScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(20),
             children: [
               StudentScreenHeader(
-                title: 'Boutique de Fiches & Livrets (${profile?.className ?? ''})',
+                title: 'Boutique & Fiches Mémo (${profile?.className ?? ''})',
               ),
               const SizedBox(height: 20),
+
+              // Section Fiches de Synthèse Officielles HD (Option 3)
+              _buildSummarySheetsSection(context),
+              const SizedBox(height: 28),
+
+              // Section Documents & Livrets payants à la carte
+              Text(
+                'Livrets d\'Exercices & Annales à la carte',
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: context.colors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 12),
               if (documents.isEmpty)
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: context.colors.card,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: context.colors.border),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(Icons.menu_book_outlined, color: context.colors.textMuted, size: 36),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Aucun document disponible pour ${profile?.className ?? 'votre classe'} pour le moment.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
-                      ),
-                    ],
-                  ),
+                EmptyStateView(
+                  icon: Icons.menu_book_outlined,
+                  title: 'Aucun livret supplémentaire',
+                  description:
+                      'Les fiches de synthèse officielles ci-dessus sont déjà disponibles pour ${profile?.className ?? 'votre classe'}.',
+                  iconColor: context.colors.accentIndigo,
                 )
               else
                 ...documents.map((doc) => Padding(
@@ -67,12 +75,169 @@ class BoutiqueShopScreen extends ConsumerWidget {
     );
   }
 
+  /// Section dédiée aux Fiches Mémo & Résumés Officiels (HD & Formules)
+  Widget _buildSummarySheetsSection(BuildContext context) {
+    final sheets = SummarySheetRegistry.sheets;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primaryCyan.withAlpha(35),
+                borderRadius: AppRadius.radiusSmall,
+              ),
+              child: const Icon(
+                Icons.auto_stories_rounded,
+                color: AppColors.primaryCyan,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Fiches Mémo de Synthèse Officielles',
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: context.colors.textPrimary,
+                  ),
+                ),
+                Text(
+                  'Revue rapide • Zoom HD tactile • Formules mathématiques officielles',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: context.colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        ...sheets.map((sheet) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildSummarySheetCard(context, sheet),
+            )),
+      ],
+    );
+  }
+
+  Widget _buildSummarySheetCard(BuildContext context, SummarySheet sheet) {
+    final isMath = sheet.subject.toLowerCase().contains('math');
+    final accentColor = isMath ? AppColors.primaryCyan : AppColors.accentAmber;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        borderRadius: AppRadius.radiusLarge,
+        border: Border.all(
+          color: accentColor.withAlpha(80),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withAlpha(20),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: accentColor.withAlpha(30),
+                  borderRadius: AppRadius.radiusSmall,
+                  border: Border.all(color: accentColor.withAlpha(120)),
+                ),
+                child: Text(
+                  sheet.subject.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: accentColor,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: context.colors.accentEmerald.withAlpha(30),
+                  borderRadius: AppRadius.radiusSmall,
+                ),
+                child: Text(
+                  'INCLUS / ACCÈS LIBRE',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: context.colors.accentEmerald,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            sheet.title,
+            style: GoogleFonts.outfit(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: context.colors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Niveau : ${sheet.level} • ${sheet.sections.length} sections canoniques détaillées',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: context.colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accentColor,
+                foregroundColor: const Color(0xFF0A0E1A),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.button),
+                ),
+                elevation: 0,
+              ),
+              onPressed: () => SummarySheetViewerModal.show(context, sheet),
+              icon: const Icon(Icons.zoom_in_rounded, size: 18),
+              label: const Text(
+                'Consulter la Fiche Mémo HD (Zoom & Formules)',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDocCard(BuildContext context, ShopDocument doc) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: context.colors.card,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.radiusLarge,
         border: Border.all(color: context.colors.border),
       ),
       child: Column(
@@ -85,7 +250,7 @@ class BoutiqueShopScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: context.colors.accentIndigo.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: AppRadius.radiusSmall,
                 ),
                 child: Text(
                   'DOCUMENT OFFICIEL',
@@ -137,7 +302,7 @@ class BoutiqueShopScreen extends ConsumerWidget {
                 side: BorderSide(color: context.colors.border),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: AppRadius.radiusSmall,
                 ),
               ),
               onPressed: () {

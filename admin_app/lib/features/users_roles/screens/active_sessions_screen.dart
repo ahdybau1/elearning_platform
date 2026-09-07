@@ -242,6 +242,8 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
                     ),
               orElse: () => const SizedBox.shrink(),
             ),
+            const SizedBox(height: 16),
+            const _FraudRiskCard(),
             const SizedBox(height: 24),
 
             // Table of Active Sessions
@@ -531,6 +533,53 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// FraudRiskAgent (AIA-AGT-025, IA-013) — audit du 2026-09-06 : le Gateway Python qui l'exécutait
+/// n'est jamais déployé, porté en Edge Function (ai-fraud-risk) le même jour. Signal DISTINCT de
+/// `suspiciousSessionAccountsProvider` ci-dessus (un compte qui bascule entre appareils) : ici, un
+/// même appareil partagé par plusieurs comptes distincts — l'inverse, tout aussi réel. Réservé
+/// super_admin/admin_pays (vérifié aussi côté fonction), un signal jamais une sanction automatique.
+class _FraudRiskCard extends ConsumerWidget {
+  const _FraudRiskCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final signalsAsync = ref.watch(fraudRiskSignalsProvider);
+    return signalsAsync.maybeWhen(
+      data: (signals) => signals.isEmpty
+          ? const SizedBox.shrink()
+          : Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.accentRose.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.accentRose.withValues(alpha: 0.35)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    const Icon(Icons.gpp_maybe_rounded, size: 16, color: AppTheme.accentRose),
+                    const SizedBox(width: 8),
+                    Text('Appareils partagés entre plusieurs comptes (AIA-AGT-025)',
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.accentRose)),
+                  ]),
+                  const SizedBox(height: 10),
+                  ...signals.map((s) => Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Text(
+                          '${(s['accounts'] as List).length} comptes sur un même appareil (confiance ${((s['confidence'] as num) * 100).round()}%) — ${s['recommended_review']}',
+                          style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
+                        ),
+                      )),
+                ],
+              ),
+            ),
+      orElse: () => const SizedBox.shrink(),
     );
   }
 }

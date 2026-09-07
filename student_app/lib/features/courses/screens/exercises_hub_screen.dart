@@ -8,8 +8,12 @@ import '../../../core/providers/student_providers.dart';
 import '../../../core/models/student_models.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../core/widgets/student_screen_header.dart';
+import '../../../design_system/components/empty_state_view.dart';
+import '../../../design_system/tokens/app_radius.dart';
 import 'exercise_chapter_folders_screen.dart';
 import 'exercise_runner_screen.dart';
+import '../../exercises/screens/exercise_path_screen.dart';
+import '../../exercises/screens/variation_table_exercise_screen.dart';
 
 /// §3.2 du CDC : vraies données (StudentSupabaseService.fetchExercisesForClass). Navigation en vrais
 /// dossiers qu'on ouvre l'un après l'autre — matière, puis chapitre, puis le contenu lui-même —
@@ -34,6 +38,7 @@ class ExercisesHubScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
             child: StudentScreenHeader(title: 'Exercices (${profile?.className ?? ''})'),
           ),
+          _buildInteractivePracticeBanner(context),
           Expanded(
             child: exercisesAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -101,27 +106,113 @@ class ExercisesHubScreen extends ConsumerWidget {
   }
 
   Widget _emptyState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.edit_note_rounded, size: 46, color: context.colors.textMuted),
-            const SizedBox(height: 16),
-            Text(
-              'Aucun exercice publié pour le moment',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Revenez bientôt : l\'enseignant prépare encore ce contenu.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
-            ),
-          ],
+    return EmptyStateView(
+      icon: Icons.edit_note_rounded,
+      title: 'Aucun exercice publié pour le moment',
+      description: 'Revenez bientôt : l\'enseignant prépare encore ce contenu d\'évaluation.',
+    );
+  }
+
+  Widget _buildInteractivePracticeBanner(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        borderRadius: AppRadius.radiusLarge,
+        border: Border.all(color: const Color(0xFF38BDF8).withAlpha(80)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF38BDF8).withAlpha(25),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF38BDF8).withAlpha(35),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.auto_awesome, color: Color(0xFF38BDF8), size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'PARCOURS & EXERCICES INTERACTIFS',
+                      style: TextStyle(
+                        color: Color(0xFF38BDF8),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10.5,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                    Text(
+                      'Entraînement adaptatif 6 niveaux & Tableaux',
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: [
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0284C7),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusSmall),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ExercisePathScreen()),
+                  );
+                },
+                icon: const Icon(Icons.alt_route_rounded, size: 16),
+                label: const Text('Parcours 6 Niveaux', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+              ),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF10B981),
+                  side: const BorderSide(color: Color(0xFF10B981)),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusSmall),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const VariationTableExerciseScreen()),
+                  );
+                },
+                icon: const Icon(Icons.table_chart_outlined, size: 16),
+                label: const Text('Tableau de variations', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -141,12 +232,12 @@ class _FolderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: AppRadius.radiusLarge,
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: context.colors.card,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadius.radiusLarge,
           border: Border.all(color: context.colors.border),
         ),
         child: Row(
@@ -157,7 +248,7 @@ class _FolderCard extends StatelessWidget {
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 gradient: LinearGradient(colors: visual.gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: AppRadius.radiusMedium,
                 boxShadow: [BoxShadow(color: visual.gradient.last.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 3))],
               ),
               child: Stack(

@@ -435,6 +435,8 @@ class DashboardOverviewScreen extends ConsumerWidget {
               );
             },
           ),
+          const SizedBox(height: 24),
+          const _AdminAssistantCard(),
         ],
       ),
     );
@@ -664,4 +666,80 @@ class _KpiData {
     required this.color,
     this.isLoading = false,
   });
+}
+
+/// AdminAssistantAgent (AIA-AGT-021, IA-013) — audit du 2026-09-06 : le Gateway Python qui
+/// l'exécutait n'est jamais déployé (uvicorn local uniquement), agent réellement injoignable malgré
+/// son statut "production" ; porté en Edge Function (ai-admin-assistant) le même jour. Synthèse
+/// "ce qui mérite l'attention maintenant" qui n'existait nulle part ailleurs comme vue unique.
+class _AdminAssistantCard extends ConsumerWidget {
+  const _AdminAssistantCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final summaryAsync = ref.watch(adminAssistantSummaryProvider);
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.primarySurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.primaryBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.support_agent_rounded, color: AppTheme.accentIndigo, size: 20),
+              const SizedBox(width: 10),
+              Text('Assistant Admin (AIA-AGT-021)',
+                  style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded, color: AppTheme.textMuted, size: 18),
+                onPressed: () => ref.invalidate(adminAssistantSummaryProvider),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          summaryAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: LinearProgressIndicator(),
+            ),
+            error: (err, _) => Text('Indisponible : $err', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+            data: (summary) {
+              final failures = (summary['recent_ai_failures'] as List?) ?? [];
+              final tickets = (summary['open_support_tickets_by_category'] as Map?) ?? {};
+              final pendingValidation = summary['pending_content_validation'] as int? ?? 0;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(spacing: 20, runSpacing: 10, children: [
+                    _statChip('Échecs IA récents', '${failures.length}', failures.isEmpty ? AppTheme.accentEmerald : AppTheme.accentRose),
+                    _statChip('Tickets ouverts', '${tickets.values.fold<int>(0, (a, b) => a + (b as int))}', AppTheme.accentAmber),
+                    _statChip('Contenu en attente', '$pendingValidation', AppTheme.accentCyan),
+                  ]),
+                  if (failures.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Text('Dernier échec : ${failures.first['agent_type']} — ${failures.first['error_message']}',
+                        style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted),
+                        maxLines: 2, overflow: TextOverflow.ellipsis),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statChip(String label, String value, Color color) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Text(value, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+      const SizedBox(width: 6),
+      Text(label, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted)),
+    ]);
+  }
 }

@@ -7,6 +7,8 @@ import '../../../core/providers/student_providers.dart';
 import '../../../core/models/student_models.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../core/widgets/student_screen_header.dart';
+import '../../../design_system/tokens/app_radius.dart';
+import '../../../design_system/components/empty_state_view.dart';
 
 /// §9 du cahier des charges. Entièrement réel : création et lecture passent par `support_tickets`,
 /// déjà protégé par RLS (owns_account) — aucune donnée fictive nécessaire, contrairement aux autres
@@ -61,7 +63,15 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                         ),
                         data: (tickets) {
                           if (tickets.isEmpty) {
-                            return _emptyState(context, account.id);
+                            return EmptyStateView(
+                              icon: Icons.support_agent_rounded,
+                              title: 'Aucun ticket pour le moment',
+                              description:
+                                  'Une question, un problème de paiement ou un bug ? Contactez l\'administration.',
+                              iconColor: context.colors.accentPrimary,
+                              actionLabel: 'Créer un ticket',
+                              onAction: () => _showNewTicketDialog(context, account.id),
+                            );
                           }
                           return ListView.separated(
                             padding: const EdgeInsets.all(20),
@@ -79,55 +89,6 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
               ],
             ),
           );
-  }
-
-  Widget _emptyState(BuildContext context, String accountId) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.support_agent_rounded,
-              size: 46,
-              color: context.colors.textMuted,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Aucun ticket pour le moment',
-              style: GoogleFonts.inter(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: context.colors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Une question, un problème de paiement ou un bug ? Contactez l\'administration.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: context.colors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: context.colors.accentPrimary,
-                foregroundColor: Colors.black,
-              ),
-              onPressed: () => _showNewTicketDialog(context, accountId),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text(
-                'Créer un ticket',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildTicketCard(SupportTicket ticket) {
@@ -148,7 +109,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: context.colors.card,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: AppRadius.radiusLarge,
         border: Border.all(color: context.colors.border),
       ),
       child: Column(
@@ -171,7 +132,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: AppRadius.radiusFull,
                 ),
                 child: Text(
                   statusLabel,

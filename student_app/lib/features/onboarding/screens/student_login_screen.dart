@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/app_root_providers.dart';
+import '../../../design_system/tokens/app_radius.dart';
 
 class StudentLoginScreen extends ConsumerStatefulWidget {
   const StudentLoginScreen({super.key});
@@ -90,8 +91,8 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                   const SizedBox(height: 4),
                   Center(
                     child: Container(
-                      width: 64,
-                      height: 64,
+                      width: 68,
+                      height: 68,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -99,12 +100,12 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                             context.colors.accentIndigo,
                           ],
                         ),
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: AppRadius.radiusLarge,
                       ),
                       child: const Icon(
                         Icons.school_rounded,
                         color: Colors.white,
-                        size: 34,
+                        size: 36,
                       ),
                     ),
                   ),
@@ -113,7 +114,7 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                     'E-Learning National',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.outfit(
-                      fontSize: 24,
+                      fontSize: 26,
                       fontWeight: FontWeight.bold,
                       color: context.colors.textPrimary,
                     ),
@@ -150,7 +151,7 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                             filled: true,
                             fillColor: context.colors.card,
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: AppRadius.radiusMedium,
                             ),
                           ),
                           validator: (v) => (v == null || !v.contains('@'))
@@ -185,7 +186,7 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                             filled: true,
                             fillColor: context.colors.card,
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: AppRadius.radiusMedium,
                             ),
                           ),
                           validator: (v) => (v == null || v.isEmpty)
@@ -201,7 +202,7 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                               color: context.colors.accentRose.withValues(
                                 alpha: 0.12,
                               ),
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: AppRadius.radiusSmall,
                               border: Border.all(
                                 color: context.colors.accentRose.withValues(
                                   alpha: 0.4,
@@ -237,7 +238,7 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                             foregroundColor: Colors.black,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: AppRadius.radiusMedium,
                             ),
                           ),
                           child: _isSubmitting

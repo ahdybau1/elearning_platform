@@ -40,6 +40,23 @@
 
   <title>student_app</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- MathJax v3 (tex-svg) — Moteur de secours et haute fidélité conforme Cahier Technique §2 -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true
+      },
+      svg: {
+        fontCache: 'global'
+      }
+    };
+  </script>
+  <script type="text/javascript" id="MathJax-script" async
+    src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+  </script>
 </head>
 <body>
   <!--

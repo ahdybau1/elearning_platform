@@ -189,6 +189,7 @@ class StudentElearningApp extends ConsumerWidget {
               builder: (_) => LessonReaderScreen(
                 chapterId: args['chapterId'] ?? '',
                 chapterTitle: args['chapterTitle'] ?? 'Leçon',
+                initialLessonId: args['initialLessonId'] as String?,
               ),
             );
           case '/exercises':

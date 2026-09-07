@@ -7,6 +7,7 @@ import '../../../core/models/student_models.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../core/widgets/student_screen_header.dart';
+import '../../../design_system/tokens/app_radius.dart';
 
 /// §11 du cahier des charges (Paramètres + Accessibilité). Tout ce qui peut réellement persister le
 /// fait désormais via `account_settings` (migration 40) — voir studentAuthProvider.updateSettings.
@@ -317,7 +318,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: context.colors.card,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.radiusLarge,
         border: Border.all(color: context.colors.border),
       ),
       child: Column(
@@ -378,6 +379,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   color: context.colors.textPrimary,
                 ),
               ),
+              const SizedBox(height: 2),
               Text(
                 subtitle,
                 style: GoogleFonts.inter(
@@ -406,7 +408,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final resolvedColor = color ?? context.colors.textPrimary;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: AppRadius.radiusSmall,
       child: Row(
         children: [
           Icon(icon, size: 18, color: resolvedColor),
@@ -437,6 +439,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required VoidCallback onSelected,
   }) {
     return ChoiceChip(
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.radiusFull,
+      ),
       label: Text(comingSoon ? '$label (bientôt)' : label),
       selected: selected,
       onSelected: comingSoon ? null : (_) => onSelected(),

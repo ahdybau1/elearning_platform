@@ -7,6 +7,8 @@ import '../../../core/providers/student_providers.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../core/widgets/student_screen_header.dart';
 import '../../../core/theme/subject_visuals.dart';
+import '../../../design_system/components/empty_state_view.dart';
+import '../../../design_system/tokens/app_radius.dart';
 
 class SubjectsListScreen extends ConsumerWidget {
   const SubjectsListScreen({super.key});
@@ -24,6 +26,7 @@ class SubjectsListScreen extends ConsumerWidget {
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
                   child: StudentScreenHeader(
                     title: 'Cours & Matières (${profile.className})',
+                    subtitle: 'Sélectionnez une discipline pour explorer ses chapitres et cours.',
                   ),
                 ),
                 Expanded(
@@ -43,46 +46,18 @@ class SubjectsListScreen extends ConsumerWidget {
                         ),
                         data: (subjects) {
                           if (subjects.isEmpty) {
-                            return Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(32),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.menu_book_outlined,
-                                      size: 46,
-                                      color: context.colors.textMuted,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'Aucune matière programmée pour ${profile.className}',
-                                      textAlign: TextAlign.center,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: context.colors.textPrimary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      'L\'administration n\'a pas encore associé de matière à cette classe.',
-                                      textAlign: TextAlign.center,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        color: context.colors.textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                            return EmptyStateView(
+                              icon: Icons.menu_book_outlined,
+                              title: 'Aucune matière programmée pour ${profile.className}',
+                              description:
+                                  'L\'administration n\'a pas encore associé de matière à cette classe pour l\'année scolaire en cours.',
                             );
                           }
                           return ListView.separated(
-                            padding: const EdgeInsets.all(20),
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                             itemCount: subjects.length,
                             separatorBuilder: (_, _) =>
-                                const SizedBox(height: 14),
+                                const SizedBox(height: 12),
                             itemBuilder: (context, index) {
                               final s = subjects[index];
                               final visual = SubjectVisuals.forSubject(
@@ -102,12 +77,12 @@ class SubjectsListScreen extends ConsumerWidget {
                                     },
                                   );
                                 },
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: AppRadius.radiusLarge,
                                 child: Container(
                                   padding: const EdgeInsets.all(14),
                                   decoration: BoxDecoration(
                                     color: context.colors.card,
-                                    borderRadius: BorderRadius.circular(16),
+                                    borderRadius: AppRadius.radiusLarge,
                                     border: Border.all(
                                       color: context.colors.border,
                                     ),
@@ -124,9 +99,7 @@ class SubjectsListScreen extends ConsumerWidget {
                                             begin: Alignment.topLeft,
                                             end: Alignment.bottomRight,
                                           ),
-                                          borderRadius: BorderRadius.circular(
-                                            14,
-                                          ),
+                                          borderRadius: AppRadius.radiusMedium,
                                           boxShadow: [
                                             BoxShadow(
                                               color: visual.gradient.last

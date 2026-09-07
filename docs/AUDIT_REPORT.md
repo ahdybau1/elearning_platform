@@ -1,4 +1,23 @@
-# Audit Report — EDLEARN (2026-08-28)
+# Audit Report — EDLEARN
+
+## Reprise du 2026-09-05 — inspection locale à HEAD `f5edccf`
+
+Cette passe vérifie le dépôt, pas la production ni les migrations effectivement appliquées à distance. Le rapport du 28 août conservé ci-dessous est historique : ses mentions « absent » concernant la Gateway, le RAG et le registre IA ne décrivent plus le code actuel.
+
+| Existant vérifié | Cible / écart | Suite / migration | Risque et validation |
+|---|---|---|---|
+| Deux applications Flutter, Riverpod, Supabase, navigation et services dédiés | Modules élève/parent et administration déjà présents ; fonctionnement de chaque parcours non réévalué ici | Préserver les parcours existants | Rejouer les parcours critiques avec comptes de test |
+| Modèle ContentBlock, registre de rendu élève, éditeur de leçons admin, exercices et indices | Prévisualisation admin et rendu élève restent dans deux projets distincts | Vérifier leur cohérence avant extraction éventuelle d'un package commun | Tests des formats historiques et structurés |
+| Gateway FastAPI : outils, RAG, routage, ledger, tuteur, correction, diagnostic, recommandations | Présence du code confirmée ; disponibilité et branchement en production non vérifiés | Vérifier configuration et déploiement avant de déclarer ces fonctions opérationnelles | Authentification, filtrage des profils et appels réels à tester |
+| 72 fichiers de migration (01 à 73, sans 50), 15 dossiers Edge Functions | État distant inconnu | Aucun SQL exécuté pendant cet audit | Vérifier historique distant avant toute nouvelle migration |
+| Exam Resource Factory : migration 73, extraction IA, écran de revue et publication admin | Aucune lecture élève de `exam_paper_questions` trouvée ; policies de cette table réservées aux admins | Finaliser workflow puis concevoir lecture élève avec droits de publication/abonnement | Ne jamais exposer brouillons ni corrigés non validés |
+| Bouton Approuver dans exam_paper_review_screen.dart transmet des valeurs nulles pour énoncé/corrigé | Des modifications encore dans les contrôleurs ne sont pas enregistrées lors de l'approbation | Enregistrer le contenu approuvé et tester cette séquence | Risque d'approuver une ancienne version |
+| publishExamPaper vérifie les questions puis met à jour le sujet via deux requêtes client | Publication non atomique dans ce chemin ; une modification concurrente peut intervenir | Préparer une opération serveur transactionnelle avant exposition élève | Test concurrence et refus si une question n'est pas approuvée |
+| Un widget test par application ; aucun fichier de test trouvé dans gateway | Couverture insuffisante des workflows métier examinés | Tests ciblés sur revue/publication puis lecture élève | Les deux `flutter test --no-pub` lancés ici sont restés sans sortie et ont été interrompus ; aucun succès de tests revendiqué |
+
+Hors-ligne et gamification sont encore explicitement annoncés comme indisponibles dans les écrans concernés. L'internationalisation reste à traiter selon la documentation ; cette passe ne constitue pas un audit exhaustif de sécurité ou d'accessibilité.
+
+## Rapport historique — 2026-08-28
 
 > Produit selon le skill `project-audit` du pack de gouvernance reçu ce jour (voir `MANIFEST.md`,
 > `.agents/AGENTS.md`). Portée : état réel du repo par rapport à la nouvelle couche « Agents IA / Content

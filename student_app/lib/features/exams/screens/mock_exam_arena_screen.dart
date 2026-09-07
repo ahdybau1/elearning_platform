@@ -7,6 +7,8 @@ import '../../../core/providers/student_providers.dart';
 import '../../../core/models/student_models.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../core/widgets/student_screen_header.dart';
+import '../../../design_system/tokens/app_radius.dart';
+import '../../../design_system/components/empty_state_view.dart';
 
 /// §14 du cahier des charges : concours blancs & olympiades. `events`/`event_results` en base ne
 /// portent aucun lien vers un contenu d'épreuve (pas de question/exercice associé) — la correction se
@@ -48,7 +50,13 @@ class MockExamArenaScreen extends ConsumerWidget {
               ),
               data: (events) {
                 if (events.isEmpty) {
-                  return _EmptyState(className: profile?.className ?? 'votre classe');
+                  return EmptyStateView(
+                    icon: Icons.emoji_events_outlined,
+                    title: 'Aucune épreuve programmée',
+                    description:
+                        'Aucune olympiade ou concours blanc n\'est encore planifié pour ${profile?.className ?? 'votre classe'}.',
+                    iconColor: context.colors.accentAmber,
+                  );
                 }
                 return Column(
                   children: events
@@ -59,34 +67,6 @@ class MockExamArenaScreen extends ConsumerWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  final String className;
-  const _EmptyState({required this.className});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: context.colors.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.colors.border),
-      ),
-      child: Column(
-        children: [
-          Icon(Icons.emoji_events_outlined, color: context.colors.textMuted, size: 36),
-          const SizedBox(height: 12),
-          Text(
-            'Aucune épreuve programmée pour $className pour le moment.',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
-          ),
-        ],
       ),
     );
   }
@@ -112,7 +92,7 @@ class _EventCard extends ConsumerWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: context.colors.card,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.radiusLarge,
         border: Border.all(color: context.colors.border),
       ),
       child: Column(
@@ -124,7 +104,7 @@ class _EventCard extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: AppRadius.radiusSmall,
                 ),
                 child: Text(
                   event.isOlympiad ? 'OLYMPIADE' : 'CONCOURS BLANC',

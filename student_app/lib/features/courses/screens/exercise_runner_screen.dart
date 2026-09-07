@@ -6,6 +6,14 @@ import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/models/student_models.dart';
 import '../../../core/widgets/student_page_content.dart';
+import '../../../design_system/components/empty_state_view.dart';
+import '../../../design_system/tokens/app_radius.dart';
+import '../../../design_system/tokens/app_colors.dart';
+import '../../../core/rendering/math_formula_view.dart';
+import '../../ai_tutor/widgets/contextual_ai_agent_sheet.dart';
+import '../../pedagogy/widgets/scientific_tools_modal.dart';
+import '../../pedagogy/widgets/photo_transcription_modal.dart';
+import '../../pedagogy/widgets/interactive_function_graph.dart';
 
 class ExerciseRunnerScreen extends ConsumerStatefulWidget {
   final String chapterId;
@@ -37,6 +45,8 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
   bool _isRevealed = false;
   int _totalScore = 0;
   final TextEditingController _freeTextCtrl = TextEditingController();
+  /// Transcription OCR issue du scan de manuscrit de l'élève
+  String? _scannedTranscription;
   /// Nombre d'indices déjà révélés pour l'exercice courant (CF-003 enrichissement) — remis à zéro à
   /// chaque changement d'exercice, jamais partagé entre deux exercices différents.
   int _hintsShown = 0;
@@ -80,6 +90,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
         _selectedOptionIndex = null;
         _isRevealed = false;
         _hintsShown = 0;
+        _scannedTranscription = null;
         _freeTextCtrl.clear();
       });
     } else {
@@ -104,6 +115,18 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
             fontSize: 16,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.calculate_rounded, color: Color(0xFF10B981)),
+            tooltip: 'Calculateur SymPy & Outils Scientifiques',
+            onPressed: () {
+              ScientificToolsModal.show(
+                context,
+                initialQuery: widget.chapterTitle,
+              );
+            },
+          ),
+        ],
       ),
       body: StudentPageContent(
         child: exercisesAsync.when(
@@ -116,38 +139,10 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
           ),
           data: (exercises) {
             if (exercises.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.edit_note_rounded,
-                        size: 46,
-                        color: context.colors.textMuted,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Aucun exercice publié pour ce chapitre',
-                        style: GoogleFonts.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: context.colors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Revenez bientôt : l\'enseignant prépare encore ce quiz.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: context.colors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              return EmptyStateView(
+                icon: Icons.edit_note_rounded,
+                title: 'Aucun exercice publié pour ce chapitre',
+                description: 'Revenez bientôt : l\'enseignant prépare encore ce quiz.',
               );
             }
 
@@ -239,20 +234,112 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
   Widget _statementCard(BuildContext context, Exercise ex) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: context.colors.card,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.radiusLarge,
         border: Border.all(color: context.colors.border),
       ),
-      child: Text(
-        ex.questionText,
-        style: GoogleFonts.inter(
-          fontSize: 17,
-          fontWeight: FontWeight.bold,
-          color: context.colors.textPrimary,
-          height: 1.4,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryCyan.withAlpha(25),
+                  borderRadius: AppRadius.radiusSmall,
+                  border: Border.all(color: AppColors.primaryCyan.withAlpha(80)),
+                ),
+                child: Text(
+                  'ÉNONCÉ OFFICIEL',
+                  style: GoogleFonts.inter(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryCyan,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              // Déclencheurs Outils Scientifiques & Tuteur Socratique
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  InkWell(
+                    onTap: () {
+                      ScientificToolsModal.show(
+                        context,
+                        initialQuery: ex.questionText,
+                      );
+                    },
+                    borderRadius: AppRadius.radiusSmall,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.calculate_rounded, size: 14, color: Color(0xFF10B981)),
+                          const SizedBox(width: 4),
+                          Text(
+                            'SymPy / Grapheur',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF10B981),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () {
+                      ContextualAiAgentSheet.show(
+                        context,
+                        topicTitle: widget.chapterTitle,
+                        subject: 'Mathématiques',
+                        formulaLatex: ex.questionText,
+                        initialMode: 'tutor',
+                      );
+                    },
+                    borderRadius: AppRadius.radiusSmall,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.auto_awesome_rounded, size: 14, color: AppColors.primaryCyan),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Tuteur Socratique',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primaryCyan,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          InlineLatexText(
+            ex.questionText,
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: context.colors.textPrimary,
+              height: 1.45,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -275,7 +362,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: context.colors.accentAmber.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: AppRadius.radiusSmall,
                 border: Border.all(color: context.colors.accentAmber.withValues(alpha: 0.4)),
               ),
               child: Row(
@@ -284,9 +371,9 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                   Icon(Icons.lightbulb_outline_rounded, size: 16, color: context.colors.accentAmber),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
+                    child: InlineLatexText(
                       ex.hints[i],
-                      style: GoogleFonts.inter(fontSize: 12, color: context.colors.textPrimary, height: 1.4),
+                      style: GoogleFonts.inter(fontSize: 12.5, color: context.colors.textPrimary, height: 1.4),
                     ),
                   ),
                 ],
@@ -294,7 +381,10 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
             ),
           if (hasMore)
             OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(foregroundColor: context.colors.accentAmber),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: context.colors.accentAmber,
+                shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusSmall),
+              ),
               onPressed: () => setState(() => _hintsShown++),
               icon: const Icon(Icons.lightbulb_outline_rounded, size: 16),
               label: Text(_hintsShown == 0 ? 'Voir un indice' : 'Indice suivant'),
@@ -314,7 +404,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: AppRadius.radiusLarge,
         border: Border.all(color: color),
       ),
       child: Column(
@@ -327,22 +417,55 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                     ? Icons.lightbulb_outline_rounded
                     : (isCorrect ? Icons.check_circle_rounded : Icons.cancel_rounded),
                 color: color,
-                size: 18,
+                size: 20,
               ),
               const SizedBox(width: 8),
               Text(
                 isCorrect == null
                     ? 'Corrigé'
                     : (isCorrect ? 'Excellente Réponse !' : 'Réponse Incorrecte'),
-                style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: context.colors.textPrimary),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
+          const SizedBox(height: 10),
+          InlineLatexText(
             ex.explanation.isNotEmpty ? ex.explanation : 'Aucun corrigé fourni pour cet exercice.',
-            style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
+            style: GoogleFonts.inter(fontSize: 13.5, color: context.colors.textSecondary, height: 1.45),
           ),
+          // Proposition de remédiation par le DiagnosticAgent / MisconceptionAgent si la réponse est incorrecte
+          if (isCorrect == false) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryCyan,
+                  foregroundColor: const Color(0xFF0F172A),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusSmall),
+                ),
+                icon: const Icon(Icons.psychology_alt_rounded, size: 18),
+                label: const Text(
+                  'Comprendre mon erreur (Diagnostic IA & Pièges)',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+                onPressed: () {
+                  final selectedText = (_selectedOptionIndex != null && _selectedOptionIndex! < ex.options.length)
+                      ? ex.options[_selectedOptionIndex!]
+                      : 'Réponse incorrecte';
+                  ContextualAiAgentSheet.show(
+                    context,
+                    topicTitle: widget.chapterTitle,
+                    subject: 'Mathématiques',
+                    formulaLatex: 'Question: ${ex.questionText}\nChoix de l\'élève: $selectedText\nCorrigé: ${ex.explanation}',
+                    initialMode: 'diagnostic',
+                  );
+                },
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -394,12 +517,13 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
             padding: const EdgeInsets.only(bottom: 12),
             child: InkWell(
               onTap: _isRevealed ? null : () => setState(() => _selectedOptionIndex = optIdx),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: AppRadius.radiusMedium,
               child: Container(
+                constraints: const BoxConstraints(minHeight: 48),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
                   color: bgColor,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: AppRadius.radiusMedium,
                   border: Border.all(color: borderColor, width: isSelected ? 2 : 1),
                 ),
                 child: Row(
@@ -423,7 +547,10 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                     ),
                     const SizedBox(width: 14),
                     Expanded(
-                      child: Text(option, style: GoogleFonts.inter(fontSize: 15, color: context.colors.textPrimary)),
+                      child: InlineLatexText(
+                        option,
+                        style: GoogleFonts.inter(fontSize: 15, color: context.colors.textPrimary),
+                      ),
                     ),
                   ],
                 ),
@@ -495,7 +622,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
               size: 26,
             ),
             const SizedBox(height: 16),
-            Text(
+            InlineLatexText(
               _isRevealed ? ex.explanation : ex.questionText,
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
@@ -526,20 +653,125 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: context.colors.accentAmber.withValues(alpha: 0.1),
+            color: context.colors.card,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: context.colors.accentAmber.withValues(alpha: 0.4)),
+            border: Border.all(color: context.colors.border),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.edit_document, color: context.colors.accentAmber, size: 22),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Cet exercice se rédige à la main, sur papier, puis se rend à votre enseignant — l\'application ne recueille pas de copie scannée pour l\'instant.',
-                  style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
-                ),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.cyanAccent.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.document_scanner_rounded, color: AppColors.cyanAccent, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Correction par scan manuscrit & OCR',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: context.colors.textPrimary),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Rédige ta solution sur papier, puis scanne-la pour vérifier tes calculs sans code technique.',
+                          style: GoogleFonts.inter(fontSize: 11.5, color: context.colors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.cyanAccent,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.camera_alt_rounded, size: 18),
+                      label: const Text(
+                        'Photographier ma feuille',
+                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+                      ),
+                      onPressed: () {
+                        PhotoTranscriptionModal.show(
+                          context,
+                          onTranscription: (transcription) {
+                            setState(() {
+                              _scannedTranscription = transcription;
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.15),
+                      foregroundColor: const Color(0xFF10B981),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: const BorderSide(color: Color(0xFF10B981)),
+                      ),
+                    ),
+                    icon: const Icon(Icons.show_chart_rounded, size: 18),
+                    label: const Text('Tracé', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    onPressed: () {
+                      InteractiveFunctionGraph.showModal(
+                        context,
+                        expression: '2x^2 - 4x - 6',
+                      );
+                    },
+                  ),
+                ],
+              ),
+              if (_scannedTranscription != null) ...[
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Solution manuscrite transcrite :',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12, color: const Color(0xFF10B981)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      InlineLatexText(
+                        _scannedTranscription!,
+                        style: GoogleFonts.inter(fontSize: 13, color: context.colors.textPrimary),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),

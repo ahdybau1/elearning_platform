@@ -1,6 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/student_supabase_service.dart';
 import '../models/student_models.dart';
+import '../models/published_exam_question.dart';
+
+typedef PublishedExamQuery = ({String profileId, String? examPaperId, String? establishmentPaperId});
+final publishedExamQuestionsProvider = FutureProvider.autoDispose.family<List<PublishedExamQuestion>, PublishedExamQuery>((ref, query) {
+  return ref.watch(studentSupabaseServiceProvider).fetchPublishedExamQuestions(
+    profileId: query.profileId, examPaperId: query.examPaperId,
+    establishmentPaperId: query.establishmentPaperId);
+});
 
 final studentSupabaseServiceProvider = Provider<StudentSupabaseService>((ref) {
   return StudentSupabaseService.instance;

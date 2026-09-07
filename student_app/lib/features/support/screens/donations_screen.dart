@@ -5,6 +5,8 @@ import '../../../core/theme/student_theme.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../core/widgets/student_screen_header.dart';
+import '../../../design_system/tokens/app_radius.dart';
+import '../../../design_system/components/empty_state_view.dart';
 
 /// §12 du cahier des charges. Le catalogue des causes est réel (charity_campaigns, lecture
 /// publique). Les dons eux-mêmes restent bloqués : la table `donations` n'a aucune policy
@@ -18,7 +20,7 @@ class DonationsScreen extends ConsumerWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: context.colors.accentAmber,
-        content: Text(
+        content: const Text(
           'Les dons Mobile Money ne sont pas encore disponibles : agrégateur de paiement en attente de configuration.',
         ),
       ),
@@ -40,7 +42,7 @@ class DonationsScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: StudentTheme.purpleGradient,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: AppRadius.radiusLarge,
               boxShadow: [
                 BoxShadow(
                   color: context.colors.accentPurple.withValues(alpha: 0.3),
@@ -83,7 +85,7 @@ class DonationsScreen extends ConsumerWidget {
                       vertical: 12,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: AppRadius.radiusMedium,
                     ),
                   ),
                   onPressed: () => _showUnavailable(context),
@@ -120,9 +122,10 @@ class DonationsScreen extends ConsumerWidget {
             ),
             data: (campaigns) {
               if (campaigns.isEmpty) {
-                return Text(
-                  'Aucune campagne active pour le moment.',
-                  style: GoogleFonts.inter(color: context.colors.textSecondary),
+                return const EmptyStateView(
+                  icon: Icons.volunteer_activism_outlined,
+                  title: 'Aucune campagne active',
+                  description: 'Revenez bientôt pour découvrir les prochaines initiatives de soutien communautaire.',
                 );
               }
               return Column(
@@ -132,7 +135,7 @@ class DonationsScreen extends ConsumerWidget {
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       color: context.colors.card,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: AppRadius.radiusLarge,
                       border: Border.all(color: context.colors.border),
                     ),
                     child: Column(

@@ -9,6 +9,7 @@ import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../core/widgets/student_screen_header.dart';
+import '../../../design_system/tokens/app_radius.dart';
 import '../../subscription/screens/paywall_modal.dart';
 
 class HomeDashboardScreen extends ConsumerWidget {
@@ -96,9 +97,12 @@ class HomeDashboardScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
 
-            // Subjects Grid
+            // Subjects Grid & Quick Resume
             subjectsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: Padding(
+                padding: EdgeInsets.all(32.0),
+                child: CircularProgressIndicator(),
+              )),
               error: (err, _) => Text(
                 'Erreur: $err',
                 style: const TextStyle(color: Colors.red),
@@ -133,24 +137,45 @@ class HomeDashboardScreen extends ConsumerWidget {
                     ),
                   );
                 }
-                return GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 14,
-                    mainAxisSpacing: 14,
-                    childAspectRatio: 1.25,
-                  ),
-                  itemCount: subjects.length,
-                  itemBuilder: (context, index) {
-                    final subject = subjects[index];
-                    return _buildSubjectCard(
+
+                final screenWidth = MediaQuery.of(context).size.width;
+                final columns = screenWidth < 360
+                    ? 1
+                    : (screenWidth < 700
+                        ? 2
+                        : (screenWidth < 1024 ? 3 : 4));
+                final childRatio = columns == 1 ? 2.3 : 1.25;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Raccourci rapide "Continuer mon apprentissage" vers la 1ère matière active
+                    _buildContinueLearningCard(
                       context,
-                      subject,
+                      subjects.first,
                       profile?.classNodeId ?? '',
-                    );
-                  },
+                    ),
+                    const SizedBox(height: 16),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: columns,
+                        crossAxisSpacing: 14,
+                        mainAxisSpacing: 14,
+                        childAspectRatio: childRatio,
+                      ),
+                      itemCount: subjects.length,
+                      itemBuilder: (context, index) {
+                        final subject = subjects[index];
+                        return _buildSubjectCard(
+                          context,
+                          subject,
+                          profile?.classNodeId ?? '',
+                        );
+                      },
+                    ),
+                  ],
                 );
               },
             ),
@@ -339,7 +364,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  'Accès complet aux fiches de cours, LaTeX & annales',
+                  'Accès complet aux fiches de cours, formules officielles & annales',
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     color: context.colors.textSecondary,
@@ -520,6 +545,126 @@ class HomeDashboardScreen extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildContinueLearningCard(
+    BuildContext context,
+    Subject subject,
+    String classNodeId,
+  ) {
+    final visual = SubjectVisuals.forSubject(
+      code: subject.code,
+      name: subject.name,
+    );
+
+    return InkWell(
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          '/chapters',
+          arguments: {
+            'subjectId': subject.id,
+            'subjectName': subject.name,
+            'subjectCode': subject.code,
+            'classNodeId': classNodeId,
+          },
+        );
+      },
+      borderRadius: AppRadius.radiusLarge,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: context.colors.card,
+          borderRadius: AppRadius.radiusLarge,
+          border: Border.all(color: context.colors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: visual.gradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: AppRadius.radiusMedium,
+              ),
+              child: Icon(visual.icon, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: context.colors.accentPrimary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'CONTINUER',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: context.colors.accentPrimary,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        subject.chaptersCount > 0 ? '${subject.chaptersCount} chapitres' : 'Au programme',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: context.colors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subject.name,
+                    style: GoogleFonts.outfit(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: context.colors.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: context.colors.surface,
+                shape: BoxShape.circle,
+                border: Border.all(color: context.colors.border),
+              ),
+              child: Icon(
+                Icons.play_arrow_rounded,
+                color: context.colors.accentPrimary,
+                size: 20,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

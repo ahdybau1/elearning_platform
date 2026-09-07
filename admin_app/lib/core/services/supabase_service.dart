@@ -3450,6 +3450,40 @@ class SupabaseService {
     }
   }
 
+  // ─── AdminAssistantAgent (AIA-AGT-021, IA-013) ─────────────────
+
+  Future<Map<String, dynamic>> fetchAdminAssistantSummary() async {
+    final res = await client.functions.invoke('ai-admin-assistant', body: {});
+    if (res.status != 200) {
+      final error = (res.data is Map) ? res.data['error'] : res.data;
+      throw Exception(error ?? 'Échec de l\'assistant admin');
+    }
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  // ─── SupportTriageAgent (AIA-AGT-022, IA-013) ──────────────────
+
+  Future<Map<String, dynamic>> triageTicketWithAi(String ticketId) async {
+    final res = await client.functions.invoke('ai-support-triage', body: {'ticket_id': ticketId});
+    if (res.status != 200) {
+      final error = (res.data is Map) ? res.data['error'] : res.data;
+      throw Exception(error ?? 'Échec du tri IA');
+    }
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  // ─── FraudRiskAgent (AIA-AGT-025, IA-013) ──────────────────────
+
+  Future<List<Map<String, dynamic>>> fetchFraudRiskSignals() async {
+    final res = await client.functions.invoke('ai-fraud-risk', body: {});
+    if (res.status != 200) {
+      final error = (res.data is Map) ? res.data['error'] : res.data;
+      throw Exception(error ?? 'Échec de la détection de risque');
+    }
+    final data = Map<String, dynamic>.from(res.data as Map);
+    return (data['signals'] as List).map((s) => Map<String, dynamic>.from(s as Map)).toList();
+  }
+
   /// Seule écriture possible de `official_correct` — réservée admin par RLS (migration 68). C'est
   /// la validation humaine exigée par le cahier pour un agent de correction.
   Future<void> reviewAttempt({

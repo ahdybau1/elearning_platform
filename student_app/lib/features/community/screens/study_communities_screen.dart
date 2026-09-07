@@ -7,6 +7,8 @@ import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../core/widgets/student_screen_header.dart';
+import '../../../design_system/tokens/app_radius.dart';
+import '../../../design_system/components/empty_state_view.dart';
 
 /// §16 du cahier des charges. Données réelles (whatsapp_communities), gate déjà appliqué côté RLS
 /// par classe ET palier d'abonnement. Une communauté n'existe qu'à l'initiative de l'admin pays —
@@ -42,7 +44,13 @@ class StudyCommunitiesScreen extends ConsumerWidget {
                         ),
                         data: (community) {
                           if (community == null) {
-                            return _emptyState(context, profile.className);
+                            return EmptyStateView(
+                              icon: Icons.groups_outlined,
+                              title: 'Aucune communauté active pour ${profile.className}',
+                              description:
+                                  'Soit l\'administration n\'a pas encore créé de groupe pour votre classe, soit votre palier d\'abonnement actuel n\'y donne pas accès.',
+                              iconColor: context.colors.accentEmerald,
+                            );
                           }
                           return _buildCommunityCard(
                             context,
@@ -60,43 +68,6 @@ class StudyCommunitiesScreen extends ConsumerWidget {
           );
   }
 
-  Widget _emptyState(BuildContext context, String className) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.groups_outlined,
-              size: 46,
-              color: context.colors.textMuted,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Aucune communauté active pour $className',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: context.colors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Soit l\'administration n\'a pas encore créé de groupe pour votre classe, soit votre palier d\'abonnement actuel n\'y donne pas accès.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: context.colors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildCommunityCard(
     BuildContext context,
     String inviteLink,
@@ -109,7 +80,7 @@ class StudyCommunitiesScreen extends ConsumerWidget {
         gradient: const LinearGradient(
           colors: [Color(0xFF25D366), Color(0xFF128C7E)],
         ),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: AppRadius.radiusLarge,
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF25D366).withValues(alpha: 0.25),
@@ -145,7 +116,7 @@ class StudyCommunitiesScreen extends ConsumerWidget {
               foregroundColor: const Color(0xFF128C7E),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: AppRadius.radiusMedium,
               ),
             ),
             onPressed: () async {

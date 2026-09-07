@@ -687,6 +687,7 @@ class OfficialExam {
 // Reflète la vraie table `exam_papers` — un sujet d'annale précis, rattaché à UN examen (donc
 // transitivement à une seule classe) et une matière.
 class ExamPaper {
+  final String processingStatus;
   final String id;
   final String examId;
   final String subjectId;
@@ -697,6 +698,7 @@ class ExamPaper {
   final bool isCorrectionUnlocked;
 
   ExamPaper({
+    this.processingStatus = 'not_started',
     required this.id,
     required this.examId,
     required this.subjectId,
@@ -710,6 +712,7 @@ class ExamPaper {
   factory ExamPaper.fromJson(Map<String, dynamic> json) {
     final subject = json['subjects'] as Map<String, dynamic>?;
     return ExamPaper(
+      processingStatus: json['processing_status'] as String? ?? 'not_started',
       id: json['id'] as String,
       examId: json['exam_id'] as String,
       subjectId: json['subject_id'] as String,
@@ -866,6 +869,7 @@ class Establishment {
 }
 
 class EstablishmentPaper {
+  final String processingStatus;
   final String id;
   final String establishmentId;
   final String? establishmentName;
@@ -876,6 +880,7 @@ class EstablishmentPaper {
   final String? correctionUrl;
 
   EstablishmentPaper({
+    this.processingStatus = 'not_started',
     required this.id,
     required this.establishmentId,
     this.establishmentName,
@@ -890,6 +895,7 @@ class EstablishmentPaper {
     final establishment = json['establishments'] as Map<String, dynamic>?;
     final subject = json['subjects'] as Map<String, dynamic>?;
     return EstablishmentPaper(
+      processingStatus: json['processing_status'] as String? ?? 'not_started',
       id: json['id'] as String,
       establishmentId: json['establishment_id'] as String,
       establishmentName: establishment?['name'] as String?,

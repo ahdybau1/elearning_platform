@@ -145,8 +145,17 @@ d'administration pour un seul agent réel aujourd'hui, et le pack lui-même (U11
 
 ---
 
-## Prochaine étape immédiate
+## Prochaine étape immédiate — actualisation du 2026-09-05
 
-Démarrer CF-001 dès confirmation, en commençant par la lecture complète de `lesson_reader_screen.dart` et
-`lessons_manager_screen.dart` (fichiers volumineux, à relire intégralement avant modification — non
-résumés ici pour éviter toute supposition sur leur contenu exact).
+CF-001 et CF-002 sont déjà implémentés. Les reports IA ci-dessus sont historiques : plusieurs de ces
+modules existent désormais dans `gateway/app/` (voir l'audit actualisé).
+
+Le dernier chantier du dépôt (`f5edccf`) est Exam Resource Factory, tranche 1 : extraction et revue admin.
+Ordre de reprise proposé, lié à U2.1/U2.4 et à l'annexe D.8-D.9 de CAHIER_IA_ZERO_COUT_MASTER :
+
+1. Fiabiliser la revue admin : approbation du texte réellement édité, gestion des sauvegardes et tests ciblés.
+2. Préparer la publication atomique côté serveur avec validation des questions ; examiner les droits avant toute modification de sécurité.
+3. Ajouter la lecture élève des questions publiées, avec accès limité au périmètre autorisé et maintien des liens documentaires existants. Migration RLS additive à concevoir sur le schéma réel.
+4. Vérifier les parcours admin → publication → élève, y compris brouillon inaccessible, refus de publication incomplète et accès selon abonnement.
+
+Aucune migration ni modification applicative effectuée pendant la passe d'audit du 5 septembre.

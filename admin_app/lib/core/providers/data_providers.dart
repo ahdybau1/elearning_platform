@@ -294,6 +294,19 @@ final attemptsNeedingHumanReviewProvider = FutureProvider<List<ExerciseAttemptFo
   return service.fetchAttemptsNeedingHumanReview();
 });
 
+/// AdminAssistantAgent (AIA-AGT-021) — synthèse plateforme en lecture seule.
+final adminAssistantSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchAdminAssistantSummary();
+});
+
+/// FraudRiskAgent (AIA-AGT-025) — réservé super_admin/admin_pays (403 pour les autres rôles, géré
+/// silencieusement côté écran via maybeWhen/orElse).
+final fraudRiskSignalsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchFraudRiskSignals();
+});
+
 final examPapersProvider =
     FutureProvider.family<List<ExamPaper>, String>((ref, examId) async {
   final service = ref.watch(supabaseServiceProvider);

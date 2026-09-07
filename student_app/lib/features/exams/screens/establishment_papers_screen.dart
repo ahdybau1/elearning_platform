@@ -8,6 +8,9 @@ import '../../../core/providers/student_providers.dart';
 import '../../../core/models/student_models.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../core/widgets/student_screen_header.dart';
+import '../../../design_system/tokens/app_radius.dart';
+import '../../../design_system/components/empty_state_view.dart';
+import 'exam_questions_screen.dart';
 
 /// §5 du cahier des charges. Données réelles (establishments/establishment_papers, lecture
 /// publique) — la classe est toujours déduite du profil actif, jamais redemandée (§5, règle de
@@ -132,7 +135,13 @@ class _EstablishmentPapersScreenState
                           ),
                           data: (papers) {
                             if (papers.isEmpty) {
-                              return _emptyState();
+                              return EmptyStateView(
+                                icon: Icons.folder_off_outlined,
+                                title: 'Aucune épreuve disponible pour le moment',
+                                description:
+                                    'Les établissements et enseignants n\'ont pas encore publié d\'épreuve pour votre classe.',
+                                iconColor: context.colors.accentPrimary,
+                              );
                             }
                             return ListView.separated(
                               itemCount: papers.length,
@@ -154,6 +163,9 @@ class _EstablishmentPapersScreenState
 
   Widget _filterChip(String label, bool selected, VoidCallback onTap) {
     return ChoiceChip(
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.radiusFull,
+      ),
       label: Text(label, style: GoogleFonts.inter(fontSize: 12)),
       selected: selected,
       onSelected: (_) => onTap(),
@@ -163,43 +175,6 @@ class _EstablishmentPapersScreenState
         color: selected
             ? context.colors.accentPrimary
             : context.colors.textPrimary,
-      ),
-    );
-  }
-
-  Widget _emptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.folder_off_outlined,
-              size: 42,
-              color: context.colors.textMuted,
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'Aucune épreuve disponible pour le moment',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: context.colors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Les établissements et enseignants n\'ont pas encore publié d\'épreuve pour votre classe.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: context.colors.textSecondary,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -217,46 +192,107 @@ class _EstablishmentPapersScreenState
   }
 
   Widget _buildPaperTile(BuildContext context, EstablishmentPaper paper) {
+    final isPublished = paper.processingStatus == 'published';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: context.colors.card,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: AppRadius.radiusLarge,
         border: Border.all(color: context.colors.border),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${paper.subjectName ?? 'Matière'} — ${paper.year}',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: context.colors.textPrimary,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: context.colors.accentPrimary.withValues(alpha: 0.12),
+                  borderRadius: AppRadius.radiusSmall,
+                ),
+                child: Icon(
+                  Icons.description_outlined,
+                  color: context.colors.accentPrimary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${paper.subjectName ?? 'Matière'} — ${paper.year}',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: context.colors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      paper.establishmentName ?? '',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: context.colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              OutlinedButton.icon(
+                icon: const Icon(Icons.download_rounded, size: 16),
+                label: const Text('Sujet PDF'),
+                style: OutlinedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppRadius.radiusSmall,
                   ),
                 ),
-                Text(
-                  paper.establishmentName ?? '',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: context.colors.textSecondary,
+                onPressed: () => _openDocument(context, paper.documentUrl),
+              ),
+              if (isPublished)
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.quiz_outlined, size: 16),
+                  label: const Text('Questions'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: context.colors.accentPrimary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppRadius.radiusSmall,
+                    ),
+                  ),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ExamQuestionsScreen(
+                        title: '${paper.subjectName ?? 'Matière'} — ${paper.year}',
+                        documentUrl: paper.documentUrl,
+                        establishmentPaperId: paper.id,
+                      ),
+                    ),
                   ),
                 ),
-              ],
-            ),
+              if (paper.correctionUrl != null)
+                TextButton.icon(
+                  icon: const Icon(Icons.check_circle_outline, size: 16),
+                  label: const Text('Corrigé'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.colors.accentEmerald,
+                  ),
+                  onPressed: () => _openDocument(context, paper.correctionUrl),
+                ),
+            ],
           ),
-          TextButton(
-            onPressed: () => _openDocument(context, paper.documentUrl),
-            child: const Text('Sujet'),
-          ),
-          if (paper.correctionUrl != null)
-            TextButton(
-              onPressed: () => _openDocument(context, paper.correctionUrl),
-              child: const Text('Correction'),
-            ),
         ],
       ),
     );

@@ -15,6 +15,7 @@ class ContentBlock {
   final String body;
   final List<String> formulas;
   final int order;
+  final Map<String, dynamic> metadata;
 
   const ContentBlock({
     required this.type,
@@ -22,11 +23,23 @@ class ContentBlock {
     required this.body,
     this.formulas = const [],
     this.order = 0,
+    this.metadata = const {},
   });
 
   /// Format natif futur : `content_json['blocks'] = [ {type, heading, body, formulas, order}, ... ]`.
   factory ContentBlock.fromJson(Map<String, dynamic> json, {int fallbackOrder = 0}) {
-    final rawFormulas = json['formulas'];
+    final rawFormulas = json['formulas'] ?? json['latex_formulas'];
+    final rawMetadata = json['metadata'];
+    final Map<String, dynamic> parsedMetadata = rawMetadata is Map
+        ? Map<String, dynamic>.from(rawMetadata)
+        : {};
+
+    for (final entry in json.entries) {
+      if (!['type', 'heading', 'body', 'formulas', 'latex_formulas', 'order', 'metadata'].contains(entry.key)) {
+        parsedMetadata[entry.key] = entry.value;
+      }
+    }
+
     return ContentBlock(
       type: (json['type'] as String?)?.trim().isNotEmpty == true
           ? (json['type'] as String).trim().toLowerCase()
@@ -37,6 +50,7 @@ class ContentBlock {
           ? rawFormulas.map((f) => f.toString()).toList()
           : const [],
       order: (json['order'] as num?)?.toInt() ?? fallbackOrder,
+      metadata: parsedMetadata,
     );
   }
 

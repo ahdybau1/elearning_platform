@@ -36,7 +36,11 @@ import '../../content_management/screens/pedagogical_catalog_screen.dart';
 import '../../subscriptions/screens/shop_management_screen.dart';
 import '../../subscriptions/screens/donations_screen.dart';
 import '../../academic_tree/screens/school_year_promotion_screen.dart';
+import '../../academic_tree/screens/curriculum_autopilot_screen.dart';
 import '../../users_roles/screens/active_sessions_screen.dart';
+import '../../content_management/screens/lesson_builder_screen.dart';
+import '../../content_management/screens/media_library_screen.dart';
+import '../../system_settings/screens/engine_center_screen.dart';
 
 class MainAdminLayout extends ConsumerStatefulWidget {
   const MainAdminLayout({super.key});
@@ -125,6 +129,24 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
           // — un vrai filtrage par scope enseignant (comme TeacherAssistantAgent) serait nécessaire
           // avant d'ouvrir cet écran à ce rôle.
           allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu],
+        ),
+        NavItem(
+          id: 29,
+          title: 'Curriculum Autopilot (D.3)',
+          icon: Icons.auto_awesome_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu],
+        ),
+        NavItem(
+          id: 30,
+          title: 'Studio de Cours v2',
+          icon: Icons.dashboard_customize_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu, AdminRole.enseignant],
+        ),
+        NavItem(
+          id: 31,
+          title: 'Médiathèque & IA',
+          icon: Icons.photo_library_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu, AdminRole.enseignant],
         ),
       ],
     ),
@@ -279,6 +301,12 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
           icon: Icons.settings_rounded,
           allowedRoles: [AdminRole.superAdmin],
         ),
+        NavItem(
+          id: 32,
+          title: 'Centre des Moteurs',
+          icon: Icons.precision_manufacturing_rounded,
+          allowedRoles: [AdminRole.superAdmin],
+        ),
       ],
     ),
   ];
@@ -386,6 +414,14 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
         return const AiAgentRegistryScreen();
       case 28:
         return const ExerciseCorrectionsScreen();
+      case 29:
+        return const CurriculumAutopilotScreen();
+      case 30:
+        return const LessonBuilderScreen();
+      case 31:
+        return const MediaLibraryScreen();
+      case 32:
+        return const EngineCenterScreen();
       default:
         return const DashboardOverviewScreen();
     }

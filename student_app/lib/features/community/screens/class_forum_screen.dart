@@ -6,6 +6,8 @@ import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../core/widgets/student_screen_header.dart';
+import '../../../design_system/tokens/app_radius.dart';
+import '../../../design_system/components/empty_state_view.dart';
 import '../../subscription/screens/boutique_shop_screen.dart';
 
 class ClassForumScreen extends ConsumerStatefulWidget {
@@ -121,6 +123,15 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
                 ),
               ),
               data: (posts) {
+                if (posts.isEmpty) {
+                  return EmptyStateView(
+                    icon: Icons.forum_outlined,
+                    title: 'Aucun message pour le moment',
+                    description:
+                        'Soyez le premier à poser une question ou partager une astuce avec votre classe !',
+                    iconColor: context.colors.accentPrimary,
+                  );
+                }
                 return ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: posts.length,
@@ -132,7 +143,7 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: context.colors.card,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: AppRadius.radiusLarge,
                         border: Border.all(color: context.colors.border),
                       ),
                       child: Column(
@@ -184,17 +195,18 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
                               ),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
+                                  horizontal: 8,
+                                  vertical: 3,
                                 ),
                                 decoration: BoxDecoration(
                                   color: context.colors.surface,
-                                  borderRadius: BorderRadius.circular(4),
+                                  borderRadius: AppRadius.radiusFull,
                                 ),
                                 child: Text(
                                   'Élève',
                                   style: TextStyle(
                                     fontSize: 10,
+                                    fontWeight: FontWeight.w600,
                                     color: context.colors.textSecondary,
                                   ),
                                 ),
@@ -248,7 +260,7 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
                         vertical: 12,
                       ),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: AppRadius.radiusFull,
                         borderSide: BorderSide(color: context.colors.border),
                       ),
                     ),

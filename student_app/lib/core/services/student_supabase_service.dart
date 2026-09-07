@@ -1,7 +1,19 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/student_models.dart';
+import '../models/published_exam_question.dart';
 
 class StudentSupabaseService {
+  Future<List<PublishedExamQuestion>> fetchPublishedExamQuestions({
+    required String profileId, String? examPaperId, String? establishmentPaperId,
+  }) async {
+    final rows = await client.rpc('read_published_exam_questions', params: {
+      'p_profile_id': profileId,
+      'p_exam_paper_id': examPaperId,
+      'p_establishment_paper_id': establishmentPaperId,
+    }) as List;
+    return rows.map((row) => PublishedExamQuestion.fromJson(
+      Map<String, dynamic>.from(row as Map))).toList();
+  }
   final SupabaseClient client;
 
   StudentSupabaseService(this.client);

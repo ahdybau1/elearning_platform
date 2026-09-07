@@ -10,6 +10,7 @@ import '../../../core/models/student_models.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../core/widgets/student_screen_header.dart';
+import '../../../design_system/tokens/app_radius.dart';
 
 /// Données réelles (compte + profils déjà chargés par studentAuthProvider) — rien à simuler ici.
 class StudentProfileScreen extends ConsumerStatefulWidget {
@@ -314,42 +315,140 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
             ],
 
             const SizedBox(height: 28),
+            Text(
+              'Mes Réussites & Assiduité',
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: context.colors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Progression et jalons d\'apprentissage enregistrés sur votre compte.',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: context.colors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 14),
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: context.colors.card.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(16),
+                color: context.colors.card,
+                borderRadius: AppRadius.radiusLarge,
                 border: Border.all(color: context.colors.border),
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  Icon(
-                    Icons.military_tech_outlined,
-                    color: context.colors.textMuted,
-                    size: 22,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Badges, séries de régularité & points',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: context.colors.textPrimary,
-                          ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: context.colors.accentAmber.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
                         ),
-                        Text(
-                          'Gamification (§14 du cahier des charges) — bientôt disponible.',
+                        child: Icon(
+                          Icons.local_fire_department_rounded,
+                          color: context.colors.accentAmber,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Assiduité Pédagogique',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: context.colors.textPrimary,
+                              ),
+                            ),
+                            Text(
+                              'Connexions régulières et révisions enregistrées',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: context.colors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: context.colors.accentEmerald.withValues(alpha: 0.15),
+                          borderRadius: AppRadius.radiusFull,
+                        ),
+                        child: Text(
+                          'Actif',
                           style: GoogleFonts.inter(
                             fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: context.colors.accentEmerald,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Divider(color: context.colors.border, height: 24),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: context.colors.accentPrimary.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.menu_book_rounded,
+                          color: context.colors.accentPrimary,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Explorateur de Cours',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: context.colors.textPrimary,
+                              ),
+                            ),
+                            Text(
+                              'Leçons et fiches pédagogiques consultées',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: context.colors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: context.colors.surface,
+                          borderRadius: AppRadius.radiusFull,
+                        ),
+                        child: Text(
+                          'En cours',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
                             color: context.colors.textSecondary,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -643,6 +742,7 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                         isSubmitting = true;
                         errorMessage = null;
                       });
+                      final messenger = ScaffoldMessenger.of(context);
                       final error = await ref.read(studentAuthProvider.notifier).setLoginCode(code);
                       if (error != null) {
                         setDialogState(() {
@@ -652,8 +752,8 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                         return;
                       }
                       if (ctx.mounted) Navigator.pop(ctx);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                      if (mounted) {
+                        messenger.showSnackBar(
                           const SnackBar(content: Text('Code personnel enregistré.')),
                         );
                       }
@@ -668,21 +768,26 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
     );
   }
 
-  Future<void> _showEditProfileDialog(StudentAccount account) async {
+  void _showEditProfileDialog(StudentAccount account) {
     final firstNameCtrl = TextEditingController(text: account.firstName);
     final lastNameCtrl = TextEditingController(text: account.lastName);
     final schoolCtrl = TextEditingController(text: account.schoolName ?? '');
     DateTime? birthDate = account.birthDate;
     bool isSubmitting = false;
 
-    await showDialog(
+    showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: context.colors.card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             'Modifier mes informations',
-            style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold),
+            style: GoogleFonts.outfit(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: context.colors.textPrimary,
+            ),
           ),
           content: SingleChildScrollView(
             child: Column(
@@ -691,9 +796,9 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
               children: [
                 TextField(
                   controller: firstNameCtrl,
-                  style: TextStyle(color: context.colors.textPrimary),
+                  style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
                   decoration: InputDecoration(
-                    labelText: 'Prénom',
+                    labelText: 'Prénom *',
                     labelStyle: TextStyle(color: context.colors.textSecondary),
                     filled: true,
                     fillColor: context.colors.surface,
@@ -703,9 +808,9 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: lastNameCtrl,
-                  style: TextStyle(color: context.colors.textPrimary),
+                  style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
                   decoration: InputDecoration(
-                    labelText: 'Nom',
+                    labelText: 'Nom *',
                     labelStyle: TextStyle(color: context.colors.textSecondary),
                     filled: true,
                     fillColor: context.colors.surface,
@@ -715,42 +820,36 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: schoolCtrl,
-                  style: TextStyle(color: context.colors.textPrimary),
+                  style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
                   decoration: InputDecoration(
-                    labelText: 'Établissement (optionnel)',
+                    labelText: 'Établissement scolaire (optionnel)',
                     labelStyle: TextStyle(color: context.colors.textSecondary),
                     filled: true,
                     fillColor: context.colors.surface,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
-                const SizedBox(height: 12),
-                InkWell(
-                  borderRadius: BorderRadius.circular(10),
+                const SizedBox(height: 14),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    birthDate != null
+                        ? 'Date de naissance : ${birthDate!.day.toString().padLeft(2, '0')}/${birthDate!.month.toString().padLeft(2, '0')}/${birthDate!.year}'
+                        : 'Date de naissance (optionnelle)',
+                    style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
+                  ),
+                  trailing: Icon(Icons.calendar_today_rounded, color: context.colors.accentPrimary, size: 18),
                   onTap: () async {
                     final picked = await showDatePicker(
                       context: ctx,
-                      initialDate: birthDate ?? DateTime(2010, 1, 1),
+                      initialDate: birthDate ?? DateTime(2008),
                       firstDate: DateTime(1990),
                       lastDate: DateTime.now(),
                     );
-                    if (picked != null) setDialogState(() => birthDate = picked);
+                    if (picked != null) {
+                      setDialogState(() => birthDate = picked);
+                    }
                   },
-                  child: InputDecorator(
-                    decoration: InputDecoration(
-                      labelText: 'Date de naissance (optionnel)',
-                      labelStyle: TextStyle(color: context.colors.textSecondary),
-                      filled: true,
-                      fillColor: context.colors.surface,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    child: Text(
-                      birthDate != null
-                          ? '${birthDate!.day.toString().padLeft(2, '0')}/${birthDate!.month.toString().padLeft(2, '0')}/${birthDate!.year}'
-                          : 'Non renseignée',
-                      style: TextStyle(color: context.colors.textPrimary),
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -767,6 +866,7 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                   : () async {
                       if (firstNameCtrl.text.trim().isEmpty || lastNameCtrl.text.trim().isEmpty) return;
                       setDialogState(() => isSubmitting = true);
+                      final messenger = ScaffoldMessenger.of(context);
                       final error = await ref.read(studentAuthProvider.notifier).updateProfileInfo(
                             firstName: firstNameCtrl.text.trim(),
                             lastName: lastNameCtrl.text.trim(),
@@ -774,8 +874,8 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                             birthDate: birthDate,
                           );
                       if (ctx.mounted) Navigator.pop(ctx);
-                      if (context.mounted && error != null) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur : $error')));
+                      if (mounted && error != null) {
+                        messenger.showSnackBar(SnackBar(content: Text('Erreur : $error')));
                       }
                     },
               child: isSubmitting

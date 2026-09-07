@@ -41,6 +41,8 @@ dependencies:
   shared_preferences: ^2.3.2
   image_picker: ^1.1.2
   url_launcher: ^6.3.1
+  flutter_math_fork: ^0.7.2
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:
@@ -67,6 +69,7 @@ flutter:
   # Environment file for Supabase credentials
   assets:
     - .env
+    - assets/sheets/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
