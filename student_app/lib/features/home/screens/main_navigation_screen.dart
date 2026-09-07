@@ -174,17 +174,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [context.colors.accentPrimary, context.colors.accentIndigo],
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.school_rounded, color: Colors.white, size: 20),
-              ),
+              Image.asset('assets/branding/logo.png', width: 36, height: 36),
               if (!collapsed) ...[
                 const SizedBox(width: 12),
                 Expanded(

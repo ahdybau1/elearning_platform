@@ -522,17 +522,7 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.accentBlue, AppTheme.accentIndigo],
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.school_rounded, color: Colors.white, size: 24),
-              ),
+              Image.asset('assets/branding/logo.png', width: 40, height: 40),
               if (!collapsed) ...[
                 const SizedBox(width: 12),
                 Expanded(
@@ -878,17 +868,7 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
               padding: const EdgeInsets.all(20),
               child: Row(
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppTheme.accentBlue, AppTheme.accentIndigo],
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.school_rounded, color: Colors.white, size: 24),
-                  ),
+                  Image.asset('assets/branding/logo.png', width: 40, height: 40),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(

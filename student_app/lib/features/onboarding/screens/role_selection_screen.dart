@@ -26,17 +26,7 @@ class RoleSelectionScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [context.colors.accentPrimary, context.colors.accentIndigo],
-                      ),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: const Icon(Icons.school_rounded, color: Colors.white, size: 34),
-                  ),
+                  Image.asset('assets/branding/logo.png', width: 64, height: 64),
                   const SizedBox(height: 20),
                   Text(
                     'pq learn',

@@ -90,24 +90,7 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                   ),
                   const SizedBox(height: 4),
                   Center(
-                    child: Container(
-                      width: 68,
-                      height: 68,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            context.colors.accentPrimary,
-                            context.colors.accentIndigo,
-                          ],
-                        ),
-                        borderRadius: AppRadius.radiusLarge,
-                      ),
-                      child: const Icon(
-                        Icons.school_rounded,
-                        color: Colors.white,
-                        size: 36,
-                      ),
-                    ),
+                    child: Image.asset('assets/branding/logo.png', width: 68, height: 68),
                   ),
                   const SizedBox(height: 20),
                   Text(

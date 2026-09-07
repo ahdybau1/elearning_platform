@@ -34,21 +34,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppTheme.accentBlue, AppTheme.accentIndigo],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(
-                    Icons.school_rounded,
-                    color: Colors.white,
-                    size: 32,
-                  ),
-                ),
+                Image.asset('assets/branding/logo.png', width: 64, height: 64),
                 const SizedBox(height: 24),
                 Text(
                   'pq learn Admin HQ',
