@@ -15,13 +15,7 @@ class ProfileSwitcherScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: context.colors.background,
       appBar: AppBar(
-        title: Text(
-          'pq learn',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            color: context.colors.textPrimary,
-          ),
-        ),
+        title: Image.asset('assets/branding/logo.png', height: 40),
         actions: [
           IconButton(
             tooltip: 'Verrouiller',

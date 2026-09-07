@@ -174,15 +174,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              Image.asset('assets/branding/logo.png', width: 36, height: 36),
-              if (!collapsed) ...[
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text('pq learn',
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
-                ),
-              ],
+              Image.asset('assets/branding/logo.png', width: 56, height: 56),
             ],
           ),
         ),

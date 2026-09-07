@@ -90,17 +90,7 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                   ),
                   const SizedBox(height: 4),
                   Center(
-                    child: Image.asset('assets/branding/logo.png', width: 68, height: 68),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'pq learn',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: context.colors.textPrimary,
-                    ),
+                    child: Image.asset('assets/branding/logo.png', width: 200, height: 200),
                   ),
                   const SizedBox(height: 6),
                   Text(

@@ -522,31 +522,17 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              Image.asset('assets/branding/logo.png', width: 40, height: 40),
+              Image.asset('assets/branding/logo.png', width: 56, height: 56),
               if (!collapsed) ...[
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'pq learn',
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Colors.white,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      Text(
-                        'Administration HQ',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          color: AppTheme.accentBlue,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    'Administration HQ',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: AppTheme.accentBlue,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -868,30 +854,16 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
               padding: const EdgeInsets.all(20),
               child: Row(
                 children: [
-                  Image.asset('assets/branding/logo.png', width: 40, height: 40),
-                  const SizedBox(width: 12),
+                  Image.asset('assets/branding/logo.png', width: 56, height: 56),
+                  const SizedBox(width: 10),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'pq learn',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Colors.white,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        Text(
-                          'Administration HQ',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            color: AppTheme.accentBlue,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      'Administration HQ',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: AppTheme.accentBlue,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],

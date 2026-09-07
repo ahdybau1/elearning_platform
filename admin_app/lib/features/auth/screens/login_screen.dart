@@ -34,16 +34,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset('assets/branding/logo.png', width: 64, height: 64),
-                const SizedBox(height: 24),
-                Text(
-                  'pq learn Admin HQ',
-                  style: GoogleFonts.outfit(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
+                Image.asset('assets/branding/logo.png', width: 180, height: 180),
                 const SizedBox(height: 4),
                 Text(
                   'Connexion administrateur',

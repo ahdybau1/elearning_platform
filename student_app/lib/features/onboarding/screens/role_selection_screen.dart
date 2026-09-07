@@ -26,13 +26,7 @@ class RoleSelectionScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.asset('assets/branding/logo.png', width: 64, height: 64),
-                  const SizedBox(height: 20),
-                  Text(
-                    'pq learn',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
-                  ),
+                  Image.asset('assets/branding/logo.png', width: 200, height: 200),
                   const SizedBox(height: 6),
                   Text(
                     'Qui utilise l\'application ?',
