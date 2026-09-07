@@ -1,5 +1,24 @@
 # Content Factory — Implementation Plan (2026-08-28)
 
+## Reprise 2026-09-07 — CF-002, persistance du Studio v2
+
+Priorité issue de l'audit de `7996f20` : remplacer le faux succès de sauvegarde par
+une création réelle en brouillon, réutiliser l'identifiant créé, charger les blocs
+existants avant édition et conserver les métadonnées. Tester annulation, erreur et
+sauvegardes répétées. La publication et les formats historiques restent traités par
+le gestionnaire existant ; le jalon complet Admin → revue → élève reste à vérifier.
+
+Implémentation locale validée : 5 tests Studio + 2 tests admin existants passants,
+analyse ciblée sans problème. Suite : entrée de réouverture depuis Leçons & Cours,
+validation avec Supabase de test, puis vérification du rendu élève contre les références.
+
+Mise à jour du 7 septembre : réouverture et soumission implémentées, métadonnées
+préservées dans l'ancien éditeur. 13 tests admin, 20 tests élève passants. Build web admin
+réussi après correction du cache FNV-1a compatible JavaScript. Sonde SQL
+sur Supabase réel réussie et intégralement annulée. Le contrat de rendu est testé sur
+trois largeurs ; validation navigateur avec comptes et comparaison graphique exhaustive
+restent distinctes. Preuves : `STUDIO_PUBLICATION_VERIFICATION.md`.
+
 > Ordre conforme à U11 (`docs/CAHIER_DES_CHARGES_MASTER_MAJ_2026.md`) : modèle de contenu structuré →
 > catalogues → Template/Renderer Registry → Block Editor Admin → rendu élève → import/jobs → agents
 > d'import → Exercise Factory → génération de cours → PDF → validation/versioning/audit → (seulement

@@ -785,7 +785,9 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -804,9 +806,8 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 6),
                     Text(
-                      'Pinch-to-zoom HD',
+                      'Zoom sur la fiche',
                       style: TextStyle(
                         color: Colors.white.withAlpha(160),
                         fontSize: 10,

@@ -9,11 +9,11 @@ import 'features/auth/screens/login_screen.dart';
 
 const _fallbackSupabaseUrl = 'https://kdprnavvgzhnygovfyuw.supabase.co';
 const _fallbackSupabaseAnonKey =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcHJuYXZ2Z3pobnlnb3ZmeXV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0MDA0NDIsImV4cCI6MjEwMTk3NjQ0Mn0.Xei_VR0_umG0QDwfGs2GpQ2qDLG3o_tJX7WgU7T9ZXA';
+    'sb_publishable_KyOfBUnlxvLQBeqzzV-1Wg_kLjmxbVi';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: '.env');
+  await dotenv.load(fileName: '.env.public');
 
   final supabaseUrl = (dotenv.env['SUPABASE_URL']?.trim().isNotEmpty == true)
       ? dotenv.env['SUPABASE_URL']!
@@ -21,10 +21,6 @@ void main() async {
   final supabaseAnonKey = (dotenv.env['SUPABASE_ANON_KEY']?.trim().isNotEmpty == true)
       ? dotenv.env['SUPABASE_ANON_KEY']!
       : _fallbackSupabaseAnonKey;
-
-  debugPrint('Loaded DOTENV keys: ${dotenv.env.keys.toList()}');
-  debugPrint('Supabase URL: $supabaseUrl');
-  debugPrint('Supabase anon key length: ${supabaseAnonKey.length}');
 
   await Supabase.initialize(
     url: supabaseUrl,

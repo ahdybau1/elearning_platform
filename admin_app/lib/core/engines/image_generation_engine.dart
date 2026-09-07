@@ -36,10 +36,13 @@ class ImageGenerationRequest {
   String computeCacheHash() {
     final raw = '$prompt|$subject|${classLevel ?? ''}|${style.name}|${aspectRatio.name}|$model|$format';
     final bytes = utf8.encode(raw);
-    int hash = 0xcbf29ce484222325;
+    // BigInt conserve les 64 bits sur Dart VM comme sur JavaScript.
+    var hash = BigInt.parse('cbf29ce484222325', radix: 16);
+    final prime = BigInt.parse('100000001b3', radix: 16);
+    final mask = (BigInt.one << 64) - BigInt.one;
     for (final b in bytes) {
-      hash ^= b;
-      hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+      hash ^= BigInt.from(b);
+      hash = (hash * prime) & mask;
     }
     return hash.toRadixString(16).padLeft(16, '0');
   }
@@ -85,7 +88,7 @@ class GeneratedImageResult {
 class ImageGenerationEngine {
   ImageGenerationEngine._();
 
-  // Cache mémoire local indexé par SHA-256
+  // Cache mémoire local indexé par FNV-1a 64 bits.
   static final Map<String, GeneratedImageResult> _cache = {};
 
   /// Vérifie si une image avec les mêmes paramètres a déjà été produite

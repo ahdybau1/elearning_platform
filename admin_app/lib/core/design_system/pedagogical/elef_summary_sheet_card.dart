@@ -132,12 +132,13 @@ class ElefSummarySheetCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 3),
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           ElefBadge(label: subject, color: disciplineColor, tone: ElefBadgeTone.subtle),
-                          const SizedBox(width: 8),
                           ElefBadge(label: level, color: ElefColors.textMuted, tone: ElefBadgeTone.outline),
-                          const SizedBox(width: 8),
                           Text(
                             officialSource ?? '',
                             style: ElefTypography.caption.copyWith(color: ElefColors.textMuted),
@@ -348,11 +349,13 @@ class ElefSummarySheetCard extends StatelessWidget {
                   children: [
                     Icon(Icons.check_circle_outline_rounded, size: 16, color: disciplineColor),
                     const SizedBox(width: 8),
-                    Text(
-                      'Points Clés & Astuces Méthodologiques',
-                      style: ElefTypography.labelLarge.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: Text(
+                        'Points Clés & Astuces Méthodologiques',
+                        style: ElefTypography.labelLarge.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],

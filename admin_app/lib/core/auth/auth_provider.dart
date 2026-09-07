@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/supabase_provider.dart';
@@ -115,24 +114,9 @@ class AdminUserState {
 class AuthNotifier extends StateNotifier<AsyncValue<AdminUserState?>> {
   AuthNotifier(this._client) : super(const AsyncValue.data(null)) {
     _listenAuthChanges();
-    _maybeAutoLogin();
   }
 
   final SupabaseClient _client;
-
-  // Connexion automatique en développement local UNIQUEMENT, pour éviter d'avoir à ressaisir les
-  // identifiants à chaque rechargement pendant les tests. Gardée par DEMO_AUTO_LOGIN dans .env
-  // (absent par défaut, jamais commit — voir 03_auth_flow.md). Ne contourne rien : passe par le
-  // vrai signInWithPassword ci-dessous, donc RLS et la vérification admin_users restent la seule
-  // source de vérité — un mauvais mot de passe ou un compte non lié échoue exactement pareil.
-  Future<void> _maybeAutoLogin() async {
-    if (dotenv.env['DEMO_AUTO_LOGIN'] != 'true') return;
-    if (_client.auth.currentSession != null) return;
-    final email = dotenv.env['DEMO_EMAIL'];
-    final password = dotenv.env['DEMO_PASSWORD'];
-    if (email == null || password == null) return;
-    await signInWithPassword(email, password);
-  }
 
   void _listenAuthChanges() {
     _authSubscription = _client.auth.onAuthStateChange.listen((data) async {

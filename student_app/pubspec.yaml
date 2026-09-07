@@ -68,7 +68,7 @@ flutter:
 
   # Environment file for Supabase credentials
   assets:
-    - .env
+    - .env.public
     - assets/sheets/
 
   # To add assets to your application, add an assets section, like this:

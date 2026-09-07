@@ -5,10 +5,12 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/auth/auth_provider.dart';
 import '../../../core/models/academic_node.dart';
 import '../../../core/models/content_models.dart';
+import '../../../core/models/editable_lesson_block.dart';
 import '../../../core/providers/data_providers.dart';
 import '../widgets/media_attachment_picker.dart';
 import '../utils/lesson_pdf_generator.dart';
 import '../../../core/widgets/app_dialog_title.dart';
+import 'lesson_builder_screen.dart';
 
 /// Types de blocs reconnus par `BlockRendererRegistry` côté `student_app` (voir
 /// `docs/CONTENT_FACTORY_IMPLEMENTATION_PLAN.md`, CF-002). Tenu manuellement synchronisé avec
@@ -25,64 +27,7 @@ const List<(String value, String label)> kEditableBlockTypes = [
   ('conseil_examen', 'Conseil d\'examen'),
 ];
 
-/// Bloc de contenu structuré éditable dans le formulaire admin (CF-002 partie 2). Porte ses propres
-/// `TextEditingController` pour rester stable entre les rebuilds `setModalState` sans perdre le
-/// curseur/la sélection en cours de frappe.
-class _EditableBlock {
-  String type;
-  final TextEditingController headingCtrl;
-  final TextEditingController bodyCtrl;
-  final TextEditingController formulasCtrl;
-
-  _EditableBlock({
-    required this.type,
-    String heading = '',
-    String body = '',
-    List<String> formulas = const [],
-  }) : headingCtrl = TextEditingController(text: heading),
-       bodyCtrl = TextEditingController(text: body),
-       formulasCtrl = TextEditingController(text: formulas.join('\n'));
-
-  factory _EditableBlock.fromJson(Map<String, dynamic> json) {
-    final rawFormulas = json['formulas'] ?? json['latex_formulas'];
-    return _EditableBlock(
-      type: (json['type'] as String?)?.trim().toLowerCase().isNotEmpty == true
-          ? (json['type'] as String).trim().toLowerCase()
-          : 'paragraph',
-      heading: (json['heading'] as String?) ?? '',
-      body: (json['body'] as String?) ?? '',
-      formulas: rawFormulas is List
-          ? rawFormulas.map((f) => f.toString()).toList()
-          : const [],
-    );
-  }
-
-  Map<String, dynamic> toJson(int order) {
-    final formulas = formulasCtrl.text
-        .split('\n')
-        .map((f) => f.trim())
-        .where((f) => f.isNotEmpty)
-        .toList();
-    return {
-      'type': type,
-      if (headingCtrl.text.trim().isNotEmpty)
-        'heading': headingCtrl.text.trim(),
-      'body': bodyCtrl.text.trim(),
-      'formulas': formulas,
-      'order': order,
-    };
-  }
-
-  bool get isEmpty =>
-      bodyCtrl.text.trim().isEmpty && formulasCtrl.text.trim().isEmpty;
-
-  void dispose() {
-    headingCtrl.dispose();
-    bodyCtrl.dispose();
-    formulasCtrl.dispose();
-  }
-}
-
+/// Gestion des leçons, de leur rattachement académique et de leur validation.
 class LessonsManagerScreen extends ConsumerStatefulWidget {
   const LessonsManagerScreen({super.key});
 
@@ -978,8 +923,9 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                                     )
                                     .length ??
                                 0;
-                            if (siblingCount == 0)
+                            if (siblingCount == 0) {
                               return const SizedBox.shrink();
+                            }
                             return TextButton.icon(
                               onPressed: () => _showDuplicateToTwinGroupModal(
                                 context,
@@ -1088,6 +1034,14 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
     );
 
     final actionButtons = [
+      if (!lesson.isPublished && lesson.contentJson['blocks'] is List)
+        IconButton(
+          icon: const Icon(Icons.auto_stories_rounded, size: 18, color: AppTheme.accentCyan),
+          tooltip: 'Ouvrir dans le Studio de Cours',
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+            builder: (_) => LessonBuilderScreen(initialLessonId: lesson.id),
+          )),
+        ),
       IconButton(
         icon: const Icon(
           Icons.history_rounded,
@@ -2679,8 +2633,9 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                                 const Duration(days: 730),
                               ),
                             );
-                            if (picked != null)
+                            if (picked != null) {
                               setModalState(() => startDate = picked);
+                            }
                           },
                           icon: const Icon(Icons.event_rounded, size: 16),
                           label: Text(
@@ -2704,8 +2659,9 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                                 const Duration(days: 730),
                               ),
                             );
-                            if (picked != null)
+                            if (picked != null) {
                               setModalState(() => endDate = picked);
+                            }
                           },
                           icon: const Icon(Icons.event_rounded, size: 16),
                           label: Text(
@@ -2817,21 +2773,21 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
     // Blocs de contenu éditables (CF-002 partie 2) : pré-remplis depuis content_json['blocks']
     // (format natif) si présent, sinon dérivés de ai_structured, sinon — pour une très ancienne leçon
     // enregistrée avant la structuration IA — un unique bloc paragraphe repris du texte brut.
-    final List<_EditableBlock> blocks = isEditing
+    final List<EditableLessonBlock> blocks = isEditing
         ? _resolveBlocksForPreview(
             existing.contentJson,
-          ).map((b) => _EditableBlock.fromJson(b)).toList()
-        : <_EditableBlock>[];
+          ).map((b) => EditableLessonBlock.fromJson(b)).toList()
+        : <EditableLessonBlock>[];
     if (blocks.isEmpty && isEditing) {
       final legacyBody = existing.contentJson['body'] as String?;
       if (legacyBody != null && legacyBody.trim().isNotEmpty) {
-        blocks.add(_EditableBlock(type: 'paragraph', body: legacyBody.trim()));
+        blocks.add(EditableLessonBlock(type: 'paragraph', body: legacyBody.trim()));
       }
     }
     // Nouvelle leçon : un bloc paragraphe vide prêt à l'emploi, pour ne pas forcer un clic
     // supplémentaire sur "Ajouter un bloc" avant de pouvoir taper du contenu.
     if (blocks.isEmpty && !isEditing) {
-      blocks.add(_EditableBlock(type: 'paragraph'));
+      blocks.add(EditableLessonBlock(type: 'paragraph'));
     }
     String? submitError;
     bool isLoading = false;
@@ -3185,7 +3141,7 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                                                   ..clear()
                                                   ..addAll(
                                                     generated.map(
-                                                      _EditableBlock.fromJson,
+                                                      EditableLessonBlock.fromJson,
                                                     ),
                                                   );
                                               });
@@ -3290,7 +3246,7 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                                     ),
                                     onPressed: () => setModalState(
                                       () => blocks.add(
-                                        _EditableBlock(type: 'paragraph'),
+                                        EditableLessonBlock(type: 'paragraph'),
                                       ),
                                     ),
                                     icon: const Icon(
@@ -3364,6 +3320,7 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                               .where((s) => s.isNotEmpty)
                               .join('\n\n');
                           final contentJson = {
+                            if (isEditing) ...existing.contentJson,
                             'body': derivedBody,
                             'media': attachedMedia
                                 .map(
@@ -3375,7 +3332,7 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                                 )
                                 .toList(),
                             'ai_structured': ?aiStructured,
-                            if (blocksJson.isNotEmpty) 'blocks': blocksJson,
+                            'blocks': blocksJson,
                           };
 
                           if (isEditing) {
@@ -3546,7 +3503,7 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
   /// Carte d'édition d'un bloc dans l'éditeur de leçon (CF-002 partie 2) : type (dropdown), titre,
   /// contenu et formules, avec contrôles de réordonnancement/suppression.
   Widget _buildEditableBlockCard(
-    _EditableBlock block, {
+    EditableLessonBlock block, {
     required int index,
     required bool isFirst,
     required bool isLast,
@@ -3619,7 +3576,11 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
               labelText: 'Type de bloc',
               isDense: true,
             ),
-            items: kEditableBlockTypes
+            items: [
+              ...kEditableBlockTypes,
+              if (!kEditableBlockTypes.any((t) => t.$1 == block.type))
+                (block.type, 'Bloc spécialisé (contenu conservé)'),
+            ]
                 .map((t) => DropdownMenuItem(value: t.$1, child: Text(t.$2)))
                 .toList(),
             onChanged: (v) {

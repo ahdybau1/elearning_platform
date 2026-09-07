@@ -25,7 +25,7 @@ import 'features/parent_portal/screens/parent_dashboard_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: '.env');
+  await dotenv.load(fileName: '.env.public');
 
   final supabaseUrl = resolvedSupabaseUrl();
   final supabaseAnonKey = resolvedSupabaseAnonKey();

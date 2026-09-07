@@ -1,5 +1,27 @@
 # Audit Report — EDLEARN
 
+## Vérification distante du 2026-09-07
+
+Le parcours Studio/revue a été corrigé et testé sur le schéma Supabase réel, avec
+annulation intégrale des écritures de test. Les politiques de lecture et la RPC de
+publication ont passé les assertions détaillées dans `STUDIO_PUBLICATION_VERIFICATION.md`.
+L'historique `supabase_migrations.schema_migrations` n'existe pas sur cette base ;
+l'état d'application de chaque fichier SQL reste indéterminé. Aucun déploiement de migration.
+
+## Reprise du 2026-09-07 — HEAD `7996f20`
+
+HEAD local identique à `git ls-remote origin HEAD`. Images de référence présentes dans
+`scratch_design_images`, fiche Suites réelles examinée. Le dernier commit ajoute le Studio v2,
+les moteurs et les renderers ; leur présence ne prouve pas leur fonctionnement en production.
+
+Écart prioritaire CF-002 : `LessonBuilderScreen._saveLesson` ne crée rien sans
+`initialLessonId`, mais affiche un succès ; avec un identifiant, le Studio ne charge pas
+la leçon et risque de remplacer son contenu par le template initial. Les erreurs sont
+présentées comme un enregistrement simulé. Cible : création réelle en brouillon dans un
+chapitre choisi, conservation de l'identifiant pour les sauvegardes suivantes, chargement
+avant édition et erreur explicite. Préserver le workflow existant pour les contenus
+publiés et les formats historiques. Aucun changement de schéma ou de permissions requis.
+
 ## Reprise du 2026-09-05 — inspection locale à HEAD `f5edccf`
 
 Cette passe vérifie le dépôt, pas la production ni les migrations effectivement appliquées à distance. Le rapport du 28 août conservé ci-dessous est historique : ses mentions « absent » concernant la Gateway, le RAG et le registre IA ne décrivent plus le code actuel.

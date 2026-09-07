@@ -25,7 +25,8 @@ class LessonBuilderScreen extends ConsumerStatefulWidget {
   const LessonBuilderScreen({super.key, this.initialLessonId});
 
   @override
-  ConsumerState<LessonBuilderScreen> createState() => _LessonBuilderScreenState();
+  ConsumerState<LessonBuilderScreen> createState() =>
+      _LessonBuilderScreenState();
 }
 
 class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
@@ -34,6 +35,10 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
   final String _status = 'draft';
   String? _selectedSubject;
   bool _isSaving = false;
+  bool _isLoading = false;
+  String? _loadError;
+  String? _lessonId;
+  Map<String, dynamic> _originalContent = {};
   bool _isMobileView = false;
   String _blockSearchQuery = '';
 
@@ -51,6 +56,111 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
     // Charger par défaut la Fiche Traits pour Traits des Suites Numériques
     final defaultTemplate = SubjectTemplate.standardTemplates.first;
     _blocks = defaultTemplate.generateBlocks();
+    _lessonId = widget.initialLessonId;
+    if (_lessonId != null) _loadLesson();
+  }
+
+  Future<void> _loadLesson() async {
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
+    try {
+      final lesson = await ref
+          .read(supabaseServiceProvider)
+          .getLesson(_lessonId!);
+      if (lesson == null) throw StateError('Leçon introuvable.');
+      if (lesson.isPublished || lesson.contentJson['blocks'] is! List) {
+        throw StateError(
+          'Ouvrez cette leçon dans Leçons & Cours pour conserver son workflow et son format.',
+        );
+      }
+      final blocks =
+          (lesson.contentJson['blocks'] as List)
+              .asMap()
+              .entries
+              .map(
+                (e) => LessonBlock.fromJson(
+                  Map<String, dynamic>.from(e.value as Map),
+                  fallbackOrder: e.key,
+                ),
+              )
+              .toList()
+            ..sort((a, b) => a.order.compareTo(b.order));
+      if (!mounted) return;
+      setState(() {
+        _titleCtrl.text = lesson.title;
+        _originalContent = Map<String, dynamic>.from(lesson.contentJson);
+        _blocks = blocks;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _loadError = e.toString());
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<String?> _chooseChapter() async {
+    final subjects = await ref.read(
+      subjectsProvider((countryId: null, includeInactive: false)).future,
+    );
+    if (!mounted) return null;
+    final subjectId = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Choisir la matière du brouillon'),
+        children: [
+          if (subjects.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Text('Aucune matière disponible.'),
+            ),
+          for (final subject in subjects)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, subject.id),
+              child: Text('${subject.name} (${subject.code})'),
+            ),
+        ],
+      ),
+    );
+    if (subjectId == null || !mounted) return null;
+    final chapters = await ref
+        .read(supabaseServiceProvider)
+        .fetchChapters(subjectId);
+    if (!mounted) return null;
+    final service = ref.read(supabaseServiceProvider);
+    final classNames = <String, String>{};
+    await Future.wait(
+      chapters.map((c) => c.classNodeId).whereType<String>().toSet().map((
+        id,
+      ) async {
+        final node = await service.getNode(id);
+        classNames[id] = node?.name ?? 'Classe indisponible';
+      }),
+    );
+    if (!mounted) return null;
+    return showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Choisir le chapitre du brouillon'),
+        children: [
+          if (chapters.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Text(
+                'Aucun chapitre disponible. Créez-le dans l’arbre académique.',
+              ),
+            ),
+          for (final chapter in chapters)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, chapter.id),
+              child: Text(
+                '${chapter.title}\nClasse : ${chapter.classNodeId == null ? "Toutes" : classNames[chapter.classNodeId]}',
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -114,38 +224,87 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
     });
   }
 
-  Future<void> _saveLesson() async {
+  Future<void> _saveLesson({bool submitForReview = false}) async {
+    if (_isSaving || _isLoading || _loadError != null) return;
+    if (_titleCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Saisissez un titre pour la leçon.')),
+      );
+      return;
+    }
     setState(() => _isSaving = true);
+    var saved = false;
     try {
       final service = ref.read(supabaseServiceProvider);
+      final chapterId = _lessonId == null ? await _chooseChapter() : null;
+      if (!mounted || (_lessonId == null && chapterId == null)) return;
       final contentJson = {
+        ..._originalContent,
         'version': 2,
         'blocks': _blocks.map((b) => b.toJson()).toList(),
       };
 
       // Si un chapitre est sélectionné ou par défaut
-      if (widget.initialLessonId != null) {
+      if (_lessonId != null) {
         await service.updateLesson(
-          id: widget.initialLessonId!,
+          id: _lessonId!,
           title: _titleCtrl.text.trim(),
           contentJson: contentJson,
+          editedBy: service.client.auth.currentUser?.id,
         );
+      } else {
+        final siblings = await service.fetchLessonsForChapter(chapterId!);
+        final nextOrder = siblings.fold<int>(
+          0,
+          (value, lesson) =>
+              lesson.displayOrder >= value ? lesson.displayOrder + 1 : value,
+        );
+        final created = await service.createLesson(
+          chapterId: chapterId,
+          title: _titleCtrl.text.trim(),
+          contentJson: contentJson,
+          displayOrder: nextOrder,
+        );
+        if (created == null) {
+          throw StateError('Le serveur n’a pas confirmé la création.');
+        }
+        _lessonId = created.id;
+      }
+
+      if (!mounted) return;
+      _originalContent = contentJson;
+      saved = true;
+      ref.invalidate(lessonsProvider);
+      ref.invalidate(chaptersWithLessonsProvider);
+
+      if (submitForReview) {
+        await service.submitLessonDraftForReview(_lessonId!);
       }
 
       if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Leçon enregistrée avec succès (v2 structurée)'),
+          SnackBar(
+            content: Text(
+              submitForReview
+                  ? 'Brouillon enregistré et soumis pour validation.'
+                  : 'Leçon enregistrée avec succès (v2 structurée)',
+            ),
             backgroundColor: ElefColors.success,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Enregistrement local simulé : ${e.toString()}'),
-            backgroundColor: ElefColors.info,
+            content: Text(
+              saved && submitForReview
+                  ? 'Brouillon enregistré, mais soumission échouée : ${e.toString()}'
+                  : 'Échec de l’enregistrement : ${e.toString()}',
+            ),
+            backgroundColor: ElefColors.danger,
           ),
         );
       }
@@ -156,6 +315,18 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_loadError != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(_loadError!, textAlign: TextAlign.center),
+            TextButton(onPressed: _loadLesson, child: const Text('Réessayer')),
+          ],
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: ElefColors.background,
       body: Column(
@@ -174,10 +345,7 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                 return Row(
                   children: [
                     // Volet Gauche : Bibliothèque de Blocs (300px)
-                    SizedBox(
-                      width: 310,
-                      child: _buildBlockLibraryPane(),
-                    ),
+                    SizedBox(width: 310, child: _buildBlockLibraryPane()),
                     const VerticalDivider(
                       width: 1,
                       thickness: 1,
@@ -185,10 +353,7 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                     ),
 
                     // Volet Central : Canvas d'Édition Directe (Flexible)
-                    Expanded(
-                      flex: 5,
-                      child: _buildCenterCanvasPane(),
-                    ),
+                    Expanded(flex: 5, child: _buildCenterCanvasPane()),
                     const VerticalDivider(
                       width: 1,
                       thickness: 1,
@@ -196,10 +361,7 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                     ),
 
                     // Volet Droit : Aperçu Élève en Temps Réel (Flexible)
-                    Expanded(
-                      flex: 4,
-                      child: _buildStudentPreviewPane(),
-                    ),
+                    Expanded(flex: 4, child: _buildStudentPreviewPane()),
                   ],
                 );
               },
@@ -221,121 +383,183 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
         color: ElefColors.surfaceDark,
         border: Border(bottom: BorderSide(color: ElefColors.borderSubtle)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: ElefColors.primaryGlow,
-              borderRadius: ElefRadius.md,
-            ),
-            child: const Icon(Icons.dashboard_customize_rounded, color: ElefColors.primary, size: 22),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          Row(
+            children: [
+              if (Navigator.of(context).canPop())
+                IconButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: const Icon(Icons.arrow_back),
+                  tooltip: 'Retour aux leçons',
+                ),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: ElefColors.primaryGlow,
+                  borderRadius: ElefRadius.md,
+                ),
+                child: const Icon(
+                  Icons.dashboard_customize_rounded,
+                  color: ElefColors.primary,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _titleCtrl,
-                        style: ElefTypography.heading2.copyWith(color: Colors.white),
-                        decoration: const InputDecoration(
-                          hintText: 'Titre de la leçon ou fiche de synthèse...',
-                          hintStyle: TextStyle(color: ElefColors.textMuted),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _titleCtrl,
+                            style: ElefTypography.heading2.copyWith(
+                              color: Colors.white,
+                            ),
+                            decoration: const InputDecoration(
+                              hintText:
+                                  'Titre de la leçon ou fiche de synthèse...',
+                              hintStyle: TextStyle(color: ElefColors.textMuted),
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        ElefBadge(
+                          label: _status == 'published'
+                              ? 'Publié'
+                              : 'Brouillon',
+                          color: _status == 'published'
+                              ? ElefColors.success
+                              : ElefColors.warning,
+                          tone: ElefBadgeTone.subtle,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'ELEF Studio v2 • Structure Canonique Multi-Discipline • Traits pour traits',
+                      style: ElefTypography.caption,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              // Action Rapide : Fiche Spéciale Suites Numériques
+              ElefButton.outline(
+                label: '⚡ Fiche Suites Numériques',
+                icon: Icons.functions_rounded,
+                size: ElefButtonSize.sm,
+                onPressed: () {
+                  final suitesTemplate =
+                      SubjectTemplate.standardTemplates.first;
+                  _loadTemplate(suitesTemplate);
+                },
+              ),
+              const SizedBox(width: 10),
+
+              // Bouton Charger un Template de Filière
+              PopupMenuButton<SubjectTemplate>(
+                tooltip: 'Charger un template de filière',
+                color: ElefColors.surfaceCard,
+                shape: RoundedRectangleBorder(
+                  borderRadius: ElefRadius.md,
+                  side: const BorderSide(color: ElefColors.borderMedium),
+                ),
+                itemBuilder: (context) =>
+                    SubjectTemplate.standardTemplates.map((tpl) {
+                      return PopupMenuItem<SubjectTemplate>(
+                        value: tpl,
+                        child: Row(
+                          children: [
+                            Icon(tpl.icon, size: 18, color: tpl.color),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    tpl.title,
+                                    style: ElefTypography.labelMedium.copyWith(
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  Text(
+                                    tpl.targetSubject,
+                                    style: ElefTypography.caption,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                onSelected: _loadTemplate,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: ElefColors.surfaceCard,
+                    borderRadius: ElefRadius.md,
+                    border: Border.all(color: ElefColors.borderMedium),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.auto_stories_rounded,
+                        size: 16,
+                        color: ElefColors.textSecondary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Templates',
+                        style: ElefTypography.labelMedium.copyWith(
+                          color: Colors.white,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    ElefBadge(
-                      label: _status == 'published' ? 'Publié' : 'Brouillon',
-                      color: _status == 'published' ? ElefColors.success : ElefColors.warning,
-                      tone: ElefBadgeTone.subtle,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'ELEF Studio v2 • Structure Canonique Multi-Discipline • Traits pour traits',
-                  style: ElefTypography.caption,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-
-          // Action Rapide : Fiche Spéciale Suites Numériques
-          ElefButton.outline(
-            label: '⚡ Fiche Suites Numériques',
-            icon: Icons.functions_rounded,
-            size: ElefButtonSize.sm,
-            onPressed: () {
-              final suitesTemplate = SubjectTemplate.standardTemplates.first;
-              _loadTemplate(suitesTemplate);
-            },
-          ),
-          const SizedBox(width: 10),
-
-          // Bouton Charger un Template de Filière
-          PopupMenuButton<SubjectTemplate>(
-            tooltip: 'Charger un template de filière',
-            color: ElefColors.surfaceCard,
-            shape: RoundedRectangleBorder(
-              borderRadius: ElefRadius.md,
-              side: const BorderSide(color: ElefColors.borderMedium),
-            ),
-            itemBuilder: (context) => SubjectTemplate.standardTemplates.map((tpl) {
-              return PopupMenuItem<SubjectTemplate>(
-                value: tpl,
-                child: Row(
-                  children: [
-                    Icon(tpl.icon, size: 18, color: tpl.color),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(tpl.title, style: ElefTypography.labelMedium.copyWith(color: Colors.white)),
-                          Text(tpl.targetSubject, style: ElefTypography.caption),
-                        ],
+                      const Icon(
+                        Icons.arrow_drop_down,
+                        color: ElefColors.textMuted,
+                        size: 18,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              );
-            }).toList(),
-            onSelected: _loadTemplate,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: ElefColors.surfaceCard,
-                borderRadius: ElefRadius.md,
-                border: Border.all(color: ElefColors.borderMedium),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.auto_stories_rounded, size: 16, color: ElefColors.textSecondary),
-                  const SizedBox(width: 6),
-                  Text('Templates', style: ElefTypography.labelMedium.copyWith(color: Colors.white)),
-                  const Icon(Icons.arrow_drop_down, color: ElefColors.textMuted, size: 18),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
+              const SizedBox(width: 10),
 
-          // Enregistrer
-          ElefButton.primary(
-            label: 'Enregistrer',
-            icon: Icons.save_rounded,
-            size: ElefButtonSize.sm,
-            isLoading: _isSaving,
-            onPressed: _saveLesson,
+              // Enregistrer
+              ElefButton.secondary(
+                label: 'Soumettre pour validation',
+                icon: Icons.fact_check_outlined,
+                size: ElefButtonSize.sm,
+                isLoading: _isSaving,
+                onPressed: () => _saveLesson(submitForReview: true),
+              ),
+              const SizedBox(width: 8),
+              ElefButton.primary(
+                label: 'Enregistrer',
+                icon: Icons.save_rounded,
+                size: ElefButtonSize.sm,
+                isLoading: _isSaving,
+                onPressed: _saveLesson,
+              ),
+            ],
           ),
         ],
       ),
@@ -359,12 +583,15 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
               children: [
                 Text(
                   'Bibliothèque de Blocs',
-                  style: ElefTypography.titleMedium.copyWith(color: Colors.white),
+                  style: ElefTypography.titleMedium.copyWith(
+                    color: Colors.white,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 ElefSearchField(
                   hintText: 'Rechercher un bloc...',
-                  onChanged: (q) => setState(() => _blockSearchQuery = q.toLowerCase()),
+                  onChanged: (q) =>
+                      setState(() => _blockSearchQuery = q.toLowerCase()),
                 ),
               ],
             ),
@@ -394,7 +621,10 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                               'badge': 'Standard',
                               'color': 0xFF38BDF8,
                               'items': [
-                                {'label': 'Propriété', 'formula': r'f(x) = ax + b'},
+                                {
+                                  'label': 'Propriété',
+                                  'formula': r'f(x) = ax + b',
+                                },
                               ],
                             },
                             {
@@ -402,13 +632,20 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                               'badge': 'Avancé',
                               'color': 0xFFA855F7,
                               'items': [
-                                {'label': 'Propriété', 'formula': r'f(x) = ax^2 + bx + c'},
+                                {
+                                  'label': 'Propriété',
+                                  'formula': r'f(x) = ax^2 + bx + c',
+                                },
                               ],
                             },
                           ],
                           keyFormula: r'\Delta = b^2 - 4ac',
-                          bulletPoints: ['Point essentiel 1', 'Point essentiel 2'],
-                          examTrap: 'Ne pas oublier le coefficient d\'ordre supérieur.',
+                          bulletPoints: [
+                            'Point essentiel 1',
+                            'Point essentiel 2',
+                          ],
+                          examTrap:
+                              'Ne pas oublier le coefficient d\'ordre supérieur.',
                         ),
                       ),
                     ),
@@ -466,8 +703,12 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                       onAdd: () => _addBlock(
                         LessonBlock.method(
                           heading: 'Méthode de Résolution',
-                          body: 'Guide structuré pour résoudre ce type d\'exercice.',
-                          steps: ['Étape 1 : Poser l\'équation', 'Étape 2 : Factoriser'],
+                          body:
+                              'Guide structuré pour résoudre ce type d\'exercice.',
+                          steps: [
+                            'Étape 1 : Poser l\'équation',
+                            'Étape 2 : Factoriser',
+                          ],
                         ),
                       ),
                     ),
@@ -510,7 +751,8 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                       onAdd: () => _addBlock(
                         LessonBlock.examTip(
                           heading: 'Conseil d\'Examen',
-                          body: 'Pensez à toujours vérifier le domaine de définition.',
+                          body:
+                              'Pensez à toujours vérifier le domaine de définition.',
                         ),
                       ),
                     ),
@@ -542,7 +784,8 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                         LessonBlock.codeRunner(
                           heading: 'Atelier Programmation Python',
                           language: 'Python',
-                          initialCode: 'def f(x):\n    return x**2\n\nprint("f(4) =", f(4))',
+                          initialCode:
+                              'def f(x):\n    return x**2\n\nprint("f(4) =", f(4))',
                           expectedOutput: 'f(4) = 16',
                         ),
                       ),
@@ -565,7 +808,13 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
   }) {
     final filtered = _blockSearchQuery.isEmpty
         ? items
-        : items.where((it) => it.title.toLowerCase().contains(_blockSearchQuery) || it.subtitle.toLowerCase().contains(_blockSearchQuery)).toList();
+        : items
+              .where(
+                (it) =>
+                    it.title.toLowerCase().contains(_blockSearchQuery) ||
+                    it.subtitle.toLowerCase().contains(_blockSearchQuery),
+              )
+              .toList();
 
     if (filtered.isEmpty) return const SizedBox.shrink();
 
@@ -578,12 +827,14 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
             children: [
               Icon(icon, size: 14, color: color),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: ElefTypography.caption.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.6,
+              Expanded(
+                child: Text(
+                  title,
+                  style: ElefTypography.caption.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.6,
+                  ),
                 ),
               ),
             ],
@@ -643,7 +894,11 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                   ],
                 ),
               ),
-              const Icon(Icons.add_circle_outline_rounded, size: 18, color: ElefColors.primary),
+              const Icon(
+                Icons.add_circle_outline_rounded,
+                size: 18,
+                color: ElefColors.primary,
+              ),
             ],
           ),
         ),
@@ -665,7 +920,9 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             decoration: const BoxDecoration(
               color: ElefColors.surfaceDark,
-              border: Border(bottom: BorderSide(color: ElefColors.borderSubtle)),
+              border: Border(
+                bottom: BorderSide(color: ElefColors.borderSubtle),
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -674,7 +931,9 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                   children: [
                     Text(
                       'Structure Pédagogique',
-                      style: ElefTypography.titleMedium.copyWith(color: Colors.white),
+                      style: ElefTypography.titleMedium.copyWith(
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     ElefBadge(
@@ -707,11 +966,17 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.note_add_rounded, size: 48, color: ElefColors.textMuted),
+                        const Icon(
+                          Icons.note_add_rounded,
+                          size: 48,
+                          color: ElefColors.textMuted,
+                        ),
                         const SizedBox(height: 12),
                         Text(
                           'Aucun bloc pour le moment',
-                          style: ElefTypography.titleMedium.copyWith(color: ElefColors.textSecondary),
+                          style: ElefTypography.titleMedium.copyWith(
+                            color: ElefColors.textSecondary,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         Text(
@@ -780,20 +1045,28 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                 topLeft: Radius.circular(ElefRadius.rawLg - 1),
                 topRight: Radius.circular(ElefRadius.rawLg - 1),
               ),
-              border: const Border(bottom: BorderSide(color: ElefColors.borderSubtle)),
+              border: const Border(
+                bottom: BorderSide(color: ElefColors.borderSubtle),
+              ),
             ),
             child: Row(
               children: [
                 // Numéro d'ordre
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: ElefColors.surfaceElevated,
                     borderRadius: ElefRadius.xs,
                   ),
                   child: Text(
                     '#${index + 1}',
-                    style: ElefTypography.caption.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: ElefTypography.caption.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -812,7 +1085,9 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                 // Boutons déplacement
                 IconButton(
                   icon: const Icon(Icons.arrow_upward_rounded, size: 16),
-                  color: index > 0 ? ElefColors.textSecondary : ElefColors.textDisabled,
+                  color: index > 0
+                      ? ElefColors.textSecondary
+                      : ElefColors.textDisabled,
                   tooltip: 'Monter',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -821,11 +1096,15 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.arrow_downward_rounded, size: 16),
-                  color: index < _blocks.length - 1 ? ElefColors.textSecondary : ElefColors.textDisabled,
+                  color: index < _blocks.length - 1
+                      ? ElefColors.textSecondary
+                      : ElefColors.textDisabled,
                   tooltip: 'Descendre',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  onPressed: index < _blocks.length - 1 ? () => _moveBlock(index, 1) : null,
+                  onPressed: index < _blocks.length - 1
+                      ? () => _moveBlock(index, 1)
+                      : null,
                 ),
                 const SizedBox(width: 12),
                 IconButton(
@@ -858,8 +1137,12 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                 // Titre optionnel
                 TextField(
                   controller: TextEditingController(text: block.heading ?? '')
-                    ..selection = TextSelection.collapsed(offset: (block.heading ?? '').length),
-                  style: ElefTypography.titleSmall.copyWith(color: Colors.white),
+                    ..selection = TextSelection.collapsed(
+                      offset: (block.heading ?? '').length,
+                    ),
+                  style: ElefTypography.titleSmall.copyWith(
+                    color: Colors.white,
+                  ),
                   decoration: InputDecoration(
                     labelText: 'Titre / Intitulé du bloc',
                     labelStyle: ElefTypography.caption,
@@ -868,7 +1151,9 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                     fillColor: const Color(0xFF090D18),
                     border: OutlineInputBorder(
                       borderRadius: ElefRadius.md,
-                      borderSide: const BorderSide(color: ElefColors.borderSubtle),
+                      borderSide: const BorderSide(
+                        color: ElefColors.borderSubtle,
+                      ),
                     ),
                   ),
                   onChanged: (val) {
@@ -880,18 +1165,26 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                 // Contenu / Corps principal
                 TextField(
                   controller: TextEditingController(text: block.body)
-                    ..selection = TextSelection.collapsed(offset: block.body.length),
-                  style: ElefTypography.bodyMedium.copyWith(color: ElefColors.textPrimary),
+                    ..selection = TextSelection.collapsed(
+                      offset: block.body.length,
+                    ),
+                  style: ElefTypography.bodyMedium.copyWith(
+                    color: ElefColors.textPrimary,
+                  ),
                   maxLines: null,
                   decoration: InputDecoration(
-                    labelText: block.type == 'code_runner' ? 'Code Source' : 'Contenu textuel & explications',
+                    labelText: block.type == 'code_runner'
+                        ? 'Code Source'
+                        : 'Contenu textuel & explications',
                     labelStyle: ElefTypography.caption,
                     isDense: true,
                     filled: true,
                     fillColor: const Color(0xFF090D18),
                     border: OutlineInputBorder(
                       borderRadius: ElefRadius.md,
-                      borderSide: const BorderSide(color: ElefColors.borderSubtle),
+                      borderSide: const BorderSide(
+                        color: ElefColors.borderSubtle,
+                      ),
                     ),
                   ),
                   onChanged: (val) {
@@ -900,28 +1193,43 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                 ),
 
                 // Formule(s) LaTeX
-                if (block.type == 'theoreme' || block.type == 'definition' || block.type == 'formule' || block.type == 'exemple') ...[
+                if (block.type == 'theoreme' ||
+                    block.type == 'definition' ||
+                    block.type == 'formule' ||
+                    block.type == 'exemple') ...[
                   const SizedBox(height: 10),
                   TextField(
-                    controller: TextEditingController(text: block.formulas.join('\n'))
-                      ..selection = TextSelection.collapsed(offset: block.formulas.join('\n').length),
+                    controller:
+                        TextEditingController(text: block.formulas.join('\n'))
+                          ..selection = TextSelection.collapsed(
+                            offset: block.formulas.join('\n').length,
+                          ),
                     style: ElefTypography.code,
                     maxLines: null,
                     decoration: InputDecoration(
                       labelText: 'Formules LaTeX (une par ligne)',
                       labelStyle: ElefTypography.caption,
-                      prefixIcon: const Icon(Icons.functions_rounded, size: 16, color: ElefColors.primary),
+                      prefixIcon: const Icon(
+                        Icons.functions_rounded,
+                        size: 16,
+                        color: ElefColors.primary,
+                      ),
                       isDense: true,
                       filled: true,
                       fillColor: const Color(0xFF090D18),
                       border: OutlineInputBorder(
                         borderRadius: ElefRadius.md,
-                        borderSide: const BorderSide(color: ElefColors.borderSubtle),
+                        borderSide: const BorderSide(
+                          color: ElefColors.borderSubtle,
+                        ),
                       ),
                     ),
                     onChanged: (val) {
                       _blocks[index] = block.copyWith(
-                        formulas: val.split('\n').where((s) => s.trim().isNotEmpty).toList(),
+                        formulas: val
+                            .split('\n')
+                            .where((s) => s.trim().isNotEmpty)
+                            .toList(),
                       );
                     },
                   ),
@@ -935,16 +1243,24 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                     decoration: BoxDecoration(
                       color: ElefColors.disciplineMath.withAlpha(20),
                       borderRadius: ElefRadius.md,
-                      border: Border.all(color: ElefColors.disciplineMath.withAlpha(60)),
+                      border: Border.all(
+                        color: ElefColors.disciplineMath.withAlpha(60),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.auto_stories_rounded, size: 16, color: ElefColors.disciplineMath),
+                        const Icon(
+                          Icons.auto_stories_rounded,
+                          size: 16,
+                          color: ElefColors.disciplineMath,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'Fiche haute fidélité avec colonnes comparatives, formules display et astuces d\'examen intégrées.',
-                            style: ElefTypography.caption.copyWith(color: Colors.white),
+                            style: ElefTypography.caption.copyWith(
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ],
@@ -973,18 +1289,26 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: const BoxDecoration(
               color: ElefColors.surfaceDark,
-              border: Border(bottom: BorderSide(color: ElefColors.borderSubtle)),
+              border: Border(
+                bottom: BorderSide(color: ElefColors.borderSubtle),
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.visibility_rounded, size: 18, color: ElefColors.success),
+                    const Icon(
+                      Icons.visibility_rounded,
+                      size: 18,
+                      color: ElefColors.success,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Aperçu Élève en Direct',
-                      style: ElefTypography.labelLarge.copyWith(color: Colors.white),
+                      style: ElefTypography.labelLarge.copyWith(
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
@@ -994,7 +1318,9 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                       icon: Icon(
                         Icons.phone_android_rounded,
                         size: 18,
-                        color: _isMobileView ? ElefColors.primary : ElefColors.textMuted,
+                        color: _isMobileView
+                            ? ElefColors.primary
+                            : ElefColors.textMuted,
                       ),
                       tooltip: 'Format Mobile (390px)',
                       onPressed: () => setState(() => _isMobileView = true),
@@ -1003,7 +1329,9 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                       icon: Icon(
                         Icons.tablet_mac_rounded,
                         size: 18,
-                        color: !_isMobileView ? ElefColors.primary : ElefColors.textMuted,
+                        color: !_isMobileView
+                            ? ElefColors.primary
+                            : ElefColors.textMuted,
                       ),
                       tooltip: 'Format Tablette / Large',
                       onPressed: () => setState(() => _isMobileView = false),
@@ -1019,13 +1347,18 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
             child: Center(
               child: Container(
                 width: _isMobileView ? 400 : double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 child: ListView(
                   children: [
                     // Titre Élève
                     Text(
                       _titleCtrl.text,
-                      style: ElefTypography.displayMedium.copyWith(color: Colors.white),
+                      style: ElefTypography.displayMedium.copyWith(
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Row(
@@ -1146,28 +1479,37 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 decoration: const BoxDecoration(
                   color: Color(0xFF0A0F1D),
-                  border: Border(bottom: BorderSide(color: ElefColors.borderSubtle)),
+                  border: Border(
+                    bottom: BorderSide(color: ElefColors.borderSubtle),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.terminal_rounded, size: 14, color: ElefColors.disciplineComputer),
+                    const Icon(
+                      Icons.terminal_rounded,
+                      size: 14,
+                      color: ElefColors.disciplineComputer,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       block.heading ?? 'Code Exécutable',
-                      style: ElefTypography.caption.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                      style: ElefTypography.caption.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.all(14),
-                child: Text(
-                  block.body,
-                  style: ElefTypography.code,
-                ),
+                child: Text(block.body, style: ElefTypography.code),
               ),
             ],
           ),
@@ -1188,11 +1530,17 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.show_chart_rounded, color: ElefColors.disciplineMath, size: 18),
+                  const Icon(
+                    Icons.show_chart_rounded,
+                    color: ElefColors.disciplineMath,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     block.heading ?? 'Tracé Interactif',
-                    style: ElefTypography.labelLarge.copyWith(color: Colors.white),
+                    style: ElefTypography.labelLarge.copyWith(
+                      color: Colors.white,
+                    ),
                   ),
                 ],
               ),
@@ -1215,11 +1563,17 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.auto_graph_rounded, color: ElefColors.disciplineMath, size: 28),
+                      const Icon(
+                        Icons.auto_graph_rounded,
+                        color: ElefColors.disciplineMath,
+                        size: 28,
+                      ),
                       const SizedBox(width: 10),
                       Text(
                         'GraphEngine — Rendu interactif actif',
-                        style: ElefTypography.bodySmall.copyWith(color: ElefColors.disciplineMath),
+                        style: ElefTypography.bodySmall.copyWith(
+                          color: ElefColors.disciplineMath,
+                        ),
                       ),
                     ],
                   ),
@@ -1245,7 +1599,9 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
               ],
               Text(
                 block.body,
-                style: ElefTypography.bodyLarge.copyWith(color: ElefColors.textSecondary),
+                style: ElefTypography.bodyLarge.copyWith(
+                  color: ElefColors.textSecondary,
+                ),
               ),
             ],
           ),

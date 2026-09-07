@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "source": {"kind": "regression_fixture", "reference": "Suites réelles"},
+  "blocks": [
+    {
+      "id": "suites-comparaison",
+      "type": "summary_card",
+      "heading": "Suites arithmétiques et géométriques",
+      "body": "Comparer les deux familles de suites",
+      "order": 0,
+      "metadata": {
+        "columns": [
+          {"title": "Suite arithmétique", "items": [{"label": "Terme général", "formula": "u_n = u_0 + nr"}]},
+          {"title": "Suite géométrique", "items": [{"label": "Terme général", "formula": "u_n = u_0 q^n"}]}
+        ],
+        "bulletPoints": ["Identifier la raison avant de choisir la formule."],
+        "examTrap": "Ne pas confondre le premier indice et le nombre de termes."
+      }
+    },
+    {"id": "source-image", "type": "image", "body": "", "order": 1, "metadata": {"imageUrl": "https://example.invalid/reference.png", "altText": "Fiche source"}}
+  ]
+}

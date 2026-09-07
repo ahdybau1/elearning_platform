@@ -38,37 +38,32 @@ class _ValidationQueueScreenState extends ConsumerState<ValidationQueueScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Expanded : titre 26pt + longue phrase de sous-titre, sans contrainte de largeur,
-              // débordait hors de l'écran sur mobile à côté du badge de compteur (retour
-              // utilisateur réel, 2026-08-30).
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'File de Validation des Contenus',
-                      style: GoogleFonts.outfit(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'File de Validation des Contenus',
+                    style: GoogleFonts.outfit(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Workflow : Brouillon → En attente → Approuvé/Rejeté/À corriger '
-                      '(le contenu du super admin saute directement à Approuvé)',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppTheme.textMuted,
-                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Workflow : Brouillon → En attente → Approuvé/Rejeté/À corriger '
+                    '(les brouillons du Studio passent par une revue explicite)',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: AppTheme.textMuted,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
+              const SizedBox(height: 12),
               queueAsync.when(
                 data: (items) {
                   // Le compteur d'en-tête doit refléter ce qui attend RÉELLEMENT une décision, pas
@@ -93,6 +88,7 @@ class _ValidationQueueScreenState extends ConsumerState<ValidationQueueScreen> {
                       border: Border.all(color: AppTheme.accentAmber),
                     ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(
                           Icons.hourglass_top_rounded,
@@ -373,7 +369,7 @@ class _ValidationQueueScreenState extends ConsumerState<ValidationQueueScreen> {
                     Expanded(
                       child: Text(
                         isSelfApproved
-                            ? 'Auto-approuvé par $reviewerName le $reviewedAtLabel'
+                            ? 'Revu par son auteur $reviewerName le $reviewedAtLabel'
                             : 'Revu par $reviewerName le $reviewedAtLabel',
                         style: GoogleFonts.inter(
                           fontSize: 12,
@@ -393,7 +389,7 @@ class _ValidationQueueScreenState extends ConsumerState<ValidationQueueScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          'AUTO-APPROUVÉ',
+                          'AUTEUR = RÉVISEUR',
                           style: GoogleFonts.inter(
                             fontSize: 9,
                             fontWeight: FontWeight.bold,

@@ -1,5 +1,17 @@
 # Progression EDLEARN
 
+## 2026-09-07 — Studio, revue et vérification Supabase
+
+Réouverture des brouillons depuis Leçons & Cours, soumission explicite à la revue,
+conservation des métadonnées par l'ancien éditeur et barre Studio responsive implémentées.
+13 tests admin et 20 tests élève passants ; analyses ciblées sans problème.
+Compilation web admin réussie après correction du hash FNV-1a 64 bits incompatible
+avec JavaScript dans le dernier push ; égalité du hash vérifiée sur Dart VM et JavaScript.
+Test Supabase transactionnel réussi : brouillon masqué, approbation anonyme refusée,
+approbation/publication admin, JSON publié intact, archivage masqué. Rollback vérifié :
+aucun test persistant, compteurs inchangés. Voir `STUDIO_PUBLICATION_VERIFICATION.md`
+pour la portée exacte, les limites et la correction de configuration locale.
+
 ## 2026-09-05 — reprise et audit local
 
 - Référence : HEAD `f5edccf`, dernier chantier Exam Resource Factory, revue/approbation/publication admin.
@@ -253,4 +265,38 @@
   - Items 30 (`Studio de Cours v2`), 31 (`Médiathèque & IA`) et 32 (`Centre des Moteurs`) câblés dans `MainAdminLayout`.
 - **Validation Qualité :**
   - `flutter analyze` sur l'ensemble des nouveaux modules : **0 erreur, 0 avertissement**.
+# 2026-09-07 — Reprise après le push `7996f20` : sauvegarde du Studio v2
 
+- Vérification : HEAD local identique au HEAD GitHub ; cahiers Content Factory et MASTER,
+  historique de progression, code du Studio et référence visuelle Suites réelles examinés.
+- CF-002 : le Studio crée maintenant une leçon via `createLesson` dans une matière et un
+  chapitre sélectionnés, puis conserve son identifiant pendant la session pour les mises à jour.
+  La création utilise le brouillon non publié du service existant.
+- Avec `initialLessonId`, chargement du titre et des blocs avant édition, conservation des
+  autres clés de `content_json`, transmission de l'auteur connecté au versioning existant.
+  Les leçons publiées et les formats historiques sont renvoyés vers Leçons & Cours.
+- Annulation sans écriture, titre obligatoire, erreurs explicites et invalidation des listes
+  Riverpod après sauvegarde confirmée. Noms de classes affichés lors du choix du chapitre.
+- Trois débordements de texte corrigés : titres de catégories de la bibliothèque, badges/source
+  de la fiche, titre des astuces. Les images de référence et contenus existants sont conservés.
+- Validation : `flutter test --no-pub` dans `admin_app` : **7 tests passants** (2 existants,
+  5 nouveaux). Analyse ciblée des 3 fichiers Dart concernés : **No issues found**.
+  `git diff --check` sans erreur.
+- Limites : services simulés dans les tests, aucune écriture de production ni migration exécutée.
+  Publication → rendu élève, fidélité visuelle exhaustive, petits écrans et réouverture du Studio
+  depuis le gestionnaire restent à vérifier/intégrer. Une sauvegarde répétée évite un doublon
+  après confirmation, sans garantie d'idempotence serveur si la réponse réseau est perdue.
+
+## Complément du 7 septembre — vérification réelle après connexion
+
+Le parcours navigateur a confirmé sauvegarde Studio, soumission, approbation manuelle et
+lecture anonyme via le véritable lecteur élève sur Supabase. Les cinq blocs et l'image
+de référence Suites réelles sont affichés. Le chapitre et la leçon temporaires sont archivés,
+et le lecteur confirme leur retrait. Corrections mobiles de la validation admin et du bandeau
+de fiche élève vérifiées. Les tests sont maintenant à **13 admin / 20 élève** ; builds web
+release réussis pour les deux applications.
+
+Configuration cliente limitée à `.env.public`, contrôle automatisé des assets, suppression de
+l'auto-connexion admin de développement. La révocation legacy reste à terminer après migration
+des consommateurs serveur. Aucun nouvel hébergement configuré. Détails et limites dans
+`STUDIO_PUBLICATION_VERIFICATION.md`, qui actualise les limites de la première passe ci-dessus.

@@ -2649,6 +2649,20 @@ class SupabaseService {
     );
   }
 
+  /// Soumission explicite depuis le Studio : conserve la revue humaine pour tous
+  /// les rôles. La publication reste l'action distincte de la file de validation.
+  Future<void> submitLessonDraftForReview(String lessonId) async {
+    final user = client.auth.currentUser;
+    if (user == null) throw StateError('Reconnectez-vous pour soumettre la leçon.');
+    final admin = await getAdminUserByAuthId(user.id);
+    if (admin == null) throw StateError('Profil administrateur introuvable.');
+    final lesson = await getLesson(lessonId);
+    if (lesson == null || lesson.isPublished || !lesson.isActive) {
+      throw StateError('Seul un brouillon actif peut être soumis.');
+    }
+    await submitForValidation(contentId: lessonId, contentType: 'lesson', authorId: admin.id);
+  }
+
   /// Point unique de vérité pour "faut-il passer par la file de validation ?" — le super_admin
   /// n'a personne au-dessus de lui pour réviser son propre contenu, donc son travail est
   /// auto-approuvé ET publié immédiatement, tout en restant traçable (une ligne validation_queue
