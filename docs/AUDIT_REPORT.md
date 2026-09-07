@@ -167,3 +167,7 @@ stack actuelle Flutter + Supabase). C'est donc l'ordre à suivre — pas de pivo
   couvert par les sessions précédentes et les addenda de `docs/cahier_des_charges.md` — non repris ici pour
   rester dans le périmètre du nouveau pack.
 - Tests automatisés existants (aucun répertoire `test/` inspecté dans cette passe).
+
+## Audit transversal Admin — 7 septembre 2026
+
+Voir ADMIN_TRANSVERSAL_AUDIT_2026_09_07.md : inventaire des écrans, parcours navigateur, preuves des simulations présentées comme résultats et plan correctif. Aucun test de mutation sensible ni validation exhaustive métier revendiqué.

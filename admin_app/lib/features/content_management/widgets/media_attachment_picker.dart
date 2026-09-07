@@ -1,4 +1,5 @@
 import 'package:file_picker/file_picker.dart';
+import '../screens/media_library_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -21,7 +22,8 @@ class MediaAttachmentPicker extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<MediaAttachmentPicker> createState() => _MediaAttachmentPickerState();
+  ConsumerState<MediaAttachmentPicker> createState() =>
+      _MediaAttachmentPickerState();
 }
 
 class _MediaAttachmentPickerState extends ConsumerState<MediaAttachmentPicker> {
@@ -42,6 +44,7 @@ class _MediaAttachmentPickerState extends ConsumerState<MediaAttachmentPicker> {
     });
     try {
       final result = await FilePicker.platform.pickFiles(withData: true);
+      if (!mounted) return;
       final file = result?.files.single;
       final bytes = file?.bytes;
       if (file == null || bytes == null) {
@@ -50,7 +53,8 @@ class _MediaAttachmentPickerState extends ConsumerState<MediaAttachmentPicker> {
       }
 
       final service = ref.read(supabaseServiceProvider);
-      final uploadedBy = ref.read(authProvider).valueOrNull?.id ??
+      final uploadedBy =
+          ref.read(authProvider).valueOrNull?.id ??
           '00000000-0000-0000-0000-000000000001';
       final asset = await service.uploadMedia(
         bytes: bytes,
@@ -58,12 +62,15 @@ class _MediaAttachmentPickerState extends ConsumerState<MediaAttachmentPicker> {
         uploadedBy: uploadedBy,
       );
 
+      if (!mounted) return;
+      ref.invalidate(mediaLibraryProvider);
       setState(() {
         _assets = [..._assets, asset];
         _isUploading = false;
       });
       widget.onChanged(_assets);
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isUploading = false;
         _error = 'Échec de l\'upload : $e';
@@ -94,7 +101,10 @@ class _MediaAttachmentPickerState extends ConsumerState<MediaAttachmentPicker> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        Wrap(
+          spacing: 10,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             OutlinedButton.icon(
               onPressed: _isUploading ? null : _pickAndUpload,
@@ -105,9 +115,34 @@ class _MediaAttachmentPickerState extends ConsumerState<MediaAttachmentPicker> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.upload_file_rounded, size: 16),
-              label: Text(_isUploading ? 'Envoi en cours...' : 'Ajouter un média'),
+              label: Text(
+                _isUploading ? 'Envoi en cours...' : 'Ajouter un média',
+              ),
             ),
-            const SizedBox(width: 10),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.photo_library_outlined, size: 16),
+              label: const Text('Choisir dans la médiathèque'),
+              onPressed: () async {
+                final asset = await Navigator.of(context).push<MediaAsset>(
+                  MaterialPageRoute(
+                    builder: (pageContext) => Scaffold(
+                      appBar: AppBar(title: const Text('Choisir un média')),
+                      body: MediaLibraryScreen(
+                        onSelected: (asset) =>
+                            Navigator.of(pageContext).pop(asset),
+                      ),
+                    ),
+                  ),
+                );
+                if (!mounted ||
+                    asset == null ||
+                    _assets.any((item) => item.id == asset.id)) {
+                  return;
+                }
+                setState(() => _assets = [..._assets, asset]);
+                widget.onChanged(List.of(_assets));
+              },
+            ),
             Text(
               'Images, vidéos, audio, documents',
               style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted),
@@ -117,7 +152,13 @@ class _MediaAttachmentPickerState extends ConsumerState<MediaAttachmentPicker> {
         if (_error != null)
           Padding(
             padding: const EdgeInsets.only(top: 6),
-            child: Text(_error!, style: GoogleFonts.inter(color: AppTheme.accentRose, fontSize: 12)),
+            child: Text(
+              _error!,
+              style: GoogleFonts.inter(
+                color: AppTheme.accentRose,
+                fontSize: 12,
+              ),
+            ),
           ),
         if (_assets.isNotEmpty)
           Padding(
@@ -127,7 +168,11 @@ class _MediaAttachmentPickerState extends ConsumerState<MediaAttachmentPicker> {
               runSpacing: 8,
               children: _assets.map((asset) {
                 return Chip(
-                  avatar: Icon(_iconFor(asset.type), size: 16, color: AppTheme.accentBlue),
+                  avatar: Icon(
+                    _iconFor(asset.type),
+                    size: 16,
+                    color: AppTheme.accentBlue,
+                  ),
                   label: Text(
                     asset.filename,
                     style: GoogleFonts.inter(fontSize: 12, color: Colors.white),

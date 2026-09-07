@@ -75,10 +75,33 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
     return chapter.lessons.any((l) => l.title.toLowerCase().contains(q));
   }
 
+  Widget _loadError(String message, VoidCallback retry) => Center(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(message),
+        TextButton(onPressed: retry, child: const Text('Réessayer')),
+      ],
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final classNodesAsync = ref.watch(nodesByTypeProvider('class'));
     final seriesNodesAsync = ref.watch(nodesByTypeProvider('series'));
+    if (classNodesAsync.isLoading || seriesNodesAsync.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          semanticsLabel: 'Chargement des classes',
+        ),
+      );
+    }
+    if (classNodesAsync.hasError || seriesNodesAsync.hasError) {
+      return _loadError('Impossible de charger les classes.', () {
+        ref.invalidate(nodesByTypeProvider('class'));
+        ref.invalidate(nodesByTypeProvider('series'));
+      });
+    }
     final classOptions = <AcademicNode>[
       ...classNodesAsync.valueOrNull ?? [],
       ...seriesNodesAsync.valueOrNull ?? [],
@@ -109,6 +132,20 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
     final subjectsAsync = _selectedClassNodeId == null
         ? null
         : ref.watch(subjectsForClassProvider(_selectedClassNodeId!));
+
+    if (subjectsAsync?.isLoading == true) {
+      return const Center(
+        child: CircularProgressIndicator(
+          semanticsLabel: 'Chargement des matières',
+        ),
+      );
+    }
+    if (subjectsAsync?.hasError == true) {
+      return _loadError(
+        'Impossible de charger les matières.',
+        () => ref.invalidate(subjectsForClassProvider(_selectedClassNodeId!)),
+      );
+    }
     final subjects = subjectsAsync?.valueOrNull ?? [];
 
     if (subjects.isNotEmpty &&
@@ -1036,11 +1073,17 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
     final actionButtons = [
       if (!lesson.isPublished && lesson.contentJson['blocks'] is List)
         IconButton(
-          icon: const Icon(Icons.auto_stories_rounded, size: 18, color: AppTheme.accentCyan),
+          icon: const Icon(
+            Icons.auto_stories_rounded,
+            size: 18,
+            color: AppTheme.accentCyan,
+          ),
           tooltip: 'Ouvrir dans le Studio de Cours',
-          onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
-            builder: (_) => LessonBuilderScreen(initialLessonId: lesson.id),
-          )),
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => LessonBuilderScreen(initialLessonId: lesson.id),
+            ),
+          ),
         ),
       IconButton(
         icon: const Icon(
@@ -2781,7 +2824,9 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
     if (blocks.isEmpty && isEditing) {
       final legacyBody = existing.contentJson['body'] as String?;
       if (legacyBody != null && legacyBody.trim().isNotEmpty) {
-        blocks.add(EditableLessonBlock(type: 'paragraph', body: legacyBody.trim()));
+        blocks.add(
+          EditableLessonBlock(type: 'paragraph', body: legacyBody.trim()),
+        );
       }
     }
     // Nouvelle leçon : un bloc paragraphe vide prêt à l'emploi, pour ne pas forcer un clic
@@ -3141,7 +3186,8 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                                                   ..clear()
                                                   ..addAll(
                                                     generated.map(
-                                                      EditableLessonBlock.fromJson,
+                                                      EditableLessonBlock
+                                                          .fromJson,
                                                     ),
                                                   );
                                               });
@@ -3576,13 +3622,16 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
               labelText: 'Type de bloc',
               isDense: true,
             ),
-            items: [
-              ...kEditableBlockTypes,
-              if (!kEditableBlockTypes.any((t) => t.$1 == block.type))
-                (block.type, 'Bloc spécialisé (contenu conservé)'),
-            ]
-                .map((t) => DropdownMenuItem(value: t.$1, child: Text(t.$2)))
-                .toList(),
+            items:
+                [
+                      ...kEditableBlockTypes,
+                      if (!kEditableBlockTypes.any((t) => t.$1 == block.type))
+                        (block.type, 'Bloc spécialisé (contenu conservé)'),
+                    ]
+                    .map(
+                      (t) => DropdownMenuItem(value: t.$1, child: Text(t.$2)),
+                    )
+                    .toList(),
             onChanged: (v) {
               block.type = v ?? 'paragraph';
               onTypeChanged();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ai_usage_summary.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
@@ -149,7 +150,9 @@ class DashboardOverviewScreen extends ConsumerWidget {
                 ),
                 _KpiData(
                   title: 'Exercices en Banque',
-                  value: exercisesCount > 0 ? _formatCount(exercisesCount) : '—',
+                  value: exercisesCount > 0
+                      ? _formatCount(exercisesCount)
+                      : '—',
                   subtitle: '$exercisesCount exercices au total',
                   icon: Icons.quiz_rounded,
                   color: AppTheme.accentIndigo,
@@ -223,78 +226,74 @@ class DashboardOverviewScreen extends ConsumerWidget {
             builder: (context) {
               final isMobile = MediaQuery.of(context).size.width < 900;
               final validationInner = Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Contenus en Attente de Validation',
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppTheme.accentAmber.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            '$validationCount en attente',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.accentAmber,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    const Divider(),
-                    validationAsync.when(
-                      data: (items) => items.isEmpty
-                          ? Center(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 20,
-                                ),
-                                child: Text(
-                                  'Aucun contenu en attente de validation.',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    color: AppTheme.textMuted,
-                                  ),
-                                ),
-                              ),
-                            )
-                          : Column(
-                              children: items
-                                  .map(
-                                    (item) => _buildValidationItem(ref, item),
-                                  )
-                                  .toList(),
-                            ),
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (err, _) => Center(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
                         child: Text(
-                          'Erreur: $err',
-                          style: GoogleFonts.inter(color: AppTheme.accentRose),
+                          'Contenus en Attente de Validation',
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.outfit(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.accentAmber.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '$validationCount en attente',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.accentAmber,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  validationAsync.when(
+                    data: (items) => items.isEmpty
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              child: Text(
+                                'Aucun contenu en attente de validation.',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: AppTheme.textMuted,
+                                ),
+                              ),
+                            ),
+                          )
+                        : Column(
+                            children: items
+                                .map((item) => _buildValidationItem(ref, item))
+                                .toList(),
+                          ),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (err, _) => Center(
+                      child: Text(
+                        'Erreur: $err',
+                        style: GoogleFonts.inter(color: AppTheme.accentRose),
+                      ),
                     ),
-                  ],
-                );
+                  ),
+                ],
+              );
               final validationBox = isMobile
                   ? validationInner
                   : Container(
@@ -314,96 +313,86 @@ class DashboardOverviewScreen extends ConsumerWidget {
               }
 
               final aiUsageInner = Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.psychology_rounded,
-                          color: AppTheme.accentCyan,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.psychology_rounded,
+                        color: AppTheme.accentCyan,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Agents IA - Consommation API',
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.outfit(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
-                        const SizedBox(width: 8),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 12),
+                  aiCallsAsync.when(
+                    data: (calls) => calls.isEmpty
+                        ? Center(
+                            child: Text(
+                              'Aucun appel IA enregistré.',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: AppTheme.textMuted,
+                              ),
+                            ),
+                          )
+                        : AiUsageSummary(calls: calls),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (err, _) => Center(
+                      child: Text(
+                        'Erreur: $err',
+                        style: GoogleFonts.inter(color: AppTheme.accentRose),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryDark,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppTheme.primaryBorder),
+                    ),
+                    child: Row(
+                      children: [
                         Expanded(
                           child: Text(
-                            'Agents IA - Consommation API',
+                            'Coût Total Estimé (30j) :',
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: Colors.white70,
                             ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${totalAiCost.toStringAsFixed(2)} \$',
+                          style: GoogleFonts.outfit(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.accentCyan,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    const Divider(),
-                    const SizedBox(height: 12),
-                    aiCallsAsync.when(
-                      data: (calls) => calls.isEmpty
-                          ? Center(
-                              child: Text(
-                                'Aucun appel IA enregistré.',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: AppTheme.textMuted,
-                                ),
-                              ),
-                            )
-                          : Column(
-                              children: calls
-                                  .map(
-                                    (call) => _buildAiUsageRow(
-                                      call.agentType,
-                                      '${call.tokensUsed} tokens',
-                                      '\$${call.costEstimate.toStringAsFixed(2)}',
-                                    ),
-                                  )
-                                  .toList(),
-                            ),
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (err, _) => Center(
-                        child: Text(
-                          'Erreur: $err',
-                          style: GoogleFonts.inter(color: AppTheme.accentRose),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryDark,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppTheme.primaryBorder),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Coût Total Estimé (30j) :',
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: Colors.white70,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${totalAiCost.toStringAsFixed(2)} \$',
-                            style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.accentCyan,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
+                  ),
+                ],
+              );
               final aiUsageBox = isMobile
                   ? aiUsageInner
                   : Container(
@@ -532,7 +521,10 @@ class DashboardOverviewScreen extends ConsumerWidget {
             ? SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2.5, color: k.color),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: k.color,
+                ),
               )
             : Text(
                 k.value,
@@ -615,39 +607,6 @@ class DashboardOverviewScreen extends ConsumerWidget {
       ),
     );
   }
-
-  Widget _buildAiUsageRow(String task, String requests, String cost) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Text(
-              task,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(fontSize: 13, color: Colors.white70),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            requests,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted),
-          ),
-          const SizedBox(width: 16),
-          Text(
-            cost,
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _KpiData {
@@ -690,13 +649,27 @@ class _AdminAssistantCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.support_agent_rounded, color: AppTheme.accentIndigo, size: 20),
+              const Icon(
+                Icons.support_agent_rounded,
+                color: AppTheme.accentIndigo,
+                size: 20,
+              ),
               const SizedBox(width: 10),
-              Text('Assistant Admin (AIA-AGT-021)',
-                  style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+              Text(
+                'Assistant Admin (AIA-AGT-021)',
+                style: GoogleFonts.outfit(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
               const Spacer(),
               IconButton(
-                icon: const Icon(Icons.refresh_rounded, color: AppTheme.textMuted, size: 18),
+                icon: const Icon(
+                  Icons.refresh_rounded,
+                  color: AppTheme.textMuted,
+                  size: 18,
+                ),
                 onPressed: () => ref.invalidate(adminAssistantSummaryProvider),
               ),
             ],
@@ -707,24 +680,56 @@ class _AdminAssistantCard extends ConsumerWidget {
               padding: EdgeInsets.symmetric(vertical: 12),
               child: LinearProgressIndicator(),
             ),
-            error: (err, _) => Text('Indisponible : $err', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose)),
+            error: (err, _) => Text(
+              'Indisponible : $err',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: AppTheme.accentRose,
+              ),
+            ),
             data: (summary) {
               final failures = (summary['recent_ai_failures'] as List?) ?? [];
-              final tickets = (summary['open_support_tickets_by_category'] as Map?) ?? {};
-              final pendingValidation = summary['pending_content_validation'] as int? ?? 0;
+              final tickets =
+                  (summary['open_support_tickets_by_category'] as Map?) ?? {};
+              final pendingValidation =
+                  summary['pending_content_validation'] as int? ?? 0;
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Wrap(spacing: 20, runSpacing: 10, children: [
-                    _statChip('Échecs IA récents', '${failures.length}', failures.isEmpty ? AppTheme.accentEmerald : AppTheme.accentRose),
-                    _statChip('Tickets ouverts', '${tickets.values.fold<int>(0, (a, b) => a + (b as int))}', AppTheme.accentAmber),
-                    _statChip('Contenu en attente', '$pendingValidation', AppTheme.accentCyan),
-                  ]),
+                  Wrap(
+                    spacing: 20,
+                    runSpacing: 10,
+                    children: [
+                      _statChip(
+                        'Échecs IA récents',
+                        '${failures.length}',
+                        failures.isEmpty
+                            ? AppTheme.accentEmerald
+                            : AppTheme.accentRose,
+                      ),
+                      _statChip(
+                        'Tickets ouverts',
+                        '${tickets.values.fold<int>(0, (a, b) => a + (b as int))}',
+                        AppTheme.accentAmber,
+                      ),
+                      _statChip(
+                        'Contenu en attente',
+                        '$pendingValidation',
+                        AppTheme.accentCyan,
+                      ),
+                    ],
+                  ),
                   if (failures.isNotEmpty) ...[
                     const SizedBox(height: 14),
-                    Text('Dernier échec : ${failures.first['agent_type']} — ${failures.first['error_message']}',
-                        style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted),
-                        maxLines: 2, overflow: TextOverflow.ellipsis),
+                    Text(
+                      'Dernier échec : ${failures.first['agent_type']} — ${failures.first['error_message']}',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: AppTheme.textMuted,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ],
               );
@@ -736,10 +741,23 @@ class _AdminAssistantCard extends ConsumerWidget {
   }
 
   Widget _statChip(String label, String value, Color color) {
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      Text(value, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-      const SizedBox(width: 6),
-      Text(label, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted)),
-    ]);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.outfit(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted),
+        ),
+      ],
+    );
   }
 }

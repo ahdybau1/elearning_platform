@@ -34,7 +34,8 @@ class ImageGenerationRequest {
 
   /// Calcule un hash unique déterministe pour le cache intelligent (FNV-1a 64-bit)
   String computeCacheHash() {
-    final raw = '$prompt|$subject|${classLevel ?? ''}|${style.name}|${aspectRatio.name}|$model|$format';
+    final raw =
+        '$prompt|$subject|${classLevel ?? ''}|${style.name}|${aspectRatio.name}|$model|$format';
     final bytes = utf8.encode(raw);
     // BigInt conserve les 64 bits sur Dart VM comme sur JavaScript.
     var hash = BigInt.parse('cbf29ce484222325', radix: 16);
@@ -50,12 +51,18 @@ class ImageGenerationRequest {
   /// Enrichit le prompt avec le contexte pédagogique et la discipline
   String buildEnrichedPrompt() {
     final styleDesc = switch (style) {
-      ImageStyleType.scientificDiagram => 'Precise, clean high-resolution scientific educational diagram with clear annotations, no clutter',
-      ImageStyleType.realisticPhoto => 'Realistic, authentic educational high-quality photograph for school textbook',
-      ImageStyleType.historicalIllustration => 'Accurate, high-quality historical textbook illustration with period details',
-      ImageStyleType.anatomicalIllustration => 'Accurate biological medical educational illustration with natural colors and structure',
-      ImageStyleType.technicalBlueprint => 'Clean vector technical blueprint schema with engineering components',
-      ImageStyleType.modernFlatPedagogical => 'Modern crisp pedagogical vector graphic with accessible harmonious palette',
+      ImageStyleType.scientificDiagram =>
+        'Precise, clean high-resolution scientific educational diagram with clear annotations, no clutter',
+      ImageStyleType.realisticPhoto =>
+        'Realistic, authentic educational high-quality photograph for school textbook',
+      ImageStyleType.historicalIllustration =>
+        'Accurate, high-quality historical textbook illustration with period details',
+      ImageStyleType.anatomicalIllustration =>
+        'Accurate biological medical educational illustration with natural colors and structure',
+      ImageStyleType.technicalBlueprint =>
+        'Clean vector technical blueprint schema with engineering components',
+      ImageStyleType.modernFlatPedagogical =>
+        'Modern crisp pedagogical vector graphic with accessible harmonious palette',
     };
 
     return '$prompt. Subject: $subject. Educational context: for school curriculum. Style instructions: $styleDesc. High educational value, strictly appropriate for students.';
@@ -97,63 +104,13 @@ class ImageGenerationEngine {
     return _cache[hash];
   }
 
-  /// Simule ou orchestre la génération via Edge Function / Provider serveur sécurisé
-  static Future<GeneratedImageResult> generate(ImageGenerationRequest req) async {
-    final hash = req.computeCacheHash();
-
-    // 1. Vérification du cache intelligent
-    if (_cache.containsKey(hash)) {
-      final existing = _cache[hash]!;
-      return GeneratedImageResult(
-        id: existing.id,
-        cacheHash: hash,
-        imageUrl: existing.imageUrl,
-        prompt: existing.prompt,
-        style: existing.style,
-        format: existing.format,
-        fromCache: true,
-        createdAt: existing.createdAt,
-      );
-    }
-
-    // 2. Génération via Edge Function ou fallback sécurisé
-    await Future.delayed(const Duration(milliseconds: 600));
-
-    // Détermine une image d'illustration de haute qualité selon la discipline
-    final fallbackUrl = _getCuratedEducationalImageUrl(req.subject, req.style);
-
-    final result = GeneratedImageResult(
-      id: 'img_${DateTime.now().millisecondsSinceEpoch}',
-      cacheHash: hash,
-      imageUrl: fallbackUrl,
-      prompt: req.prompt,
-      style: req.style.name,
-      format: req.format,
-      fromCache: false,
-      createdAt: DateTime.now(),
+  /// Aucun fournisseur de génération n'est raccordé dans cette application.
+  /// Ne jamais présenter une photo prédéfinie comme un résultat généré.
+  static Future<GeneratedImageResult> generate(
+    ImageGenerationRequest req,
+  ) async {
+    throw UnsupportedError(
+      'Génération d’images IA non raccordée. Utilisez la médiathèque.',
     );
-
-    _cache[hash] = result;
-    return result;
-  }
-
-  static String _getCuratedEducationalImageUrl(String subject, ImageStyleType style) {
-    final lower = subject.toLowerCase();
-    if (lower.contains('math')) {
-      return 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=1200&auto=format&fit=crop&q=80';
-    }
-    if (lower.contains('physiq')) {
-      return 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?w=1200&auto=format&fit=crop&q=80';
-    }
-    if (lower.contains('chim')) {
-      return 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=1200&auto=format&fit=crop&q=80';
-    }
-    if (lower.contains('bio') || lower.contains('svt')) {
-      return 'https://images.unsplash.com/photo-1530497610245-94d3c16cda28?w=1200&auto=format&fit=crop&q=80';
-    }
-    if (lower.contains('info') || lower.contains('code')) {
-      return 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1200&auto=format&fit=crop&q=80';
-    }
-    return 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=1200&auto=format&fit=crop&q=80';
   }
 }
