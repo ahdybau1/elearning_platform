@@ -193,6 +193,7 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
   Widget build(BuildContext context) {
     final chapter = widget.chapter;
     final isUnlocked = chapter.isUnlocked;
+    final summarySheet = SummarySheetRegistry.findSheetFor(chapter.title);
 
     return Container(
       clipBehavior: Clip.antiAlias,
@@ -240,7 +241,9 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                           ),
                           decoration: BoxDecoration(
                             color: isUnlocked
-                                ? widget.visual.gradient.first.withValues(alpha: 0.18)
+                                ? widget.visual.gradient.first.withValues(
+                                    alpha: 0.18,
+                                  )
                                 : Colors.grey.withValues(alpha: 0.15),
                             borderRadius: AppRadius.radiusSmall,
                           ),
@@ -318,151 +321,172 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                       ),
                     ],
                     const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            '${chapter.lessonsCount} leçons • ${chapter.exercisesCount} exercices',
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: context.colors.textMuted,
-                            ),
+                        Text(
+                          '${chapter.lessonsCount} leçons • ${chapter.exercisesCount} exercices',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: context.colors.textMuted,
                           ),
                         ),
-                        if (isUnlocked) ...[
-                          const SizedBox(width: 4),
-                          IconButton(
-                            visualDensity: VisualDensity.compact,
-                            icon: const Icon(
-                              Icons.history_edu_rounded,
-                              size: 18,
-                              color: Color(0xFF38BDF8),
-                            ),
-                            tooltip: 'Introduction & Applications',
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ChapterIntroScreen(
-                                    subjectName: (widget.subjectName ?? 'MATHEMATIQUES').toUpperCase(),
-                                    chapterTitle: chapter.title,
-                                  ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 4,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            if (isUnlocked) ...[
+                              IconButton(
+                                visualDensity: VisualDensity.compact,
+                                icon: const Icon(
+                                  Icons.history_edu_rounded,
+                                  size: 18,
+                                  color: Color(0xFF38BDF8),
                                 ),
-                              );
-                            },
-                          ),
-                          IconButton(
-                            visualDensity: VisualDensity.compact,
-                            icon: const Icon(
-                              Icons.alt_route_rounded,
-                              size: 18,
-                              color: Color(0xFF10B981),
-                            ),
-                            tooltip: 'Parcours d\'exercices adaptatif',
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ExercisePathScreen(
-                                    subjectName: (widget.subjectName ?? 'MATHEMATIQUES').toUpperCase(),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                          IconButton(
-                            visualDensity: VisualDensity.compact,
-                            icon: const Icon(
-                              Icons.auto_stories_rounded,
-                              size: 18,
-                              color: Color(0xFFF59E0B),
-                            ),
-                            tooltip: 'Fiche Mémo Synthèse HD',
-                            onPressed: () {
-                              final sheet = SummarySheetRegistry.findSheetFor(chapter.title) ??
-                                  SummarySheetRegistry.sheets.first;
-                              SummarySheetViewerModal.show(context, sheet);
-                            },
-                          ),
-                          if (chapter.lessonsCount > 1)
-                            IconButton(
-                              visualDensity: VisualDensity.compact,
-                              icon: Icon(
-                                _isExpanded
-                                    ? Icons.keyboard_arrow_up_rounded
-                                    : Icons.keyboard_arrow_down_rounded,
-                                color: context.colors.textSecondary,
-                              ),
-                              tooltip: _isExpanded ? 'Masquer les leçons' : 'Voir les leçons',
-                              onPressed: () => setState(() => _isExpanded = !_isExpanded),
-                            ),
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: widget.visual.gradient.first,
-                              foregroundColor: Colors.black,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 8,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: AppRadius.radiusSmall,
-                              ),
-                            ),
-                            onPressed: () {
-                              Navigator.pushNamed(
-                                context,
-                                '/lesson-reader',
-                                arguments: {
-                                  'chapterId': chapter.id,
-                                  'chapterTitle': chapter.title,
+                                tooltip: 'Introduction & Applications',
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ChapterIntroScreen(
+                                        chapterId: chapter.id,
+                                        introduction: chapter.introduction,
+                                        subjectName:
+                                            (widget.subjectName ??
+                                                    'MATHEMATIQUES')
+                                                .toUpperCase(),
+                                        chapterTitle: chapter.title,
+                                      ),
+                                    ),
+                                  );
                                 },
-                              );
-                            },
-                            icon: const Icon(
-                              Icons.play_arrow_rounded,
-                              size: 16,
-                            ),
-                            label: const Text(
-                              'Ouvrir le cours',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
                               ),
-                            ),
-                          ),
-                        ] else
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: context.colors.textSecondary,
-                              side: BorderSide(color: context.colors.border),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
+                              IconButton(
+                                visualDensity: VisualDensity.compact,
+                                icon: const Icon(
+                                  Icons.alt_route_rounded,
+                                  size: 18,
+                                  color: Color(0xFF10B981),
+                                ),
+                                tooltip: 'Parcours d\'exercices adaptatif',
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ExercisePathScreen(
+                                        subjectName:
+                                            (widget.subjectName ??
+                                                    'MATHEMATIQUES')
+                                                .toUpperCase(),
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
-                            ),
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    chapter.termName != null
-                                        ? 'Ce chapitre sera débloqué automatiquement au ${chapter.termName}.'
-                                        : 'Ce chapitre sera débloqué automatiquement à la date prévue.',
+                              if (summarySheet != null)
+                                IconButton(
+                                  visualDensity: VisualDensity.compact,
+                                  icon: const Icon(
+                                    Icons.auto_stories_rounded,
+                                    size: 18,
+                                    color: Color(0xFFF59E0B),
+                                  ),
+                                  tooltip: 'Fiche Mémo Synthèse HD',
+                                  onPressed: () {
+                                    SummarySheetViewerModal.show(
+                                      context,
+                                      summarySheet,
+                                    );
+                                  },
+                                ),
+                              if (chapter.lessonsCount > 1)
+                                IconButton(
+                                  visualDensity: VisualDensity.compact,
+                                  icon: Icon(
+                                    _isExpanded
+                                        ? Icons.keyboard_arrow_up_rounded
+                                        : Icons.keyboard_arrow_down_rounded,
+                                    color: context.colors.textSecondary,
+                                  ),
+                                  tooltip: _isExpanded
+                                      ? 'Masquer les leçons'
+                                      : 'Voir les leçons',
+                                  onPressed: () => setState(
+                                    () => _isExpanded = !_isExpanded,
                                   ),
                                 ),
-                              );
-                            },
-                            icon: const Icon(
-                              Icons.lock_outline_rounded,
-                              size: 14,
-                            ),
-                            label: const Text(
-                              'Bientôt débloqué',
-                              style: TextStyle(fontSize: 11),
-                            ),
-                          ),
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: widget.visual.gradient.first,
+                                  foregroundColor: Colors.black,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: AppRadius.radiusSmall,
+                                  ),
+                                ),
+                                onPressed: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/lesson-reader',
+                                    arguments: {
+                                      'chapterId': chapter.id,
+                                      'chapterTitle': chapter.title,
+                                    },
+                                  );
+                                },
+                                icon: const Icon(
+                                  Icons.play_arrow_rounded,
+                                  size: 16,
+                                ),
+                                label: const Text(
+                                  'Ouvrir le cours',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ] else
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: context.colors.textSecondary,
+                                  side: BorderSide(
+                                    color: context.colors.border,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                ),
+                                onPressed: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        chapter.termName != null
+                                            ? 'Ce chapitre sera débloqué automatiquement au ${chapter.termName}.'
+                                            : 'Ce chapitre sera débloqué automatiquement à la date prévue.',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(
+                                  Icons.lock_outline_rounded,
+                                  size: 14,
+                                ),
+                                label: const Text(
+                                  'Bientôt débloqué',
+                                  style: TextStyle(fontSize: 11),
+                                ),
+                              ),
+                          ],
+                        ),
                       ],
                     ),
 
@@ -473,17 +497,24 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                       const SizedBox(height: 12),
                       Consumer(
                         builder: (context, ref, _) {
-                          final lessonsAsync = ref.watch(studentLessonsProvider(chapter.id));
+                          final lessonsAsync = ref.watch(
+                            studentLessonsProvider(chapter.id),
+                          );
                           return lessonsAsync.when(
                             loading: () => const Center(
                               child: Padding(
                                 padding: EdgeInsets.all(8.0),
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               ),
                             ),
                             error: (err, _) => Text(
                               'Erreur: $err',
-                              style: const TextStyle(color: Colors.red, fontSize: 12),
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 12,
+                              ),
                             ),
                             data: (lessons) {
                               if (lessons.isEmpty) {
@@ -530,7 +561,8 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                                               '${idx + 1}. ${lesson.title}',
                                               style: GoogleFonts.inter(
                                                 fontSize: 13,
-                                                color: context.colors.textPrimary,
+                                                color:
+                                                    context.colors.textPrimary,
                                               ),
                                             ),
                                           ),

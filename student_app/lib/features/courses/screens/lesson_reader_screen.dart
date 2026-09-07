@@ -66,6 +66,7 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
     final authState = ref.watch(studentAuthProvider);
     final profile = authState.activeProfile;
     final lessonsAsync = ref.watch(studentLessonsProvider(widget.chapterId));
+    final summarySheet = SummarySheetRegistry.findSheetFor(widget.chapterTitle);
 
     return Scaffold(
       backgroundColor: context.colors.background,
@@ -96,23 +97,23 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.auto_stories_rounded, color: AppColors.primaryCyan),
-            tooltip: 'Fiche Mémo Synthèse HD (Zoom & Formules)',
-            onPressed: () {
-              final sheet = SummarySheetRegistry.findSheetFor(widget.chapterTitle) ??
-                  SummarySheetRegistry.sheets.first;
-              SummarySheetViewerModal.show(context, sheet);
-            },
-          ),
+          if (summarySheet != null)
+            IconButton(
+              icon: const Icon(
+                Icons.auto_stories_rounded,
+                color: AppColors.primaryCyan,
+              ),
+              tooltip: 'Fiche Mémo Synthèse HD (Zoom & Formules)',
+              onPressed: () {
+                SummarySheetViewerModal.show(context, summarySheet);
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.science_outlined, color: Color(0xFF38BDF8)),
             tooltip: 'Laboratoire interactif de la dérivée',
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const DerivativeLabScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const DerivativeLabScreen()),
               );
             },
           ),
@@ -163,7 +164,9 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
 
             // Sélection de la leçon initiale si spécifiée
             if (!_hasInitializedIndex && widget.initialLessonId != null) {
-              final foundIndex = lessons.indexWhere((l) => l.id == widget.initialLessonId);
+              final foundIndex = lessons.indexWhere(
+                (l) => l.id == widget.initialLessonId,
+              );
               if (foundIndex != -1) {
                 _selectedLessonIndex = foundIndex;
               }
@@ -175,7 +178,8 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
             }
 
             final lesson = lessons[_selectedLessonIndex];
-            final isLocked = !lesson.isFree && (profile?.hasActiveSubscription != true);
+            final isLocked =
+                !lesson.isFree && (profile?.hasActiveSubscription != true);
 
             final readerContent = SingleChildScrollView(
               controller: _scrollController,
@@ -185,7 +189,10 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
                 children: [
                   // Sélecteur horizontal de leçons si le chapitre en compte plusieurs
                   if (lessons.length > 1) ...[
-                    _buildLessonTabs(lessons, profile?.hasActiveSubscription == true),
+                    _buildLessonTabs(
+                      lessons,
+                      profile?.hasActiveSubscription == true,
+                    ),
                     const SizedBox(height: 20),
                   ],
 
@@ -255,8 +262,10 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
                   const SizedBox(height: 20),
 
                   // Fiche Mémo Synthèse Officielle (HD Zoom & Formules LaTeX)
-                  _buildSummarySheetBanner(context),
-                  const SizedBox(height: 20),
+                  if (summarySheet != null) ...[
+                    _buildSummarySheetBanner(context, summarySheet),
+                    const SizedBox(height: 20),
+                  ],
 
                   // Contenu structuré en blocs typés (CF-001)
                   for (final block in lesson.blocks) ...[
@@ -363,7 +372,9 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.w500,
                       color: isSelected
                           ? context.colors.accentPrimary
                           : context.colors.textSecondary,
@@ -401,7 +412,10 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
               label: Text(
                 'Leçon précédente',
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           )
@@ -415,7 +429,9 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
                 backgroundColor: context.colors.surface,
                 foregroundColor: context.colors.textPrimary,
                 elevation: 0,
-                side: BorderSide(color: context.colors.accentPrimary.withValues(alpha: 0.5)),
+                side: BorderSide(
+                  color: context.colors.accentPrimary.withValues(alpha: 0.5),
+                ),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: AppRadius.radiusMedium,
@@ -595,17 +611,16 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFF10B981),
-                side: BorderSide(color: const Color(0xFF10B981).withValues(alpha: 0.5)),
+                side: BorderSide(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.5),
+                ),
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.button),
                 ),
               ),
               onPressed: () {
-                ScientificToolsModal.show(
-                  context,
-                  initialQuery: lesson.title,
-                );
+                ScientificToolsModal.show(context, initialQuery: lesson.title);
               },
               icon: const Icon(Icons.calculate_rounded, size: 16),
               label: const Text(
@@ -740,10 +755,7 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
   }
 
   /// Bannière interactive d'accès direct à la Fiche Mémo Synthèse HD du chapitre
-  Widget _buildSummarySheetBanner(BuildContext context) {
-    final sheet = SummarySheetRegistry.findSheetFor(widget.chapterTitle) ??
-        SummarySheetRegistry.sheets.first;
-
+  Widget _buildSummarySheetBanner(BuildContext context, SummarySheet sheet) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -790,11 +802,16 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
                   runSpacing: 4,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.accentAmber.withAlpha(40),
                         borderRadius: AppRadius.radiusSmall,
-                        border: Border.all(color: AppColors.accentAmber.withAlpha(100)),
+                        border: Border.all(
+                          color: AppColors.accentAmber.withAlpha(100),
+                        ),
                       ),
                       child: const Text(
                         'FICHE DE SYNTHÈSE HD',

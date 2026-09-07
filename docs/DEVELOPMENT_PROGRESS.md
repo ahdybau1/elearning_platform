@@ -300,3 +300,29 @@ Configuration cliente limitée à `.env.public`, contrôle automatisé des asset
 l'auto-connexion admin de développement. La révocation legacy reste à terminer après migration
 des consommateurs serveur. Aucun nouvel hébergement configuré. Détails et limites dans
 `STUDIO_PUBLICATION_VERIFICATION.md`, qui actualise les limites de la première passe ci-dessus.
+
+## 7 septembre — fidélité du contexte dans le parcours élève (après `be2c58e`)
+
+Exigences : MASTER U2/U2.3, Content Factory §5/§12, absence de faux succès (AGENTS.md).
+
+- Le registre de fiches retourne désormais une correspondance précise ou aucune ; normalisation
+  des accents/séparateurs, limites de mots, préférence au sujet le plus précis et refus des
+  égalités ambiguës. Une matière générique ou un chapitre inconnu n'ouvre plus Suites réelles.
+- Liste des chapitres et lecteur utilisent cette même résolution ; images/formules conservées.
+- Visionneuse : message honnête sur l'enregistrement hors ligne non implémenté, erreur image
+  distinguée d'un chargement, accès au mode formules conservé. Onglets et consigne de zoom
+  adaptés aux petits écrans ; actions de chapitre sur plusieurs lignes au besoin.
+- Introduction : reçoit l'identifiant et le texte réels du chapitre, les transmet au lecteur,
+  ne fabrique plus une classe Terminale. Le texte enregistré prime sur le template de dérivation,
+  qui reste restreint aux chapitres de mathématiques concernés. État explicite si aucun texte.
+- Laboratoire : retour au lecteur d'origine et à sa leçon sélectionnée, sans `chap_derivation`
+  fictif ni annonce de validation d'une observation qui n'a pas été évaluée.
+- Vérification : 44 tests élève passants (20 existants + 24 nouveaux), analyse des huit fichiers
+  concernés sans problème. Tests des trois fiches à 390/800/1400 pixels, erreur image,
+  navigation introduction/lecteur, maintien de la sélection après le laboratoire.
+  Build web release final réussi ; configuration distribuée contrôlée par
+  `node scripts/verify_public_config.cjs --built`.
+- Aucun changement de schéma, de permission, de données Supabase ou d'images de référence.
+  Les tests des services utilisent des données de contrôle ; aucune nouvelle validation distante
+  de ces parcours n'est revendiquée. Le stockage hors ligne et l'association des références
+  administrable par identifiant restent des chantiers distincts. Déploiement non effectué.

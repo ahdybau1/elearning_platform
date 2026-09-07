@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../design_system/tokens/app_colors.dart';
 import '../../../design_system/tokens/app_radius.dart';
 import '../../pedagogy/widgets/interactive_function_graph.dart';
-import 'lesson_reader_screen.dart';
 
 /// Écran complet de l'Activité Interactive « Observe la dérivée »
 /// Permet à l'élève de manipuler le point A sur la courbe, d'observer
@@ -51,7 +50,10 @@ class _DerivativeLabScreenState extends State<DerivativeLabScreen> {
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -60,12 +62,15 @@ class _DerivativeLabScreenState extends State<DerivativeLabScreen> {
                       alignment: Alignment.centerLeft,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 5),
+                          horizontal: 12,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF6B21A8).withAlpha(160),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                              color: const Color(0xFFA855F7).withAlpha(100)),
+                            color: const Color(0xFFA855F7).withAlpha(100),
+                          ),
                         ),
                         child: const Text(
                           'ACTIVITÉ INTERACTIVE',
@@ -149,10 +154,7 @@ class _DerivativeLabScreenState extends State<DerivativeLabScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFF0F172A),
                 border: Border(
-                  top: BorderSide(
-                    color: Colors.white.withAlpha(20),
-                    width: 1,
-                  ),
+                  top: BorderSide(color: Colors.white.withAlpha(20), width: 1),
                 ),
               ),
               child: Row(
@@ -165,7 +167,9 @@ class _DerivativeLabScreenState extends State<DerivativeLabScreen> {
                       foregroundColor: Colors.white,
                       side: const BorderSide(color: Color(0xFF334155)),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppRadius.card),
                       ),
@@ -175,24 +179,9 @@ class _DerivativeLabScreenState extends State<DerivativeLabScreen> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        // Célébration ou passage à la suite de la leçon
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Observation validée avec succès ! Poursuivons vers les variations.',
-                            ),
-                            backgroundColor: AppColors.tealSuccess,
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(
-                            builder: (_) => const LessonReaderScreen(
-                              chapterId: 'chap_derivation',
-                              chapterTitle: 'Fonction dérivée',
-                            ),
-                          ),
-                        );
+                        // The activity is opened from the reader: keep its selected
+                        // lesson and scroll position instead of fabricating a chapter.
+                        Navigator.of(context).pop();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.tealSuccess,
@@ -204,7 +193,7 @@ class _DerivativeLabScreenState extends State<DerivativeLabScreen> {
                         elevation: 4,
                       ),
                       child: const Text(
-                        'VALIDER MON OBSERVATION',
+                        'REVENIR AU COURS',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,

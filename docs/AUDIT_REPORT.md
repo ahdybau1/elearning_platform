@@ -1,5 +1,29 @@
 # Audit Report — EDLEARN
 
+## Reprise après `be2c58e` — fiches de révision élève
+
+Audit local du 7 septembre, avant modification du code. Exigences : MASTER U2/U2.3,
+Content Factory §5 (rendu conforme au contenu), absence de faux succès dans AGENTS.md.
+
+| Existant | Écart | Correction prévue | Risque / vérification |
+|---|---|---|---|
+| Registre de trois fiches et accès depuis chapitres/lecteur | `findSheetFor` retourne toujours une fiche, même pour SVT, un titre vide ou inconnu ; les écrans ajoutent encore un fallback sur Suites | Résolution normalisée par titre/tag, aucune fiche si absence ou ambiguïté ; accès conditionnels cohérents | Conserver les trois fiches et leurs images ; tests positifs/négatifs et widget |
+| Bouton marqué « Fiche enregistrée » dans la visionneuse | Affiche un succès hors ligne sans aucune écriture ni vérification du cache | Indiquer honnêtement que l'enregistrement hors ligne n'est pas disponible | Aucun téléchargement existant supprimé ; vérifier le message utilisateur |
+
+Aucune modification de schéma, permission ou donnée distante nécessaire pour cette tranche.
+
+Écart supplémentaire vérifié sur le même parcours : `ChapterIntroScreen` reçoit le titre
+du chapitre mais affiche systématiquement Fermat/la dérivée et une classe Terminale fictive.
+Son bouton ouvre `chap_derivation`, qui n'est pas un UUID Supabase. Correction prévue :
+transmettre identifiant et introduction réels, garder le template de dérivation pour les
+chapitres de mathématiques correspondants uniquement, afficher un état honnête sinon,
+et ouvrir le chapitre d'origine. Vérification widget de la navigation et de la priorité
+du contenu enregistré. Aucun changement de données nécessaire.
+
+La même valeur fictive est utilisée à la sortie du laboratoire de dérivée, dont les deux
+points d'entrée sont le lecteur. Le retour doit dépiler l'activité pour retrouver exactement
+la leçon sélectionnée, sans créer un nouveau lecteur ni annoncer une validation non calculée.
+
 ## Vérification distante du 2026-09-07
 
 Le parcours Studio/revue a été corrigé et testé sur le schéma Supabase réel, avec

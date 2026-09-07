@@ -22,6 +22,7 @@ class SummarySheet {
   final String subject;
   final String level;
   final String chapterTag;
+  final List<String> chapterAliases;
   final String imageAssetPath;
   final List<SummarySheetSection> sections;
 
@@ -31,6 +32,7 @@ class SummarySheet {
     required this.subject,
     this.level = 'Terminale C, D & TI',
     required this.chapterTag,
+    this.chapterAliases = const [],
     required this.imageAssetPath,
     required this.sections,
   });
@@ -47,6 +49,12 @@ class SummarySheetRegistry {
       title: 'Résumé : Suites Réelles',
       subject: 'Mathématiques',
       chapterTag: 'suites',
+      chapterAliases: [
+        'suites réelles',
+        'suites numériques',
+        'suite arithmétique',
+        'suite géométrique',
+      ],
       imageAssetPath: 'assets/sheets/math_suites_reelles.jpg',
       sections: [
         SummarySheetSection(
@@ -65,12 +73,15 @@ class SummarySheetRegistry {
             'r : Raison de la suite arithmétique',
             'q : Raison de la suite géométrique',
           ],
-          tip: 'Attention : Pour une somme de U_1 à U_n, le nombre de termes est n. De U_0 à U_n, il y a (n+1) termes !',
+          tip:
+              'Attention : Pour une somme de U_1 à U_n, le nombre de termes est n. De U_0 à U_n, il y a (n+1) termes !',
         ),
         SummarySheetSection(
           title: '2. Raisonnement par Récurrence',
-          formulaLatex: r'\forall n \ge n_0, \quad \mathcal{P}(n) \text{ est vraie}',
-          explanation: 'Démonstration rigoureuse en trois étapes indissociables :',
+          formulaLatex:
+              r'\forall n \ge n_0, \quad \mathcal{P}(n) \text{ est vraie}',
+          explanation:
+              'Démonstration rigoureuse en trois étapes indissociables :',
           bulletPoints: [
             'Étape 1 (Initialisation) : On vérifie que la proposition P(n) est vraie pour le premier rang n_0.',
             'Étape 2 (Hérédité) : On suppose que P(n) est vraie pour un rang n fixé (Hypothèse de récurrence), et on démontre que P(n+1) est vraie.',
@@ -94,7 +105,8 @@ class SummarySheetRegistry {
         ),
         SummarySheetSection(
           title: '4. Théorèmes de Convergence & Comparaisons',
-          formulaLatex: r'''V_n \le U_n \le W_n \quad \text{et} \quad \lim V_n = \lim W_n = \ell \implies \lim U_n = \ell''',
+          formulaLatex:
+              r'''V_n \le U_n \le W_n \quad \text{et} \quad \lim V_n = \lim W_n = \ell \implies \lim U_n = \ell''',
           explanation: 'Théorèmes cardinaux pour le Baccalauréat :',
           bulletPoints: [
             'Théorème de convergence monotone : Toute suite croissante et majorée est convergente.',
@@ -112,6 +124,7 @@ class SummarySheetRegistry {
       title: 'Les Oscillateurs Mécaniques',
       subject: 'Physique-Chimie',
       chapterTag: 'oscillateurs',
+      chapterAliases: ['oscillateur mécanique', 'oscillateurs mécaniques'],
       imageAssetPath: 'assets/sheets/physique_oscillateurs_classification.jpg',
       sections: [
         SummarySheetSection(
@@ -122,7 +135,8 @@ class SummarySheetRegistry {
 \text{Pendule pesant} & \longleftrightarrow \text{Solide oscillant autour d'un axe horizontal } (d, J_\Delta) \\
 \text{Pendule simple} & \longleftrightarrow \text{Fil inextensible de longueur } L \text{ + Masse ponctuelle } m
 \end{aligned}''',
-          explanation: 'Deux approches mécaniques selon la nature du mouvement :',
+          explanation:
+              'Deux approches mécaniques selon la nature du mouvement :',
           bulletPoints: [
             'Translation (Pendule élastique) : Application directe de la IIᵉ Loi de Newton : ∑ F_ext = m · a_G',
             'Rotation (Pendules de torsion, pesant, simple) : Relation Fondamentale de la Dynamique en rotation (R.F.D.) : ∑ M_Δ(F_ext) = J_Δ · θ̈',
@@ -130,8 +144,10 @@ class SummarySheetRegistry {
         ),
         SummarySheetSection(
           title: '2. Bilan Dynamique : Translation vs Rotation',
-          formulaLatex: r'''\sum \vec{F}_{\text{ext}} = m \cdot \vec{a}_G \quad \Big| \quad \sum \mathcal{M}_\Delta(\vec{F}_{\text{ext}}) = J_\Delta \cdot \ddot{\theta}''',
-          explanation: 'Choisir le bon référentiel et le bon axe de projection pour isoler le système mécanique.',
+          formulaLatex:
+              r'''\sum \vec{F}_{\text{ext}} = m \cdot \vec{a}_G \quad \Big| \quad \sum \mathcal{M}_\Delta(\vec{F}_{\text{ext}}) = J_\Delta \cdot \ddot{\theta}''',
+          explanation:
+              'Choisir le bon référentiel et le bon axe de projection pour isoler le système mécanique.',
           bulletPoints: [
             'En translation : Repère cartésien (O, i, j). Projection sur l\'axe du mouvement.',
             'En rotation : Coordonnées angulaires θ(t), vitesse angulaire θ̇, accélération angulaire θ̈.',
@@ -146,6 +162,7 @@ class SummarySheetRegistry {
       title: 'Étude Dynamique du Pendule Élastique',
       subject: 'Physique-Chimie',
       chapterTag: 'pendule_elastique',
+      chapterAliases: ['pendules élastiques'],
       imageAssetPath: 'assets/sheets/physique_pendule_elastique_dynamique.jpg',
       sections: [
         SummarySheetSection(
@@ -155,11 +172,13 @@ class SummarySheetRegistry {
 \text{Plan Incliné (angle } \alpha \text{) : } & m \cdot g \cdot \sin\alpha - k \cdot \Delta \ell_0 = 0 \implies \Delta \ell_0 = \frac{m \cdot g \cdot \sin\alpha}{k} \\
 \text{Vertical : } & m \cdot g - k \cdot \Delta \ell_0 = 0 \implies \Delta \ell_0 = \frac{m \cdot g}{k}
 \end{aligned}''',
-          explanation: 'À l\'équilibre : ∑ F_ext = 0 (Le poids P, la réaction R du support et la tension F_0 du ressort s\'annulent).',
+          explanation:
+              'À l\'équilibre : ∑ F_ext = 0 (Le poids P, la réaction R du support et la tension F_0 du ressort s\'annulent).',
         ),
         SummarySheetSection(
           title: '2. Équation Différentielle du Mouvement',
-          formulaLatex: r'\ddot{x} + \frac{k}{m} x = 0 \quad \iff \quad \ddot{x} + \omega_0^2 x = 0',
+          formulaLatex:
+              r'\ddot{x} + \frac{k}{m} x = 0 \quad \iff \quad \ddot{x} + \omega_0^2 x = 0',
           explanation: 'Nature du mouvement :',
           bulletPoints: [
             'Puisque l\'équation différentielle est linéaire du second ordre sans second membre à coefficients constants positifs :',
@@ -169,32 +188,70 @@ class SummarySheetRegistry {
         ),
         SummarySheetSection(
           title: '3. Période Propre & Équation Horaire',
-          formulaLatex: r'''T_0 = 2\pi \sqrt{\frac{m}{k}} \qquad x(t) = X_m \cdot \cos\left(\frac{2\pi}{T_0} t + \varphi\right)''',
+          formulaLatex:
+              r'''T_0 = 2\pi \sqrt{\frac{m}{k}} \qquad x(t) = X_m \cdot \cos\left(\frac{2\pi}{T_0} t + \varphi\right)''',
           explanation: 'Grandeurs caractéristiques de l\'oscillateur :',
           bulletPoints: [
             'T_0 : Période propre des oscillations (en secondes s)',
             'X_m : Amplitude maximale des oscillations (en mètres m), toujours strictement positive',
             'φ : Phase initiale à t = 0 (en radians rad), déterminée par les Conditions Initiales (C.I.)',
           ],
-          tip: 'Astuce d\'examen : Si le solide est lâché sans vitesse initiale depuis x_0 > 0 à t=0, alors X_m = x_0 et φ = 0.',
+          tip:
+              'Astuce d\'examen : Si le solide est lâché sans vitesse initiale depuis x_0 > 0 à t=0, alors X_m = x_0 et φ = 0.',
         ),
       ],
     ),
   ];
 
-  /// Recherche une fiche de synthèse par mot-clé (matière, titre ou tag chapitre)
+  /// Résout un sujet précis, jamais une matière générique ou un titre inconnu.
+  /// Les expressions complètes évitent « poursuites » -> « suites ». Une
+  /// correspondance plus précise prime ; une égalité ambiguë ne choisit rien.
   static SummarySheet? findSheetFor(String query) {
-    final lower = query.toLowerCase();
+    final normalized = _normalize(query);
+    if (normalized.isEmpty) return null;
+    SummarySheet? match;
+    var bestScore = 0;
+    var ambiguous = false;
     for (final sheet in sheets) {
-      if (sheet.chapterTag.contains(lower) ||
-          sheet.title.toLowerCase().contains(lower) ||
-          lower.contains(sheet.chapterTag)) {
-        return sheet;
+      var score = 0;
+      for (final candidate in [
+        sheet.id,
+        sheet.title,
+        sheet.chapterTag,
+        ...sheet.chapterAliases,
+      ]) {
+        final phrase = _normalize(candidate);
+        if (phrase.isNotEmpty && ' $normalized '.contains(' $phrase ')) {
+          final words = phrase.split(' ').length;
+          if (words > score) score = words;
+        }
+      }
+      if (score > bestScore) {
+        match = sheet;
+        bestScore = score;
+        ambiguous = false;
+      } else if (score > 0 && score == bestScore) {
+        ambiguous = true;
       }
     }
-    // Par défaut, retourner la première fiche math ou physique si demandée
-    if (lower.contains('math')) return sheets.first;
-    if (lower.contains('phys')) return sheets[1];
-    return sheets.first;
+    return ambiguous ? null : match;
+  }
+
+  static String _normalize(String value) {
+    var result = value.toLowerCase();
+    for (final entry in const {
+      'àâä': 'a',
+      'éèêë': 'e',
+      'îï': 'i',
+      'ôö': 'o',
+      'ùûü': 'u',
+      'ç': 'c',
+    }.entries) {
+      result = result.replaceAll(RegExp('[${entry.key}]'), entry.value);
+    }
+    return result
+        .replaceAll(RegExp(r'[\u0300-\u036f]'), '')
+        .replaceAll(RegExp('[^a-z0-9]+'), ' ')
+        .trim();
   }
 }

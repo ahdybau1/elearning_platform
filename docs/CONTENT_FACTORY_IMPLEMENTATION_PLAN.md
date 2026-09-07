@@ -1,5 +1,24 @@
 # Content Factory — Implementation Plan (2026-08-28)
 
+## Tranche suivante après `be2c58e` — association des fiches
+
+1. Corriger la résolution des références : accents et séparateurs normalisés, pas de
+   correspondance sur une sous-chaîne arbitraire ou sur une matière générique, pas de fiche par défaut.
+2. Utiliser la même résolution depuis le lecteur et les cartes de chapitres ; ne proposer
+   l'ouverture que si une fiche correspond au chapitre.
+3. Remplacer l'annonce fictive d'enregistrement hors ligne par un état explicite.
+4. Tester les trois références, les absences et ambiguïtés, les accès UI et les petits écrans.
+
+Réalisé localement : résolution sans fiche arbitraire, accès conditionnels, états hors ligne
+et erreur image honnêtes, actions/onglets mobiles adaptatifs. La même passe corrige les
+liens fictifs des introductions et du laboratoire vers le lecteur. Les introductions enregistrées
+priment ; le modèle de dérivation reste disponible seulement pour les chapitres de mathématiques
+correspondants. Tests élève : 44 passants, dont 24 nouveaux ; analyse ciblée : aucun problème.
+
+Limites : les correspondances de fiches utilisent encore titres/tags/alias du registre local.
+L'association administrable par identifiant de contenu, le vrai stockage hors ligne et les
+évaluations d'observations de laboratoire restent à implémenter. Aucun succès simulé ne les remplace.
+
 ## Reprise 2026-09-07 — CF-002, persistance du Studio v2
 
 Priorité issue de l'audit de `7996f20` : remplacer le faux succès de sauvegarde par

@@ -13,10 +13,7 @@ import '../../ai_tutor/widgets/contextual_ai_agent_sheet.dart';
 class SummarySheetViewerModal extends StatefulWidget {
   final SummarySheet sheet;
 
-  const SummarySheetViewerModal({
-    super.key,
-    required this.sheet,
-  });
+  const SummarySheetViewerModal({super.key, required this.sheet});
 
   /// Méthode d'ouverture pratique en modal bottom sheet ou dialogue plein écran
   static Future<void> show(BuildContext context, SummarySheet sheet) {
@@ -29,7 +26,8 @@ class SummarySheetViewerModal extends StatefulWidget {
   }
 
   @override
-  State<SummarySheetViewerModal> createState() => _SummarySheetViewerModalState();
+  State<SummarySheetViewerModal> createState() =>
+      _SummarySheetViewerModalState();
 }
 
 class _SummarySheetViewerModalState extends State<SummarySheetViewerModal> {
@@ -84,13 +82,16 @@ class _SummarySheetViewerModalState extends State<SummarySheetViewerModal> {
         actions: [
           if (_selectedViewMode == 0)
             IconButton(
-              icon: const Icon(Icons.zoom_out_map_rounded, color: Colors.white70),
+              icon: const Icon(
+                Icons.zoom_out_map_rounded,
+                color: Colors.white70,
+              ),
               tooltip: 'Réinitialiser le zoom',
               onPressed: _resetZoom,
             ),
           IconButton(
-            icon: const Icon(Icons.bookmark_added_outlined, color: AppColors.tealSuccess),
-            tooltip: 'Fiche enregistrée pour révisions hors-ligne',
+            icon: const Icon(Icons.offline_pin_outlined, color: Colors.white70),
+            tooltip: 'Enregistrement hors ligne — à venir',
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -98,9 +99,17 @@ class _SummarySheetViewerModalState extends State<SummarySheetViewerModal> {
                   behavior: SnackBarBehavior.floating,
                   content: Row(
                     children: const [
-                      Icon(Icons.check_circle_rounded, color: AppColors.tealSuccess, size: 20),
+                      Icon(
+                        Icons.info_outline_rounded,
+                        color: Colors.white70,
+                        size: 20,
+                      ),
                       SizedBox(width: 10),
-                      Text('Fiche de synthèse disponible hors-ligne.'),
+                      Expanded(
+                        child: Text(
+                          'L’enregistrement hors ligne n’est pas encore disponible.',
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -179,12 +188,15 @@ class _SummarySheetViewerModalState extends State<SummarySheetViewerModal> {
               color: isSelected ? Colors.white : const Color(0xFF94A3B8),
             ),
             const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? Colors.white : const Color(0xFF94A3B8),
+            Flexible(
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected ? Colors.white : const Color(0xFF94A3B8),
+                ),
               ),
             ),
           ],
@@ -207,10 +219,12 @@ class _SummarySheetViewerModalState extends State<SummarySheetViewerModal> {
               boundaryMargin: const EdgeInsets.all(40),
               child: Image.asset(
                 sheet.imageAssetPath,
+                semanticLabel: sheet.title,
                 fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) => const Center(
                   child: Text(
-                    'Image en cours de chargement...',
+                    'Image indisponible. Consultez l’onglet Formules & Définitions.',
+                    textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white70),
                   ),
                 ),
@@ -223,7 +237,10 @@ class _SummarySheetViewerModalState extends State<SummarySheetViewerModal> {
             right: 0,
             child: Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black.withAlpha(180),
                   borderRadius: AppRadius.radiusFull,
@@ -232,11 +249,18 @@ class _SummarySheetViewerModalState extends State<SummarySheetViewerModal> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: const [
-                    Icon(Icons.pinch_rounded, color: AppColors.primaryCyan, size: 16),
+                    Icon(
+                      Icons.pinch_rounded,
+                      color: AppColors.primaryCyan,
+                      size: 16,
+                    ),
                     SizedBox(width: 6),
-                    Text(
-                      'Pincez pour zoomer • Déplacez pour explorer',
-                      style: TextStyle(color: Colors.white, fontSize: 11),
+                    Flexible(
+                      child: Text(
+                        'Pincez pour zoomer • Déplacez pour explorer',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white, fontSize: 11),
+                      ),
                     ),
                   ],
                 ),
@@ -376,7 +400,10 @@ class _SummarySheetViewerModalState extends State<SummarySheetViewerModal> {
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.primaryCyan,
-                        side: const BorderSide(color: AppColors.primaryCyan, width: 1.1),
+                        side: const BorderSide(
+                          color: AppColors.primaryCyan,
+                          width: 1.1,
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(AppRadius.button),
@@ -394,7 +421,10 @@ class _SummarySheetViewerModalState extends State<SummarySheetViewerModal> {
                       icon: const Icon(Icons.psychology_rounded, size: 15),
                       label: const Text(
                         'Tuteur Socratique',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -403,7 +433,10 @@ class _SummarySheetViewerModalState extends State<SummarySheetViewerModal> {
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.amberHighlight,
-                        side: const BorderSide(color: AppColors.amberHighlight, width: 1.1),
+                        side: const BorderSide(
+                          color: AppColors.amberHighlight,
+                          width: 1.1,
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(AppRadius.button),
@@ -421,7 +454,10 @@ class _SummarySheetViewerModalState extends State<SummarySheetViewerModal> {
                       icon: const Icon(Icons.rule_rounded, size: 15),
                       label: const Text(
                         'Pièges du Bac',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -449,7 +485,10 @@ class _SummarySheetViewerModalState extends State<SummarySheetViewerModal> {
                       icon: const Icon(Icons.edit_note_rounded, size: 16),
                       label: const Text(
                         'S\'entraîner',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
