@@ -173,6 +173,8 @@ Génère la structure JSON exacte avec les clés :
     let modelUsed: string | null = null;
     let tokensUsed = 0;
     let costEstimate = 0;
+    // Diagnostic réel de l'échec Gemini (au lieu d'un message générique) — voir plus bas.
+    let geminiDiag = "";
 
     // Mode mock : déclenché uniquement par AI_MOCK_MODE=true, jamais silencieux, toujours signalé
     // explicitement dans la réponse (_mock: true) — voir 06_ai_pipeline.md.
@@ -196,7 +198,12 @@ Génère la structure JSON exacte avec les clés :
               ],
               generationConfig: {
                 responseMimeType: "application/json",
-                maxOutputTokens: 4096, // gemini-3.6-flash consomme des jetons de réflexion cachés — voir ai-tutor-chat
+                // Le JSON d'un cours structuré (titre + résumé + plusieurs sections + pièges +
+                // conseils + quiz) est volumineux ; gemini-3.6-flash dépense en plus des jetons de
+                // "réflexion" cachés. 4096 était trop juste → réponse tronquée/vide (bug réel
+                // observé le 2026-09-11). On monte le plafond.
+                maxOutputTokens: 16384,
+                temperature: 0.4,
               },
             }),
           },
@@ -204,17 +211,46 @@ Génère la structure JSON exacte avec les clés :
 
         if (geminiRes.ok) {
           const geminiData = await geminiRes.json();
-          const rawText =
-            geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-          structuredCourse = JSON.parse(rawText);
-          provider = "gemini";
-          modelUsed = "gemini-3.6-flash";
-          tokensUsed = geminiData.usageMetadata?.totalTokenCount ?? 0;
-          costEstimate = 0;
+          const cand = geminiData.candidates?.[0];
+          const finishReason = cand?.finishReason ?? "";
+          // Concatène toutes les parts textuelles (une part "thought" peut précéder la réponse).
+          const rawText = (cand?.content?.parts ?? [])
+            .map((p: { text?: string }) => p?.text ?? "")
+            .join("")
+            .trim();
+          // Repli défensif : retire d'éventuels délimiteurs markdown malgré responseMimeType.
+          const jsonText = rawText
+            .replace(/^```(?:json)?\s*/i, "")
+            .replace(/\s*```$/i, "")
+            .trim();
+
+          if (!jsonText) {
+            geminiDiag = `réponse vide (finishReason=${finishReason || "?"}` +
+              (geminiData.promptFeedback?.blockReason
+                ? `, blockReason=${geminiData.promptFeedback.blockReason}`
+                : "") + ")";
+          } else {
+            try {
+              structuredCourse = JSON.parse(jsonText);
+              provider = "gemini";
+              modelUsed = "gemini-3.6-flash";
+              tokensUsed = geminiData.usageMetadata?.totalTokenCount ?? 0;
+              costEstimate = 0;
+            } catch (parseErr) {
+              geminiDiag =
+                `JSON illisible (finishReason=${finishReason || "?"}, ` +
+                `${(parseErr as Error).message}). Extrait : ${jsonText.slice(0, 160)}`;
+            }
+          }
+        } else {
+          geminiDiag = `HTTP ${geminiRes.status} : ${(await geminiRes.text()).slice(0, 200)}`;
         }
       } catch (geminiErr) {
+        geminiDiag = `exception : ${(geminiErr as Error).message}`;
         console.warn("Gemini API Error:", geminiErr);
       }
+    } else {
+      geminiDiag = "GEMINI_API_KEY absente côté serveur";
     }
 
     const durationMs = Date.now() - startTime;
@@ -225,8 +261,9 @@ Génère la structure JSON exacte avec les clés :
     // Aucun résultat réel et mode mock inactif : erreur explicite, jamais de contenu statique
     // déguisé en résultat réel (voir 06_ai_pipeline.md).
     if (!structuredCourse) {
-      const errorMessage =
-        "Échec de la structuration IA : Gemini n'a retourné aucun résultat exploitable.";
+      const errorMessage = geminiDiag
+        ? `Échec de la structuration IA — ${geminiDiag}`
+        : "Échec de la structuration IA : Gemini n'a retourné aucun résultat exploitable.";
       try {
         await supabase.from("ai_agent_calls").insert({
           request_id: requestId,
