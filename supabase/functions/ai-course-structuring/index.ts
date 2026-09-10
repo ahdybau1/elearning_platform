@@ -182,75 +182,49 @@ Génère la structure JSON exacte avec les clés :
       structuredCourse = buildMockCourse();
       provider = "mock";
       modelUsed = "mock";
-    } else if (GEMINI_API_KEY) {
+    } else {
+      // Passe par le Model Router multi-fournisseurs (ai-generate-text) : bascule automatique
+      // Gemini → Groq → Cerebras → OpenRouter → Mistral selon les clés configurées et les quotas.
       try {
-        const geminiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [
-                {
-                  role: "user",
-                  parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }],
-                },
-              ],
-              generationConfig: {
-                responseMimeType: "application/json",
-                // Le JSON d'un cours structuré (titre + résumé + plusieurs sections + pièges +
-                // conseils + quiz) est volumineux ; gemini-3.6-flash dépense en plus des jetons de
-                // "réflexion" cachés. 4096 était trop juste → réponse tronquée/vide (bug réel
-                // observé le 2026-09-11). On monte le plafond.
-                maxOutputTokens: 16384,
-                temperature: 0.4,
-              },
-            }),
+        const routerRes = await fetch(`${SUPABASE_URL}/functions/v1/ai-generate-text`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
           },
-        );
-
-        if (geminiRes.ok) {
-          const geminiData = await geminiRes.json();
-          const cand = geminiData.candidates?.[0];
-          const finishReason = cand?.finishReason ?? "";
-          // Concatène toutes les parts textuelles (une part "thought" peut précéder la réponse).
-          const rawText = (cand?.content?.parts ?? [])
-            .map((p: { text?: string }) => p?.text ?? "")
-            .join("")
-            .trim();
-          // Repli défensif : retire d'éventuels délimiteurs markdown malgré responseMimeType.
-          const jsonText = rawText
+          body: JSON.stringify({
+            capability: "structuring_json",
+            system_prompt: systemPrompt,
+            user_prompt: userPrompt,
+            json: true,
+            max_tokens: 16384,
+            temperature: 0.4,
+          }),
+        });
+        const routerData = await routerRes.json();
+        if (!routerRes.ok) {
+          geminiDiag = `Model Router : ${routerData.error ?? `HTTP ${routerRes.status}`}` +
+            (routerData.provider_chain ? ` [${routerData.provider_chain.map((a: { provider: string; reason: string }) => `${a.provider}=${a.reason}`).join(", ")}]` : "");
+        } else {
+          const jsonText = (routerData.text ?? "")
             .replace(/^```(?:json)?\s*/i, "")
             .replace(/\s*```$/i, "")
             .trim();
-
-          if (!jsonText) {
-            geminiDiag = `réponse vide (finishReason=${finishReason || "?"}` +
-              (geminiData.promptFeedback?.blockReason
-                ? `, blockReason=${geminiData.promptFeedback.blockReason}`
-                : "") + ")";
-          } else {
-            try {
-              structuredCourse = JSON.parse(jsonText);
-              provider = "gemini";
-              modelUsed = "gemini-3.6-flash";
-              tokensUsed = geminiData.usageMetadata?.totalTokenCount ?? 0;
-              costEstimate = 0;
-            } catch (parseErr) {
-              geminiDiag =
-                `JSON illisible (finishReason=${finishReason || "?"}, ` +
-                `${(parseErr as Error).message}). Extrait : ${jsonText.slice(0, 160)}`;
-            }
+          try {
+            structuredCourse = JSON.parse(jsonText);
+            provider = routerData._provider ?? "router";
+            modelUsed = routerData._model ?? null;
+            tokensUsed = 0;
+            costEstimate = 0;
+          } catch (parseErr) {
+            geminiDiag = `JSON illisible du fournisseur ${routerData._provider} : ` +
+              `${(parseErr as Error).message}. Extrait : ${jsonText.slice(0, 160)}`;
           }
-        } else {
-          geminiDiag = `HTTP ${geminiRes.status} : ${(await geminiRes.text()).slice(0, 200)}`;
         }
-      } catch (geminiErr) {
-        geminiDiag = `exception : ${(geminiErr as Error).message}`;
-        console.warn("Gemini API Error:", geminiErr);
+      } catch (routerErr) {
+        geminiDiag = `exception Model Router : ${(routerErr as Error).message}`;
+        console.warn("Model Router error:", routerErr);
       }
-    } else {
-      geminiDiag = "GEMINI_API_KEY absente côté serveur";
     }
 
     const durationMs = Date.now() - startTime;

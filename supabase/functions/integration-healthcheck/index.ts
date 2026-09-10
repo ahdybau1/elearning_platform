@@ -40,6 +40,38 @@ async function checkGemini(): Promise<Verdict> {
   }
 }
 
+/** Test minimal d'un fournisseur OpenAI-compatible du Model Router (Groq / Cerebras / OpenRouter / Mistral). */
+async function checkOpenAICompat(
+  secretName: string,
+  base: string,
+  model: string,
+  extraHeaders: Record<string, string> = {},
+): Promise<Verdict> {
+  const key = Deno.env.get(secretName) ?? "";
+  if (!key) {
+    return { status: "not_configured", detail: `${secretName} absente côté serveur — ajoutez-la comme secret Supabase.`, latency_ms: 0 };
+  }
+  const t = Date.now();
+  try {
+    const r = await fetch(`${base}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}`, ...extraHeaders },
+      body: JSON.stringify({ model, messages: [{ role: "user", content: "ping" }], max_tokens: 5 }),
+      signal: AbortSignal.timeout(15000),
+    });
+    const latency = Date.now() - t;
+    if (r.ok) {
+      const d = await r.json();
+      const reply = (d.choices?.[0]?.message?.content ?? "").slice(0, 40);
+      return { status: "ok", detail: `Connexion OK (${model}) — réponse : « ${reply} ».`, latency_ms: latency };
+    }
+    const body = (await r.text()).slice(0, 180);
+    return { status: r.status === 429 ? "error" : "error", detail: `HTTP ${r.status} : ${body}`, latency_ms: latency };
+  } catch (e: any) {
+    return { status: "error", detail: `Injoignable : ${e?.message ?? e}`, latency_ms: Date.now() - t };
+  }
+}
+
 async function checkStorage(): Promise<Verdict> {
   const t = Date.now();
   try {
@@ -68,11 +100,24 @@ Deno.serve(async (req: Request) => {
     const { data: integ } = await admin.from("integrations").select("*").eq("key", key).maybeSingle();
     if (!integ) return json({ error: `Intégration inconnue : ${key}` }, 404);
 
+    const cfg = (integ.config ?? {}) as Record<string, string>;
     let verdict: Verdict;
     switch (key) {
       case "gemini_generative":
       case "gemini_embeddings":
         verdict = await checkGemini();
+        break;
+      case "ai_provider_groq":
+        verdict = await checkOpenAICompat("GROQ_API_KEY", cfg.base_url ?? "https://api.groq.com/openai/v1", cfg.model_small ?? "llama-3.1-8b-instant");
+        break;
+      case "ai_provider_cerebras":
+        verdict = await checkOpenAICompat("CEREBRAS_API_KEY", cfg.base_url ?? "https://api.cerebras.ai/v1", cfg.model_small ?? "llama-3.1-8b");
+        break;
+      case "ai_provider_openrouter":
+        verdict = await checkOpenAICompat("OPENROUTER_API_KEY", cfg.base_url ?? "https://openrouter.ai/api/v1", cfg.model_small ?? "google/gemma-2-9b-it:free", { "HTTP-Referer": "https://pq-learn.app", "X-Title": "pq learn" });
+        break;
+      case "ai_provider_mistral":
+        verdict = await checkOpenAICompat("MISTRAL_API_KEY", cfg.base_url ?? "https://api.mistral.ai/v1", cfg.model ?? "mistral-small-latest");
         break;
       case "supabase_storage":
         verdict = await checkStorage();
