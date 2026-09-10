@@ -2264,8 +2264,9 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
                                                           ],
                                                         ),
                                                       );
-                                                      if (confirm != true)
+                                                      if (confirm != true) {
                                                         return;
+                                                      }
                                                       final service = ref.read(
                                                         supabaseServiceProvider,
                                                       );

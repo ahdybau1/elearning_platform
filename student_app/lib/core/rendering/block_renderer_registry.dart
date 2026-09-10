@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../features/pedagogy/widgets/interactive_function_graph.dart';
+import '../../features/pedagogy/widgets/virtual_labs/ballistics_simulator_widget.dart';
+import '../../features/pedagogy/widgets/virtual_labs/circuit_simulator_widget.dart';
+import '../../features/pedagogy/widgets/virtual_labs/molecular_viewer_3d_widget.dart';
+import '../../features/pedagogy/widgets/virtual_labs/python_sandbox_widget.dart';
 import '../models/content_block.dart';
 import '../theme/student_theme.dart';
 import 'math_formula_view.dart';
@@ -72,8 +77,8 @@ class BlockRendererRegistry {
           icon: Icons.verified_rounded,
           color: context.colors.accentPrimary,
           defaultTitle: 'Théorème Majeur & Définition',
-          bgColor: const Color(0xFF132338),
-          textColor: Colors.white,
+          bgColor: context.colors.card,
+          textColor: context.colors.textPrimary,
         );
       case 'definition':
       case 'cours':
@@ -115,6 +120,18 @@ class BlockRendererRegistry {
           bgColor: context.colors.card,
           textColor: context.colors.textPrimary,
         );
+      // Blocs Moteurs Scientifiques & Laboratoires Virtuels Déterministes
+      case 'virtual_lab':
+      case 'simulation':
+      case 'lab':
+      case 'graph_plot':
+      case 'code_runner':
+        return _virtualLabBlock(context, block);
+      // Blocs Multimédia & Schémas Pédagogiques
+      case 'image':
+      case 'media_image':
+      case 'illustration':
+        return _imageBlock(context, block);
       case 'paragraph':
       default:
         return _paragraph(context, block);
@@ -318,11 +335,13 @@ class BlockRendererRegistry {
         ? block.formulas
         : ['(u + v)\' = u\' + v\'', '(uv)\' = u\'v + uv\''];
 
+    final purple = context.colors.accentPurple;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE9D5FF)),
+        border: Border.all(color: purple.withAlpha(80)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(8),
@@ -339,22 +358,22 @@ class BlockRendererRegistry {
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: const BoxDecoration(
-                color: Color(0xFF6B21A8),
+              decoration: BoxDecoration(
+                color: purple.withAlpha(30),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.balance_rounded,
-                  color: Colors.white, size: 22),
+              child: Icon(Icons.balance_rounded,
+                  color: purple, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'RÈGLES ESSENTIELLES',
                     style: TextStyle(
-                      color: Color(0xFF6B21A8),
+                      color: purple,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                       letterSpacing: 1.1,
@@ -366,9 +385,9 @@ class BlockRendererRegistry {
                     padding: const EdgeInsets.symmetric(
                         vertical: 12, horizontal: 16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFAF5FF),
+                      color: purple.withAlpha(20),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFE9D5FF)),
+                      border: Border.all(color: purple.withAlpha(50)),
                     ),
                     child: Column(
                       children: formulas
@@ -377,11 +396,11 @@ class BlockRendererRegistry {
                               padding: const EdgeInsets.symmetric(vertical: 4),
                               child: Text(
                                 f,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: 'serif',
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1E293B),
+                                  color: context.colors.textPrimary,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -401,11 +420,13 @@ class BlockRendererRegistry {
 
   /// 5. EXEMPLE GUIDÉ (Vert)
   static Widget _guidedExampleCard(BuildContext context, ContentBlock block) {
+    final emerald = context.colors.accentEmerald;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFBBF7D0)),
+        border: Border.all(color: emerald.withAlpha(80)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(8),
@@ -419,7 +440,7 @@ class BlockRendererRegistry {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(width: 5, color: const Color(0xFF16A34A)),
+            Container(width: 5, color: emerald),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -428,22 +449,22 @@ class BlockRendererRegistry {
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF16A34A),
+                      decoration: BoxDecoration(
+                        color: emerald.withAlpha(30),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.edit_rounded,
-                          color: Colors.white, size: 22),
+                      child: Icon(Icons.edit_rounded,
+                          color: emerald, size: 22),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'EXEMPLE GUIDÉ',
                             style: TextStyle(
-                              color: Color(0xFF16A34A),
+                              color: emerald,
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
                               letterSpacing: 1.1,
@@ -455,33 +476,33 @@ class BlockRendererRegistry {
                             padding: const EdgeInsets.symmetric(
                                 vertical: 12, horizontal: 16),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF0FDF4),
+                              color: emerald.withAlpha(20),
                               borderRadius: BorderRadius.circular(10),
                               border:
-                                  Border.all(color: const Color(0xFFBBF7D0)),
+                                  Border.all(color: emerald.withAlpha(50)),
                             ),
                             child: Column(
-                              children: const [
+                              children: [
                                 Text(
                                   'f(x) = x³ - 3x² + 1',
                                   style: TextStyle(
                                     fontFamily: 'serif',
                                     fontSize: 15,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF1E293B),
+                                    color: context.colors.textPrimary,
                                   ),
                                 ),
-                                SizedBox(height: 4),
+                                const SizedBox(height: 4),
                                 Icon(Icons.arrow_downward_rounded,
-                                    size: 16, color: Color(0xFF16A34A)),
-                                SizedBox(height: 4),
+                                    size: 16, color: emerald),
+                                const SizedBox(height: 4),
                                 Text(
                                   "f'(x) = 3x² - 6x",
                                   style: TextStyle(
                                     fontFamily: 'serif',
                                     fontSize: 15,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF16A34A),
+                                    color: emerald,
                                   ),
                                 ),
                               ],
@@ -502,12 +523,14 @@ class BlockRendererRegistry {
 
   /// 6. À REMARQUER (Comparatif f'(a) vs f')
   static Widget _remarksCard(BuildContext context, ContentBlock block) {
+    final purple = context.colors.accentPurple;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE9D5FF)),
+        border: Border.all(color: purple.withAlpha(80)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(8),
@@ -523,21 +546,21 @@ class BlockRendererRegistry {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF7E22CE),
+                decoration: BoxDecoration(
+                  color: purple.withAlpha(30),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.lightbulb_outline_rounded,
-                    color: Colors.white, size: 20),
+                child: Icon(Icons.lightbulb_outline_rounded,
+                    color: purple, size: 20),
               ),
               const SizedBox(width: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'À REMARQUER',
                     style: TextStyle(
-                      color: Color(0xFF7E22CE),
+                      color: purple,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                       letterSpacing: 1.1,
@@ -546,7 +569,7 @@ class BlockRendererRegistry {
                   Text(
                     'Ce qu\'il faut vraiment comprendre',
                     style: TextStyle(
-                      color: Color(0xFF64748B),
+                      color: context.colors.textMuted,
                       fontSize: 11,
                     ),
                   ),
@@ -560,14 +583,14 @@ class BlockRendererRegistry {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFFAF5FF),
+              color: purple.withAlpha(20),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE9D5FF)),
+              border: Border.all(color: purple.withAlpha(50)),
             ),
             child: Row(
-              children: const [
-                Icon(Icons.adjust_rounded, color: Color(0xFF7E22CE), size: 20),
-                SizedBox(width: 10),
+              children: [
+                Icon(Icons.adjust_rounded, color: purple, size: 20),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -575,7 +598,7 @@ class BlockRendererRegistry {
                       Text(
                         "f'(a) est un nombre",
                         style: TextStyle(
-                          color: Color(0xFF7E22CE),
+                          color: purple,
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                           fontFamily: 'serif',
@@ -583,7 +606,7 @@ class BlockRendererRegistry {
                       ),
                       Text(
                         "C'est la pente de la tangente au point d'abscisse a.",
-                        style: TextStyle(color: Color(0xFF475569), fontSize: 12),
+                        style: TextStyle(color: context.colors.textSecondary, fontSize: 12),
                       ),
                     ],
                   ),
@@ -597,14 +620,14 @@ class BlockRendererRegistry {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFFAF5FF),
+              color: purple.withAlpha(20),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE9D5FF)),
+              border: Border.all(color: purple.withAlpha(50)),
             ),
             child: Row(
-              children: const [
-                Icon(Icons.timeline_rounded, color: Color(0xFF7E22CE), size: 20),
-                SizedBox(width: 10),
+              children: [
+                Icon(Icons.timeline_rounded, color: purple, size: 20),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -612,7 +635,7 @@ class BlockRendererRegistry {
                       Text(
                         "f' est une fonction",
                         style: TextStyle(
-                          color: Color(0xFF7E22CE),
+                          color: purple,
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                           fontFamily: 'serif',
@@ -620,7 +643,7 @@ class BlockRendererRegistry {
                       ),
                       Text(
                         "Elle associe à chaque x la valeur f'(x).",
-                        style: TextStyle(color: Color(0xFF475569), fontSize: 12),
+                        style: TextStyle(color: context.colors.textSecondary, fontSize: 12),
                       ),
                     ],
                   ),
@@ -644,24 +667,26 @@ class BlockRendererRegistry {
             'Lire le signe de f au lieu de celui de f\'',
           ];
 
+    final rose = context.colors.accentRose;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF1F2),
+        color: rose.withAlpha(20),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFECDD3)),
+        border: Border.all(color: rose.withAlpha(60)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Icon(Icons.cancel_rounded, color: Color(0xFFE11D48), size: 22),
-              SizedBox(width: 8),
+            children: [
+              Icon(Icons.cancel_rounded, color: rose, size: 22),
+              const SizedBox(width: 8),
               Text(
                 'ERREURS FRÉQUENTES',
                 style: TextStyle(
-                  color: Color(0xFFBE123C),
+                  color: rose,
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                   letterSpacing: 1.1,
@@ -675,20 +700,20 @@ class BlockRendererRegistry {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.colors.card,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFFFE4E6)),
+                border: Border.all(color: rose.withAlpha(40)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.close_rounded,
-                      color: Color(0xFFE11D48), size: 16),
+                  Icon(Icons.close_rounded,
+                      color: rose, size: 16),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       err.replaceFirst('- ', '').replaceFirst('• ', ''),
-                      style: const TextStyle(
-                        color: Color(0xFF334155),
+                      style: TextStyle(
+                        color: context.colors.textPrimary,
                         fontSize: 12.5,
                         fontWeight: FontWeight.w500,
                       ),
@@ -705,25 +730,27 @@ class BlockRendererRegistry {
 
   /// 8. VÉRIFIE QUE TU AS COMPRIS (Oui / Non)
   static Widget _quickCheckCard(BuildContext context, ContentBlock block) {
+    final cyan = context.colors.accentCyan;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0FDFA),
+        color: cyan.withAlpha(20),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF99F6E4)),
+        border: Border.all(color: cyan.withAlpha(60)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
+            children: [
               Icon(Icons.help_outline_rounded,
-                  color: Color(0xFF0F766E), size: 22),
-              SizedBox(width: 8),
+                  color: cyan, size: 22),
+              const SizedBox(width: 8),
               Text(
                 'VÉRIFIE QUE TU AS COMPRIS',
                 style: TextStyle(
-                  color: Color(0xFF0F766E),
+                  color: cyan,
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                   letterSpacing: 1.1,
@@ -736,8 +763,8 @@ class BlockRendererRegistry {
             block.body.isNotEmpty
                 ? block.body
                 : "Une fonction peut-elle avoir f'(a) = 0 sans maximum ni minimum ?",
-            style: const TextStyle(
-              color: Color(0xFF1E293B),
+            style: TextStyle(
+              color: context.colors.textPrimary,
               fontSize: 13.5,
               fontWeight: FontWeight.w600,
             ),
@@ -749,23 +776,23 @@ class BlockRendererRegistry {
                 child: OutlinedButton(
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Exact ! Exemple : f(x) = x³ en 0 possède f\'(0)=0 avec un point d\'inflexion.'),
-                        backgroundColor: Color(0xFF0F766E),
+                      SnackBar(
+                        content: const Text('Exact ! Exemple : f(x) = x³ en 0 possède f\'(0)=0 avec un point d\'inflexion.'),
+                        backgroundColor: cyan,
                       ),
                     );
                   },
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFF14B8A6)),
-                    backgroundColor: Colors.white,
+                    side: BorderSide(color: cyan),
+                    backgroundColor: context.colors.card,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: const Text('OUI',
+                  child: Text('OUI',
                       style: TextStyle(
-                          color: Color(0xFF0F766E),
+                          color: cyan,
                           fontWeight: FontWeight.bold)),
                 ),
               ),
@@ -774,23 +801,23 @@ class BlockRendererRegistry {
                 child: OutlinedButton(
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Pas tout à fait ! Pense à la fonction cube x³ au point x=0.'),
-                        backgroundColor: Color(0xFFEA580C),
+                      SnackBar(
+                        content: const Text('Pas tout à fait ! Pense à la fonction cube x³ au point x=0.'),
+                        backgroundColor: context.colors.accentAmber,
                       ),
                     );
                   },
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFFCBD5E1)),
-                    backgroundColor: Colors.white,
+                    side: BorderSide(color: context.colors.border),
+                    backgroundColor: context.colors.card,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: const Text('NON',
+                  child: Text('NON',
                       style: TextStyle(
-                          color: Color(0xFF64748B),
+                          color: context.colors.textSecondary,
                           fontWeight: FontWeight.bold)),
                 ),
               ),
@@ -953,12 +980,12 @@ class BlockRendererRegistry {
       decoration: BoxDecoration(
         color: context.colors.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: disciplineColor.withAlpha(90), width: 1.2),
+        border: Border.all(color: disciplineColor.withAlpha(50), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(20),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
+            color: Colors.black.withAlpha(10),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -970,15 +997,15 @@ class BlockRendererRegistry {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             decoration: BoxDecoration(
-              color: disciplineColor.withAlpha(25),
-              border: Border(bottom: BorderSide(color: disciplineColor.withAlpha(50))),
+              color: disciplineColor.withAlpha(15),
+              border: Border(bottom: BorderSide(color: disciplineColor.withAlpha(30))),
             ),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: disciplineColor.withAlpha(35),
+                    color: disciplineColor.withAlpha(30),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(Icons.auto_stories_rounded, color: disciplineColor, size: 22),
@@ -1016,7 +1043,7 @@ class BlockRendererRegistry {
           // Colonnes Comparatives (Arithmétique vs Géométrique)
           if (cols != null && cols.isNotEmpty) ...[
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final isNarrow = constraints.maxWidth < 600;
@@ -1029,11 +1056,11 @@ class BlockRendererRegistry {
                     final items = (col['items'] as List?) ?? [];
 
                     return Container(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0F172A),
+                        color: context.colors.surface,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: colColor.withAlpha(70)),
+                        border: Border.all(color: colColor.withAlpha(45)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1045,7 +1072,7 @@ class BlockRendererRegistry {
                                 child: Text(
                                   colTitle,
                                   style: GoogleFonts.inter(
-                                    fontSize: 14,
+                                    fontSize: 13.5,
                                     fontWeight: FontWeight.bold,
                                     color: colColor,
                                   ),
@@ -1053,15 +1080,15 @@ class BlockRendererRegistry {
                               ),
                               if (badgeText != null)
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                                   decoration: BoxDecoration(
-                                    color: colColor.withAlpha(30),
+                                    color: colColor.withAlpha(25),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
                                     badgeText,
                                     style: TextStyle(
-                                      fontSize: 11,
+                                      fontSize: 10.5,
                                       fontWeight: FontWeight.bold,
                                       color: colColor,
                                     ),
@@ -1069,19 +1096,19 @@ class BlockRendererRegistry {
                                 ),
                             ],
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 10),
                           ...items.map((item) {
                             final itemMap = Map<String, dynamic>.from(item as Map);
                             final label = itemMap['label'] as String? ?? '';
                             final formula = itemMap['formula'] as String? ?? '';
 
                             return Container(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              padding: const EdgeInsets.all(10),
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF070B14),
+                                color: context.colors.card,
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: context.colors.border.withAlpha(50)),
+                                border: Border.all(color: context.colors.border.withAlpha(35)),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1117,7 +1144,7 @@ class BlockRendererRegistry {
                     return Column(
                       children: colWidgets
                           .map((w) => Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.only(bottom: 10),
                                 child: w,
                               ))
                           .toList(),
@@ -1129,7 +1156,7 @@ class BlockRendererRegistry {
                     children: colWidgets
                         .map((w) => Expanded(
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 5),
                                 child: w,
                               ),
                             ))
@@ -1143,14 +1170,14 @@ class BlockRendererRegistry {
           // Formule Centrale Générale
           if (keyFormula != null && keyFormula.isNotEmpty) ...[
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0A1020),
+                  color: context.colors.surface,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: disciplineColor.withAlpha(70)),
+                  border: Border.all(color: disciplineColor.withAlpha(45)),
                 ),
                 child: Column(
                   children: [
@@ -1179,13 +1206,13 @@ class BlockRendererRegistry {
           // Points Méthodologiques
           if (bulletPoints.isNotEmpty) ...[
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: context.colors.surface,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: context.colors.border.withAlpha(50)),
+                  border: Border.all(color: context.colors.border.withAlpha(35)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1237,13 +1264,13 @@ class BlockRendererRegistry {
           // Piège Classique d'Examen
           if (examTrap != null && examTrap.isNotEmpty) ...[
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
+              padding: const EdgeInsets.fromLTRB(14, 5, 14, 14),
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: context.colors.accentRose.withAlpha(20),
+                  color: context.colors.accentRose.withAlpha(15),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: context.colors.accentRose.withAlpha(60)),
+                  border: Border.all(color: context.colors.accentRose.withAlpha(45)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1279,6 +1306,545 @@ class BlockRendererRegistry {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  // --- LABORATOIRES VIRTUELS & SIMULATEURS DÉTERMINISTES ---
+
+  static Widget _virtualLabBlock(BuildContext context, ContentBlock block) {
+    String labType = 'circuit';
+    if (block.type == 'graph_plot') {
+      labType = 'graph';
+    } else if (block.type == 'code_runner') {
+      labType = 'python';
+    } else {
+      final metaType = block.metadata['labType'] as String?;
+      if (metaType != null && metaType.isNotEmpty) {
+        labType = metaType.toLowerCase();
+      }
+    }
+
+    return _VirtualLabCardWidget(block: block, labType: labType);
+  }
+
+  // --- BLOCS MULTIMÉDIA & SCHÉMAS PÉDAGOGIQUES ---
+
+  static Widget _imageBlock(BuildContext context, ContentBlock block) {
+    final imageUrl = (block.metadata['imageUrl'] as String?) ??
+        (block.metadata['url'] as String?) ??
+        (block.formulas.isNotEmpty ? block.formulas.first : '');
+    final caption = (block.metadata['caption'] as String?)?.trim().isNotEmpty == true
+        ? block.metadata['caption'] as String
+        : (block.body.trim().isNotEmpty ? block.body.trim() : null);
+    final altText = (block.metadata['altText'] as String?)?.trim().isNotEmpty == true
+        ? block.metadata['altText'] as String
+        : (block.heading ?? caption ?? 'Figure pédagogique');
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: context.colors.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (block.heading != null && block.heading!.trim().isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              color: context.colors.surface,
+              child: Row(
+                children: [
+                  Icon(Icons.image_rounded, size: 16, color: context.colors.accentPrimary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      block.heading!.trim(),
+                      style: TextStyle(
+                        color: context.colors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (imageUrl.trim().isNotEmpty)
+            InkWell(
+              onTap: () => _showImageZoomModal(context, imageUrl.trim(), altText, caption),
+              child: Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  Semantics(
+                    label: altText,
+                    image: true,
+                    child: Image.network(
+                      imageUrl.trim(),
+                      fit: BoxFit.contain,
+                      width: double.infinity,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          height: 180,
+                          alignment: Alignment.center,
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        padding: const EdgeInsets.all(24),
+                        alignment: Alignment.center,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.broken_image_rounded, color: context.colors.textMuted, size: 36),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Image inaccessible hors-ligne ou lien expiré',
+                              style: TextStyle(color: context.colors.textMuted, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withAlpha(150),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.zoom_in_rounded, color: Colors.white, size: 18),
+                  ),
+                ],
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(24),
+              alignment: Alignment.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.image_not_supported_outlined, color: context.colors.textMuted, size: 36),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Aucune ressource visuelle fournie',
+                    style: TextStyle(color: context.colors.textMuted, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          if (caption != null)
+            Container(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+              color: context.colors.surface.withAlpha(50),
+              child: Text(
+                caption,
+                style: TextStyle(
+                  color: context.colors.textSecondary,
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  static void _showImageZoomModal(
+    BuildContext context,
+    String imageUrl,
+    String altText,
+    String? caption,
+  ) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black.withAlpha(230),
+        insetPadding: const EdgeInsets.all(12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      altText,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: InteractiveViewer(
+                minScale: 0.8,
+                maxScale: 4.0,
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => const Center(
+                    child: Icon(Icons.broken_image_rounded, color: Colors.white54, size: 48),
+                  ),
+                ),
+              ),
+            ),
+            if (caption != null && caption.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  caption,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12, fontStyle: FontStyle.italic),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Carte interactive hébergeant un simulateur / laboratoire déterministe natif
+class _VirtualLabCardWidget extends StatefulWidget {
+  final ContentBlock block;
+  final String labType;
+
+  const _VirtualLabCardWidget({
+    required this.block,
+    required this.labType,
+  });
+
+  @override
+  State<_VirtualLabCardWidget> createState() => _VirtualLabCardWidgetState();
+}
+
+class _VirtualLabCardWidgetState extends State<_VirtualLabCardWidget> {
+  bool _isExpanded = true;
+
+  Widget _buildEngineWidget(BuildContext context) {
+    switch (widget.labType) {
+      case 'ballistics':
+        return const BallisticsSimulatorWidget();
+      case 'molecule':
+        return const MolecularViewer3DWidget();
+      case 'python':
+        return const PythonSandboxWidget();
+      case 'graph':
+        final expr = widget.block.metadata['expression'] as String? ??
+            (widget.block.formulas.isNotEmpty ? widget.block.formulas.first : 'x^2 - 3*x + 2');
+        return InteractiveFunctionGraph(
+          functionSpec: MathFunctionSpec.fromExpression(
+            expr,
+            title: widget.block.heading,
+          ),
+          showObservationCard: true,
+        );
+      case 'circuit':
+      default:
+        return const CircuitSimulatorWidget();
+    }
+  }
+
+  void _openFullscreen(BuildContext context) {
+    if (widget.labType == 'graph') {
+      final expr = widget.block.metadata['expression'] as String? ??
+          (widget.block.formulas.isNotEmpty ? widget.block.formulas.first : 'x^2 - 3*x + 2');
+      InteractiveFunctionGraph.showModal(
+        context,
+        expression: expr,
+        title: widget.block.heading ?? 'Tracé de Fonction GraphEngine',
+      );
+      return;
+    }
+
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withAlpha(210),
+      builder: (ctx) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        backgroundColor: context.colors.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: context.colors.border),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800, maxHeight: 720),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: context.colors.surface,
+                    border: Border(
+                      bottom: BorderSide(color: context.colors.border),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(_getLabIcon(), size: 20, color: _getLabColor(context)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          widget.block.heading ?? _getDefaultTitle(),
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: context.colors.textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        tooltip: 'Fermer',
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        color: context.colors.textSecondary,
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: _buildEngineWidget(context),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _getLabIcon() {
+    switch (widget.labType) {
+      case 'ballistics':
+        return Icons.rocket_launch_rounded;
+      case 'molecule':
+        return Icons.view_in_ar_rounded;
+      case 'python':
+        return Icons.terminal_rounded;
+      case 'graph':
+        return Icons.show_chart_rounded;
+      case 'circuit':
+      default:
+        return Icons.electrical_services_rounded;
+    }
+  }
+
+  Color _getLabColor(BuildContext context) {
+    switch (widget.labType) {
+      case 'ballistics':
+        return context.colors.accentPrimary;
+      case 'molecule':
+        return context.colors.accentEmerald;
+      case 'python':
+        return context.colors.accentCyan;
+      case 'graph':
+        return context.colors.accentPurple;
+      case 'circuit':
+      default:
+        return context.colors.accentAmber;
+    }
+  }
+
+  String _getDefaultTitle() {
+    switch (widget.labType) {
+      case 'ballistics':
+        return 'Simulateur Balistique 2D (Mécanique)';
+      case 'molecule':
+        return 'Visualiseur Moléculaire 3D (Chimie)';
+      case 'python':
+        return 'Bac à Sable Algorithmique Python';
+      case 'graph':
+        return 'Tracé de Fonction Graphique 2D';
+      case 'circuit':
+      default:
+        return 'Simulateur Circuit SPICE (Électronique)';
+    }
+  }
+
+  String _getEngineBadge() {
+    switch (widget.labType) {
+      case 'ballistics':
+        return 'MOTEUR NEWTONIEN RK4';
+      case 'molecule':
+        return 'GÉOMÉTRIE 3D COVALENTE';
+      case 'python':
+        return 'INTERPRÉTEUR PYODIDE WASM';
+      case 'graph':
+        return 'GRAPH ENGINE DÉTERMINISTE';
+      case 'circuit':
+      default:
+        return 'SPICE 3F5 DÉTERMINISTE';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final labColor = _getLabColor(context);
+    final labIcon = _getLabIcon();
+    final title = widget.block.heading ?? _getDefaultTitle();
+    final badge = _getEngineBadge();
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: labColor.withAlpha(50),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: labColor.withAlpha(12),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // En-tête du simulateur
+          Container(
+            padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+            decoration: BoxDecoration(
+              color: labColor.withAlpha(15),
+              borderRadius: BorderRadius.vertical(
+                top: const Radius.circular(15),
+                bottom: _isExpanded ? Radius.zero : const Radius.circular(15),
+              ),
+              border: Border(
+                bottom: BorderSide(
+                  color: _isExpanded ? labColor.withAlpha(40) : Colors.transparent,
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: labColor.withAlpha(35),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(labIcon, size: 20, color: labColor),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: labColor.withAlpha(30),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Text(
+                              badge,
+                              style: GoogleFonts.inter(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                color: labColor,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        title,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: context.colors.textPrimary,
+                        ),
+                      ),
+                      if (widget.block.body.isNotEmpty &&
+                          widget.block.body != 'Expérimentation déterministe interactive.') ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          widget.block.body,
+                          style: GoogleFonts.inter(
+                            fontSize: 11.5,
+                            color: context.colors.textSecondary,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // Bouton Plein écran
+                IconButton(
+                  icon: const Icon(Icons.fullscreen_rounded, size: 20),
+                  color: labColor,
+                  tooltip: 'Mode plein écran',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  onPressed: () => _openFullscreen(context),
+                ),
+
+                // Bouton Réduire/Déplier
+                IconButton(
+                  icon: Icon(
+                    _isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                    size: 20,
+                  ),
+                  color: context.colors.textSecondary,
+                  tooltip: _isExpanded ? 'Réduire' : 'Déplier',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  onPressed: () => setState(() => _isExpanded = !_isExpanded),
+                ),
+              ],
+            ),
+          ),
+
+          // Contenu interactif du simulateur
+          if (_isExpanded)
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(15)),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 540),
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: _buildEngineWidget(context),
+                ),
+              ),
+            ),
         ],
       ),
     );

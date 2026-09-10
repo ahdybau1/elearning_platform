@@ -463,6 +463,18 @@ class _ValidationQueueScreenState extends ConsumerState<ValidationQueueScreen> {
               spacing: 12,
               runSpacing: 8,
               children: [
+                if (item.contentType == ContentType.lesson)
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.accentCyan,
+                      side: const BorderSide(color: AppTheme.accentCyan),
+                    ),
+                    onPressed: _isProcessing
+                        ? null
+                        : () => _runPedagogicalPrecheck(item),
+                    icon: const Icon(Icons.psychology_rounded, size: 18),
+                    label: const Text('Pré-contrôle IA (AIA-AGT-024)'),
+                  ),
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.accentRose,
@@ -598,6 +610,224 @@ class _ValidationQueueScreenState extends ConsumerState<ValidationQueueScreen> {
     }
   }
 
+  Future<void> _runPedagogicalPrecheck(ValidationQueueItem item) async {
+    if (item.contentType != ContentType.lesson) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppTheme.accentAmber,
+          content: Text(
+            'Le pré-contrôle automatisé AIA-AGT-024 est actuellement configuré pour les leçons et fiches structurées.',
+            style: GoogleFonts.inter(color: Colors.white),
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isProcessing = true);
+    try {
+      final service = ref.read(supabaseServiceProvider);
+      final report = await service.validateLessonWithAi(item.contentId);
+      if (!mounted) return;
+
+      final checklist = (report['checklist'] as List?) ?? [];
+      final warnings = (report['warnings'] as List?) ?? [];
+      final blockingIssues = (report['blocking_issues'] as List?) ?? [];
+      final confidence = (report['confidence'] as num?)?.toDouble() ?? 0.0;
+      final recommendation = report['recommendation']?.toString() ?? 'Pré-contrôle terminé';
+      final isPassing = blockingIssues.isEmpty;
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppTheme.primarySurface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: AppDialogTitle(
+            icon: Icons.psychology_rounded,
+            iconColor: isPassing ? AppTheme.accentEmerald : AppTheme.accentRose,
+            text: 'Rapport de Pré-contrôle IA (AIA-AGT-024)',
+            onClose: () => Navigator.pop(ctx),
+          ),
+          content: SizedBox(
+            width: 550,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: (isPassing ? AppTheme.accentEmerald : AppTheme.accentRose).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isPassing ? AppTheme.accentEmerald : AppTheme.accentRose,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isPassing ? Icons.check_circle_rounded : Icons.warning_rounded,
+                          color: isPassing ? AppTheme.accentEmerald : AppTheme.accentRose,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                recommendation,
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Indice de conformité : ${(confidence * 100).toInt()}% • Blocs analysés : ${report['total_blocks'] ?? 0} • Formules : ${report['total_formulas'] ?? 0}',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white70,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Critères d\'évaluation automatisés :',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...checklist.map((c) {
+                    final itemCheck = Map<String, dynamic>.from(c as Map);
+                    final passed = itemCheck['passed'] == true;
+                    final label = itemCheck['label'] ?? itemCheck['check'] ?? 'Contrôle';
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Icon(
+                            passed ? Icons.check_circle_outline_rounded : Icons.highlight_off_rounded,
+                            color: passed ? AppTheme.accentEmerald : AppTheme.accentRose,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              label.toString(),
+                              style: GoogleFonts.inter(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            passed ? 'Validé' : 'À revoir',
+                            style: GoogleFonts.inter(
+                              color: passed ? AppTheme.accentEmerald : AppTheme.accentRose,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                  if (blockingIssues.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      'Points bloquants détectés :',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.accentRose,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    ...blockingIssues.map((err) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(Icons.error_outline, size: 14, color: AppTheme.accentRose),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  err.toString(),
+                                  style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                  ],
+                  if (warnings.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      'Avertissements pédagogiques :',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.accentAmber,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    ...warnings.map((warn) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(Icons.info_outline, size: 14, color: AppTheme.accentAmber),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  warn.toString(),
+                                  style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Fermer', style: GoogleFonts.inter(color: AppTheme.textMuted)),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppTheme.accentRose,
+            content: Text(
+              'Erreur lors du pré-contrôle IA : $e',
+              style: GoogleFonts.inter(color: Colors.white),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
   Future<void> _approveContent(
     ValidationQueueItem item,
     String reviewerId,
@@ -704,8 +934,9 @@ class _ValidationQueueScreenState extends ConsumerState<ValidationQueueScreen> {
                     ),
                   ),
                   onChanged: (_) {
-                    if (fieldError != null)
+                    if (fieldError != null) {
                       setModalState(() => fieldError = null);
+                    }
                   },
                 ),
               ],

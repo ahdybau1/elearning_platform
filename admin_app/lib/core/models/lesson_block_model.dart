@@ -313,4 +313,25 @@ class LessonBlock {
       },
     );
   }
+
+  /// Bloc Laboratoire Virtuel / Simulateur Scientifique Déterministe
+  factory LessonBlock.virtualLab({
+    String? heading,
+    required String labType,
+    String? description,
+    Map<String, dynamic>? initialParams,
+    int order = 0,
+  }) {
+    return LessonBlock(
+      id: 'lab_${DateTime.now().microsecondsSinceEpoch}',
+      type: 'virtual_lab',
+      heading: heading ?? 'Laboratoire Virtuel Interactif',
+      body: description ?? 'Expérimentation déterministe interactive.',
+      order: order,
+      metadata: {
+        'labType': labType,
+        'initialParams': ?initialParams,
+      },
+    );
+  }
 }

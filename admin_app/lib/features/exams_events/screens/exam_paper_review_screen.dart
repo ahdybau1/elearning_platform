@@ -72,13 +72,20 @@ class _ExamPaperReviewScreenState extends ConsumerState<ExamPaperReviewScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Sujet publié.')));
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) Navigator.pop(context);
+        if (mounted) {
+          Navigator.pop(context);
+        }
       });
     } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Publication impossible : $error')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Publication impossible : $error')),
+        );
+      }
     } finally {
-      if (mounted) setState(() => _publishing = false);
+      if (mounted) {
+        setState(() => _publishing = false);
+      }
     }
   }
 
@@ -88,8 +95,11 @@ class _ExamPaperReviewScreenState extends ConsumerState<ExamPaperReviewScreen> {
     return PopScope(
       canPop: _dirty.isEmpty && _saving.isEmpty && !_publishing,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Enregistrez ou annulez vos modifications avant de quitter.')));
+        if (!didPop) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Enregistrez ou annulez vos modifications avant de quitter.'),
+          ));
+        }
       },
       child: Scaffold(
         backgroundColor: AppTheme.primaryDark,

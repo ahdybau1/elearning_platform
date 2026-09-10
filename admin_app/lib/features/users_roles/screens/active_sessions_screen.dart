@@ -569,13 +569,18 @@ class _FraudRiskCard extends ConsumerWidget {
                         style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.accentRose)),
                   ]),
                   const SizedBox(height: 10),
-                  ...signals.map((s) => Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Text(
-                          '${(s['accounts'] as List).length} comptes sur un même appareil (confiance ${((s['confidence'] as num) * 100).round()}%) — ${s['recommended_review']}',
-                          style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
-                        ),
-                      )),
+                  ...signals.map((s) {
+                    final accountsList = (s['accounts'] as List?) ?? [];
+                    final confidenceNum = (s['confidence'] as num?)?.toDouble() ?? 0.0;
+                    final reviewText = s['recommended_review']?.toString() ?? 'À vérifier manuellement.';
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        '${accountsList.length} comptes sur un même appareil (confiance ${(confidenceNum * 100).round()}%) — $reviewText',
+                        style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
+                      ),
+                    );
+                  }),
                 ],
               ),
             ),

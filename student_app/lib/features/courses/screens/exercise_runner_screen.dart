@@ -243,8 +243,11 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -264,8 +267,10 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                 ),
               ),
               // Déclencheurs Outils Scientifiques & Tuteur Socratique
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   InkWell(
                     onTap: () {
@@ -294,7 +299,6 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
                   InkWell(
                     onTap: () {
                       ContextualAiAgentSheet.show(

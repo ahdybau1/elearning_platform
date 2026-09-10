@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'dart:html' as html;
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:printing/printing.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/models/admin_models.dart';
@@ -261,15 +261,19 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
     return logs.where((log) {
       if (_adminFilter != _allFilter) {
         if (_adminFilter == 'system') {
-          if (log.adminUserId != null) return false;
+          if (log.adminUserId != null) {
+            return false;
+          }
         } else if (log.adminUserId != _adminFilter) {
           return false;
         }
       }
-      if (_actionFilter != _allFilter && log.actionType != _actionFilter)
+      if (_actionFilter != _allFilter && log.actionType != _actionFilter) {
         return false;
-      if (_entityFilter != _allFilter && log.entityType != _entityFilter)
+      }
+      if (_entityFilter != _allFilter && log.entityType != _entityFilter) {
         return false;
+      }
       return true;
     }).toList();
   }
@@ -569,12 +573,12 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
     );
   }
 
-  // Export web uniquement (dart:html) — l'app admin est une cible Flutter Web (CDC section 1.3).
-  void _exportCsv(
+  // Export universel multi-plateforme (Clipboard + Printing share)
+  Future<void> _exportCsv(
     BuildContext context,
     List<AuditLog> logs,
     Map<String, String> adminNames,
-  ) {
+  ) async {
     final buffer = StringBuffer(
       'Horodatage,Administrateur,Action,Entité,ID Entité\n',
     );
@@ -593,25 +597,29 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
       );
     }
 
-    final bytes = utf8.encode(buffer.toString());
-    final blob = html.Blob([bytes], 'text/csv');
-    final url = html.Url.createObjectUrlFromBlob(blob);
-    html.AnchorElement(href: url)
-      ..setAttribute(
-        'download',
-        'audit_log_${DateTime.now().millisecondsSinceEpoch}.csv',
-      )
-      ..click();
-    html.Url.revokeObjectUrl(url);
+    final csvText = buffer.toString();
+    final bytes = Uint8List.fromList(utf8.encode(csvText));
+    await Clipboard.setData(ClipboardData(text: csvText));
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: AppTheme.accentEmerald,
-        content: Text(
-          '${logs.length} entrées exportées.',
-          style: GoogleFonts.inter(color: Colors.white),
+    try {
+      await Printing.sharePdf(
+        bytes: bytes,
+        filename: 'audit_log_${DateTime.now().millisecondsSinceEpoch}.csv',
+      );
+    } catch (_) {
+      // Repli silencieux presse-papier si partage indisponible
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppTheme.accentEmerald,
+          content: Text(
+            '${logs.length} entrées exportées (copiées dans le presse-papier).',
+            style: GoogleFonts.inter(color: Colors.white),
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 }

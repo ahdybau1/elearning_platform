@@ -3511,4 +3511,33 @@ class SupabaseService {
       'reviewed_at': DateTime.now().toIso8601String(),
     }).eq('id', attemptId);
   }
+
+  // ─── PedagogicalValidationAgent (AIA-AGT-024, IA-008) ──────────
+
+  Future<Map<String, dynamic>> validateLessonWithAi(String lessonId) async {
+    final res = await client.functions.invoke(
+      'ai-pedagogical-validation',
+      body: {'lesson_id': lessonId},
+    );
+    if (res.status != 200) {
+      final error = (res.data is Map) ? res.data['error'] : res.data;
+      throw Exception(error ?? 'Échec du pré-contrôle pédagogique');
+    }
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  // ─── CurriculumMappingAgent (AIA-AGT-017, IA-008) ─────────────
+
+  Future<Map<String, dynamic>> mapCurriculumWithAi(String text) async {
+    final res = await client.functions.invoke(
+      'ai-curriculum-mapping',
+      body: {'text': text},
+    );
+    if (res.status != 200) {
+      final error = (res.data is Map) ? res.data['error'] : res.data;
+      throw Exception(error ?? 'Échec du mapping curriculaire');
+    }
+    return Map<String, dynamic>.from(res.data as Map);
+  }
 }
+

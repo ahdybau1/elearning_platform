@@ -18,7 +18,7 @@ void main() {
     await tester.pump();
 
     expect(find.byType(LoginScreen), findsOneWidget);
-    expect(find.text('E-LEARNING Admin HQ'), findsOneWidget);
+    expect(find.byType(Image), findsOneWidget);
     expect(find.text('Connexion administrateur'), findsOneWidget);
     expect(find.text('Se Connecter'), findsOneWidget);
   });

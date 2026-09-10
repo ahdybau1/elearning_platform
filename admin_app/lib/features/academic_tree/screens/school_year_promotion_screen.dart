@@ -709,8 +709,9 @@ class _SchoolYearPromotionScreenState
                                 const Duration(days: 1825),
                               ),
                             );
-                            if (picked != null)
+                            if (picked != null) {
                               setModalState(() => startDate = picked);
+                            }
                           },
                           icon: const Icon(Icons.event_rounded, size: 16),
                           label: Text(
@@ -736,8 +737,9 @@ class _SchoolYearPromotionScreenState
                                 const Duration(days: 1825),
                               ),
                             );
-                            if (picked != null)
+                            if (picked != null) {
                               setModalState(() => endDate = picked);
+                            }
                           },
                           icon: const Icon(Icons.event_rounded, size: 16),
                           label: Text(
@@ -1043,8 +1045,9 @@ class _SchoolYearPromotionScreenState
                                 const Duration(days: 1825),
                               ),
                             );
-                            if (picked != null)
+                            if (picked != null) {
                               setModalState(() => startDate = picked);
+                            }
                           },
                           icon: const Icon(Icons.event_rounded, size: 16),
                           label: Text(
@@ -1066,8 +1069,9 @@ class _SchoolYearPromotionScreenState
                                 const Duration(days: 1825),
                               ),
                             );
-                            if (picked != null)
+                            if (picked != null) {
                               setModalState(() => endDate = picked);
+                            }
                           },
                           icon: const Icon(Icons.event_rounded, size: 16),
                           label: Text(DateFormat('dd/MM/yyyy').format(endDate)),
@@ -1370,8 +1374,9 @@ class _SchoolYearPromotionScreenState
                                 const Duration(days: 30),
                               ),
                             );
-                            if (picked != null)
+                            if (picked != null) {
                               setModalState(() => startDate = picked);
+                            }
                           },
                           icon: const Icon(Icons.event_rounded, size: 16),
                           label: Text(
@@ -1395,8 +1400,9 @@ class _SchoolYearPromotionScreenState
                                 const Duration(days: 30),
                               ),
                             );
-                            if (picked != null)
+                            if (picked != null) {
                               setModalState(() => endDate = picked);
+                            }
                           },
                           icon: const Icon(Icons.event_rounded, size: 16),
                           label: Text(
@@ -1561,8 +1567,9 @@ class _SchoolYearPromotionScreenState
                                 const Duration(days: 1825),
                               ),
                             );
-                            if (picked != null)
+                            if (picked != null) {
                               setModalState(() => startDate = picked);
+                            }
                           },
                           icon: const Icon(Icons.event_rounded, size: 16),
                           label: Text(
@@ -1584,8 +1591,9 @@ class _SchoolYearPromotionScreenState
                                 const Duration(days: 1825),
                               ),
                             );
-                            if (picked != null)
+                            if (picked != null) {
                               setModalState(() => endDate = picked);
+                            }
                           },
                           icon: const Icon(Icons.event_rounded, size: 16),
                           label: Text(DateFormat('dd/MM/yyyy').format(endDate)),

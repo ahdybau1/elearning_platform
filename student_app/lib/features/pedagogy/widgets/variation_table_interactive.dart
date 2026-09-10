@@ -97,199 +97,247 @@ class _VariationTableInteractiveState extends State<VariationTableInteractive> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // 1. Structure du Tableau (Border bleue/grise élégante)
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(AppRadius.card),
-            border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(8),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              // LIGNE 1 : Valeurs de x
-              _buildRow(
-                height: 48,
-                headerWidget: Math.tex(
-                  'x',
-                  mathStyle: MathStyle.display,
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-                ),
-                content: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    Math.tex(r'-\infty', mathStyle: MathStyle.text, textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                    Math.tex('0', mathStyle: MathStyle.text, textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                    Math.tex('2', mathStyle: MathStyle.text, textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                    Math.tex(r'+\infty', mathStyle: MathStyle.text, textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                  ],
-                ),
-                backgroundColor: const Color(0xFFF8FAFC),
-              ),
-              const Divider(height: 1, color: Color(0xFFCBD5E1), thickness: 1.5),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF0E1726) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFCBD5E1);
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final subTextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final rowAltBg = isDark ? const Color(0xFF131D31) : const Color(0xFFF8FAFC);
 
-              // LIGNE 2 : Signe de f'(x)
-              _buildRow(
-                height: 64,
-                headerWidget: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('Signe de', style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
-                    const SizedBox(height: 2),
-                    Math.tex("f'(x)", mathStyle: MathStyle.text, textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                  ],
-                ),
-                content: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildDropSlot(
-                      slotId: 'sign_1',
-                      width: 70,
-                      height: 44,
-                      hint: 'Signe',
-                      isSign: true,
-                    ),
-                    Math.tex('0', mathStyle: MathStyle.text, textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
-                    _buildDropSlot(
-                      slotId: 'sign_2',
-                      width: 70,
-                      height: 44,
-                      hint: 'Signe',
-                      isSign: true,
-                    ),
-                    Math.tex('0', mathStyle: MathStyle.text, textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
-                    _buildDropSlot(
-                      slotId: 'sign_3',
-                      width: 70,
-                      height: 44,
-                      hint: 'Signe',
-                      isSign: true,
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1, color: Color(0xFFCBD5E1), thickness: 1.5),
-
-              // LIGNE 3 : Variations de f
-              _buildRow(
-                height: 96,
-                headerWidget: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('Variations de', style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
-                    const SizedBox(height: 2),
-                    Math.tex('f', mathStyle: MathStyle.text, textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                  ],
-                ),
-                content: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Math.tex(r'-\infty', mathStyle: MathStyle.text, textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
-                    _buildDropSlot(
-                      slotId: 'var_1',
-                      width: 60,
-                      height: 58,
-                      hint: 'Flèche',
-                      isSign: false,
-                    ),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Math.tex('1', mathStyle: MathStyle.text, textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                        const SizedBox(height: 14),
-                      ],
-                    ),
-                    _buildDropSlot(
-                      slotId: 'var_2',
-                      width: 60,
-                      height: 58,
-                      hint: 'Flèche',
-                      isSign: false,
-                    ),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 14),
-                        Math.tex('-3', mathStyle: MathStyle.text, textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                      ],
-                    ),
-                    _buildDropSlot(
-                      slotId: 'var_3',
-                      width: 60,
-                      height: 58,
-                      hint: 'Flèche',
-                      isSign: false,
-                    ),
-                    Math.tex(r'+\infty', mathStyle: MathStyle.text, textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // 2. Palette des éléments à placer (si mode interactif)
-        if (widget.isInteractive) ...[
-          const SizedBox(height: 18),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFAF5FF),
-              borderRadius: BorderRadius.circular(AppRadius.card),
-              border: Border.all(color: const Color(0xFFE9D5FF)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'ÉLÉMENTS À PLACER',
-                  style: TextStyle(
-                    color: Color(0xFF7E22CE),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    letterSpacing: 1.1,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 10,
-                  children: [
-                    _buildTokenItem('+'),
-                    _buildTokenItem('-'),
-                    _buildTokenItem('0'),
-                    _buildTokenItem('↗'),
-                    _buildTokenItem('↘'),
-                  ],
-                ),
-                if (_selectedToken != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Jeton "$_selectedToken" sélectionné : cliquez sur une case pointillée pour le déposer.',
-                    style: const TextStyle(
-                      color: Color(0xFF6B21A8),
-                      fontSize: 12,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+    final tableWidget = Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(isDark ? 30 : 8),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
-      ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          // LIGNE 1 : Valeurs de x
+          _buildRow(
+            height: 46,
+            headerWidget: Math.tex(
+              'x',
+              mathStyle: MathStyle.display,
+              textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+            ),
+            content: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                Math.tex(r'-\infty', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
+                Math.tex('0', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
+                Math.tex('2', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
+                Math.tex(r'+\infty', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
+              ],
+            ),
+            backgroundColor: rowAltBg,
+            borderColor: borderColor,
+          ),
+          Divider(height: 1, color: borderColor, thickness: 1.2),
+
+          // LIGNE 2 : Signe de f'(x)
+          _buildRow(
+            height: 60,
+            headerWidget: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Signe de', style: TextStyle(fontSize: 11, color: subTextColor, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 2),
+                Math.tex("f'(x)", mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
+              ],
+            ),
+            content: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildDropSlot(
+                  slotId: 'sign_1',
+                  width: 64,
+                  height: 42,
+                  hint: 'Signe',
+                  isSign: true,
+                  isDark: isDark,
+                ),
+                Math.tex('0', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: subTextColor)),
+                _buildDropSlot(
+                  slotId: 'sign_2',
+                  width: 64,
+                  height: 42,
+                  hint: 'Signe',
+                  isSign: true,
+                  isDark: isDark,
+                ),
+                Math.tex('0', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: subTextColor)),
+                _buildDropSlot(
+                  slotId: 'sign_3',
+                  width: 64,
+                  height: 42,
+                  hint: 'Signe',
+                  isSign: true,
+                  isDark: isDark,
+                ),
+              ],
+            ),
+            borderColor: borderColor,
+          ),
+          Divider(height: 1, color: borderColor, thickness: 1.2),
+
+          // LIGNE 3 : Variations de f
+          _buildRow(
+            height: 88,
+            headerWidget: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Variations de', style: TextStyle(fontSize: 11, color: subTextColor, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 2),
+                Math.tex('f', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textColor)),
+              ],
+            ),
+            content: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Math.tex(r'-\infty', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: subTextColor)),
+                _buildDropSlot(
+                  slotId: 'var_1',
+                  width: 56,
+                  height: 52,
+                  hint: 'Flèche',
+                  isSign: false,
+                  isDark: isDark,
+                ),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Math.tex('1', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
+                    const SizedBox(height: 12),
+                  ],
+                ),
+                _buildDropSlot(
+                  slotId: 'var_2',
+                  width: 56,
+                  height: 52,
+                  hint: 'Flèche',
+                  isSign: false,
+                  isDark: isDark,
+                ),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 12),
+                    Math.tex('-3', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
+                  ],
+                ),
+                _buildDropSlot(
+                  slotId: 'var_3',
+                  width: 56,
+                  height: 52,
+                  hint: 'Flèche',
+                  isSign: false,
+                  isDark: isDark,
+                ),
+                Math.tex(r'+\infty', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: subTextColor)),
+              ],
+            ),
+            borderColor: borderColor,
+          ),
+        ],
+      ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final needsHorizontalScroll = constraints.maxWidth < 420;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 1. Structure du Tableau (avec scroll horizontal souple sur petit mobile)
+            if (needsHorizontalScroll)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 420),
+                  child: tableWidget,
+                ),
+              )
+            else
+              tableWidget,
+
+            // 2. Palette des éléments à placer (Ruban fluide et épuré)
+            if (widget.isInteractive) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF131D31) : const Color(0xFFFAF5FF),
+                  borderRadius: BorderRadius.circular(AppRadius.card),
+                  border: Border.all(
+                    color: isDark
+                        ? const Color(0xFF7E22CE).withAlpha(50)
+                        : const Color(0xFFE9D5FF),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.touch_app_rounded,
+                          size: 15,
+                          color: isDark ? const Color(0xFFA855F7) : const Color(0xFF7E22CE),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'JETONS À DÉPOSER',
+                          style: TextStyle(
+                            color: isDark ? const Color(0xFFA855F7) : const Color(0xFF7E22CE),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 8,
+                      children: [
+                        _buildTokenItem('+', isDark),
+                        _buildTokenItem('-', isDark),
+                        _buildTokenItem('0', isDark),
+                        _buildTokenItem('↗', isDark),
+                        _buildTokenItem('↘', isDark),
+                      ],
+                    ),
+                    if (_selectedToken != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Jeton "$_selectedToken" sélectionné : touchez une case pour le placer.',
+                        style: TextStyle(
+                          color: isDark ? const Color(0xFFC084FC) : const Color(0xFF6B21A8),
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 
@@ -299,6 +347,7 @@ class _VariationTableInteractiveState extends State<VariationTableInteractive> {
     Widget? headerWidget,
     required Widget content,
     Color? backgroundColor,
+    required Color borderColor,
   }) {
     return Container(
       height: height,
@@ -307,11 +356,11 @@ class _VariationTableInteractiveState extends State<VariationTableInteractive> {
         children: [
           // En-tête gauche
           Container(
-            width: 90,
+            width: 84,
             alignment: Alignment.center,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(
-                right: BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                right: BorderSide(color: borderColor, width: 1.2),
               ),
             ),
             child: headerWidget ??
@@ -321,7 +370,6 @@ class _VariationTableInteractiveState extends State<VariationTableInteractive> {
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
                     fontFamily: 'serif',
                   ),
                 ),
@@ -339,9 +387,20 @@ class _VariationTableInteractiveState extends State<VariationTableInteractive> {
     required double height,
     required String hint,
     required bool isSign,
+    required bool isDark,
   }) {
     final value = _placedElements[slotId];
     final bool hasValue = value != null;
+
+    final slotBg = hasValue
+        ? (isSign
+            ? (isDark ? const Color(0xFF1E3A5F) : const Color(0xFFEFF6FF))
+            : (isDark ? const Color(0xFF133E2B) : const Color(0xFFF0FDF4)))
+        : (isDark ? const Color(0xFF162032) : const Color(0xFFF8FAFC));
+
+    final slotBorder = hasValue
+        ? (isSign ? const Color(0xFF3B82F6) : AppColors.tealSuccess)
+        : (isDark ? const Color(0xFF334155) : const Color(0xFF94A3B8));
 
     return DragTarget<String>(
       onAcceptWithDetails: (details) => _handleDrop(slotId, details.data),
@@ -354,28 +413,23 @@ class _VariationTableInteractiveState extends State<VariationTableInteractive> {
             width: width,
             height: height,
             decoration: BoxDecoration(
-              color: hasValue
-                  ? (isSign ? const Color(0xFFEFF6FF) : const Color(0xFFF0FDF4))
-                  : (isHovered ? const Color(0xFFF3E8FF) : const Color(0xFFF8FAFC)),
+              color: isHovered
+                  ? (isDark ? const Color(0xFF3B1D54) : const Color(0xFFF3E8FF))
+                  : slotBg,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: hasValue
-                    ? (isSign ? const Color(0xFF3B82F6) : AppColors.tealSuccess)
-                    : (isHovered
-                        ? const Color(0xFF9333EA)
-                        : const Color(0xFF94A3B8)),
-                width: hasValue ? 1.5 : 1.2,
-                style: hasValue ? BorderStyle.solid : BorderStyle.solid,
+                color: isHovered ? const Color(0xFF9333EA) : slotBorder,
+                width: hasValue ? 1.5 : 1.1,
               ),
             ),
             child: Center(
               child: hasValue
-                  ? _buildPlacedContent(value, isSign)
+                  ? _buildPlacedContent(value, isSign, isDark)
                   : Text(
                       widget.isInteractive ? hint : '',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10,
-                        color: Color(0xFF94A3B8),
+                        color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -386,32 +440,34 @@ class _VariationTableInteractiveState extends State<VariationTableInteractive> {
     );
   }
 
-  Widget _buildPlacedContent(String value, bool isSign) {
+  Widget _buildPlacedContent(String value, bool isSign, bool isDark) {
     if (value == 'up' || value == '↗') {
       return const Icon(
         Icons.trending_up_rounded,
         color: AppColors.tealSuccess,
-        size: 26,
+        size: 24,
       );
     }
     if (value == 'down' || value == '↘') {
       return const Icon(
         Icons.trending_down_rounded,
         color: Color(0xFFEA580C),
-        size: 26,
+        size: 24,
       );
     }
     return Text(
       value,
       style: TextStyle(
-        fontSize: isSign ? 18 : 16,
+        fontSize: isSign ? 17 : 15,
         fontWeight: FontWeight.bold,
-        color: isSign ? const Color(0xFF1D4ED8) : const Color(0xFF0F172A),
+        color: isSign
+            ? (isDark ? const Color(0xFF60A5FA) : const Color(0xFF1D4ED8))
+            : (isDark ? Colors.white : const Color(0xFF0F172A)),
       ),
     );
   }
 
-  Widget _buildTokenItem(String token) {
+  Widget _buildTokenItem(String token, bool isDark) {
     final isSelected = _selectedToken == token;
 
     final tokenWidget = GestureDetector(
@@ -422,28 +478,28 @@ class _VariationTableInteractiveState extends State<VariationTableInteractive> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
               ? const Color(0xFF581C87)
-              : const Color(0xFF7E22CE), // Violet riche maquette
-          borderRadius: BorderRadius.circular(10),
+              : (isDark ? const Color(0xFF6B21A8) : const Color(0xFF7E22CE)),
+          borderRadius: BorderRadius.circular(8),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF7E22CE).withAlpha(isSelected ? 100 : 50),
-              blurRadius: isSelected ? 8 : 4,
+              color: const Color(0xFF7E22CE).withAlpha(isSelected ? 90 : 40),
+              blurRadius: isSelected ? 6 : 3,
               offset: const Offset(0, 2),
             ),
           ],
           border: isSelected
-              ? Border.all(color: Colors.white, width: 2)
+              ? Border.all(color: Colors.white, width: 1.5)
               : null,
         ),
         child: Text(
           token,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -455,14 +511,14 @@ class _VariationTableInteractiveState extends State<VariationTableInteractive> {
       feedback: Material(
         color: Colors.transparent,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           decoration: BoxDecoration(
             color: const Color(0xFF6B21A8),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
             boxShadow: const [
               BoxShadow(
                 color: Colors.black26,
-                blurRadius: 12,
+                blurRadius: 10,
                 offset: Offset(0, 4),
               ),
             ],
@@ -471,7 +527,7 @@ class _VariationTableInteractiveState extends State<VariationTableInteractive> {
             token,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),

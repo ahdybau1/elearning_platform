@@ -39,19 +39,20 @@ class HomeDashboardScreen extends ConsumerWidget {
               subtitle:
                   'Bienvenue, ${profile?.name ?? 'Élève'} — ${profile?.className ?? ''}',
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             // Anniversaire (fonctionnalité hors CDC, approuvée explicitement par l'utilisateur)
             if (authState.account?.isBirthdayToday == true) ...[
               _buildBirthdayBanner(authState.account!.firstName),
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
             ],
             // Subscription Status / Upgrade Banner
-            if (profile?.hasActiveSubscription != true)
-              _buildSubscriptionBanner(context, ref)
-            else
+            if (profile?.hasActiveSubscription != true) ...[
+              _buildSubscriptionBanner(context, ref),
+              const SizedBox(height: 12),
+            ] else ...[
               _buildActivePassCard(context, profile!),
-
-            const SizedBox(height: 24),
+              const SizedBox(height: 12),
+            ],
 
             // §2.7 : compte à rebours vers l'examen officiel du profil actif — n'apparaît
             // que si la classe compose réellement un examen national (§4).
@@ -63,7 +64,7 @@ class HomeDashboardScreen extends ConsumerWidget {
             if (profile != null)
               _buildTrimesterStatusCard(context, ref, profile.classNodeId),
 
-            const SizedBox(height: 28),
+            const SizedBox(height: 16),
 
             // Section Title — le titre rétrécit avant de déborder (Expanded+ellipsis) : sur un
             // petit écran, "Vos Matières au Programme" + "Programme Officiel" côte à côte ne
@@ -328,49 +329,43 @@ class HomeDashboardScreen extends ConsumerWidget {
 
   Widget _buildActivePassCard(BuildContext context, StudentProfile profile) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: context.colors.card,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: context.colors.accentEmerald.withValues(alpha: 0.4),
+          color: context.colors.accentEmerald.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: context.colors.accentEmerald.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              Icons.verified_rounded,
-              color: context.colors.accentEmerald,
-              size: 22,
-            ),
+          Icon(
+            Icons.verified_rounded,
+            color: context.colors.accentEmerald,
+            size: 18,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Abonnement Actif : Pass ${profile.subscriptionTier.toUpperCase()}',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: context.colors.textPrimary,
-                  ),
+            child: Text.rich(
+              TextSpan(
+                text: 'Abonnement Actif : ',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: context.colors.textSecondary,
                 ),
-                Text(
-                  'Accès complet aux fiches de cours, formules officielles & annales',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: context.colors.textSecondary,
+                children: [
+                  TextSpan(
+                    text: 'Pass ${profile.subscriptionTier.toUpperCase()}',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: context.colors.accentEmerald,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -387,7 +382,7 @@ class HomeDashboardScreen extends ConsumerWidget {
 
     return termAsync.when(
       loading: () => const SizedBox(
-        height: 80,
+        height: 60,
         child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
       ),
       error: (err, _) => const SizedBox.shrink(),
@@ -398,12 +393,12 @@ class HomeDashboardScreen extends ConsumerWidget {
           return const SizedBox.shrink();
         }
         return Padding(
-          padding: const EdgeInsets.only(bottom: 28),
+          padding: const EdgeInsets.only(bottom: 14),
           child: Container(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: context.colors.card,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(color: context.colors.border),
             ),
             child: Column(
@@ -416,7 +411,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                       children: [
                         Icon(
                           Icons.calendar_today_rounded,
-                          size: 16,
+                          size: 15,
                           color: context.colors.accentPrimary,
                         ),
                         const SizedBox(width: 8),
@@ -425,7 +420,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                               ? '${term.termName} (Terminé)'
                               : '${term.termName} (En Cours)',
                           style: GoogleFonts.inter(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
                             color: context.colors.textPrimary,
                           ),
@@ -435,7 +430,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                     if (term.schoolYearName != null)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
+                          horizontal: 7,
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
@@ -447,7 +442,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                         child: Text(
                           'ANNÉE ${term.schoolYearName}',
                           style: GoogleFonts.inter(
-                            fontSize: 10,
+                            fontSize: 9.5,
                             fontWeight: FontWeight.bold,
                             color: context.colors.accentEmerald,
                           ),
@@ -455,24 +450,16 @@ class HomeDashboardScreen extends ConsumerWidget {
                       ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: term.progressRatio,
                     backgroundColor: context.colors.surface,
                     valueColor: AlwaysStoppedAnimation<Color>(
                       context.colors.accentPrimary,
                     ),
-                    minHeight: 8,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Le contenu déjà couvert reste toujours accessible ; le trimestre suivant se débloque automatiquement à sa date.',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: context.colors.textSecondary,
+                    minHeight: 6,
                   ),
                 ),
               ],
@@ -497,26 +484,26 @@ class HomeDashboardScreen extends ConsumerWidget {
         if (daysLeft < 0) return const SizedBox.shrink();
 
         return Padding(
-          padding: const EdgeInsets.only(bottom: 24),
+          padding: const EdgeInsets.only(bottom: 14),
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 colors: [Color(0xFF0EA5E9), Color(0xFF6366F1)],
               ),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF0EA5E9).withValues(alpha: 0.3),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
+                  color: const Color(0xFF0EA5E9).withValues(alpha: 0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
@@ -524,17 +511,17 @@ class HomeDashboardScreen extends ConsumerWidget {
                   child: const Icon(
                     Icons.hourglass_top_rounded,
                     color: Colors.white,
-                    size: 24,
+                    size: 20,
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     daysLeft == 0
                         ? "C'est aujourd'hui ! Bonne chance pour le ${exam.name} 🍀"
                         : 'Plus que $daysLeft jour${daysLeft > 1 ? 's' : ''} avant le ${exam.name} !',
                     style: GoogleFonts.outfit(
-                      fontSize: 14,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),

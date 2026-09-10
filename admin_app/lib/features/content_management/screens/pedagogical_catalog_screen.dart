@@ -368,11 +368,12 @@ class _PedagogicalCatalogScreenState
                       final subject = subjects
                           .where((s) => s.id == _selectedSubjectId)
                           .firstOrNull;
-                      if (subject != null)
+                      if (subject != null) {
                         _showCreateOrEditSubjectModal(
                           context,
                           existing: subject,
                         );
+                      }
                     },
                     icon: const Icon(
                       Icons.edit_rounded,
@@ -435,11 +436,12 @@ class _PedagogicalCatalogScreenState
                         final subject = subjects
                             .where((s) => s.id == _selectedSubjectId)
                             .firstOrNull;
-                        if (subject != null)
+                        if (subject != null) {
                           _showPermanentDeleteSubjectConfirmation(
                             context,
                             subject,
                           );
+                        }
                       },
                       icon: const Icon(
                         Icons.delete_forever_rounded,
@@ -1335,8 +1337,9 @@ class _PedagogicalCatalogScreenState
                               code: code,
                               countryId: selectedCountryId,
                             );
-                            if (created == null)
+                            if (created == null) {
                               throw Exception('La création a échoué.');
+                            }
                             subjectId = created.id;
                             await service.linkSubjectToClasses(
                               subjectId,
@@ -1345,7 +1348,9 @@ class _PedagogicalCatalogScreenState
                           }
                           ref.invalidate(subjectsProvider);
                           ref.invalidate(subjectsForClassProvider);
-                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (ctx.mounted) {
+                            Navigator.pop(ctx);
+                          }
                           if (context.mounted) {
                             setState(() => _selectedSubjectId = subjectId);
                           }
@@ -1709,8 +1714,9 @@ class _PedagogicalCatalogScreenState
               backgroundColor: AppTheme.accentEmerald,
             ),
             onPressed: () async {
-              if (typeCtrl.text.trim().isEmpty || _selectedSubjectId == null)
+              if (typeCtrl.text.trim().isEmpty || _selectedSubjectId == null) {
                 return;
+              }
               final service = ref.read(supabaseServiceProvider);
               if (isEditing) {
                 await service.updateContentCatalogItem(

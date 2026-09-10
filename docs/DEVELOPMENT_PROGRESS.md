@@ -1,6 +1,42 @@
 # Progression EDLEARN
 
-## 2026-09-07 — Studio, revue et vérification Supabase
+## 2026-09-08 — Continuum Multimédia Médiathèque & Modernisation Observabilité Moteurs
+
+- **Objectif :** Raccorder la Médiathèque centrale partagée (`MediaLibraryScreen`) au Studio de création (`lesson_builder_screen.dart`), intégrer le rendu natif haute-fidélité des figures et schémas dans l'application élève (`BlockRendererRegistry`), et moderniser le Centre des Moteurs (`EngineCenterScreen`) avec les tokens du `ElefDesignSystem`.
+- **Continuum Multimédia & Schémas Pédagogiques (`admin_app` <-> `student_app`) :**
+  - Dans `admin_app` (`lesson_builder_screen.dart`) :
+    - Ajout de la section `RESSOURCES VISUELLES & MÉDIATHÈQUE` dans le volet Bibliothèque avec le bloc `Image & Schéma Pédagogique` (`LessonBlock.mediaImage`).
+    - Carte d'édition dédiée dans `_BlockEditorCardWidgetState` avec sélecteur modal direct `MediaLibraryScreen(onSelected: ...)` pour lier les assets sans copier/coller manuel.
+    - Champs URL, légende descriptive, texte alternatif d'accessibilité et aperçu miniature en direct.
+    - Rendu en direct dans le volet d'aperçu élève du Studio v2.
+  - Dans `student_app` (`block_renderer_registry.dart`) :
+    - Routage des types `image`, `media_image`, `illustration` vers `_imageBlock`.
+    - Rendu responsive adaptatif carte avec conteneur `Semantics` pour l'accessibilité, gestion de chargement (`loadingBuilder`), repli gracieux hors-ligne sans crash (`errorBuilder`), légende en italique et modale de zoom plein écran tactile avec `InteractiveViewer` (pinch-to-zoom).
+- **Modernisation du Centre des Moteurs (`admin_app`) :**
+  - Refonte complète de `EngineCenterScreen` sur `ElefDesignSystem` (`ElefColors`, `ElefTypography`, `ElefRadius`, `ElefBadge`).
+  - Badges d'exécution visuels (`LOCAL`, `HYBRIDE`, `SERVEUR`), filtres rapides, compteurs de répartition et cartes de diagnostics interactifs.
+- **Validation & Non-Régression :**
+  - 92 tests automatisés réussis sur l'ensemble de la plateforme (36/36 `admin_app`, 56/56 `student_app`).
+  - 0 avertissement ni erreur `dart analyze` sur l'ensemble des deux projets Flutter.
+  - Zéro mock : utilisation exclusive des assets réels et fallbacks contrôlés.
+
+## 2026-09-08 — Continuum Content Factory & Laboratoires Virtuels Déterministes
+
+- **Objectif :** Intégrer les 5 moteurs scientifiques et simulateurs déterministes natifs dans le continuum éditorial (`admin_app` Studio v2 -> persistance JSON canonique -> `student_app` BlockRendererRegistry).
+- **Modèle & Studio v2 (`admin_app`) :**
+  - Ajout de la factory `LessonBlock.virtualLab({String? heading, required String labType, String? description, Map<String, dynamic>? initialParams, int order = 0})` dans `LessonBlock`.
+  - Extension de la bibliothèque Studio v2 (`MOTEURS SCIENTIFIQUES & INTERACTIFS`) avec les blocs SPICE Circuit, Balistique 2D, et Visualiseur Moléculaire 3D.
+  - Carte d'édition dédiée dans `_BlockEditorCardWidgetState` avec sélecteur déroulant du moteur déterministe (`circuit`, `ballistics`, `molecule`, `python`, `graph`) et synchronisation réactive des métadonnées `labType`.
+- **Rendu & Interaction Élève (`student_app`) :**
+  - Routage unifié dans `BlockRendererRegistry.build` pour les types `virtual_lab`, `simulation`, `lab`, `graph_plot`, `code_runner` vers `_virtualLabBlock`.
+  - Carte `_VirtualLabCardWidget` adaptative dark/light avec badges de précision déterministe (`SPICE 3F5 DÉTERMINISTE`, `MOTEUR NEWTONIEN RK4`, `GÉOMÉTRIE 3D COVALENTE`, `INTERPRÉTEUR PYODIDE WASM`, `GRAPH ENGINE DÉTERMINISTE`).
+  - Accordéon ergonomique mobile (replier/déplier) et lanceur plein écran modal (`showDialog` / `InteractiveFunctionGraph.showModal`).
+  - Protection anti-débordement vertical avec `SingleChildScrollView` et hauteur bornée à 540 px.
+- **Validation & Non-Régression :**
+  - 90 tests automatisés réussis sur l'ensemble de la plateforme (36/36 `admin_app`, 54/54 `student_app`).
+  - 0 avertissement ni erreur `dart analyze` sur les deux dépôts.
+  - Zéro mock : utilisation exclusive des moteurs déterministes réels (ngspice/WASM/RK4).
+
 
 Réouverture des brouillons depuis Leçons & Cours, soumission explicite à la revue,
 conservation des métadonnées par l'ancien éditeur et barre Studio responsive implémentées.
@@ -348,3 +384,70 @@ Inventaire et preuves : ADMIN_TRANSVERSAL_AUDIT_2026_09_07.md.
 - Aucun schéma, permission, compte, paiement, contenu publié ou configuration secrète modifié. Aucun upload réel ni coût IA déclenché pour les tests. Points restant à traiter : tableau de bord trop long, états de chargement de certaines pages, raccordements IA et validation E2E des mutations module par module.
 
 Complément du même lot : les appels IA du tableau de bord sont regroupés par agent (5 groupes initialement, développement de la liste et détail défilant), en conservant sommes et échecs observés. Les classes/matières distinguent chargement et échec réseau de l’absence réelle de données, avec reprise. Suite finale : **36 tests admin passants**, analyse ciblée sans problème. Le premier build web du lot (médiathèque/Autopilot/moteurs) a réussi ; bibliothèque réelle et filtre Images vérifiés en session connectée. Le build incluant les deux dernières corrections reste à produire après le push demandé par l’utilisateur. Aucun déploiement distant réalisé.
+
+## 8 septembre — Remise à niveau intégrale Admin HQ (Studio v2, Agents IA, Multiplateforme & Tests)
+
+Références : MASTER administration §2.3/2.5/2.7, Content Factory §4/5/6/9, Agents IA AIA-AGT-017 / AIA-AGT-024 et directives `.agents/AGENTS.md`.
+
+- **Correction des tests & Marque visuelle** :
+  - Mise à jour de `admin_app/test/widget_test.dart` pour s'aligner sur la marque visuelle réelle (`Image` avec logo SVG/PNG plutôt qu'un texte statique obsolète). Les 2 tests de `widget_test.dart` passent à 100%.
+- **Studio de Cours v2 (`lesson_builder_screen.dart`)** :
+  - Résolution définitive du bogue de perte de focus et saut de curseur lors de la frappe en extrayant les cartes de blocs dans un widget avec état dédié `_BlockEditorCardWidget` doté de contrôleurs textuels stables (`ValueKey(block.id)`).
+  - Ajout du bloc `Fiche Synthèse Visuelle` (`LessonBlock.summaryCard`) dans la bibliothèque de blocs.
+  - Implémentation de l'éditeur interactif complet pour `summary_card` : titres, sous-titres, formule clé LaTeX, comparaison responsive à 2 colonnes (Cas A vs Cas B avec badges et items libellé/formule), mémos et pièges d'examen.
+  - Tests unitaires et de persistance du Studio : 7/7 passants.
+- **Agents IA Métier Backend & Supabase Edge Functions** :
+  - Déploiement de `ai-pedagogical-validation` (AIA-AGT-024) : validation substantielle des leçons (vérification des blocs de fond, détection de mocks/placeholders, conformité des formules et liaisons curriculaires avec calcul d'indice de confiance et liste de contrôle).
+  - Déploiement de `ai-curriculum-mapping` (AIA-AGT-017) : analyse d'extraits officiels, normalisation lexicale, recherche de correspondance avec les chapitres/compétences de la base et détection d'ambiguïtés nécessitant une relecture humaine (HITL).
+- **Raccordement IHM Frontend** :
+  - `curriculum_autopilot_screen.dart` : Raccordement de l'assistant d'analyse AIA-AGT-017 avec suggestions de chapitres et compétences cibles, tout en maintenant les avertissements et l'absence de faux harvesting automatique. Mise en conformité responsive multi-résolutions (345px, 390px, 800px, 1400px sans overflow).
+  - `validation_queue_screen.dart` : Ajout d'une action "Pré-contrôle IA (AIA-AGT-024)" ouvrant une boîte modale d'analyse automatisée de conformité avant validation humaine.
+- **Portabilité multiplateforme & Qualité de code** :
+  - Suppression de l'import obsolète web-only `dart:html` dans `audit_log_screen.dart` au profit d'une solution multiplateforme (`package:printing` et `Clipboard.setData`).
+  - Casts sécurisés dans `active_sessions_screen.dart` pour prévenir tout crash sur les sessions utilisateur.
+  - Résolution exhaustive de tous les avertissements `curly_braces_in_flow_control_structures` dans l'application admin (`academic_tree_screen.dart`, `school_year_promotion_screen.dart`, `pedagogical_catalog_screen.dart`, `validation_queue_screen.dart`, `exam_paper_review_screen.dart`).
+- **Validation** :
+  - `dart analyze` : **0 erreur, 0 avertissement** (No issues found).
+  - `flutter test` : **36/36 tests passants à 100%**.
+  - Intégrité Python Gateway : vérification des imports de `app.main` avec succès.
+
+## 8 septembre — Audit Global Cross-Système (Application Élève, Liens Admin-Élève, Cahiers des Charges & Supabase)
+
+Rapport exhaustif consigné dans : `docs/AUDIT_SYSTEME_COMPLET_2026_09_08.md`.
+
+- **Application Élève (`student_app`)** :
+  - Cartographie exhaustive des 13 modules et 31 écrans (Auth multi-comptes avec anti-fraude, Onboarding académique, BottomBar mobile-first, lecteurs de leçons haute-fidélité, Runner d'exercices à 5 formats, Annales d'examens officiels et d'établissements, Tuteur IA avec rendu LaTeX, Portail Parent étanche, Support et Dons).
+  - 5 simulateurs et outils scientifiques déterministes autonomes sans mocks (`CircuitSimulatorWidget`, `BallisticsSimulatorWidget`, `MolecularViewer3DWidget`, `PythonSandboxWidget`, `InteractiveFunctionGraph` & `VariationTableInteractive`).
+  - Validation qualité : **48/48 tests passants à 100%**, `dart analyze` : **No issues found**.
+- **Synergie et Liens Admin <-> Élève** :
+  - Chaîne éditoriale vérifiée : Studio v2 (`admin_app`) -> File de validation avec pré-contrôle IA (AIA-AGT-024) -> Transaction RPC `approve_and_publish_content` -> Consommation immédiate par `student_app` via `BlockRendererRegistry`.
+  - Intégrité des données : compatibilité 100% des clés `summary_card` entre la sérialisation admin et le rendu élève.
+  - Étanchéité RLS, filtrage trimestriel en coulisses, tatouage judiciaire anti-capture (`ForensicWatermarkService`) et observabilité des coûts IA via `ai_agent_calls`.
+- **Alignement Cahiers des Charges (`docs/`)** :
+  - Parfaite adhérence au CDC Master (Parties 1 et 2), au CDC Agents IA (zéro coût obligatoire, découplage calcul déterministe / raisonnement LLM), et au cahier Content Factory.
+- **Application Supabase** :
+  - 77 migrations relationnelles actives, RLS activé sur toutes les tables sensibles, 21 Edge Functions Deno opérationnelles, et buckets Storage (`lesson-media`, `avatars`, `official-exams`, `establishment-papers`) configurés.
+
+## 8 septembre — Ergonomie Mobile & Élimination de la Surcharge de Boîtes ("Trop de box sur un même écran")
+
+Références : Feedback utilisateur sur smartphone, CDC Master §11.1 Apparence & Design Mobile-First.
+
+- **Élimination des boîtes blanches en dur et harmonisation Dark/Light (`block_renderer_registry.dart`)** :
+  - Remplacement de `Colors.white` et des fonds ardoise fixes par `context.colors.card` et `context.colors.surface` dans tous les blocs haute-fidélité (`_essentialRulesCard`, `_guidedExampleCard`, `_remarksCard`, `_frequentErrorsCard`, `_quickCheckCard`, `_summaryCard`).
+  - Adoucissement des bordures imbriquées (opacité ramenée de 70-90% à 35-50% avec `withAlpha`), suppression des bordures dures multiples et allègement des ombres portées pour aérer l'interface sur smartphones (345-390px).
+  - Couleurs textuelles raccordées à `context.colors.textPrimary`, `textSecondary` et `textMuted` pour lisibilité sans éblouissement en mode sombre natif.
+- **Tableau de Variations Interactif (`variation_table_interactive.dart`)** :
+  - Remplacement de la carte blanche externe par `context.colors.card` avec bordure subtile `context.colors.border`.
+  - Intégration d'un défilement horizontal `SingleChildScrollView` avec largeur minimale sécurisée (420px) pour les écrans < 420px : empêche l'écrasement des colonnes et le rognage des zones de dépôt Drag & Drop.
+  - Transformation de la zone « ÉLÉMENTS À PLACER » en un ruban d'outils intégré, éliminant le conteneur lourd violet à double bordure.
+- **Runner d'Exercices (`exercise_runner_screen.dart`)** :
+  - En-tête de l'énoncé converti d'une `Row` rigide vers un `Wrap(spacing: 8, runSpacing: 8)` : supprime les risques de débordement ou d'écrasement entre le badge d'énoncé et les déclencheurs SymPy et Tuteur Socratique sur les largeurs 320-375px.
+- **Tableau de Bord Accueil (`home_dashboard_screen.dart`)** :
+  - Réduction drastique des marges et séparateurs verticaux empilés (passant de 24-28px à 12-14px).
+  - Transformation de la carte d'abonnement `_buildActivePassCard` en une pastille d'état sobre et compacte.
+  - Compactage des bandeaux Compte à rebours examen et Progression trimestrielle pour rendre les matières au programme immédiatement visibles au-dessus du pli de l'écran mobile.
+- **Validation Qualité Globale** :
+  - `student_app` : `dart analyze` **0 issues**, `flutter test` **48/48 tests passés (100%)**.
+  - `admin_app` : `dart analyze` **0 issues**, `flutter test` **36/36 tests passés (100%)**.
+
+
