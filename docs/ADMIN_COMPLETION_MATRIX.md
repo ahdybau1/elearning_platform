@@ -22,8 +22,13 @@
 - **Pas de `supabase_migrations.schema_migrations`** → l'historique d'application des 77 fichiers
   SQL est inconnu ; **toujours sonder le schéma live avant toute migration**. `pgvector` + `pg_cron`
   actifs. 76 tables publiques, 13 tables `ai_*`.
-- **19 Edge Functions déployées** (pas `ai-curriculum-mapping` ni `ai-pedagogical-validation` — WIP
-  sur disque uniquement).
+- **21 Edge Functions déployées** — `ai-curriculum-mapping` + `ai-pedagogical-validation` **déployées
+  en WP1** (via `npx supabase functions deploy --use-api`, `SUPABASE_ACCESS_TOKEN`=PAT, depuis la
+  racine du dépôt). `ai-curriculum-mapping` corrigée avant déploiement : la jointure PostgREST
+  `academic_levels(name)` visait une table inexistante → remplacée par
+  `academic_nodes:class_node_id(name)`. Les deux **vérifiées bout-en-bout** avec un JWT super_admin
+  réel (compte de test éphémère `claude-wp1-test-admin@pqlearn.local`, à supprimer en WP8) :
+  mapping renvoie de vrais chapitres, validation détecte `_mock` + leçon vide, 401 sans auth.
 - **Registre `ai_agents` : 30 lignes.** 13 pointent une Edge Function réelle déployée ;
   **10 sont `gateway_native`** (AGT-006/007/008/009/010/015/017/018/019/024) = **injoignables**
   (Gateway FastAPI non déployé) ; 7 sont `draft` (AGT-002/003/011/012/013/023/026).
@@ -52,8 +57,8 @@
 | C2-09 | Publier / dépublier / archiver / restaurer / suppr. déf. | Leçons, Exercices, Arbre | RPC lifecycle | 🔵 | libellés à harmoniser ; vérifier présence sur chapitres | — |
 | C2-10 | Opérations groupées (publier/archiver/palier sur sélection) | Leçons, Exercices | — | ❌ | à construire | — |
 | C2-11 | Historique / suivi des traitements | versions leçons ✅, versions exos ✅, **chapitres ?** | `*_versions` | 🟡 | vérifier historique chapitre | — |
-| C2-12 | Curriculum Autopilot : message cohérent + action réelle | `curriculum_autopilot_screen.dart` | `mapCurriculumWithAi` → `ai-curriculum-mapping` | 🟠 | (a) supprimer le disclaimer « non raccordé » contradictoire ; (b) le résultat IA est **affichage seul** — ajouter action « rattacher au chapitre / créer compétence » après revue humaine ; (c) déployer l'Edge Function ; (d) `_textController` sans listener → bouton « Effacer » non réactif | — |
-| C2-13 | File de validation : pré-contrôle IA fonctionnel | `validation_queue_screen.dart` `_runPedagogicalPrecheck` | `validateLessonWithAi` → `ai-pedagogical-validation` | 🟡 | bien construit ; **déployer l'Edge Function** puis vérifier bout en bout | — |
+| C2-12 | Curriculum Autopilot : message cohérent + action réelle | `curriculum_autopilot_screen.dart` | `mapCurriculumWithAi` → `ai-curriculum-mapping` | ✅ | réécrit : disclaimer contradictoire supprimé, framing HITL exact, `ElefDesignSystem` cohérent, `_textController` réactif (listener), chaque chapitre candidat → bouton « Gérer dans Leçons & Cours » (nav id 2) + copier l'ID, transparence méthode déterministe | EF vérifiée bout-en-bout (JWT super_admin) → renvoie chapitre réel « Vérification Studio — Suites » ; `flutter analyze` 0/0 sur le fichier |
+| C2-13 | File de validation : pré-contrôle IA fonctionnel | `validation_queue_screen.dart` `_runPedagogicalPrecheck` | `validateLessonWithAi` → `ai-pedagogical-validation` | 🟡 | backend ✅ (EF déployée + vérifiée : flag `_mock` bloquant sur leçon publiée, structure vide détectée). Contrat de champs identique au dialogue UI. Reste : vérif du rendu dialogue dans l'app en session + traçage `ai_agent_runs` (WP2) | EF testée sur 2 leçons réelles |
 | C2-14 | Registre Agents IA lisible (schémas I/O, statut, EF liée, dernier appel) | `ai_agent_registry_screen.dart` | `aiAgentsProvider` | 🟡 | lecture seule OK pour l'affichage ; enrichir avec « en ligne / hors ligne (gateway_native) » + dernier appel ; l'édition = WP2 | — |
 | C2-15 | Tableau de bord Agents IA & Coûts lisible | `ai_agents_dashboard_screen.dart` | `aiAgentCallsProvider` | 🔵 | regroupé par agent (déjà corrigé) ; lier « Derniers appels » à l'historique WP2 | — |
 

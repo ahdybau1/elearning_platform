@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/curriculum_preview_data.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/data_providers.dart';
 import '../../../core/design_system/tokens/elef_colors.dart';
 import '../../../core/design_system/tokens/elef_typography.dart';
 import '../../../core/design_system/tokens/elef_radius.dart';
-import 'academic_tree_screen.dart';
+import '../../../core/design_system/tokens/elef_spacing.dart';
 
-/// Écran Curriculum Autopilot
-/// Intègre l'Agent de Rattachement Curriculaire (AIA-AGT-017) avec revue humaine obligatoire (HITL).
+/// Curriculum Autopilot (D.3) — assistant de **rattachement curriculaire**.
+///
+/// Intègre l'agent AIA-AGT-017 (`ai-curriculum-mapping`, Edge Function déterministe, sans appel
+/// modèle payant) : à partir d'un extrait de programme ou d'un sommaire, il propose les chapitres
+/// et compétences **déjà présents en base** qui correspondent. Aucune écriture automatique : toute
+/// création ou tout rattachement se fait ensuite à la main dans « Leçons & Cours » ou l'arbre
+/// académique, après revue humaine (HITL). L'exemple de structure en bas de page est une
+/// illustration non normative, jamais enregistrée.
 class CurriculumAutopilotScreen extends ConsumerStatefulWidget {
   const CurriculumAutopilotScreen({super.key});
 
@@ -26,6 +32,13 @@ class _CurriculumAutopilotScreenState
   Map<String, dynamic>? _mappingResult;
 
   @override
+  void initState() {
+    super.initState();
+    // Rendre l'UI réactive à la saisie (bouton « Analyser » activé/désactivé, bouton « Effacer »).
+    _textController.addListener(() => setState(() {}));
+  }
+
+  @override
   void dispose() {
     _textController.dispose();
     super.dispose();
@@ -35,7 +48,8 @@ class _CurriculumAutopilotScreenState
     final text = _textController.text.trim();
     if (text.isEmpty) {
       setState(() {
-        _analysisError = 'Veuillez saisir ou coller un extrait de programme ou sommaire.';
+        _analysisError =
+            'Veuillez saisir ou coller un extrait de programme ou un sommaire.';
         _mappingResult = null;
       });
       return;
@@ -49,330 +63,421 @@ class _CurriculumAutopilotScreenState
     try {
       final service = ref.read(supabaseServiceProvider);
       final res = await service.mapCurriculumWithAi(text);
-      if (mounted) {
-        setState(() {
-          _mappingResult = res;
-          _isAnalyzing = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _mappingResult = res;
+        _isAnalyzing = false;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _analysisError = e.toString().replaceFirst('Exception: ', '');
-          _isAnalyzing = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _analysisError = e.toString().replaceFirst('Exception: ', '');
+        _isAnalyzing = false;
+      });
     }
   }
 
+  void _goToLessonsManager() {
+    ref.read(selectedNavIndexProvider.notifier).state = 2; // Leçons & Cours
+  }
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppTheme.primaryDark,
-    body: ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text(
-          'Curriculum Autopilot',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Collecte automatique non raccordée à cet écran.',
-          style: TextStyle(
-            color: AppTheme.accentAmber,
-            fontWeight: FontWeight.bold,
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: ElefColors.background,
+      body: ListView(
+        padding: ElefSpacing.paddingLg,
+        children: [
+          Text('Curriculum Autopilot', style: ElefTypography.displayMedium),
+          const SizedBox(height: ElefSpacing.xs),
+          Text(
+            "Assistant de rattachement curriculaire (AIA-AGT-017). Analyse déterministe par "
+            "mots-clés, sans coût d'API. Aucune écriture automatique : les rattachements se font "
+            "à la main après revue.",
+            style: ElefTypography.bodyMedium,
           ),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Aucun programme n’a été collecté, certifié ou injecté. Les programmes doivent être reliés à leurs sources, puis relus avant publication.',
-        ),
-        const SizedBox(height: 16),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: FilledButton.icon(
-            icon: const Icon(Icons.account_tree_outlined),
-            label: const Text('Ouvrir l’arbre académique'),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => Scaffold(
-                  appBar: AppBar(title: const Text('Arbre académique')),
-                  body: const AcademicTreeScreen(),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
+          const SizedBox(height: ElefSpacing.lg),
+          _buildAnalyzerCard(),
+          const SizedBox(height: ElefSpacing.lg),
+          _buildSampleSection(),
+        ],
+      ),
+    );
+  }
 
-        // Panneau interactif de l'Agent IA Métier (AIA-AGT-017)
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: ElefColors.surfaceCard,
-            borderRadius: ElefRadius.lg,
-            border: Border.all(color: ElefColors.primary.withAlpha(80)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildAnalyzerCard() {
+    final canAnalyze = _textController.text.trim().isNotEmpty && !_isAnalyzing;
+    return Container(
+      padding: ElefSpacing.paddingMd,
+      decoration: BoxDecoration(
+        color: ElefColors.surfaceCard,
+        borderRadius: ElefRadius.lg,
+        border: Border.all(color: ElefColors.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: ElefColors.primary.withAlpha(40),
-                      borderRadius: ElefRadius.sm,
-                    ),
-                    child: const Icon(
-                      Icons.psychology_rounded,
-                      color: ElefColors.primary,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Analyse et Rattachement Curriculaire (AIA-AGT-017)',
-                          style: ElefTypography.titleMedium.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          'Proposer les chapitres et compétences cibles à partir d\'un extrait de cours ou syllabus officiel.',
-                          style: ElefTypography.caption.copyWith(
-                            color: ElefColors.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-
-              TextField(
-                controller: _textController,
-                style: ElefTypography.bodyMedium.copyWith(color: Colors.white),
-                maxLines: 4,
-                decoration: InputDecoration(
-                  hintText: 'Collez ici l\'extrait du programme ou les objectifs pédagogiques (ex: Suites numériques, raison de récurrence, convergence, limites)...',
-                  hintStyle: ElefTypography.bodySmall.copyWith(color: ElefColors.textMuted),
-                  filled: true,
-                  fillColor: const Color(0xFF090D18),
-                  border: OutlineInputBorder(
-                    borderRadius: ElefRadius.md,
-                    borderSide: const BorderSide(color: ElefColors.borderSubtle),
-                  ),
+              Container(
+                padding: ElefSpacing.paddingSm,
+                decoration: BoxDecoration(
+                  color: ElefColors.primary.withValues(alpha: 0.15),
+                  borderRadius: ElefRadius.sm,
                 ),
+                child: const Icon(Icons.psychology_rounded,
+                    color: ElefColors.primary, size: 20),
               ),
-              const SizedBox(height: 12),
-
-              Wrap(
-                spacing: 12,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: _isAnalyzing ? null : _runAnalysis,
-                    icon: _isAnalyzing
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Icon(Icons.bolt_rounded, size: 18),
-                    label: Text(_isAnalyzing ? 'Analyse en cours...' : 'Analyser le contenu'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: ElefColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    ),
-                  ),
-                  if (_textController.text.isNotEmpty)
-                    TextButton(
-                      onPressed: () {
-                        _textController.clear();
-                        setState(() {
-                          _mappingResult = null;
-                          _analysisError = null;
-                        });
-                      },
-                      child: const Text('Effacer'),
-                    ),
-                ],
-              ),
-
-              if (_analysisError != null) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: ElefColors.danger.withAlpha(20),
-                    borderRadius: ElefRadius.sm,
-                    border: Border.all(color: ElefColors.danger.withAlpha(80)),
-                  ),
-                  child: Text(
-                    _analysisError!,
-                    style: ElefTypography.bodySmall.copyWith(color: ElefColors.danger),
-                  ),
-                ),
-              ],
-
-              // Affichage des candidats identifiés par l'agent IA
-              if (_mappingResult != null) ...[
-                const SizedBox(height: 16),
-                const Divider(color: ElefColors.borderSubtle),
-                const SizedBox(height: 8),
-
-                Row(
+              const SizedBox(width: ElefSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      _mappingResult!['needs_human_review'] == true
-                          ? Icons.warning_amber_rounded
-                          : Icons.check_circle_outline_rounded,
-                      color: _mappingResult!['needs_human_review'] == true
-                          ? ElefColors.warning
-                          : ElefColors.success,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _mappingResult!['recommendation']?.toString() ?? 'Résultats de correspondance :',
-                        style: ElefTypography.labelMedium.copyWith(
-                          color: _mappingResult!['needs_human_review'] == true
-                              ? ElefColors.warning
-                              : ElefColors.success,
-                        ),
-                      ),
+                    Text('Analyse et rattachement curriculaire',
+                        style: ElefTypography.titleMedium),
+                    Text(
+                      "Proposer les chapitres et compétences cibles à partir d'un extrait de "
+                      "cours ou d'un syllabus officiel.",
+                      style: ElefTypography.caption,
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-
-                Text(
-                  'Chapitres cibles détectés :',
-                  style: ElefTypography.titleSmall.copyWith(color: Colors.white),
+              ),
+            ],
+          ),
+          const SizedBox(height: ElefSpacing.md),
+          TextField(
+            controller: _textController,
+            style: ElefTypography.bodyMedium.copyWith(color: ElefColors.textPrimary),
+            maxLines: 4,
+            decoration: InputDecoration(
+              hintText:
+                  "Collez ici l'extrait du programme ou les objectifs pédagogiques "
+                  "(ex : suites numériques, raison de récurrence, convergence, limites)…",
+              hintStyle: ElefTypography.bodySmall,
+              filled: true,
+              fillColor: ElefColors.surfaceDark,
+              border: OutlineInputBorder(
+                borderRadius: ElefRadius.md,
+                borderSide: const BorderSide(color: ElefColors.borderSubtle),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: ElefRadius.md,
+                borderSide: const BorderSide(color: ElefColors.borderSubtle),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: ElefRadius.md,
+                borderSide: const BorderSide(color: ElefColors.borderActive),
+              ),
+            ),
+          ),
+          const SizedBox(height: ElefSpacing.sm),
+          Wrap(
+            spacing: ElefSpacing.md,
+            runSpacing: ElefSpacing.sm,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              ElevatedButton.icon(
+                onPressed: canAnalyze ? _runAnalysis : null,
+                icon: _isAnalyzing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.bolt_rounded, size: 18),
+                label: Text(_isAnalyzing ? 'Analyse en cours…' : 'Analyser le contenu'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ElefColors.primary,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: ElefColors.surfaceElevated,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 ),
-                const SizedBox(height: 6),
-                if ((_mappingResult!['chapter_candidates'] as List?)?.isEmpty ?? true)
-                  Text('Aucun chapitre correspondant identifié.', style: ElefTypography.caption)
-                else
-                  ...((_mappingResult!['chapter_candidates'] as List).map((c) {
-                    final item = Map<String, dynamic>.from(c as Map);
-                    final conf = (item['confidence'] as num?)?.toDouble() ?? 0.0;
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF090D18),
-                        borderRadius: ElefRadius.md,
-                        border: Border.all(color: ElefColors.borderSubtle),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item['title'] ?? item['chapter_id'] ?? 'Chapitre',
-                                  style: ElefTypography.bodyMedium.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                if (item['evidence'] != null)
-                                  Text(
-                                    item['evidence'].toString(),
-                                    style: ElefTypography.caption.copyWith(color: ElefColors.textMuted),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: conf >= 0.7
-                                  ? ElefColors.success.withAlpha(30)
-                                  : ElefColors.warning.withAlpha(30),
-                              borderRadius: ElefRadius.xs,
-                            ),
-                            child: Text(
-                              '${(conf * 100).toInt()}% conf.',
-                              style: ElefTypography.caption.copyWith(
-                                color: conf >= 0.7 ? ElefColors.success : ElefColors.warning,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  })),
-
-                const SizedBox(height: 10),
-                Text(
-                  'Compétences associées :',
-                  style: ElefTypography.titleSmall.copyWith(color: Colors.white),
+              ),
+              if (_textController.text.isNotEmpty && !_isAnalyzing)
+                TextButton(
+                  onPressed: () {
+                    _textController.clear();
+                    setState(() {
+                      _mappingResult = null;
+                      _analysisError = null;
+                    });
+                  },
+                  child: const Text('Effacer'),
                 ),
-                const SizedBox(height: 6),
-                if ((_mappingResult!['skill_candidates'] as List?)?.isEmpty ?? true)
-                  Text('Aucune compétence spécifique trouvée.', style: ElefTypography.caption)
-                else
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
-                    children: (_mappingResult!['skill_candidates'] as List).map((s) {
-                      final item = Map<String, dynamic>.from(s as Map);
-                      return Chip(
-                        backgroundColor: const Color(0xFF090D18),
-                        side: const BorderSide(color: ElefColors.primary),
-                        label: Text(
-                          item['name']?.toString() ?? 'Compétence',
-                          style: ElefTypography.caption.copyWith(color: Colors.white),
-                        ),
-                      );
-                    }).toList(),
+            ],
+          ),
+          if (_analysisError != null) ...[
+            const SizedBox(height: ElefSpacing.md),
+            Container(
+              padding: ElefSpacing.paddingSm,
+              decoration: BoxDecoration(
+                color: ElefColors.dangerBg,
+                borderRadius: ElefRadius.sm,
+                border: Border.all(color: ElefColors.dangerBorder),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline_rounded,
+                      color: ElefColors.danger, size: 16),
+                  const SizedBox(width: ElefSpacing.sm),
+                  Expanded(
+                    child: Text(_analysisError!,
+                        style: ElefTypography.bodySmall
+                            .copyWith(color: ElefColors.danger)),
                   ),
-              ],
+                ],
+              ),
+            ),
+          ],
+          if (_mappingResult != null) ...[
+            const SizedBox(height: ElefSpacing.md),
+            const Divider(color: ElefColors.borderSubtle),
+            const SizedBox(height: ElefSpacing.sm),
+            _buildResult(_mappingResult!),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResult(Map<String, dynamic> result) {
+    final needsReview = result['needs_human_review'] == true;
+    final chapterCandidates =
+        (result['chapter_candidates'] as List?)?.cast<dynamic>() ?? const [];
+    final skillCandidates =
+        (result['skill_candidates'] as List?)?.cast<dynamic>() ?? const [];
+    final keywordCount = result['input_keywords_count'] ?? 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: ElefSpacing.paddingSm,
+          decoration: BoxDecoration(
+            color: needsReview ? ElefColors.warningBg : ElefColors.successBg,
+            borderRadius: ElefRadius.sm,
+            border: Border.all(
+                color: needsReview
+                    ? ElefColors.warningBorder
+                    : ElefColors.successBorder),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                needsReview
+                    ? Icons.rate_review_rounded
+                    : Icons.check_circle_outline_rounded,
+                color: needsReview ? ElefColors.warning : ElefColors.success,
+                size: 18,
+              ),
+              const SizedBox(width: ElefSpacing.sm),
+              Expanded(
+                child: Text(
+                  (result['recommendation'] ?? 'Analyse terminée.').toString(),
+                  style: ElefTypography.labelMedium.copyWith(
+                    color: needsReview ? ElefColors.warning : ElefColors.success,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
-
-        const SizedBox(height: 24),
-        const Text(
-          'EXEMPLE DE STRUCTURE — NON VALIDÉ',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Cet exemple local du Cameroun illustre l’organisation attendue. Il ne constitue pas un référentiel officiel et n’est pas enregistré dans la base.',
-        ),
-        const SizedBox(height: 12),
-        for (final node in sampleCurriculum()) _node(node),
+        const SizedBox(height: ElefSpacing.xs),
+        Text('$keywordCount mots-clés significatifs extraits · méthode déterministe.',
+            style: ElefTypography.caption),
+        const SizedBox(height: ElefSpacing.md),
+        Text('Chapitres existants correspondants', style: ElefTypography.titleSmall),
+        const SizedBox(height: ElefSpacing.xs),
+        if (chapterCandidates.isEmpty)
+          Text(
+            'Aucun chapitre existant ne correspond. Créez-le manuellement dans « Leçons & Cours ».',
+            style: ElefTypography.bodySmall,
+          )
+        else
+          ...chapterCandidates.map((c) =>
+              _chapterCandidateRow(Map<String, dynamic>.from(c as Map))),
+        const SizedBox(height: ElefSpacing.md),
+        Text('Compétences existantes associées', style: ElefTypography.titleSmall),
+        const SizedBox(height: ElefSpacing.xs),
+        if (skillCandidates.isEmpty)
+          Text('Aucune compétence enregistrée ne correspond.',
+              style: ElefTypography.bodySmall)
+        else
+          Wrap(
+            spacing: ElefSpacing.sm,
+            runSpacing: ElefSpacing.xs,
+            children: skillCandidates.map((s) {
+              final item = Map<String, dynamic>.from(s as Map);
+              final conf = ((item['confidence'] as num?)?.toDouble() ?? 0) * 100;
+              return Chip(
+                backgroundColor: ElefColors.surfaceDark,
+                side: const BorderSide(color: ElefColors.borderMedium),
+                label: Text(
+                  '${item['name'] ?? 'Compétence'} · ${conf.toInt()}%',
+                  style: ElefTypography.caption
+                      .copyWith(color: ElefColors.textSecondary),
+                ),
+              );
+            }).toList(),
+          ),
       ],
-    ),
-  );
+    );
+  }
 
-  Widget _node(CurriculumCandidateNode node) => ExpansionTile(
-    tilePadding: const EdgeInsets.symmetric(horizontal: 8),
-    childrenPadding: const EdgeInsets.only(left: 8),
-    title: Text(node.title),
-    children: [
-      if (node.coefficient != null)
-        Text('Coefficient d’exemple : ${node.coefficient}'),
-      if (node.trimester != null)
-        Text('Trimestre d’exemple : ${node.trimester}'),
-      for (final skill in node.skills)
-        ListTile(dense: true, title: Text(skill)),
-      for (final child in node.children) _node(child),
-    ],
-  );
+  Widget _chapterCandidateRow(Map<String, dynamic> item) {
+    final conf = (item['confidence'] as num?)?.toDouble() ?? 0.0;
+    final strong = conf >= 0.5;
+    return Container(
+      margin: const EdgeInsets.only(bottom: ElefSpacing.sm),
+      padding: ElefSpacing.paddingSm,
+      decoration: BoxDecoration(
+        color: ElefColors.surfaceDark,
+        borderRadius: ElefRadius.md,
+        border: Border.all(color: ElefColors.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  (item['title'] ?? item['chapter_id'] ?? 'Chapitre').toString(),
+                  style: ElefTypography.titleSmall,
+                ),
+              ),
+              const SizedBox(width: ElefSpacing.sm),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: (strong ? ElefColors.success : ElefColors.warning)
+                      .withValues(alpha: 0.15),
+                  borderRadius: ElefRadius.xs,
+                ),
+                child: Text(
+                  '${(conf * 100).toInt()}% conf.',
+                  style: ElefTypography.badge.copyWith(
+                      color: strong ? ElefColors.success : ElefColors.warning),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: ElefSpacing.xxs),
+          Text(
+            [
+              if ((item['subject_name'] ?? '').toString().isNotEmpty)
+                item['subject_name'],
+              if ((item['level_name'] ?? '').toString().isNotEmpty)
+                item['level_name'],
+            ].join(' · '),
+            style: ElefTypography.caption,
+          ),
+          if ((item['evidence'] ?? '').toString().isNotEmpty) ...[
+            const SizedBox(height: ElefSpacing.xxs),
+            Text(item['evidence'].toString(),
+                style: ElefTypography.bodySmall),
+          ],
+          const SizedBox(height: ElefSpacing.sm),
+          Wrap(
+            spacing: ElefSpacing.sm,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _goToLessonsManager,
+                icon: const Icon(Icons.menu_book_rounded, size: 15),
+                label: const Text('Gérer dans Leçons & Cours'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: ElefColors.primary,
+                  side: const BorderSide(color: ElefColors.borderMedium),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(
+                      text: (item['chapter_id'] ?? '').toString()));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Identifiant du chapitre copié.')),
+                  );
+                },
+                icon: const Icon(Icons.copy_rounded, size: 15),
+                label: const Text('Copier l’ID'),
+                style: TextButton.styleFrom(
+                    foregroundColor: ElefColors.textMuted),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSampleSection() {
+    return Container(
+      padding: ElefSpacing.paddingMd,
+      decoration: BoxDecoration(
+        color: ElefColors.surfaceCard,
+        borderRadius: ElefRadius.lg,
+        border: Border.all(color: ElefColors.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.info_outline_rounded,
+                  size: 16, color: ElefColors.textMuted),
+              const SizedBox(width: ElefSpacing.sm),
+              Text('Exemple de structure — non normatif',
+                  style: ElefTypography.titleSmall),
+            ],
+          ),
+          const SizedBox(height: ElefSpacing.xs),
+          Text(
+            "Cet exemple local (Cameroun) illustre l'organisation attendue. Il ne constitue pas "
+            "un référentiel officiel et n'est pas enregistré en base.",
+            style: ElefTypography.bodySmall,
+          ),
+          const SizedBox(height: ElefSpacing.sm),
+          for (final node in sampleCurriculum()) _sampleNode(node),
+        ],
+      ),
+    );
+  }
+
+  Widget _sampleNode(CurriculumCandidateNode node) => Theme(
+        data: Theme.of(context)
+            .copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 8),
+          childrenPadding: const EdgeInsets.only(left: 8),
+          title: Text(node.title, style: ElefTypography.bodyMedium),
+          iconColor: ElefColors.textMuted,
+          collapsedIconColor: ElefColors.textMuted,
+          children: [
+            if (node.coefficient != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Coefficient d’exemple : ${node.coefficient}',
+                    style: ElefTypography.caption),
+              ),
+            if (node.trimester != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Trimestre d’exemple : ${node.trimester}',
+                    style: ElefTypography.caption),
+              ),
+            for (final skill in node.skills)
+              ListTile(
+                dense: true,
+                title: Text(skill, style: ElefTypography.bodySmall),
+              ),
+            for (final child in node.children) _sampleNode(child),
+          ],
+        ),
+      );
 }
-
