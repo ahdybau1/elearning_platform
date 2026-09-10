@@ -433,6 +433,7 @@ class SupabaseService {
     if (_isValidUuid(lessonId)) query = query.eq('lesson_id', lessonId!);
     if (_isValidUuid(chapterId)) query = query.eq('chapter_id', chapterId!);
     final rows = await query
+        .order('display_order')
         .order('created_at', ascending: false)
         .then((rows) => rows as List);
     return (rows)
@@ -443,10 +444,30 @@ class SupabaseService {
   Future<List<Exercise>> fetchAllExercises({bool includeInactive = false}) async {
     var query = client.from('exercises').select();
     if (!includeInactive) query = query.eq('is_active', true);
-    final rows = await query.order('created_at', ascending: false).then((rows) => rows as List);
+    final rows = await query
+        .order('display_order')
+        .order('created_at', ascending: false)
+        .then((rows) => rows as List);
     return (rows)
         .map((r) => Exercise.fromJson(Map<String, dynamic>.from(r)))
         .toList();
+  }
+
+  /// WP1 — échange l'ordre de deux exercices d'un même dossier (réorganisation, consigne #2).
+  Future<void> swapExerciseOrder(
+    String aId,
+    int aOrder,
+    String bId,
+    int bOrder,
+  ) async {
+    await client
+        .from('exercises')
+        .update({'display_order': bOrder, 'updated_at': DateTime.now().toIso8601String()})
+        .eq('id', aId);
+    await client
+        .from('exercises')
+        .update({'display_order': aOrder, 'updated_at': DateTime.now().toIso8601String()})
+        .eq('id', bId);
   }
 
   // ─── Validation Queue ─────────────────────────────────────────

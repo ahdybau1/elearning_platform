@@ -400,6 +400,7 @@ class _ExercisesManagerScreenState
                           itemBuilder: (context, idx) => _buildExerciseCard(
                             linkedExercises[idx],
                             classOptions,
+                            siblings: linkedExercises,
                           ),
                         );
                       },
@@ -434,6 +435,7 @@ class _ExercisesManagerScreenState
                           itemBuilder: (context, idx) => _buildExerciseCard(
                             independentExercises[idx],
                             classOptions,
+                            siblings: independentExercises,
                           ),
                         );
                       },
@@ -471,10 +473,38 @@ class _ExercisesManagerScreenState
     return result;
   }
 
-  Widget _buildExerciseCard(Exercise ex, List<AcademicNode> classOptions) {
+  /// Échange l'ordre d'affichage de l'exercice avec son voisin dans le même dossier.
+  Future<void> _reorderExercise(Exercise ex, List<Exercise> siblings, int delta) async {
+    final idx = siblings.indexWhere((e) => e.id == ex.id);
+    final target = idx + delta;
+    if (idx < 0 || target < 0 || target >= siblings.length) return;
+    final other = siblings[target];
+    try {
+      await ref.read(supabaseServiceProvider).swapExerciseOrder(
+            ex.id,
+            ex.displayOrder,
+            other.id,
+            other.displayOrder,
+          );
+      ref.invalidate(exercisesProvider);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Réordonnancement impossible : $e')));
+      }
+    }
+  }
+
+  Widget _buildExerciseCard(
+    Exercise ex,
+    List<AcademicNode> classOptions, {
+    List<Exercise> siblings = const <Exercise>[],
+  }) {
     final typeLabel = exerciseTypeToDb(ex.type);
     final formatLabel = exerciseFormatToDb(ex.format);
     final difficultyLabel = exerciseDifficultyToDb(ex.difficulty);
+    final idx = siblings.indexWhere((e) => e.id == ex.id);
+    final canReorder = siblings.length > 1 && idx >= 0;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -589,6 +619,30 @@ class _ExercisesManagerScreenState
                   ],
                 ),
               ),
+              if (canReorder) ...[
+                IconButton(
+                  icon: const Icon(Icons.arrow_upward_rounded,
+                      size: 16, color: Colors.white54),
+                  tooltip: 'Monter dans le dossier',
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 28, minHeight: 32),
+                  onPressed: idx == 0
+                      ? null
+                      : () => _reorderExercise(ex, siblings, -1),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.arrow_downward_rounded,
+                      size: 16, color: Colors.white54),
+                  tooltip: 'Descendre dans le dossier',
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 28, minHeight: 32),
+                  onPressed: idx == siblings.length - 1
+                      ? null
+                      : () => _reorderExercise(ex, siblings, 1),
+                ),
+              ],
               IconButton(
                 icon: const Icon(
                   Icons.picture_as_pdf_rounded,
