@@ -349,10 +349,23 @@ final aiAgentCallsProvider =
   return service.fetchAiAgentCalls(days: days);
 });
 
-/// IA-001 (migration 55) : registre réel des agents IA (ADM-AI-001 Agent Registry).
+/// IA-001 (migration 55) + WP2 Control Plane (migration 78) : registre des agents IA.
 final aiAgentsProvider = FutureProvider<List<AiAgent>>((ref) async {
   final service = ref.watch(supabaseServiceProvider);
   return service.fetchAiAgents();
+});
+
+/// WP2 — historique d'exécutions unitaires (`ai_agent_runs`). `null` = tous les agents.
+final aiAgentRunsProvider =
+    FutureProvider.family<List<AiAgentRun>, String?>((ref, agentKey) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchAiAgentRuns(agentKey: agentKey);
+});
+
+/// WP2 — workflows multi-agents (`ai_workflows` + étapes).
+final aiWorkflowsProvider = FutureProvider<List<AiWorkflow>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchAiWorkflows();
 });
 
 // ─── Dashboard KPI Counts ─────────────────────────────────────

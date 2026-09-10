@@ -932,6 +932,118 @@ class SupabaseService {
         .toList();
   }
 
+  // ─── AI Control Plane (WP2, migration 78) ─────────────────────
+
+  /// Met à jour la configuration niveau-agent (activation, revue humaine, dépendances).
+  /// Le trigger `trg_ai_agents_config_audit` journalise le changement dans `audit_log`.
+  Future<void> updateAiAgentConfig(
+    String agentRowId, {
+    bool? enabled,
+    bool? requiresHumanReview,
+    List<String>? dependsOn,
+    String? description,
+  }) async {
+    final patch = <String, dynamic>{'updated_at': DateTime.now().toIso8601String()};
+    if (enabled != null) patch['enabled'] = enabled;
+    if (requiresHumanReview != null) {
+      patch['requires_human_review'] = requiresHumanReview;
+    }
+    if (dependsOn != null) patch['depends_on'] = dependsOn;
+    if (description != null) patch['description'] = description;
+    await client.from('ai_agents').update(patch).eq('id', agentRowId);
+  }
+
+  /// Met à jour une version d'agent (prompt, outils/sources autorisés, limites, repli, statut).
+  Future<void> updateAiAgentVersion(
+    String versionId, {
+    String? promptTemplate,
+    String? promptNotes,
+    List<String>? allowedTools,
+    List<String>? allowedSources,
+    Map<String, dynamic>? limits,
+    Map<String, dynamic>? fallbackStrategy,
+    String? status,
+  }) async {
+    final patch = <String, dynamic>{};
+    if (promptTemplate != null) patch['prompt_template'] = promptTemplate;
+    if (promptNotes != null) patch['prompt_notes'] = promptNotes;
+    if (allowedTools != null) patch['allowed_tools'] = allowedTools;
+    if (allowedSources != null) patch['allowed_sources'] = allowedSources;
+    if (limits != null) patch['limits'] = limits;
+    if (fallbackStrategy != null) patch['fallback_strategy'] = fallbackStrategy;
+    if (status != null) patch['status'] = status;
+    if (patch.isEmpty) return;
+    await client.from('ai_agent_versions').update(patch).eq('id', versionId);
+  }
+
+  /// Console de test : exécute réellement l'agent via le harnais `ai-agent-invoke`,
+  /// journalise dans `ai_agent_runs` et renvoie la sortie structurée + la validation de schéma.
+  Future<Map<String, dynamic>> invokeAiAgent(
+    String agentKey,
+    Map<String, dynamic> input, {
+    String trigger = 'manual_test',
+  }) async {
+    final res = await client.functions.invoke(
+      'ai-agent-invoke',
+      body: {'agent_key': agentKey, 'input': input, 'trigger': trigger},
+    );
+    final data = res.data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {'error': 'Réponse inattendue du harnais.', '_raw': data};
+  }
+
+  Future<List<AiAgentRun>> fetchAiAgentRuns({String? agentKey, int limit = 50}) async {
+    var query = client.from('ai_agent_runs').select();
+    if (agentKey != null && agentKey.isNotEmpty) {
+      query = query.eq('agent_key', agentKey);
+    }
+    final rows = await query
+        .order('created_at', ascending: false)
+        .limit(limit)
+        .then((r) => r as List);
+    return rows
+        .map((r) => AiAgentRun.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  Future<List<AiWorkflow>> fetchAiWorkflows({int limit = 30}) async {
+    final rows = await client
+        .from('ai_workflows')
+        .select('*, ai_workflow_steps(*)')
+        .order('created_at', ascending: false)
+        .limit(limit)
+        .then((r) => r as List);
+    return rows
+        .map((r) => AiWorkflow.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  /// Démarre un workflow multi-agents via l'exécuteur `ai-workflow-run`.
+  /// `steps` = liste de `{agent_key, title}`.
+  Future<Map<String, dynamic>> startAiWorkflow({
+    required String workflowKey,
+    required String title,
+    required Map<String, dynamic> context,
+    required List<Map<String, String>> steps,
+  }) async {
+    final res = await client.functions.invoke('ai-workflow-run', body: {
+      'workflow_key': workflowKey,
+      'title': title,
+      'context': context,
+      'steps': steps,
+    });
+    final data = res.data;
+    return data is Map ? Map<String, dynamic>.from(data) : {'error': 'Réponse inattendue.'};
+  }
+
+  /// Reprend un workflow en échec à partir de la première étape non réussie.
+  Future<Map<String, dynamic>> resumeAiWorkflow(String workflowId) async {
+    final res = await client.functions
+        .invoke('ai-workflow-run', body: {'resume_id': workflowId});
+    final data = res.data;
+    return data is Map ? Map<String, dynamic>.from(data) : {'error': 'Réponse inattendue.'};
+  }
+
   // ─── WhatsApp Communities ────────────────────────────────────
 
   Future<List<WhatsappCommunity>> fetchWhatsappCommunities({

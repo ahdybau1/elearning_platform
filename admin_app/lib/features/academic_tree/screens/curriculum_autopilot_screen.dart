@@ -432,8 +432,10 @@ class _CurriculumAutopilotScreenState
               const Icon(Icons.info_outline_rounded,
                   size: 16, color: ElefColors.textMuted),
               const SizedBox(width: ElefSpacing.sm),
-              Text('Exemple de structure — non normatif',
-                  style: ElefTypography.titleSmall),
+              Expanded(
+                child: Text('Exemple de structure — non normatif',
+                    style: ElefTypography.titleSmall),
+              ),
             ],
           ),
           const SizedBox(height: ElefSpacing.xs),
@@ -443,38 +445,56 @@ class _CurriculumAutopilotScreenState
             style: ElefTypography.bodySmall,
           ),
           const SizedBox(height: ElefSpacing.sm),
-          for (final node in sampleCurriculum()) _sampleNode(node),
+          // Material transparent : les ExpansionTile/ListTile internes ont besoin d'un ancêtre
+          // Material sans DecoratedBox coloré intermédiaire (sinon l'assertion Flutter
+          // « ListTile background may be invisible »).
+          Material(
+            type: MaterialType.transparency,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final node in sampleCurriculum()) _sampleNode(node),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _sampleNode(CurriculumCandidateNode node) => Theme(
-        data: Theme.of(context)
-            .copyWith(dividerColor: Colors.transparent),
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           tilePadding: const EdgeInsets.symmetric(horizontal: 8),
-          childrenPadding: const EdgeInsets.only(left: 8),
+          childrenPadding: const EdgeInsets.only(left: 8, bottom: 4),
+          expandedCrossAxisAlignment: CrossAxisAlignment.start,
           title: Text(node.title, style: ElefTypography.bodyMedium),
           iconColor: ElefColors.textMuted,
           collapsedIconColor: ElefColors.textMuted,
           children: [
             if (node.coefficient != null)
-              Align(
-                alignment: Alignment.centerLeft,
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Text('Coefficient d’exemple : ${node.coefficient}',
                     style: ElefTypography.caption),
               ),
             if (node.trimester != null)
-              Align(
-                alignment: Alignment.centerLeft,
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Text('Trimestre d’exemple : ${node.trimester}',
                     style: ElefTypography.caption),
               ),
             for (final skill in node.skills)
-              ListTile(
-                dense: true,
-                title: Text(skill, style: ElefTypography.bodySmall),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('•  ', style: TextStyle(color: ElefColors.textMuted)),
+                    Expanded(
+                        child: Text(skill, style: ElefTypography.bodySmall)),
+                  ],
+                ),
               ),
             for (final child in node.children) _sampleNode(child),
           ],

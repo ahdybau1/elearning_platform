@@ -86,28 +86,38 @@
 
 ---
 
-## Consigne #4 — Control-Plane IA centralisé (WP2)
+## Consigne #4 — Control-Plane IA centralisé (WP2) — **LIVRÉ**
 
-| Réf | Attendu (CAHIER_TECHNIQUE_ADMIN_AI_CONTROL_PLANE ADM-077..093 ; CDC IA §9) | État | Reste à faire |
+Migration `78_ai_control_plane.sql` **appliquée** (Management API) : `ai_agents` +enabled/
+requires_human_review/depends_on/runtime/description ; `ai_agent_versions` +prompt_template/
+prompt_notes/allowed_tools/allowed_sources/limits/fallback_strategy ; nouvelles tables
+`ai_agent_runs` (17 col), `ai_workflows`, `ai_workflow_steps` ; trigger d'audit `log_ai_config_change`
+→ `audit_log`. `runtime` backfillé (15 edge_function, 8 gateway_native, 7 none). AGT-017/024
+rattachés à leurs Edge Functions réelles. Edge Functions **déployées + vérifiées** :
+`ai-agent-invoke` (harnais test/run), `ai-workflow-run` (orchestration séquentielle + reprise).
+UI : `ai_agent_registry_screen.dart` réécrit en **Control-Plane** (3 vues : Agents / Historique /
+Workflows). `flutter analyze` 0/0 · 36 tests · `build web` OK.
+
+| Réf | Attendu | État | Preuve |
 |---|---|---|---|
-| C4-01 | Inventaire de **tous** les agents (26 catalogue + présents en code) intégrés à l'admin | 🟡 | 30 en registre ; 10 gateway_native injoignables, 7 draft — marquer « hors ligne » honnêtement |
-| C4-02 | Par agent : rôle/description | 🔵 | `mission`/`non_mission` en DB |
-| C4-03 | Activation / désactivation | ❌ | colonne `enabled` + toggle UI |
-| C4-04 | Modèle & fournisseur administrables | 🟡 | dans `model_policy` jsonb, non éditable |
-| C4-05 | Instructions & versions de prompts (+ diff, rollback) | ❌ | `prompt_template`/`prompt_version` + UI versions |
-| C4-06 | Outils autorisés | 🟡 | `ai_tools` existe ; pas de lien agent→tools éditable |
-| C4-07 | Sources utilisables | ❌ | `allowed_sources[]` |
-| C4-08 | Formats d'entrée / sortie | 🟡 | `input_schema`/`output_schema` en DB, non éditables |
-| C4-09 | Limites, délais, concurrence | 🟡 | `ai_policies` (concurrency_limit, allowance) ; pas par agent |
-| C4-10 | Dépendances entre agents | ❌ | `depends_on[]` |
-| C4-11 | Validation humaine éventuelle | ❌ | `requires_human_review` |
-| C4-12 | Stratégie de reprise / remplacement | ❌ | `fallback_strategy` jsonb |
-| C4-13 | Historique des exécutions | 🟡 | `ai_agent_calls` (sans payload I/O ni workflow) → `ai_agent_runs` |
-| C4-14 | Résultats, erreurs, consommation par agent | 🟡 | agrégé dans dashboard ; pas de détail run |
-| C4-15 | **Console de test** (entrée → sortie structurée → vérif schéma) | ❌ | Edge Function générique + UI |
-| C4-16 | **Suivi de workflows multi-agents** (progression, étapes, erreurs, reprise) | ❌ | `ai_workflows` + `ai_workflow_steps` + UI |
-| C4-17 | Ne pas exposer de raisonnement interne privé | 🟡 | à respecter dans la console |
-| C4-18 | Rôles IA distincts (`AI_ADMIN`, `PEDAGOGICAL_AI_REVIEWER`, `RAG_MANAGER`…) | ❌ | `is_admin` seul aujourd'hui — best-effort ou documenté |
+| C4-01 | Inventaire de **tous** les agents intégrés à l'admin | ✅ | 30 agents listés, filtres (en ligne/hors ligne/brouillon), badge EN LIGNE/HORS LIGNE + `offlineReason` explicite |
+| C4-02 | Par agent : rôle/description | ✅ | mission/non-mission/catalogue + champ `description` éditable |
+| C4-03 | Activation / désactivation | ✅ | `Switch` par carte → `updateAiAgentConfig(enabled:)` ; trigger audit |
+| C4-04 | Modèle & fournisseur | 🟡 | `model_policy`/`runtime` affichés ; édition du modèle = via prompt/version, pas de sélecteur dédié |
+| C4-05 | Prompts & versions (+ rollback) | ✅ | dialogue prompt_template + note de version ; `versionStatusDropdown` (draft/candidate/production/retired) = mécanisme de rollback |
+| C4-06 | Outils autorisés | ✅ | éditeur de chips `allowed_tools` → `updateAiAgentVersion` |
+| C4-07 | Sources utilisables | ✅ | éditeur de chips `allowed_sources` |
+| C4-08 | Formats d'entrée / sortie | ✅ | schémas I/O affichés (JSON dépliable) ; l'aperçu d'entrée alimente la console de test |
+| C4-09 | Limites, délais, concurrence | ✅ | champs `max_tokens`/`timeout_ms`/`max_concurrency` → `limits` jsonb |
+| C4-10 | Dépendances entre agents | 🟡 | colonne `depends_on[]` + persistance service ; affichage UI à compléter |
+| C4-11 | Validation humaine éventuelle | ✅ | `SwitchListTile` → `requires_human_review` |
+| C4-12 | Stratégie de reprise / remplacement | 🟡 | colonne `fallback_strategy` jsonb + service ; éditeur UI dédié à finir (retry/backoff/fallback_agent) |
+| C4-13 | Historique des exécutions | ✅ | onglet Historique : `ai_agent_runs` (entrée+sortie+statut+durée+schéma), filtre par agent, export CSV |
+| C4-14 | Résultats, erreurs, consommation par agent | ✅ | run détaillé dépliable ; lien « historique de cet agent » depuis la carte |
+| C4-15 | **Console de test** | ✅ | zone entrée JSON → `ai-agent-invoke` → sortie structurée + statut + durée + `output_valid` + issues de schéma ; désactivée si hors ligne. **Vérifié E2E** : AGT-024 → sortie valide (659 ms), AGT-006 gateway_native → échec « hors ligne » honnête, tous 2 tracés dans `ai_agent_runs` |
+| C4-16 | **Workflows multi-agents** | ✅ | onglet Workflows : progression, étapes, erreurs, bouton **Reprendre**. **Vérifié E2E** : pipeline 2 étapes, étape 2 échoue (`lesson_id manquant`) → workflow `failed` 50 % → contexte corrigé → reprise → `completed` 100 % |
+| C4-17 | Pas de raisonnement interne privé exposé | ✅ | console montre entrée/sortie structurée/diagnostics seulement |
+| C4-18 | Rôles IA distincts | ❌ | `is_admin_user()` + `super_admin` seuls (aligné migr. 55) — rôles fins IA différés, documenté ici |
 
 ---
 

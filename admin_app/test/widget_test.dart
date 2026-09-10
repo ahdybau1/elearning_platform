@@ -24,7 +24,7 @@ void main() {
   });
 
   testWidgets(
-    'Curriculum preview preserves its sample without claiming collection',
+    'Curriculum Autopilot preserves its sample without claiming collection or auto-writes',
     (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1400, 900);
       tester.view.devicePixelRatio = 1.0;
@@ -42,14 +42,22 @@ void main() {
       await tester.pump();
 
       expect(find.text('Curriculum Autopilot'), findsOneWidget);
+      // Cadrage honnête : assistance, aucune écriture automatique. Plus de disclaimer
+      // « collecte non raccordée » contradictoire (le panneau d'analyse EST raccordé).
+      expect(
+        find.textContaining('Aucune écriture automatique'),
+        findsWidgets,
+      );
       expect(
         find.text('Collecte automatique non raccordée à cet écran.'),
-        findsOneWidget,
+        findsNothing,
       );
-      expect(find.text('Ouvrir l’arbre académique'), findsOneWidget);
+      // L'exemple non normatif reste consultable et dépliable.
+      expect(find.text('Exemple de structure — non normatif'), findsOneWidget);
       await tester.tap(find.text('Cameroun — Sous-système Francophone'));
       await tester.pumpAndSettle();
       expect(find.text('Second Cycle (Lycée)'), findsOneWidget);
+      // Aucun faux succès ni pourcentage de confiance sans analyse réelle.
       expect(find.textContaining('Confirmer l'), findsNothing);
       expect(find.textContaining('100%'), findsNothing);
       expect(tester.takeException(), isNull);

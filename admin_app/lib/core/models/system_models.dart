@@ -10,6 +10,13 @@ class AiAgentVersion {
   final String quotaClass;
   final String status; // 'draft' | 'candidate' | 'production' | 'retired'
   final String? edgeFunctionName;
+  // WP2 — Control Plane : champs administrables (migration 78).
+  final String? promptTemplate;
+  final String? promptNotes;
+  final List<String> allowedTools;
+  final List<String> allowedSources;
+  final Map<String, dynamic> limits; // {max_tokens, timeout_ms, max_concurrency}
+  final Map<String, dynamic> fallbackStrategy; // {retry, backoff_ms, fallback_agent}
 
   AiAgentVersion({
     required this.id,
@@ -20,9 +27,25 @@ class AiAgentVersion {
     this.quotaClass = 'standard',
     this.status = 'draft',
     this.edgeFunctionName,
+    this.promptTemplate,
+    this.promptNotes,
+    List<String>? allowedTools,
+    List<String>? allowedSources,
+    Map<String, dynamic>? limits,
+    Map<String, dynamic>? fallbackStrategy,
   })  : inputSchema = inputSchema ?? {},
         outputSchema = outputSchema ?? {},
-        modelPolicy = modelPolicy ?? {};
+        modelPolicy = modelPolicy ?? {},
+        allowedTools = allowedTools ?? const [],
+        allowedSources = allowedSources ?? const [],
+        limits = limits ?? {},
+        fallbackStrategy = fallbackStrategy ?? {};
+
+  static List<String> _strList(dynamic raw) => (raw as List?)
+          ?.map((e) => e.toString())
+          .where((e) => e.isNotEmpty)
+          .toList() ??
+      const [];
 
   factory AiAgentVersion.fromJson(Map<String, dynamic> json) => AiAgentVersion(
         id: json['id'] as String,
@@ -33,6 +56,13 @@ class AiAgentVersion {
         quotaClass: json['quota_class'] as String? ?? 'standard',
         status: json['status'] as String? ?? 'draft',
         edgeFunctionName: json['edge_function_name'] as String?,
+        promptTemplate: json['prompt_template'] as String?,
+        promptNotes: json['prompt_notes'] as String?,
+        allowedTools: _strList(json['allowed_tools']),
+        allowedSources: _strList(json['allowed_sources']),
+        limits: (json['limits'] as Map?)?.cast<String, dynamic>(),
+        fallbackStrategy:
+            (json['fallback_strategy'] as Map?)?.cast<String, dynamic>(),
       );
 }
 
@@ -46,6 +76,12 @@ class AiAgent {
   final String status; // 'draft' | 'active' | 'deprecated'
   final String? owner;
   final List<AiAgentVersion> versions;
+  // WP2 — Control Plane (migration 78).
+  final bool enabled;
+  final bool requiresHumanReview;
+  final List<String> dependsOn;
+  final String runtime; // 'edge_function' | 'gateway_native' | 'none'
+  final String? description;
 
   AiAgent({
     required this.id,
@@ -57,7 +93,32 @@ class AiAgent {
     this.status = 'draft',
     this.owner,
     List<AiAgentVersion>? versions,
-  }) : versions = versions ?? [];
+    this.enabled = true,
+    this.requiresHumanReview = false,
+    List<String>? dependsOn,
+    this.runtime = 'edge_function',
+    this.description,
+  })  : versions = versions ?? [],
+        dependsOn = dependsOn ?? const [];
+
+  /// L'agent est réellement exécutable depuis l'admin aujourd'hui.
+  bool get isOnline =>
+      enabled &&
+      runtime == 'edge_function' &&
+      versions.isNotEmpty &&
+      (versions.first.edgeFunctionName ?? '').isNotEmpty &&
+      versions.first.edgeFunctionName != 'gateway_native';
+
+  String get offlineReason {
+    if (!enabled) return 'Désactivé';
+    if (runtime == 'gateway_native') {
+      return 'Défini côté Gateway FastAPI (non déployé) — hors ligne';
+    }
+    if (runtime == 'none' || versions.isEmpty) {
+      return 'Aucune implémentation rattachée (brouillon)';
+    }
+    return 'Aucune Edge Function rattachée';
+  }
 
   factory AiAgent.fromJson(Map<String, dynamic> json) => AiAgent(
         id: json['id'] as String,
@@ -71,6 +132,128 @@ class AiAgent {
         versions: ((json['ai_agent_versions'] as List?) ?? const [])
             .map((v) => AiAgentVersion.fromJson(Map<String, dynamic>.from(v as Map)))
             .toList(),
+        enabled: json['enabled'] as bool? ?? true,
+        requiresHumanReview: json['requires_human_review'] as bool? ?? false,
+        dependsOn: AiAgentVersion._strList(json['depends_on']),
+        runtime: json['runtime'] as String? ?? 'edge_function',
+        description: json['description'] as String?,
+      );
+}
+
+/// WP2 — une exécution unitaire d'un agent (table `ai_agent_runs`, migration 78).
+class AiAgentRun {
+  final String id;
+  final String agentKey;
+  final String trigger; // manual_test | workflow | production
+  final String status; // running | success | failed | cancelled
+  final bool? outputValid;
+  final String? errorMessage;
+  final Map<String, dynamic>? inputPreview;
+  final Map<String, dynamic>? output;
+  final int tokensUsed;
+  final int? durationMs;
+  final DateTime createdAt;
+  final DateTime? completedAt;
+
+  AiAgentRun({
+    required this.id,
+    required this.agentKey,
+    required this.trigger,
+    required this.status,
+    this.outputValid,
+    this.errorMessage,
+    this.inputPreview,
+    this.output,
+    this.tokensUsed = 0,
+    this.durationMs,
+    required this.createdAt,
+    this.completedAt,
+  });
+
+  bool get isFailed => status == 'failed';
+
+  factory AiAgentRun.fromJson(Map<String, dynamic> json) => AiAgentRun(
+        id: json['id'] as String,
+        agentKey: json['agent_key'] as String? ?? '',
+        trigger: json['trigger'] as String? ?? 'manual_test',
+        status: json['status'] as String? ?? 'running',
+        outputValid: json['output_valid'] as bool?,
+        errorMessage: json['error_message'] as String?,
+        inputPreview: (json['input_preview'] as Map?)?.cast<String, dynamic>(),
+        output: (json['output'] as Map?)?.cast<String, dynamic>(),
+        tokensUsed: (json['tokens_used'] as int?) ?? 0,
+        durationMs: json['duration_ms'] as int?,
+        createdAt: DateTime.parse(json['created_at'] as String),
+        completedAt: json['completed_at'] != null
+            ? DateTime.parse(json['completed_at'] as String)
+            : null,
+      );
+}
+
+/// WP2 — un workflow multi-agents (tables `ai_workflows` / `ai_workflow_steps`, migration 78).
+class AiWorkflow {
+  final String id;
+  final String workflowKey;
+  final String title;
+  final String status; // pending|running|paused|completed|failed|cancelled
+  final int progressPct;
+  final String? errorMessage;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final List<AiWorkflowStep> steps;
+
+  AiWorkflow({
+    required this.id,
+    required this.workflowKey,
+    required this.title,
+    required this.status,
+    this.progressPct = 0,
+    this.errorMessage,
+    required this.createdAt,
+    required this.updatedAt,
+    List<AiWorkflowStep>? steps,
+  }) : steps = steps ?? const [];
+
+  factory AiWorkflow.fromJson(Map<String, dynamic> json) => AiWorkflow(
+        id: json['id'] as String,
+        workflowKey: json['workflow_key'] as String? ?? '',
+        title: json['title'] as String? ?? '',
+        status: json['status'] as String? ?? 'pending',
+        progressPct: (json['progress_pct'] as int?) ?? 0,
+        errorMessage: json['error_message'] as String?,
+        createdAt: DateTime.parse(json['created_at'] as String),
+        updatedAt: DateTime.parse(json['updated_at'] as String),
+        steps: ((json['ai_workflow_steps'] as List?) ?? const [])
+            .map((s) => AiWorkflowStep.fromJson(Map<String, dynamic>.from(s as Map)))
+            .toList()
+          ..sort((a, b) => a.stepIndex.compareTo(b.stepIndex)),
+      );
+}
+
+class AiWorkflowStep {
+  final String id;
+  final int stepIndex;
+  final String agentKey;
+  final String title;
+  final String status; // pending|running|success|failed|skipped
+  final String? errorMessage;
+
+  AiWorkflowStep({
+    required this.id,
+    required this.stepIndex,
+    required this.agentKey,
+    required this.title,
+    required this.status,
+    this.errorMessage,
+  });
+
+  factory AiWorkflowStep.fromJson(Map<String, dynamic> json) => AiWorkflowStep(
+        id: json['id'] as String,
+        stepIndex: (json['step_index'] as int?) ?? 0,
+        agentKey: json['agent_key'] as String? ?? '',
+        title: json['title'] as String? ?? '',
+        status: json['status'] as String? ?? 'pending',
+        errorMessage: json['error_message'] as String?,
       );
 }
 
