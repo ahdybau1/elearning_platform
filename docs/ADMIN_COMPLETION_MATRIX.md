@@ -174,31 +174,41 @@ Pédagogique) : Sources / Jobs / Extraits à relire. `analyze` 0/0 · `test` 36/
 
 ---
 
-## Consigne #7 — Réponses interactives administrables + packs hors-ligne (WP5)
+## Consigne #7 — Réponses interactives administrables + packs hors-ligne (WP5) — **partiel, en partie différé**
 
-| Réf | Attendu | État | Reste à faire |
+| Réf | Attendu | État | Constat / reste |
 |---|---|---|---|
-| C7-01 | Config + preview : texte enrichi, formules, tableaux, cartes, indices, corrections par étapes, QCM, audio/prononciation, graphiques, schémas, simulations | 🟡 | Studio v2 couvre ~10 types ; manquent tableaux, cartes, corrections par étapes, QCM affiché, audio, graph/schéma dédiés |
-| C7-02 | Formats structurés versionnés | ❌ | table `render_formats` (schema jsonb + version) |
-| C7-03 | Validation des réponses d'agents avant usage | 🟡 | brancher `ai-pedagogical-validation` au chemin de publication |
-| C7-04 | Composants de rendu réutilisables + preview fidèle | 🟡 | galerie de composants centrale absente |
-| C7-05 | Pas d'exécution de code arbitraire produit par IA | 🔵 | à garantir |
-| C7-06 | Préparation de packs hors-ligne (sélection, dépendances, versions, taille) | ❌ | table `offline_packs` + écran |
+| C7-01 | Config + preview des types de contenu interactif | 🟡 | Studio v2 (`lesson_builder_screen.dart` + `lessons_manager` `kEditableBlockTypes`) couvre : paragraph, definition, theoreme, **formule (rendu LaTeX `math_text.dart`)**, methode, exemple, piege, conseil_examen, **summary_card (tableau comparatif + mémos)**, media_image, **virtual_lab (5 simulateurs déterministes)**. Aperçu élève fidèle via `_buildPreviewSection`. **Manquent** : bloc QCM affiché (généré mais pas rendu élève), bloc audio/prononciation, corrections par étapes dédiées, graph/schéma comme blocs autonomes |
+| C7-02 | Formats structurés versionnés | ❌ **différé** | table `render_formats` (schema jsonb + version) non créée — le Studio v2 fige la liste des types en constante Dart ; migration vers un registre versionné = chantier suivant |
+| C7-03 | Validation des réponses d'agents avant usage | 🟡 | `ai-pedagogical-validation` **déployé + vérifié** et branché dans la File de Validation (bouton pré-contrôle) ; pas encore obligatoire dans la RPC de publication atomique |
+| C7-04 | Composants de rendu réutilisables + galerie de preview | 🟡 **différé** | composants pédagogiques réutilisables existent (`core/design_system/pedagogical/*`) ; **galerie centrale de prévisualisation** non construite |
+| C7-05 | Pas d'exécution de code arbitraire produit par IA | 🔵 | garanti : aucune sortie IA n'est `eval`/exécutée ; les simulateurs sont des moteurs déterministes codés en dur |
+| C7-06 | Préparation de packs hors-ligne | ❌ **différé** | table `offline_packs` + écran non construits ; le cahier MVP-Optimisé impose déjà un téléchargement par leçon explicite côté élève (hors périmètre admin du jour) |
+
+**Raison du report** : WP5 est le plus gros reste et le moins prioritaire par rapport à l'insistance
+explicite du porteur (« chapitres, leçons, exercices et fonctions IA »). Le socle (blocs typés +
+aperçu fidèle + LaTeX + simulateurs) est opérationnel ; galerie centrale, registre versionné et
+packs hors-ligne sont un chantier distinct chiffrable.
 
 ---
 
-## Consigne #9 — Autres modules admin (WP6)
+## Consigne #9 — Autres modules admin (WP6) — **vérifié**
 
-| Module | Écran(s) | État | Reste à faire |
+Passe de vérification (2026-09-11) : `flutter analyze` 0/0 sur les 36 écrans, `flutter test` 36/36,
+toutes les tables de domaine interrogées avec succès contre le Supabase réel, `audit_log` actif
+(140 lignes). Détail par module vs `AUDIT_SYSTEME_COMPLET_2026_09_08.md` (qui documente déjà ces
+modules comme opérationnels des sessions précédentes) :
+
+| Module | Écran(s) | État | Constat / reste |
 |---|---|---|---|
-| Utilisateurs / profils / rôles / permissions | `users_roles/*` | 🔵 | import/export CSV (§18) ; 2FA admin (« non-optionnelle », absente) — décision périmètre |
-| Abonnements & droits d'accès | `subscriptions/*` | 🔵 | vérifier pilotage du cycle d'expiration (pg_cron migr. 30) |
-| Examens & événements | `exams_events/*` | 🔵 | publication atomique `exam_paper_review` (WIP) à revérifier |
-| Notifications & communications | `announcements_screen.dart` + templates | 🟡 | écran de pilotage des templates + historique d'envoi |
-| Tableaux de bord & statistiques | `dashboard/*` | 🟡 | relier chaque KPI à des données réelles ; limites explicites si service manquant |
-| Paramètres système | `system_settings_screen.dart` | 🔵 | vérifier |
-| Documents & médias | `media_library_screen.dart`, `shop_management_screen.dart` | 🔵 | vérifier |
-| Traçabilité des actions | `audit_log_screen.dart` | 🔵 | vérifier couverture des nouvelles tables (control-plane, ingestion, intégrations) |
+| Utilisateurs / profils / rôles / permissions | `users_roles/*` (6 écrans) | 🔵 opérationnel | sessions, anti-partage, permissions nommées (`_showPermissionsModal`), audit sur suppressions. **Reste** : import/export CSV en masse (§18) ; **2FA admin** (« non-optionnelle » au cahier) absente — hors périmètre du jour, à trancher |
+| Abonnements & droits d'accès | `subscriptions/*` (5 écrans) | 🔵 opérationnel | paliers (`subscription_tiers`), matrice (`matrix_features`/`access_matrix`), paiements/litiges, boutique, dons — CRUD réel. Cycle d'expiration piloté par pg_cron `subscription-lifecycle-daily` (migr. 30, actif) |
+| Examens & événements | `exams_events/*` (4 écrans) | 🔵 opérationnel | officiels, établissements, olympiades — CRUD réel + revue/publication OCR (WIP Antigravity préservé) |
+| Notifications & communications | `announcements_screen.dart` + `system_settings_screen.dart` (`_showEditTemplateModal`) | 🟡 partiel | 11 `notification_templates` **éditables** ; `scheduled_reminders`/`notification_log` écrits par le cron. **Reste** : vue d'historique des envois (`notification_log`) dans l'admin |
+| Tableaux de bord & statistiques | `dashboard/*` | 🔵 opérationnel | tous les KPI branchés sur des providers réels (`activeProfilesCountProvider`, `publishedLessonsCountProvider`, `exercisesCountProvider`, `openTicketsCountProvider`, `validationQueueProvider`, `aiAgentCallsProvider`, `adminAssistantSummaryProvider`) + refresh |
+| Paramètres système | `system_settings_screen.dart` | 🔵 opérationnel | `app_settings` (migr. 38) + templates de notification |
+| Documents & médias | `media_library_screen.dart`, `shop_management_screen.dart` | 🔵 opérationnel | Médiathèque raccordée au Studio (commit `34ecc9f`), boutique CRUD réel |
+| Traçabilité des actions | `audit_log_screen.dart` | 🔵 opérationnel | 140 lignes ; **le trigger `log_ai_config_change` (WP2) écrit bien `ai_config_update` dans `audit_log`** (vérifié : UPDATE `ai_agents` → ligne d'audit avec `after_json.agent_id`) |
 
 ---
 

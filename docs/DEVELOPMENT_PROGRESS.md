@@ -1,5 +1,39 @@
 # Progression EDLEARN
 
+## 2026-09-10/11 — Achèvement Administration : Control-Plane IA, Ingestion, Intégrations
+
+Branche `admin-completion` (WIP Antigravity préservé sur `main` @ `09d8d63`). Voir
+`docs/ADMIN_COMPLETION_MATRIX.md` (matrice par consigne) et `docs/ADMIN_DELIVERY_REPORT.md`
+(rapport de livraison avec preuves).
+
+- **Control-Plane IA (consigne #4) — LIVRÉ** : migration 78 (colonnes de pilotage sur
+  `ai_agents`/`ai_agent_versions` + `ai_agent_runs`/`ai_workflows`/`ai_workflow_steps` + trigger
+  d'audit). Edge Functions `ai-agent-invoke` (harnais de test/exécution + validation de schéma) et
+  `ai-workflow-run` (orchestration multi-agents + reprise), déployées et vérifiées E2E. Écran
+  `ai_agent_registry_screen.dart` réécrit (Agents / Historique / Workflows) : activation, HITL,
+  prompts+versions, outils/sources/limites éditables, console de test, historique + export CSV.
+- **Centre Sources & Ingestion (consigne #6) — LIVRÉ** : migration 79 (`ai_ingestion_jobs`,
+  `ai_extracted_documents`, `ai_rag_sources` étendu, pg_cron). Edge Function `ingestion-worker`
+  (crawl robots-aware, extraction, dédup, classement, embeddings après validation humaine),
+  vérifiée E2E (URL → extrait → classé → validé → chunk RAG réel). Écran
+  `ingestion_center_screen.dart` (nav 33). OCR image/PDF : indisponible explicite.
+- **Page Intégrations (consigne #5) — LIVRÉ** : migration 80 (`integrations`, secrets jamais
+  exposés). Edge Function `integration-healthcheck` (test de connexion réel), vérifiée
+  (Gemini OK 50 modèles, Storage OK). Écran `integrations_screen.dart` (nav 34) +
+  `docs/INTEGRATIONS_INVENTORY.md`.
+- **Interfaces IA signalées (consigne #2) — corrigées** : `curriculum_autopilot_screen.dart`
+  réécrit (fin du disclaimer contradictoire, action HITL réelle) ; bug réel `ai-curriculum-mapping`
+  (jointure `academic_levels` inexistante) corrigé ; **bug réel `ai-course-structuring`**
+  (`maxOutputTokens` trop bas → sortie tronquée/vide) corrigé + diagnostic réel.
+- **Contenus (consigne #2)** : migration 81 — `exercises.display_order` + réordonnancement ▲/▼.
+- **Autres modules (consigne #9)** : passe de vérification — tous opérationnels, `audit_log` actif
+  (trigger IA vérifié). Restes documentés : historique `notification_log`, CSV utilisateurs, 2FA.
+- **Différé explicitement (consigne #7)** : registre `render_formats` versionné, blocs
+  QCM/audio/corrections par étapes, galerie centrale de composants, packs hors-ligne — socle
+  (blocs typés + aperçu fidèle + LaTeX + simulateurs) opérationnel.
+- **Vérif** : `flutter analyze` 0/0 · `flutter test` 36/36 · `flutter build web` OK · `deno check`
+  vert sur les 7 Edge Functions. « Administration terminée » **non déclaré** — voir rapport.
+
 ## 2026-09-08 — Continuum Multimédia Médiathèque & Modernisation Observabilité Moteurs
 
 - **Objectif :** Raccorder la Médiathèque centrale partagée (`MediaLibraryScreen`) au Studio de création (`lesson_builder_screen.dart`), intégrer le rendu natif haute-fidélité des figures et schémas dans l'application élève (`BlockRendererRegistry`), et moderniser le Centre des Moteurs (`EngineCenterScreen`) avec les tokens du `ElefDesignSystem`.
