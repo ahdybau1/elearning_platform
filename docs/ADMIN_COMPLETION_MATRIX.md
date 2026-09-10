@@ -121,17 +121,23 @@ Workflows). `flutter analyze` 0/0 · 36 tests · `build web` OK.
 
 ---
 
-## Consigne #5 — Page Intégrations (WP4)
+## Consigne #5 — Page Intégrations (WP4) — **LIVRÉ**
 
-| Réf | Attendu | État | Reste à faire |
+Migration `80_integrations.sql` **appliquée** : table `integrations` (config non secrète + `secret_ref`
+= nom du function-secret + état de santé). 4 intégrations seedées (Gemini génération, Gemini
+embeddings, Supabase Storage, Mobile Money). Edge Function **`integration-healthcheck` déployée +
+vérifiée E2E**. UI `integrations_screen.dart` (nav id 34). Doc `docs/INTEGRATIONS_INVENTORY.md`.
+`analyze` 0/0 · `test` 36/36 · `build web` OK.
+
+| Réf | Attendu | État | Preuve |
 |---|---|---|---|
-| C5-01 | Page d'admin des intégrations | ❌ | écran + nav |
-| C5-02 | Inventaire (rôle, présence/version, compatibilité, config, licence/coût) | ❌ | table `integrations` + doc `INTEGRATIONS_INVENTORY.md` |
-| C5-03 | Activation | ❌ | toggle `enabled` |
-| C5-04 | Test de connexion | ❌ | Edge Function `integration-healthcheck` |
-| C5-05 | État de santé, limites, erreurs, dernière vérification | ❌ | colonnes `last_check_at/last_status/last_error` |
-| C5-06 | Secrets côté serveur uniquement | 🔵 | déjà function secrets Supabase (`GEMINI_API_KEY`, `SERVICE_ROLE_KEY`) — ne rien exposer client |
-| C5-07 | Aucune API payante obligatoire ajoutée | 🔵 | contrainte respectée |
+| C5-01 | Page d'admin des intégrations | ✅ | écran + nav id 34 (super_admin) |
+| C5-02 | Inventaire (rôle, présence/version, compat, config, licence/coût) | ✅ | carte par intégration + `docs/INTEGRATIONS_INVENTORY.md` (frameworks, libs, moteurs, modèles, API) |
+| C5-03 | Activation | ✅ | `Switch` → `setIntegrationEnabled` |
+| C5-04 | Test de connexion | ✅ | bouton « Tester la connexion » → `integration-healthcheck`. **Vérifié** : Gemini → OK (50 modèles, 88 ms) ; Storage → OK (2 buckets, 209 ms) ; Mobile Money → `not_configured` (honnête) |
+| C5-05 | État de santé, limites, erreurs, dernière vérification | ✅ | `connected` / `last_status` / `last_error` / `last_latency_ms` / `last_check_at` affichés ; `known_limits` |
+| C5-06 | Secrets côté serveur uniquement | ✅ | seul le *nom* du function-secret est affiché ; aucune clé côté client/dépôt/log |
+| C5-07 | Aucune API payante obligatoire ajoutée | ✅ | contrainte respectée ; inventaire de deps = 0 ajout |
 
 ---
 

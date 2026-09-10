@@ -41,6 +41,7 @@ import '../../users_roles/screens/active_sessions_screen.dart';
 import '../../content_management/screens/lesson_builder_screen.dart';
 import '../../content_management/screens/media_library_screen.dart';
 import '../../content_management/screens/ingestion_center_screen.dart';
+import '../../system_settings/screens/integrations_screen.dart';
 import '../../system_settings/screens/engine_center_screen.dart';
 
 class MainAdminLayout extends ConsumerStatefulWidget {
@@ -314,6 +315,12 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
           icon: Icons.precision_manufacturing_rounded,
           allowedRoles: [AdminRole.superAdmin],
         ),
+        NavItem(
+          id: 34,
+          title: 'Intégrations',
+          icon: Icons.cable_rounded,
+          allowedRoles: [AdminRole.superAdmin],
+        ),
       ],
     ),
   ];
@@ -431,6 +438,8 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
         return const EngineCenterScreen();
       case 33:
         return const IngestionCenterScreen();
+      case 34:
+        return const IntegrationsScreen();
       default:
         return const DashboardOverviewScreen();
     }

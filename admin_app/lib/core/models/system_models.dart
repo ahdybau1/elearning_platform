@@ -257,6 +257,71 @@ class AiWorkflowStep {
       );
 }
 
+/// WP4 — une intégration externe pilotable depuis l'admin (table `integrations`, migration 80).
+/// Ne contient jamais de secret : `secretRef` est le *nom* du function-secret requis.
+class Integration {
+  final String key;
+  final String name;
+  final String category; // ai | storage | payment | messaging | other
+  final String? provider;
+  final String? description;
+  final bool enabled;
+  final Map<String, dynamic> config;
+  final String? secretRef;
+  final String? docsUrl;
+  final bool connected;
+  final DateTime? lastCheckAt;
+  final String lastStatus; // never | ok | error | not_configured
+  final String? lastError;
+  final int? lastLatencyMs;
+  final Map<String, dynamic> knownLimits;
+  final String? licenseNote;
+  final String? costNote;
+
+  Integration({
+    required this.key,
+    required this.name,
+    required this.category,
+    this.provider,
+    this.description,
+    this.enabled = true,
+    Map<String, dynamic>? config,
+    this.secretRef,
+    this.docsUrl,
+    this.connected = false,
+    this.lastCheckAt,
+    this.lastStatus = 'never',
+    this.lastError,
+    this.lastLatencyMs,
+    Map<String, dynamic>? knownLimits,
+    this.licenseNote,
+    this.costNote,
+  })  : config = config ?? const {},
+        knownLimits = knownLimits ?? const {};
+
+  factory Integration.fromJson(Map<String, dynamic> j) => Integration(
+        key: j['key'] as String,
+        name: j['name'] as String,
+        category: j['category'] as String? ?? 'other',
+        provider: j['provider'] as String?,
+        description: j['description'] as String?,
+        enabled: j['enabled'] as bool? ?? true,
+        config: (j['config'] as Map?)?.cast<String, dynamic>(),
+        secretRef: j['secret_ref'] as String?,
+        docsUrl: j['docs_url'] as String?,
+        connected: j['connected'] as bool? ?? false,
+        lastCheckAt: j['last_check_at'] != null
+            ? DateTime.parse(j['last_check_at'] as String)
+            : null,
+        lastStatus: j['last_status'] as String? ?? 'never',
+        lastError: j['last_error'] as String?,
+        lastLatencyMs: j['last_latency_ms'] as int?,
+        knownLimits: (j['known_limits'] as Map?)?.cast<String, dynamic>(),
+        licenseNote: j['license_note'] as String?,
+        costNote: j['cost_note'] as String?,
+      );
+}
+
 /// CF-004 (docs/CONTENT_FACTORY_IMPLEMENTATION_PLAN.md, migration 53) : request_id/model/
 /// duration_ms/status/error_message sont réels depuis le 2026-08-28 — avant cette migration, un
 /// appel IA échoué n'était même pas enregistré du tout (invisible), et le modèle exact utilisé

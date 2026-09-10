@@ -390,6 +390,13 @@ final extractedDocsProvider =
   return service.fetchExtractedDocs(reviewStatus: reviewStatus);
 });
 
+// ─── WP4 — Intégrations (migration 80) ───────────────────────
+
+final integrationsProvider = FutureProvider<List<Integration>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchIntegrations();
+});
+
 // ─── Dashboard KPI Counts ─────────────────────────────────────
 
 final activeProfilesCountProvider = FutureProvider<int>((ref) async {

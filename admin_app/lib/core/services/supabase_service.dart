@@ -1161,6 +1161,34 @@ class SupabaseService {
         .toList();
   }
 
+  // ─── Intégrations (WP4, migration 80) ────────────────────────
+
+  Future<List<Integration>> fetchIntegrations() async {
+    final rows = await client
+        .from('integrations')
+        .select()
+        .order('category')
+        .then((r) => r as List);
+    return rows
+        .map((r) => Integration.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  Future<void> setIntegrationEnabled(String key, bool enabled) async {
+    await client.from('integrations').update({'enabled': enabled}).eq('key', key);
+  }
+
+  /// Test de connexion réel via l'Edge Function `integration-healthcheck`
+  /// (écrit `connected` / `last_status` / `last_error` / `last_latency_ms` côté serveur).
+  Future<Map<String, dynamic>> testIntegration(String key) async {
+    final res = await client.functions
+        .invoke('integration-healthcheck', body: {'key': key});
+    final data = res.data;
+    return data is Map
+        ? Map<String, dynamic>.from(data)
+        : {'error': 'Réponse inattendue du test de connexion.'};
+  }
+
   /// Revue humaine d'un extrait. `validated` → enfile automatiquement l'indexation RAG.
   Future<void> reviewExtractedDoc(
     String docId, {
