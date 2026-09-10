@@ -7,6 +7,7 @@ import '../models/subscription_models.dart';
 import '../models/admin_models.dart';
 import '../models/community_models.dart';
 import '../models/system_models.dart';
+import '../models/ingestion_models.dart';
 
 final supabaseServiceProvider = Provider<SupabaseService>((ref) {
   final client = ref.watch(supabaseClientProvider);
@@ -366,6 +367,27 @@ final aiAgentRunsProvider =
 final aiWorkflowsProvider = FutureProvider<List<AiWorkflow>>((ref) async {
   final service = ref.watch(supabaseServiceProvider);
   return service.fetchAiWorkflows();
+});
+
+// ─── WP3 — Centre Sources & Ingestion (migration 79) ──────────
+
+final ingestionSourcesProvider = FutureProvider<List<AiSource>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchIngestionSources();
+});
+
+/// `null` = tous les jobs ; sinon jobs d'une source précise.
+final ingestionJobsProvider =
+    FutureProvider.family<List<AiIngestionJob>, String?>((ref, sourceId) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchIngestionJobs(sourceId: sourceId);
+});
+
+/// `null` = tous les extraits ; sinon filtrés par statut de revue.
+final extractedDocsProvider =
+    FutureProvider.family<List<AiExtractedDoc>, String?>((ref, reviewStatus) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchExtractedDocs(reviewStatus: reviewStatus);
 });
 
 // ─── Dashboard KPI Counts ─────────────────────────────────────

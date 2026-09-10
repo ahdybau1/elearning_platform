@@ -8,6 +8,7 @@ import '../models/subscription_models.dart';
 import '../models/admin_models.dart';
 import '../models/community_models.dart';
 import '../models/system_models.dart';
+import '../models/ingestion_models.dart';
 
 class SupabaseService {
   final SupabaseClient client;
@@ -1042,6 +1043,140 @@ class SupabaseService {
         .invoke('ai-workflow-run', body: {'resume_id': workflowId});
     final data = res.data;
     return data is Map ? Map<String, dynamic>.from(data) : {'error': 'Réponse inattendue.'};
+  }
+
+  // ─── Centre Sources & Ingestion (WP3, migration 79) ───────────
+
+  Future<List<AiSource>> fetchIngestionSources() async {
+    final rows = await client
+        .from('ai_rag_sources')
+        .select()
+        .inFilter('source_type', ['manual_upload', 'url', 'document'])
+        .order('created_at', ascending: false)
+        .then((r) => r as List);
+    return rows
+        .map((r) => AiSource.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  Future<String> createIngestionSource({
+    required String title,
+    required String sourceType, // manual_upload | url | document
+    String? sourceUrl,
+    String? rawText,
+    Map<String, dynamic>? crawlRules,
+    String? schedule,
+    required bool accessTermsAck,
+    String? provenance,
+  }) async {
+    final data = <String, dynamic>{
+      'title': title,
+      'source_type': sourceType,
+      'access_terms_ack': accessTermsAck,
+      'status': 'active',
+    };
+    if (sourceUrl != null) data['source_url'] = sourceUrl;
+    if (rawText != null) data['raw_text'] = rawText;
+    if (crawlRules != null) data['crawl_rules'] = crawlRules;
+    if (schedule != null && schedule.isNotEmpty) data['schedule'] = schedule;
+    if (provenance != null) data['provenance'] = provenance;
+    final row =
+        await client.from('ai_rag_sources').insert(data).select('id').single();
+    return row['id'] as String;
+  }
+
+  Future<void> updateIngestionSource(
+    String id, {
+    String? title,
+    String? status,
+    Map<String, dynamic>? crawlRules,
+    String? schedule,
+    bool? accessTermsAck,
+  }) async {
+    final patch = <String, dynamic>{};
+    if (title != null) patch['title'] = title;
+    if (status != null) patch['status'] = status;
+    if (crawlRules != null) patch['crawl_rules'] = crawlRules;
+    if (schedule != null) patch['schedule'] = schedule;
+    if (accessTermsAck != null) patch['access_terms_ack'] = accessTermsAck;
+    if (patch.isEmpty) return;
+    await client.from('ai_rag_sources').update(patch).eq('id', id);
+  }
+
+  /// Met un job en file (`extract` pour un texte collé, `crawl` pour une URL, `classify`, `embed`).
+  Future<void> enqueueIngestionJob(String sourceId, String jobType) async {
+    await client.from('ai_ingestion_jobs').insert({
+      'source_id': sourceId,
+      'job_type': jobType,
+    });
+  }
+
+  /// Déclenche le worker d'ingestion (non bloquant côté UI : la progression est sur la ligne de job).
+  Future<Map<String, dynamic>> runIngestionWorker({String? jobId}) async {
+    final res = await client.functions.invoke(
+      'ingestion-worker',
+      body: jobId != null ? {'job_id': jobId} : {},
+    );
+    final data = res.data;
+    return data is Map
+        ? Map<String, dynamic>.from(data)
+        : {'error': 'Réponse inattendue du worker.'};
+  }
+
+  Future<void> cancelIngestionJob(String jobId) async {
+    await client
+        .from('ai_ingestion_jobs')
+        .update({'cancel_requested': true}).eq('id', jobId);
+  }
+
+  Future<void> retryIngestionJob(String jobId) async {
+    await client.from('ai_ingestion_jobs').update({
+      'status': 'queued',
+      'cancel_requested': false,
+      'next_retry_at': null,
+    }).eq('id', jobId);
+  }
+
+  Future<List<AiIngestionJob>> fetchIngestionJobs({String? sourceId}) async {
+    var query = client.from('ai_ingestion_jobs').select();
+    if (sourceId != null) query = query.eq('source_id', sourceId);
+    final rows = await query
+        .order('created_at', ascending: false)
+        .limit(100)
+        .then((r) => r as List);
+    return rows
+        .map((r) => AiIngestionJob.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  Future<List<AiExtractedDoc>> fetchExtractedDocs({String? reviewStatus}) async {
+    var query = client.from('ai_extracted_documents').select();
+    if (reviewStatus != null) query = query.eq('review_status', reviewStatus);
+    final rows = await query
+        .order('created_at', ascending: false)
+        .limit(100)
+        .then((r) => r as List);
+    return rows
+        .map((r) => AiExtractedDoc.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  /// Revue humaine d'un extrait. `validated` → enfile automatiquement l'indexation RAG.
+  Future<void> reviewExtractedDoc(
+    String docId, {
+    required bool approve,
+    String? rejectionReason,
+    String? sourceId,
+  }) async {
+    await client.from('ai_extracted_documents').update({
+      'review_status': approve ? 'validated' : 'rejected',
+      'reviewed_at': DateTime.now().toIso8601String(),
+      if (!approve && rejectionReason != null)
+        'rejection_reason': rejectionReason,
+    }).eq('id', docId);
+    if (approve && sourceId != null) {
+      await enqueueIngestionJob(sourceId, 'embed');
+    }
   }
 
   // ─── WhatsApp Communities ────────────────────────────────────

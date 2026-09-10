@@ -135,25 +135,36 @@ Workflows). `flutter analyze` 0/0 · 36 tests · `build web` OK.
 
 ---
 
-## Consigne #6 — Scraping & Ingestion (WP3)
+## Consigne #6 — Scraping & Ingestion (WP3) — **LIVRÉ**
 
-| Réf | Attendu | État | Reste à faire |
+Migration `79_ingestion_center.sql` **appliquée** : `ai_rag_sources` +source_url/raw_text/crawl_rules/
+schedule/access_terms_ack/provenance/collected_at/status ; types élargis (`url`, `document`) ;
+`ai_ingestion_jobs` (file générique : statut/progress/attempts/next_retry/error_history/cancel) ;
+`ai_extracted_documents` (extrait + métadonnées + hash + dédup + classification + review_status) ;
+`advance_ingestion_queue()` + pg_cron `process-ingestion-queue` (*/2 min, chemin texte déterministe).
+Edge Function **`ingestion-worker` déployée + vérifiée E2E** : crawl `https://example.com`
+(robots.txt respecté, texte extrait, job → done 100 %) ; classify (→ `ai-curriculum-mapping`) ;
+validation humaine → embed (→ `ai-embeddings-generate`, **1 `ai_rag_chunk` réel** 768-dim écrit,
+`ai_rag_ingestions` → completed). UI `ingestion_center_screen.dart` (nav id 33, groupe Gestion
+Pédagogique) : Sources / Jobs / Extraits à relire. `analyze` 0/0 · `test` 36/36 · `build web` OK.
+
+| Réf | Attendu | État | Preuve |
 |---|---|---|---|
-| C6-01 | Centre de gestion des sources & collecte | ❌ | écran `ingestion_center_screen.dart` |
-| C6-02 | Ajout/modif sources, URL/sites/fichiers/documents | 🟡 | table `ai_rag_sources` (schéma minimal) |
-| C6-03 | Règles inclusion/exclusion, profondeur, limites | ❌ | `crawl_rules` jsonb |
-| C6-04 | Fréquence & planification | ❌ | `schedule` + pg_cron worker |
-| C6-05 | Lancement manuel | ❌ | bouton + insert job |
-| C6-06 | Suivi, annulation, relance, temporisation, nouvelles tentatives | ❌ | `ai_ingestion_jobs` (statut/progress/attempts/next_retry) |
-| C6-07 | Détection des doublons | ❌ | hash empreinte |
-| C6-08 | Extraction texte + métadonnées | 🟡 | `ai-document-structuring` existe |
-| C6-09 | OCR si nécessaire | 🟠 | pas de moteur vision auto-hébergé à coût zéro → **livré « indisponible »** honnête |
-| C6-10 | Nettoyage & structuration | 🟡 | via `ai-document-structuring` |
-| C6-11 | Classement pédagogique | 🟡 | via `ai-curriculum-mapping` (à déployer) |
-| C6-12 | Prévisualisation avant intégration, validation/rejet | ❌ | `ai_extracted_documents` état `preview/validated/rejected` |
-| C6-13 | Provenance + date de collecte, historique erreurs | ❌ | colonnes dédiées |
-| C6-14 | Contenu collecté = non fiable (anti prompt-injection) | 🔵 | principe à appliquer dans le worker |
-| C6-15 | Traitement en arrière-plan sans bloquer l'UI | ❌ | pg_cron + Edge worker |
+| C6-01 | Centre de gestion des sources & collecte | ✅ | écran + nav id 33 |
+| C6-02 | Ajout/modif sources URL / texte / document | ✅ | dialogue « Nouvelle source » (URL + texte collé) ; archive/réactive |
+| C6-03 | Règles inclusion/exclusion, profondeur, limites | 🟡 | `crawl_rules` jsonb persisté ; UI = champ profondeur (0 = page unique, > 0 honnêtement « non disponible cette itération ») ; include/exclude patterns pas encore édités |
+| C6-04 | Fréquence & planification | 🟡 | colonne `schedule` (cron) + pg_cron worker actif ; éditeur de planning par source à finir |
+| C6-05 | Lancement manuel | ✅ | bouton « Collecter / Extraire » + « Traiter la file » |
+| C6-06 | Suivi, annulation, relance, tentatives | ✅ | onglet Jobs : barre de progression, « Annuler » (`cancel_requested`), « Relancer », `attempts/max`, historique d'erreurs |
+| C6-07 | Détection des doublons | ✅ | empreinte SHA-256 du texte ; `is_duplicate` + `duplicate_of` ; badge DOUBLON dans l'UI |
+| C6-08 | Extraction texte + métadonnées | ✅ | worker : fetch + strip HTML → texte, `metadata` {url, http_status, word_count, fetched_at, robots, depth} |
+| C6-09 | OCR si nécessaire | 🟠 | **« indisponible » explicite** (aucun moteur vision auto-hébergé à coût zéro) — le worker refuse les content-types image/pdf avec un message clair, jamais de faux résultat |
+| C6-10 | Nettoyage & structuration | ✅ | compaction espaces/lignes ; `ai-document-structuring` disponible pour la structuration fine |
+| C6-11 | Classement pédagogique | ✅ | job `classify` → `ai-curriculum-mapping` → `classification` + `proposed_chapter/subject/class_node` sur l'extrait |
+| C6-12 | Prévisualisation, validation/rejet | ✅ | onglet Extraits : aperçu texte + métadonnées + classement proposé → « Valider → indexer RAG » / « Rejeter » (motif obligatoire) |
+| C6-13 | Provenance + date de collecte, historique erreurs | ✅ | `provenance`, `collected_at`, `error_history[]` jsonb affiché |
+| C6-14 | Contenu collecté = non fiable (anti prompt-injection) | ✅ | le texte n'est jamais concaténé dans un prompt d'agent ; seul `ai-curriculum-mapping` le lit (rapprochement lexical déterministe, sans LLM) |
+| C6-15 | Traitement arrière-plan non bloquant + reprise | ✅ | file `ai_ingestion_jobs` + worker Edge (UI kick + polling) + pg_cron ; reprise = `retryIngestionJob` / worker rejoue les `failed` sous `max_attempts` |
 
 ---
 
