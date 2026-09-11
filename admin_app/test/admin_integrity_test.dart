@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:admin_app/core/models/content_models.dart';
 import 'package:admin_app/core/models/curriculum_preview_data.dart';
+import 'package:admin_app/core/models/curriculum_models.dart';
 import 'package:admin_app/core/providers/data_providers.dart';
 import 'package:admin_app/core/engines/capability_registry.dart';
 import 'package:admin_app/core/engines/engine_diagnostics.dart';
@@ -30,6 +31,9 @@ void main() {
           mediaLibraryProvider(
             null,
           ).overrideWith((ref) => load?.call() ?? Future.value([asset])),
+          // Écran « Collecte des Programmes » : liste d'imports vide en test (pas d'appel réseau).
+          curriculumImportsProvider
+              .overrideWith((ref) => Future.value(<CurriculumImport>[])),
         ],
         child: MaterialApp(theme: ThemeData.dark(), home: child),
       );

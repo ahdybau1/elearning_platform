@@ -9,6 +9,7 @@ import '../models/admin_models.dart';
 import '../models/community_models.dart';
 import '../models/system_models.dart';
 import '../models/ingestion_models.dart';
+import '../models/curriculum_models.dart';
 
 class SupabaseService {
   final SupabaseClient client;
@@ -1180,6 +1181,75 @@ class SupabaseService {
     return rows
         .map((r) => AiExtractedDoc.fromJson(Map<String, dynamic>.from(r)))
         .toList();
+  }
+
+  // ─── Collecte de programmes → Arbre Académique (migration 83) ──
+
+  Future<List<CurriculumImport>> fetchCurriculumImports({int limit = 30}) async {
+    final rows = await client
+        .from('curriculum_imports')
+        .select()
+        .order('created_at', ascending: false)
+        .limit(limit)
+        .then((r) => r as List);
+    return rows
+        .map((r) => CurriculumImport.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  Future<List<CurriculumImportItem>> fetchCurriculumImportItems(
+      String importId) async {
+    final rows = await client
+        .from('curriculum_import_items')
+        .select()
+        .eq('import_id', importId)
+        .order('item_kind')
+        .order('display_order')
+        .then((r) => r as List);
+    return rows
+        .map((r) => CurriculumImportItem.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  /// Lance une collecte : recherche/crawl des sources → extraction → structuration →
+  /// écriture dans curriculum_import_items (statut 'proposed').
+  Future<Map<String, dynamic>> collectCurriculum({
+    String? scopeNodeId,
+    required List<String> seedUrls,
+  }) async {
+    final body = <String, dynamic>{'seed_urls': seedUrls};
+    if (scopeNodeId != null) body['scope_node_id'] = scopeNodeId;
+    final res = await client.functions.invoke('curriculum-collect', body: body);
+    final d = res.data;
+    return d is Map ? Map<String, dynamic>.from(d) : {'error': 'Réponse inattendue.'};
+  }
+
+  /// Applique les éléments d'un import dans l'arbre (dédup, statut « À vérifier », sans écraser).
+  Future<Map<String, dynamic>> applyCurriculumImport(
+    String importId, {
+    String mode = 'all', // all | verified_only | reapply
+    List<String>? itemIds,
+  }) async {
+    final body = <String, dynamic>{'import_id': importId, 'mode': mode};
+    if (itemIds != null) body['item_ids'] = itemIds;
+    final res = await client.functions.invoke('curriculum-apply', body: body);
+    final d = res.data;
+    return d is Map ? Map<String, dynamic>.from(d) : {'error': 'Réponse inattendue.'};
+  }
+
+  /// Annule un import : retire de l'arbre ses entités non éditées et sans contenu.
+  Future<Map<String, dynamic>> cancelCurriculumImport(String importId) async {
+    final res = await client.functions
+        .invoke('curriculum-cancel', body: {'import_id': importId});
+    final d = res.data;
+    return d is Map ? Map<String, dynamic>.from(d) : {'error': 'Réponse inattendue.'};
+  }
+
+  /// Marque un élément proposé comme vérifié / rejeté avant application.
+  Future<void> setCurriculumItemStatus(String itemId, String status) async {
+    await client
+        .from('curriculum_import_items')
+        .update({'status': status}).eq('id', itemId);
   }
 
   // ─── Intégrations (WP4, migration 80) ────────────────────────

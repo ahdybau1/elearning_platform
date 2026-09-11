@@ -8,6 +8,7 @@ import '../models/admin_models.dart';
 import '../models/community_models.dart';
 import '../models/system_models.dart';
 import '../models/ingestion_models.dart';
+import '../models/curriculum_models.dart';
 
 final supabaseServiceProvider = Provider<SupabaseService>((ref) {
   final client = ref.watch(supabaseClientProvider);
@@ -395,6 +396,20 @@ final extractedDocsProvider =
 final integrationsProvider = FutureProvider<List<Integration>>((ref) async {
   final service = ref.watch(supabaseServiceProvider);
   return service.fetchIntegrations();
+});
+
+// ─── Collecte de programmes → Arbre (migration 83) ───────────
+
+final curriculumImportsProvider =
+    FutureProvider<List<CurriculumImport>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchCurriculumImports();
+});
+
+final curriculumImportItemsProvider =
+    FutureProvider.family<List<CurriculumImportItem>, String>((ref, importId) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchCurriculumImportItems(importId);
 });
 
 // ─── Dashboard KPI Counts ─────────────────────────────────────

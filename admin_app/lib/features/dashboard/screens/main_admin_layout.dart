@@ -134,8 +134,8 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
         ),
         NavItem(
           id: 29,
-          title: 'Curriculum Autopilot (D.3)',
-          icon: Icons.auto_awesome_rounded,
+          title: 'Collecte des Programmes',
+          icon: Icons.travel_explore_rounded,
           allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu],
         ),
         NavItem(

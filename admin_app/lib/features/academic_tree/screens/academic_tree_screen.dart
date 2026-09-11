@@ -586,6 +586,27 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
                         ),
                       ),
                     ),
+                    if (node.verificationStatus != 'ok') ...[
+                      const SizedBox(width: 6),
+                      Tooltip(
+                        message: node.verificationStatus == 'incomplete'
+                            ? 'Structure incomplète — à compléter'
+                            : 'Élément importé ambigu — à vérifier avant publication',
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.accentAmber.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text('À VÉRIFIER',
+                              style: GoogleFonts.inter(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.accentAmber)),
+                        ),
+                      ),
+                    ],
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
