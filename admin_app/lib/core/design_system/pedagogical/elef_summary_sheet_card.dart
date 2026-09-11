@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_math_fork/flutter_math.dart';
+import '../../widgets/math_text.dart';
 import '../tokens/elef_colors.dart';
 import '../tokens/elef_radius.dart';
 import '../tokens/elef_typography.dart';
@@ -245,17 +245,9 @@ class ElefSummarySheetCard extends StatelessWidget {
                             if (formula.isNotEmpty)
                               SingleChildScrollView(
                                 scrollDirection: Axis.horizontal,
-                                child: Math.tex(
+                                child: MathText.formula(
                                   formula,
-                                  mathStyle: MathStyle.display,
-                                  textStyle: const TextStyle(
-                                    fontSize: 15,
-                                    color: Colors.white,
-                                  ),
-                                  onErrorFallback: (err) => Text(
-                                    formula,
-                                    style: ElefTypography.code,
-                                  ),
+                                  style: const TextStyle(fontSize: 15, color: Colors.white),
                                 ),
                               ),
                           ],
@@ -316,15 +308,13 @@ class ElefSummarySheetCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  child: Math.tex(
+                  child: MathText.formula(
                     keyFormula!,
-                    mathStyle: MathStyle.display,
-                    textStyle: const TextStyle(
+                    style: const TextStyle(
                       fontSize: 16,
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
                     ),
-                    onErrorFallback: (err) => Text(keyFormula!, style: ElefTypography.code),
                   ),
                 ),
               ],
@@ -372,7 +362,7 @@ class ElefSummarySheetCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 10),
                           Expanded(
-                            child: Text(
+                            child: MathText(
                               pt,
                               style: ElefTypography.bodySmall.copyWith(
                                 color: ElefColors.textSecondary,
@@ -415,7 +405,7 @@ class ElefSummarySheetCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
+                      MathText(
                         examTrap!,
                         style: ElefTypography.bodySmall.copyWith(
                           color: ElefColors.textPrimary,
@@ -510,14 +500,9 @@ class ElefSummarySheetCard extends StatelessWidget {
               child: Center(
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  child: Math.tex(
+                  child: MathText.formula(
                     sec.formulaLatex!,
-                    mathStyle: MathStyle.display,
-                    textStyle: const TextStyle(fontSize: 16.5, color: Colors.white),
-                    onErrorFallback: (err) => Text(
-                      sec.formulaLatex!,
-                      style: ElefTypography.code,
-                    ),
+                    style: const TextStyle(fontSize: 16.5, color: Colors.white),
                   ),
                 ),
               ),
@@ -527,7 +512,7 @@ class ElefSummarySheetCard extends StatelessWidget {
           // Explication & Puces d'apprentissage
           if (sec.explanation != null && sec.explanation!.isNotEmpty) ...[
             const SizedBox(height: 10),
-            Text(
+            MathText(
               sec.explanation!,
               style: ElefTypography.bodyMedium.copyWith(color: ElefColors.textSecondary),
             ),
@@ -546,7 +531,7 @@ class ElefSummarySheetCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Text(
+                        child: MathText(
                           pt,
                           style: ElefTypography.bodySmall.copyWith(
                             color: ElefColors.textPrimary,
@@ -575,7 +560,7 @@ class ElefSummarySheetCard extends StatelessWidget {
                   const Icon(Icons.lightbulb_rounded, size: 16, color: ElefColors.warning),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text(
+                    child: MathText(
                       sec.tip!,
                       style: ElefTypography.bodySmall.copyWith(
                         color: ElefColors.warning,
@@ -612,7 +597,7 @@ class ElefSummarySheetCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
+          MathText(
             content,
             style: ElefTypography.bodySmall.copyWith(color: ElefColors.textSecondary),
           ),

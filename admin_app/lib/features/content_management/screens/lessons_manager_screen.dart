@@ -10,6 +10,7 @@ import '../../../core/providers/data_providers.dart';
 import '../widgets/media_attachment_picker.dart';
 import '../utils/lesson_pdf_generator.dart';
 import '../../../core/widgets/app_dialog_title.dart';
+import '../../../core/widgets/math_text.dart';
 import 'lesson_builder_screen.dart';
 
 /// Types de blocs reconnus par `BlockRendererRegistry` côté `student_app` (voir
@@ -3657,6 +3658,9 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
               isDense: true,
             ),
           ),
+          // Aperçu rendu en direct : l'admin voit tout de suite si le texte contient du LaTeX et
+          // s'il est valide, sans attendre l'aperçu élève séparé (retour utilisateur 2026-09-12).
+          _livePreview(block.bodyCtrl),
           const SizedBox(height: 8),
           TextField(
             controller: block.formulasCtrl,
@@ -3668,8 +3672,55 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
               isDense: true,
             ),
           ),
+          _livePreview(block.formulasCtrl, forceDisplay: true),
         ],
       ),
+    );
+  }
+
+  /// Bandeau d'aperçu LaTeX en direct, réactif à la saisie (`ListenableBuilder` sur le
+  /// `TextEditingController`). N'apparaît que si le champ contient réellement une formule.
+  Widget _livePreview(TextEditingController ctrl, {bool forceDisplay = false}) {
+    return ListenableBuilder(
+      listenable: ctrl,
+      builder: (context, _) {
+        final raw = ctrl.text;
+        if (raw.trim().isEmpty || !MathText.containsMath(raw)) {
+          return const SizedBox.shrink();
+        }
+        return Container(
+          margin: const EdgeInsets.only(top: 6),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppTheme.primarySurface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppTheme.primaryBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Aperçu du rendu',
+                  style: GoogleFonts.inter(
+                      fontSize: 10, color: AppTheme.textMuted)),
+              const SizedBox(height: 4),
+              if (forceDisplay)
+                ...raw.split('\n').where((l) => l.trim().isNotEmpty).map(
+                      (l) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: MathText(
+                          MathText.containsMath(l) ? l : '\$\$$l\$\$',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                        ),
+                      ),
+                    )
+              else
+                MathText(raw, style: const TextStyle(color: Colors.white, fontSize: 13)),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -3765,7 +3816,7 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
       if (body.trim().isEmpty) return const SizedBox.shrink();
       return Padding(
         padding: const EdgeInsets.only(bottom: 14),
-        child: Text(
+        child: MathText(
           body,
           style: GoogleFonts.inter(
             fontSize: 14,
@@ -3820,7 +3871,7 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
             ],
           ),
           const SizedBox(height: 4),
-          Text(
+          MathText(
             section['body'] as String? ?? '',
             style: GoogleFonts.inter(
               fontSize: 13,
@@ -3841,11 +3892,13 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                   color: const Color(0xFFF3F4F6),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(
-                  f,
+                // Rendu réel de la formule (plus le code LaTeX brut) — forcé en mode « display »
+                // même si l'auteur a saisi la formule sans ses délimiteurs $$...$$.
+                child: MathText(
+                  MathText.containsMath(f) ? f : '\$\$$f\$\$',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.firaCode(
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF111827),
                   ),
@@ -3893,12 +3946,22 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
             for (final item in items)
               Padding(
                 padding: const EdgeInsets.only(bottom: 3),
-                child: Text(
-                  '•  $item',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: const Color(0xFF374151),
-                  ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('•  ',
+                        style: GoogleFonts.inter(
+                            fontSize: 12, color: const Color(0xFF374151))),
+                    Expanded(
+                      child: MathText(
+                        item,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: const Color(0xFF374151),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
           ],

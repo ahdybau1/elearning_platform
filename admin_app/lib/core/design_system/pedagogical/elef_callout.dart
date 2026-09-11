@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_math_fork/flutter_math.dart';
+import '../../widgets/math_text.dart';
 import '../tokens/elef_colors.dart';
 import '../tokens/elef_radius.dart';
 import '../tokens/elef_typography.dart';
@@ -128,7 +128,7 @@ class ElefCallout extends StatelessWidget {
           ),
           if (content.trim().isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text(
+            MathText(
               content,
               style: ElefTypography.bodyMedium.copyWith(
                 color: ElefColors.textPrimary,
@@ -158,17 +158,11 @@ class ElefCallout extends StatelessWidget {
       child: Center(
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          child: Math.tex(
+          // Moteur unique MathText.formula : mêmes délimiteurs/repli chimie/erreur non brute que
+          // partout ailleurs (éditeur, aperçu, consultation) — voir core/widgets/math_text.dart.
+          child: MathText.formula(
             latex,
-            mathStyle: MathStyle.display,
-            textStyle: const TextStyle(
-              fontSize: 16,
-              color: Colors.white,
-            ),
-            onErrorFallback: (err) => Text(
-              latex,
-              style: ElefTypography.code.copyWith(color: ElefColors.textSecondary),
-            ),
+            style: const TextStyle(fontSize: 16, color: Colors.white),
           ),
         ),
       ),
