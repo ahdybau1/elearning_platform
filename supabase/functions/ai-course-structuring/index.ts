@@ -14,6 +14,50 @@ const AI_MOCK_MODE = Deno.env.get("AI_MOCK_MODE") === "true";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+// Retour porteur (2026-09-12, point #3) : la génération ne tenait compte que de raw_notes/
+// subject_id — un cours de 3ème et de Terminale C sortaient quasi identiques. Résout la chaîne
+// complète pays → section → enseignement → classe → série → matière → chapitre, et la position du
+// chapitre dans le programme (chapitres voisins), pour une vraie adaptation au niveau réel.
+async function resolveCurricularContext(
+  chapterId: string | null,
+  subjectIdIn: string | null,
+): Promise<{ label: string; subjectId: string | null; programmeNeighbours: string[] }> {
+  if (!chapterId) return { label: "", subjectId: subjectIdIn, programmeNeighbours: [] };
+  const { data: chapter } = await supabase
+    .from("chapters")
+    .select("title, subject_id, class_node_id, display_order")
+    .eq("id", chapterId)
+    .maybeSingle();
+  if (!chapter) return { label: "", subjectId: subjectIdIn, programmeNeighbours: [] };
+
+  const subjectId = subjectIdIn ?? chapter.subject_id;
+  const { data: subject } = subjectId
+    ? await supabase.from("subjects").select("name").eq("id", subjectId).maybeSingle()
+    : { data: null };
+
+  const pathParts: string[] = [];
+  let currentId: string | null = chapter.class_node_id;
+  const visited = new Set<string>();
+  while (currentId && !visited.has(currentId)) {
+    visited.add(currentId);
+    const { data: node } = await supabase
+      .from("academic_nodes").select("name, parent_id").eq("id", currentId).maybeSingle();
+    if (!node) break;
+    pathParts.unshift(node.name as string);
+    currentId = node.parent_id as string | null;
+  }
+
+  const { data: siblings } = await supabase
+    .from("chapters").select("title, display_order")
+    .eq("subject_id", subjectId).eq("class_node_id", chapter.class_node_id)
+    .order("display_order");
+  const neighbours = ((siblings ?? []) as { title: string }[]).map((s) => s.title);
+
+  const label = [...pathParts, subject?.name, `Chapitre : ${chapter.title}`]
+    .filter(Boolean).join(" › ");
+  return { label, subjectId, programmeNeighbours: neighbours };
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -87,8 +131,17 @@ Deno.serve(async (req: Request) => {
   const requestId = crypto.randomUUID();
 
   try {
-    const { chapter_id, subject_id, raw_notes, prompt_directives } = await req
-      .json();
+    const {
+      chapter_id, subject_id, raw_notes, prompt_directives,
+      mode: modeIn, existing_blocks,
+    } = await req.json();
+    // 'plan' = plan de chapitre seul (rapide, à valider avant rédaction complète) ;
+    // 'full' = leçon complète (comportement historique) ;
+    // 'examples_only' = ne régénère QUE les exemples, le reste des blocs existants est conservé
+    // tel quel côté client (fusion, jamais un remplacement total) — répond à la demande explicite
+    // « je dois pouvoir modifier une partie et régénérer uniquement cette partie ».
+    const mode: "plan" | "full" | "examples_only" =
+      ["plan", "full", "examples_only"].includes(modeIn) ? modeIn : "full";
 
     if (!raw_notes && !chapter_id) {
       return new Response(
@@ -102,14 +155,20 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // 0. Contexte curriculaire réel (pays/section/enseignement/classe/série/matière/chapitre +
+    // position dans le programme) — sans lui, un cours de 3ème et de Terminale C étaient quasi
+    // identiques (retour porteur du 2026-09-12).
+    const ctx = await resolveCurricularContext(chapter_id ?? null, subject_id ?? null);
+    const effectiveSubjectId = ctx.subjectId;
+
     // 1. Récupération du catalogue pédagogique de la matière (Section 16.0 du CDC)
     let catalogPrompt =
       "Structure type : Définition, Théorème, Propriété, Formule LaTeX, Méthode pas-à-pas, Piège classique.";
-    if (subject_id) {
+    if (effectiveSubjectId) {
       const { data: catalogItems } = await supabase
         .from("content_catalog")
         .select("element_type, description")
-        .eq("subject_id", subject_id);
+        .eq("subject_id", effectiveSubjectId);
 
       if (catalogItems && catalogItems.length > 0) {
         catalogPrompt = catalogItems
@@ -120,29 +179,85 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // 2. Construction du prompt expert (Section 16.0 & 2.1 du CDC)
-    const systemPrompt =
-      `Tu es un expert pédagogique national et concepteur de programmes scolaires d'excellence.
-Ta mission est de structurer un cours complet, rigoureux et interactif au format JSON strict.
+    const contextBlock = ctx.label
+      ? `Périmètre curriculaire réel (adapte impérativement le niveau, le vocabulaire et la ` +
+        `profondeur à cette classe précise — ne traite jamais un chapitre de 3ème comme un ` +
+        `chapitre de Terminale, ni l'inverse) :\n${ctx.label}\n` +
+        (ctx.programmeNeighbours.length
+          ? `Programme complet de cette matière pour cette classe (ordre officiel) : ` +
+            `${ctx.programmeNeighbours.join(" → ")}\n`
+          : "")
+      : "";
 
+    // 2. Construction du prompt expert (Section 16.0 & 2.1 du CDC), variable selon le mode.
+    const systemPromptCommon =
+      `Tu es un expert pédagogique national et concepteur de programmes scolaires d'excellence.
+${contextBlock}
 Typologie pédagogique obligatoire :
 ${catalogPrompt}
 
 Règles strictes de rédaction :
 - Toutes les formules mathématiques, chimiques ou physiques DOIVENT être encadrées par des balises LaTeX : $...$ pour inline ou $$...$$ pour blocs séparés.
-- Mettre en exergue les astuces d'examens officiels et les pièges classiques fréquents.
-- Fournir un quiz d'évaluation formative avec explications détaillées.
 - Ne renvoyer QUE du JSON valide, sans texte additionnel ni balises de commentaires Markdown.`;
 
-    const userPrompt =
-      `Voici les notes brutes et objectifs du cours à structurer :
+    let systemPrompt: string;
+    let userPrompt: string;
+    let maxTokens: number;
+
+    if (mode === "plan") {
+      systemPrompt = `${systemPromptCommon}
+Ta mission ICI : produire uniquement le PLAN du chapitre (pas encore la rédaction complète), pour
+validation humaine avant de dépenser du calcul sur la rédaction détaillée.`;
+      userPrompt = `Notes / objectifs de départ :
+${raw_notes ?? "Chapitre du programme officiel sélectionné."}
+${prompt_directives ? `Directives du professeur : ${prompt_directives}` : ""}
+
+Génère STRICTEMENT ce JSON :
+{
+  "title": "Titre complet du chapitre",
+  "summary": "Résumé exécutif en 2-3 phrases",
+  "prerequisites": ["Prérequis 1", "Prérequis 2"],
+  "objectives": ["Objectif pédagogique 1", "Objectif 2"],
+  "competencies": ["Compétence visée 1", "Compétence 2"],
+  "plan": [
+    {"heading": "Titre de la section prévue", "type": "theoreme | definition | formule | methode | exemple", "summary": "1 phrase de ce que contiendra cette section"}
+  ]
+}`;
+      maxTokens = 3072;
+    } else if (mode === "examples_only") {
+      const existingSummary = Array.isArray(existing_blocks)
+        ? (existing_blocks as { type: string; heading?: string; body?: string }[])
+            .filter((b) => b.type !== "exemple")
+            .map((b) => `- [${b.type}] ${b.heading ?? ""} : ${(b.body ?? "").slice(0, 200)}`)
+            .join("\n")
+        : "";
+      systemPrompt = `${systemPromptCommon}
+Ta mission ICI : générer UNIQUEMENT de nouveaux exemples d'application (type "exemple"), cohérents
+avec le contenu déjà rédigé fourni en référence ci-dessous. Ne reformule PAS les définitions/
+théorèmes déjà écrits — ils sont conservés tels quels par l'admin, tu ne dois produire que des
+exemples supplémentaires ou de remplacement.`;
+      userPrompt = `Contenu déjà rédigé pour ce chapitre (référence, à ne pas dupliquer) :
+${existingSummary || "(aucun autre bloc encore rédigé)"}
+
+${prompt_directives ? `Directives du professeur pour ces exemples : ${prompt_directives}` : ""}
+${raw_notes ? `Notes additionnelles : ${raw_notes}` : ""}
+
+Génère STRICTEMENT ce JSON (uniquement des sections de type "exemple") :
+{
+  "sections": [
+    {"heading": "Exemple d'application N", "type": "exemple", "body": "Énoncé + résolution pas-à-pas avec LaTeX", "latex_formulas": ["..."]}
+  ]
+}`;
+      maxTokens = 6144;
+    } else {
+      systemPrompt = `${systemPromptCommon}
+Ta mission ICI : structurer un cours complet, rigoureux et interactif.
+- Mettre en exergue les astuces d'examens officiels et les pièges classiques fréquents.
+- Fournir un quiz d'évaluation formative avec explications détaillées.`;
+      userPrompt = `Voici les notes brutes et objectifs du cours à structurer :
 ${raw_notes ?? "Cours sur le programme officiel du chapitre sélectionné."}
 
-${
-        prompt_directives
-          ? `Directives spécifiques du professeur : ${prompt_directives}`
-          : ""
-      }
+${prompt_directives ? `Directives spécifiques du professeur : ${prompt_directives}` : ""}
 
 Génère la structure JSON exacte avec les clés :
 {
@@ -167,6 +282,8 @@ Génère la structure JSON exacte avec les clés :
     }
   ]
 }`;
+      maxTokens = 16384;
+    }
 
     let structuredCourse: Record<string, unknown> | null = null;
     let provider = "none";
@@ -197,7 +314,7 @@ Génère la structure JSON exacte avec les clés :
             system_prompt: systemPrompt,
             user_prompt: userPrompt,
             json: true,
-            max_tokens: 16384,
+            max_tokens: maxTokens,
             temperature: 0.4,
           }),
         });
@@ -241,7 +358,7 @@ Génère la structure JSON exacte avec les clés :
       try {
         await supabase.from("ai_agent_calls").insert({
           request_id: requestId,
-          agent_type: "course_structuring",
+          agent_type: `course_structuring:${mode}`,
           provider,
           duration_ms: durationMs,
           status: "failed",
@@ -264,7 +381,7 @@ Génère la structure JSON exacte avec les clés :
     try {
       await supabase.from("ai_agent_calls").insert({
         request_id: requestId,
-        agent_type: "course_structuring",
+        agent_type: `course_structuring:${mode}`,
         provider,
         model: modelUsed,
         tokens_used: tokensUsed,
@@ -283,6 +400,8 @@ Génère la structure JSON exacte avec les clés :
         _agent_version: AGENT_VERSION,
         _model: modelUsed,
         _duration_ms: durationMs,
+        _mode: mode,
+        _curricular_context: ctx.label || null,
       }),
       {
         status: 200,

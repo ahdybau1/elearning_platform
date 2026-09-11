@@ -2838,6 +2838,10 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
     String? submitError;
     bool isLoading = false;
     bool isGeneratingAi = false;
+    // Distingue quel bouton de génération est en cours (affiche le spinner sur le bon bouton parmi
+    // les 3 opérations désormais séparées — plan / leçon complète / exemples uniquement — retour
+    // porteur 2026-09-12, point #3).
+    String? aiGenerationMode;
     String? resolvedChapterTitle;
     String? resolvedSubjectName;
     bool hasStartedContextFetch = false;
@@ -2862,6 +2866,99 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
               setModalState(() {});
             });
           }
+
+          // Trois opérations désormais séparées (retour porteur 2026-09-12, point #3) : générer le
+          // plan seul (rapide, à valider avant de dépenser du calcul sur la rédaction complète),
+          // générer la leçon complète (comportement historique), ou régénérer UNIQUEMENT les
+          // exemples sans jamais perdre les définitions/théorèmes déjà corrigés à la main.
+          Future<void> runAiGeneration(String mode) async {
+            if (mode != 'examples_only' &&
+                contentController.text.trim().isEmpty) {
+              setModalState(
+                () => submitError =
+                    'Saisissez quelques notes/mots-clés avant de générer.',
+              );
+              return;
+            }
+            if (mode == 'examples_only' && blocks.isEmpty) {
+              setModalState(
+                () => submitError =
+                    'Rédigez ou générez d\'abord le reste du cours avant de régénérer des exemples.',
+              );
+              return;
+            }
+            setModalState(() {
+              isGeneratingAi = true;
+              aiGenerationMode = mode;
+              submitError = null;
+            });
+            try {
+              final service = ref.read(supabaseServiceProvider);
+              final result = await service.generateAiLessonDraft(
+                chapterId: chapterId,
+                rawNotes: contentController.text.trim(),
+                mode: mode,
+                existingBlocks: mode == 'examples_only'
+                    ? [
+                        for (var i = 0; i < blocks.length; i++)
+                          blocks[i].toJson(i),
+                      ]
+                    : null,
+              );
+              setModalState(() {
+                aiStructured = result;
+                isGeneratingAi = false;
+                aiGenerationMode = null;
+                if (titleController.text.trim().isEmpty &&
+                    result['title'] != null) {
+                  titleController.text = result['title'] as String;
+                }
+                if (mode == 'examples_only') {
+                  // Fusion stricte : seuls les blocs de type "exemple" sont remplacés — tout le
+                  // reste (définitions, théorèmes, formules déjà relus/corrigés par l'admin) reste
+                  // intact. C'est exactement la demande explicite « modifier une partie et
+                  // régénérer uniquement cette partie sans perdre les autres corrections ».
+                  final newExamples = (_blocksFromAiStructured(result) ?? const [])
+                      .where((b) => (b['type'] as String?) == 'exemple')
+                      .toList();
+                  final toRemove = blocks
+                      .where((b) => b.type == 'exemple')
+                      .toList();
+                  for (final b in toRemove) {
+                    blocks.remove(b);
+                    b.dispose();
+                  }
+                  blocks.addAll(newExamples.map(EditableLessonBlock.fromJson));
+                } else if (mode == 'plan') {
+                  // Plan seul : squelette de sections à valider, pas encore une rédaction — un plan
+                  // précède le contenu, il ne se fusionne pas avec du contenu déjà rédigé.
+                  final generated = _blocksFromAiPlan(result) ?? const [];
+                  for (final b in blocks) {
+                    b.dispose();
+                  }
+                  blocks
+                    ..clear()
+                    ..addAll(generated.map(EditableLessonBlock.fromJson));
+                } else {
+                  // 'full' : comportement historique — remplace l'intégralité des blocs.
+                  final generated = _blocksFromAiStructured(result) ?? const [];
+                  for (final b in blocks) {
+                    b.dispose();
+                  }
+                  blocks
+                    ..clear()
+                    ..addAll(generated.map(EditableLessonBlock.fromJson));
+                }
+              });
+            } catch (e) {
+              setModalState(() {
+                isGeneratingAi = false;
+                aiGenerationMode = null;
+                submitError = 'Erreur IA : $e';
+              });
+            }
+          }
+
           final dialogWidth = MediaQuery.of(context).size.width * 0.85;
           return AlertDialog(
             backgroundColor: AppTheme.primarySurface,
@@ -3129,96 +3226,105 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 12),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: OutlinedButton.icon(
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppTheme.accentCyan,
-                                    ),
-                                    onPressed: isGeneratingAi
-                                        ? null
-                                        : () async {
-                                            if (contentController.text
-                                                .trim()
-                                                .isEmpty) {
-                                              setModalState(
-                                                () => submitError =
-                                                    'Saisissez quelques notes/mots-clés avant de générer.',
-                                              );
-                                              return;
-                                            }
-                                            setModalState(() {
-                                              isGeneratingAi = true;
-                                              submitError = null;
-                                            });
-                                            try {
-                                              final service = ref.read(
-                                                supabaseServiceProvider,
-                                              );
-                                              final result = await service
-                                                  .generateAiLessonDraft(
-                                                    chapterId: chapterId,
-                                                    rawNotes: contentController
-                                                        .text
-                                                        .trim(),
-                                                  );
-                                              setModalState(() {
-                                                aiStructured = result;
-                                                isGeneratingAi = false;
-                                                if (titleController.text
-                                                        .trim()
-                                                        .isEmpty &&
-                                                    result['title'] != null) {
-                                                  titleController.text =
-                                                      result['title'] as String;
-                                                }
-                                                // Remplace les blocs par la structuration IA — l'admin
-                                                // reste libre de les modifier/supprimer un par un ensuite
-                                                // (voir CF-002, blocs éditables ci-dessous).
-                                                final generated =
-                                                    _blocksFromAiStructured(
-                                                      result,
-                                                    ) ??
-                                                    const [];
-                                                for (final b in blocks) {
-                                                  b.dispose();
-                                                }
-                                                blocks
-                                                  ..clear()
-                                                  ..addAll(
-                                                    generated.map(
-                                                      EditableLessonBlock
-                                                          .fromJson,
-                                                    ),
-                                                  );
-                                              });
-                                            } catch (e) {
-                                              setModalState(() {
-                                                isGeneratingAi = false;
-                                                submitError = 'Erreur IA : $e';
-                                              });
-                                            }
-                                          },
-                                    icon: isGeneratingAi
-                                        ? const SizedBox(
-                                            width: 14,
-                                            height: 14,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: AppTheme.accentCyan,
+                                // Trois actions désormais séparées (retour porteur 2026-09-12,
+                                // point #3) : avant, un seul bouton remplaçait TOUT le cours à
+                                // chaque régénération, y compris des corrections déjà relues. Voir
+                                // `runAiGeneration` ci-dessus pour la logique de fusion exacte.
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AppTheme.accentCyan,
+                                      ),
+                                      onPressed: isGeneratingAi
+                                          ? null
+                                          : () => runAiGeneration('plan'),
+                                      icon:
+                                          (isGeneratingAi &&
+                                              aiGenerationMode == 'plan')
+                                          ? const SizedBox(
+                                              width: 14,
+                                              height: 14,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: AppTheme.accentCyan,
+                                              ),
+                                            )
+                                          : const Icon(
+                                              Icons.checklist_rounded,
+                                              size: 16,
                                             ),
-                                          )
-                                        : const Icon(
-                                            Icons.psychology_rounded,
-                                            size: 16,
-                                          ),
-                                    label: Text(
-                                      isGeneratingAi
-                                          ? 'Génération en cours...'
-                                          : (blocks.isEmpty
-                                                ? 'Structurer avec l\'IA (Gemini)'
-                                                : 'Regénérer avec l\'IA (remplace les blocs ci-dessous)'),
+                                      label: const Text('1. Générer le plan'),
                                     ),
+                                    OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AppTheme.accentCyan,
+                                      ),
+                                      onPressed: isGeneratingAi
+                                          ? null
+                                          : () => runAiGeneration('full'),
+                                      icon:
+                                          (isGeneratingAi &&
+                                              aiGenerationMode == 'full')
+                                          ? const SizedBox(
+                                              width: 14,
+                                              height: 14,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: AppTheme.accentCyan,
+                                              ),
+                                            )
+                                          : const Icon(
+                                              Icons.psychology_rounded,
+                                              size: 16,
+                                            ),
+                                      label: Text(
+                                        blocks.isEmpty
+                                            ? '2. Générer la leçon complète'
+                                            : '2. Régénérer TOUT (remplace tous les blocs)',
+                                      ),
+                                    ),
+                                    OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AppTheme.accentAmber,
+                                      ),
+                                      onPressed: (isGeneratingAi || blocks.isEmpty)
+                                          ? null
+                                          : () =>
+                                                runAiGeneration('examples_only'),
+                                      icon:
+                                          (isGeneratingAi &&
+                                              aiGenerationMode ==
+                                                  'examples_only')
+                                          ? const SizedBox(
+                                              width: 14,
+                                              height: 14,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: AppTheme.accentAmber,
+                                              ),
+                                            )
+                                          : const Icon(
+                                              Icons.auto_awesome_rounded,
+                                              size: 16,
+                                            ),
+                                      label: const Text(
+                                        '3. Régénérer uniquement les exemples',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Plan = squelette rapide à valider avant rédaction. Leçon complète = '
+                                  'rédige tout (remplace l\'existant). Exemples uniquement = ajoute de '
+                                  'nouveaux exemples SANS toucher aux définitions/théorèmes déjà rédigés.',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10.5,
+                                    color: AppTheme.textMuted,
                                   ),
                                 ),
                                 const SizedBox(height: 20),
@@ -3514,6 +3620,65 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
         'body': tips.map((t) => '•  $t').join('\n'),
         'order': order++,
       });
+    }
+
+    return blocks.isEmpty ? null : blocks;
+  }
+
+  /// Dérive un squelette de blocs depuis une réponse IA en mode 'plan' (ai-course-structuring,
+  /// point #3) : pas encore une rédaction, juste des sections placeholder à valider avant de
+  /// dépenser du calcul sur la rédaction complète (bouton « Générer la leçon complète » ensuite).
+  List<Map<String, dynamic>>? _blocksFromAiPlan(
+    Map<String, dynamic>? structured,
+  ) {
+    if (structured == null) return null;
+    final blocks = <Map<String, dynamic>>[];
+    var order = 0;
+
+    final prerequisites = _asStringList(structured['prerequisites']);
+    final objectives = _asStringList(structured['objectives']);
+    final competencies = _asStringList(structured['competencies']);
+    if (prerequisites.isNotEmpty ||
+        objectives.isNotEmpty ||
+        competencies.isNotEmpty) {
+      final buf = StringBuffer();
+      if (prerequisites.isNotEmpty) {
+        buf.writeln('Prérequis :');
+        buf.writeln(prerequisites.map((p) => '•  $p').join('\n'));
+      }
+      if (objectives.isNotEmpty) {
+        if (buf.isNotEmpty) buf.writeln();
+        buf.writeln('Objectifs pédagogiques :');
+        buf.writeln(objectives.map((p) => '•  $p').join('\n'));
+      }
+      if (competencies.isNotEmpty) {
+        if (buf.isNotEmpty) buf.writeln();
+        buf.writeln('Compétences visées :');
+        buf.writeln(competencies.map((p) => '•  $p').join('\n'));
+      }
+      blocks.add({
+        'type': 'definition',
+        'heading': 'Plan du chapitre — à valider avant rédaction complète',
+        'body': buf.toString().trim(),
+        'order': order++,
+      });
+    }
+
+    final plan = (structured['plan'] as List?) ?? const [];
+    for (final p in plan) {
+      if (p is Map) {
+        final section = Map<String, dynamic>.from(p);
+        final type = (section['type'] as String?)?.trim().toLowerCase();
+        final summary = (section['summary'] as String?)?.trim();
+        blocks.add({
+          'type': (type != null && type.isNotEmpty) ? type : 'paragraph',
+          'heading': section['heading'],
+          'body':
+              '(à rédiger — ${summary?.isNotEmpty == true ? summary : 'section prévue par le plan'}. '
+              'Modifiez ce plan puis cliquez sur « Générer la leçon complète » pour la rédiger.)',
+          'order': order++,
+        });
+      }
     }
 
     return blocks.isEmpty ? null : blocks;

@@ -2454,11 +2454,20 @@ class SupabaseService {
   /// 16.0 du CDC) : transforme des notes brutes en cours structuré (sections, formules LaTeX,
   /// pièges classiques, conseils d'examen, quiz). Retourne le JSON structuré tel quel — l'appelant
   /// décide comment le fusionner dans le contenu de la leçon.
+  ///
+  /// [mode] distingue trois opérations désormais séparées (retour porteur 2026-09-12, point #3) :
+  /// - 'plan'          : uniquement le plan du chapitre (rapide, à valider avant rédaction) ;
+  /// - 'full'          : leçon complète (comportement historique, par défaut) ;
+  /// - 'examples_only' : régénère UNIQUEMENT les exemples — [existingBlocks] doit alors contenir
+  ///   les blocs déjà rédigés (hors exemples) pour cohérence, et l'appelant fusionne le résultat
+  ///   sans jamais écraser les autres blocs (jamais de remplacement total).
   Future<Map<String, dynamic>> generateAiLessonDraft({
     String? chapterId,
     String? subjectId,
     required String rawNotes,
     String? promptDirectives,
+    String mode = 'full',
+    List<Map<String, dynamic>>? existingBlocks,
   }) async {
     final res = await client.functions.invoke(
       'ai-course-structuring',
@@ -2467,6 +2476,8 @@ class SupabaseService {
         'subject_id': subjectId,
         'raw_notes': rawNotes,
         'prompt_directives': promptDirectives,
+        'mode': mode,
+        if (existingBlocks != null) 'existing_blocks': existingBlocks,
       },
     );
     if (res.status != 200) {
@@ -3018,6 +3029,7 @@ class SupabaseService {
     required int count,
     String? rawNotes,
     String? promptDirectives,
+    List<Map<String, dynamic>>? existingExercises,
   }) async {
     final res = await client.functions.invoke(
       'ai-exercise-generation',
@@ -3030,6 +3042,7 @@ class SupabaseService {
         'count': count,
         'raw_notes': rawNotes,
         'prompt_directives': promptDirectives,
+        if (existingExercises != null) 'existing_exercises': existingExercises,
       },
     );
     if (res.status != 200) {
