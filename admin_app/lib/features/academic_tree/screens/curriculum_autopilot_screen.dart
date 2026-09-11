@@ -21,35 +21,73 @@ class CurriculumAutopilotScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final importsAsync = ref.watch(curriculumImportsProvider);
+    final scrapeAsync = ref.watch(curriculumScrapeRunsProvider);
     return Scaffold(
       backgroundColor: ElefColors.background,
-      body: ListView(
-        padding: ElefSpacing.paddingLg,
-        children: [
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(curriculumScrapeRunsProvider);
+          ref.invalidate(curriculumImportsProvider);
+        },
+        child: ListView(
+          padding: ElefSpacing.paddingLg,
+          children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Collecte des Programmes', style: ElefTypography.displayMedium),
               const SizedBox(height: ElefSpacing.xs),
               Text(
-                "Recherche → collecte → extraction → structuration → intégration réelle dans "
-                "l'arbre académique. Revue humaine obligatoire. Aucun programme inventé.",
+                "Recherche web (CommonCrawl + Wikipédia + recherche IA) → crawl récursif → "
+                "extraction → intégration dans l'arbre. Revue humaine obligatoire. Aucun "
+                "programme inventé ; les lacunes sont signalées.",
                 style: ElefTypography.bodyMedium,
               ),
               const SizedBox(height: ElefSpacing.md),
-              ElevatedButton.icon(
-                onPressed: () => _newCollectionDialog(context, ref),
-                icon: const Icon(Icons.travel_explore_rounded, size: 18),
-                label: const Text('Nouvelle collecte'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: ElefColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                ),
+              Wrap(
+                spacing: ElefSpacing.sm,
+                runSpacing: ElefSpacing.sm,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => _scrapeDialog(context, ref),
+                    icon: const Icon(Icons.public_rounded, size: 18),
+                    label: const Text('Scraper un pays'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: ElefColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => _newCollectionDialog(context, ref),
+                    icon: const Icon(Icons.link_rounded, size: 18),
+                    label: const Text('Collecte manuelle (URL)'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: ElefColors.primary,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
           const SizedBox(height: ElefSpacing.lg),
+          scrapeAsync.maybeWhen(
+            data: (runs) {
+              final active = runs.where((r) => r.status != 'proposed' || r.importId == null).toList();
+              if (active.isEmpty) return const SizedBox();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Scrapings', style: ElefTypography.heading3),
+                  const SizedBox(height: ElefSpacing.xs),
+                  ...active.map((r) => _scrapeCard(context, ref, r)),
+                  const SizedBox(height: ElefSpacing.md),
+                ],
+              );
+            },
+            orElse: () => const SizedBox(),
+          ),
           importsAsync.when(
             loading: () => const Padding(
                 padding: EdgeInsets.all(40),
@@ -71,6 +109,212 @@ class CurriculumAutopilotScreen extends ConsumerWidget {
               );
             },
           ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────── SCRAPING ───────────────────────────
+
+  static const _countries = <String, String>{
+    'cm': 'Cameroun', 'fr': 'France', 'ci': 'Côte d\'Ivoire',
+    'sn': 'Sénégal', 'ga': 'Gabon', 'bj': 'Bénin',
+  };
+
+  Future<void> _scrapeDialog(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    String cc = 'cm';
+    double depth = 2, pages = 100;
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          backgroundColor: ElefColors.surfaceCard,
+          title: Text('Scraper les programmes d\'un pays',
+              style: ElefTypography.heading2),
+          content: SizedBox(
+            width: 520,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "L'agent découvre les sources (index CommonCrawl des domaines officiels, "
+                  "recherche IA, Wikipédia, registre), crawle en profondeur en respectant "
+                  "robots.txt, puis extrait la structure et les programmes explicitement "
+                  "présents. Avancement automatique en tâche de fond.",
+                  style: ElefTypography.bodySmall,
+                ),
+                const SizedBox(height: ElefSpacing.md),
+                DropdownButtonFormField<String>(
+                  initialValue: cc,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                      labelText: 'Pays', border: OutlineInputBorder()),
+                  dropdownColor: ElefColors.surfaceElevated,
+                  items: _countries.entries
+                      .map((e) => DropdownMenuItem(
+                          value: e.key, child: Text(e.value)))
+                      .toList(),
+                  onChanged: (v) => setD(() => cc = v ?? 'cm'),
+                ),
+                const SizedBox(height: ElefSpacing.sm),
+                Text('Profondeur de crawl : ${depth.toInt()}',
+                    style: ElefTypography.caption),
+                Slider(
+                  value: depth, min: 1, max: 3, divisions: 2,
+                  label: depth.toInt().toString(),
+                  onChanged: (v) => setD(() => depth = v),
+                ),
+                Text('Pages maximum : ${pages.toInt()}',
+                    style: ElefTypography.caption),
+                Slider(
+                  value: pages, min: 30, max: 300, divisions: 9,
+                  label: pages.toInt().toString(),
+                  onChanged: (v) => setD(() => pages = v),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Annuler')),
+            ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Lancer le scraping')),
+          ],
+        ),
+      ),
+    );
+    if (go != true) return;
+    messenger.showSnackBar(const SnackBar(
+        content: Text('Découverte des sources en cours…')));
+    try {
+      final res = await ref.read(supabaseServiceProvider).startCurriculumScrape(
+            countryCode: cc,
+            maxDepth: depth.toInt(),
+            maxPages: pages.toInt(),
+          );
+      ref.invalidate(curriculumScrapeRunsProvider);
+      messenger.showSnackBar(SnackBar(
+        content: Text(res['error'] != null
+            ? 'Échec : ${res['error']}'
+            : 'Scraping lancé — ${(res['discovered'] as Map?)?['total_queued'] ?? 0} '
+                'pages à explorer sur ${(res['discovered'] as Map?)?['domains'] ?? 0} '
+                'domaine(s). Avancement automatique.'),
+      ));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Erreur : $e')));
+    }
+  }
+
+  Widget _scrapeCard(
+      BuildContext context, WidgetRef ref, CurriculumScrapeRun r) {
+    final sc = switch (r.status) {
+      'proposed' => ElefColors.success,
+      'failed' => ElefColors.danger,
+      'cancelled' => ElefColors.textMuted,
+      'extracting' => ElefColors.primary,
+      _ => ElefColors.info,
+    };
+    final label = switch (r.status) {
+      'discovering' => 'Découverte…',
+      'crawling' => 'Crawl en cours',
+      'extracting' => 'Extraction',
+      'proposed' => 'Prêt à relire',
+      'failed' => 'Échec',
+      'cancelled' => 'Annulé',
+      _ => r.status,
+    };
+    return Container(
+      margin: const EdgeInsets.only(bottom: ElefSpacing.sm),
+      padding: ElefSpacing.paddingMd,
+      decoration: BoxDecoration(
+        color: ElefColors.surfaceCard,
+        borderRadius: ElefRadius.lg,
+        border: Border.all(color: ElefColors.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                  child: Text('${_countries[r.countryCode] ?? r.countryCode} · ${r.scopeLabel}',
+                      style: ElefTypography.titleMedium)),
+              _pill(label, sc),
+            ],
+          ),
+          const SizedBox(height: ElefSpacing.xs),
+          if (r.running)
+            LinearProgressIndicator(
+              value: (r.pagesFetched + r.pagesFailed) == 0
+                  ? null
+                  : (r.pagesFetched + r.pagesFailed) /
+                      ((r.pagesFetched + r.pagesFailed + r.pagesQueued)
+                          .clamp(1, 100000)),
+              backgroundColor: ElefColors.surfaceDark,
+            ),
+          const SizedBox(height: ElefSpacing.xs),
+          Wrap(spacing: ElefSpacing.sm, runSpacing: ElefSpacing.xs, children: [
+            _chip('${r.domains} domaine(s)'),
+            _chip('${r.pagesFetched} pages lues'),
+            _chip('${r.pagesQueued} en file'),
+            if (r.pagesFailed > 0) _chip('${r.pagesFailed} échecs'),
+            if (r.findings > 0) _chip('${r.findings} extractions'),
+            if (r.items > 0) _chip('${r.items} éléments'),
+          ]),
+          if (r.errorMessage != null) ...[
+            const SizedBox(height: ElefSpacing.xs),
+            Text(r.errorMessage!,
+                style: ElefTypography.caption
+                    .copyWith(color: ElefColors.danger)),
+          ],
+          const SizedBox(height: ElefSpacing.sm),
+          Wrap(spacing: ElefSpacing.sm, children: [
+            if (r.running)
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final m = ScaffoldMessenger.of(context);
+                  final res = await ref
+                      .read(supabaseServiceProvider)
+                      .advanceCurriculumScrape(r.id, r.status);
+                  ref.invalidate(curriculumScrapeRunsProvider);
+                  ref.invalidate(curriculumImportsProvider);
+                  m.showSnackBar(SnackBar(
+                      content: Text(res['error'] != null
+                          ? 'Erreur : ${res['error']}'
+                          : 'Traité : ${res['processed'] ?? 0}'
+                              '${res['has_more'] == true ? " (encore en cours)" : ""}')));
+                },
+                icon: const Icon(Icons.fast_forward_rounded, size: 15),
+                label: const Text('Faire avancer'),
+              ),
+            if (r.running)
+              TextButton.icon(
+                onPressed: () async {
+                  await ref
+                      .read(supabaseServiceProvider)
+                      .cancelCurriculumScrape(r.id);
+                  ref.invalidate(curriculumScrapeRunsProvider);
+                },
+                icon: const Icon(Icons.stop_circle_outlined, size: 15),
+                label: const Text('Arrêter'),
+                style: TextButton.styleFrom(foregroundColor: ElefColors.danger),
+              ),
+            if (r.importId != null)
+              ElevatedButton.icon(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => _ImportDetailScreen(importId: r.importId!))),
+                icon: const Icon(Icons.rate_review_rounded, size: 15),
+                label: const Text('Relire & appliquer'),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: ElefColors.primary,
+                    foregroundColor: Colors.white),
+              ),
+          ]),
         ],
       ),
     );

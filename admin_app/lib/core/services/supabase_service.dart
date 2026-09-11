@@ -1252,6 +1252,59 @@ class SupabaseService {
         .update({'status': status}).eq('id', itemId);
   }
 
+  // ─── Agent de scraping curriculum (migration 84) ─────────────
+
+  Future<List<CurriculumScrapeRun>> fetchCurriculumScrapeRuns({int limit = 20}) async {
+    final rows = await client
+        .from('curriculum_scrape_runs')
+        .select()
+        .order('created_at', ascending: false)
+        .limit(limit)
+        .then((r) => r as List);
+    return rows
+        .map((r) => CurriculumScrapeRun.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  /// Démarre un run de scraping pour un pays : découverte web (CommonCrawl + grounding + Wikipédia
+  /// + registre) puis crawl récursif + extraction, avancés en tâche de fond (pg_cron).
+  Future<Map<String, dynamic>> startCurriculumScrape({
+    required String countryCode,
+    String? systemHint,
+    int maxDepth = 2,
+    int maxPages = 120,
+  }) async {
+    final body = <String, dynamic>{
+      'country_code': countryCode,
+      'max_depth': maxDepth,
+      'max_pages': maxPages,
+    };
+    if (systemHint != null && systemHint.isNotEmpty) body['system_hint'] = systemHint;
+    final res =
+        await client.functions.invoke('curriculum-scrape-start', body: body);
+    final d = res.data;
+    return d is Map ? Map<String, dynamic>.from(d) : {'error': 'Réponse inattendue.'};
+  }
+
+  /// Fait avancer manuellement un run (le cron le fait aussi automatiquement) :
+  /// crawl si `crawling`, extraction si `extracting`.
+  Future<Map<String, dynamic>> advanceCurriculumScrape(
+      String runId, String status) async {
+    final fn = status == 'extracting'
+        ? 'curriculum-scrape-extract'
+        : 'curriculum-crawl-worker';
+    final res = await client.functions
+        .invoke(fn, body: {'run_id': runId, if (fn.contains('crawl')) 'batch': 12 else 'pages': 5});
+    final d = res.data;
+    return d is Map ? Map<String, dynamic>.from(d) : {'error': 'Réponse inattendue.'};
+  }
+
+  Future<void> cancelCurriculumScrape(String runId) async {
+    await client
+        .from('curriculum_scrape_runs')
+        .update({'cancel_requested': true}).eq('id', runId);
+  }
+
   // ─── Intégrations (WP4, migration 80) ────────────────────────
 
   Future<List<Integration>> fetchIntegrations() async {

@@ -412,6 +412,12 @@ final curriculumImportItemsProvider =
   return service.fetchCurriculumImportItems(importId);
 });
 
+final curriculumScrapeRunsProvider =
+    FutureProvider<List<CurriculumScrapeRun>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchCurriculumScrapeRuns();
+});
+
 // ─── Dashboard KPI Counts ─────────────────────────────────────
 
 final activeProfilesCountProvider = FutureProvider<int>((ref) async {

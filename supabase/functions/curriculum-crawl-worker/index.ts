@@ -3,6 +3,7 @@
 // Appelé par pg_cron (avec cron_secret) et/ou depuis l'admin (JWT). Chaque invocation traite un
 // lot puis rend la main : « background » réel, sans blocage d'interface.
 import { createClient } from "npm:@supabase/supabase-js@2.39.0";
+import { extractText, getDocumentProxy } from "npm:unpdf@0.12.1";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -155,21 +156,44 @@ Deno.serve(async (req: Request) => {
           }
           const resp = await fetch(p.url, {
             headers: { "User-Agent": "pq-learn-curriculum-bot/1.0 (+admin)" },
-            signal: AbortSignal.timeout(18000),
+            signal: AbortSignal.timeout(25000),
             redirect: "follow",
           });
           const ct = resp.headers.get("content-type") ?? "";
-          if (/(image|pdf|octet-stream|zip)/i.test(ct)) {
+          const isPdf = /pdf/i.test(ct) || /\.pdf($|\?)/i.test(p.url as string);
+          let html = "";
+          let text = "";
+          let title = u.hostname;
+
+          if (/(image|zip|octet-stream)/i.test(ct) && !isPdf) {
             await admin.from("curriculum_crawl_pages").update({
               status: "skipped_type", http_status: resp.status,
-              error_message: `Type ${ct} non extrait (OCR/PDF hors périmètre coût zéro).`,
+              error_message: `Type ${ct} non extractible.`,
             }).eq("id", p.id);
             continue;
           }
-          const html = await resp.text();
-          const titleM = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-          const title = titleM ? htmlToText(titleM[1]).slice(0, 200) : u.hostname;
-          const text = htmlToText(html).slice(0, 60000);
+
+          if (isPdf) {
+            // Extraction texte des PDF (programmes officiels souvent en PDF) via unpdf.
+            try {
+              const bytes = new Uint8Array(await resp.arrayBuffer());
+              const doc = await getDocumentProxy(bytes);
+              const r = await extractText(doc, { mergePages: true });
+              text = (Array.isArray(r.text) ? r.text.join("\n") : r.text).replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim().slice(0, 80000);
+              title = decodeURIComponent((p.url as string).split("/").pop() ?? u.hostname).slice(0, 200);
+            } catch (pdfErr) {
+              await admin.from("curriculum_crawl_pages").update({
+                status: "failed", http_status: resp.status,
+                error_message: `PDF illisible : ${(pdfErr as Error).message}`.slice(0, 200),
+              }).eq("id", p.id);
+              continue;
+            }
+          } else {
+            html = await resp.text();
+            const titleM = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+            title = titleM ? htmlToText(titleM[1]).slice(0, 200) : u.hostname;
+            text = htmlToText(html).slice(0, 60000);
+          }
           const rel = Math.max(relevance(title + " " + text.slice(0, 4000)), Number(p.depth) === 0 ? 0.3 : 0);
 
           if (Number(p.depth) > 0 && rel < 0.12) {

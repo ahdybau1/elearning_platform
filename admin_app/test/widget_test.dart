@@ -40,6 +40,8 @@ void main() {
             overrides: [
               curriculumImportsProvider
                   .overrideWith((ref) => Future.value(<CurriculumImport>[])),
+              curriculumScrapeRunsProvider
+                  .overrideWith((ref) => Future.value(<CurriculumScrapeRun>[])),
             ],
             child: const Scaffold(body: CurriculumAutopilotScreen()),
           ),
@@ -48,7 +50,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Collecte des Programmes'), findsOneWidget);
-      expect(find.text('Nouvelle collecte'), findsOneWidget);
+      expect(find.text('Scraper un pays'), findsOneWidget);
+      expect(find.text('Collecte manuelle (URL)'), findsOneWidget);
       // À vide : état vide explicite, aucun élément ni pourcentage inventé.
       expect(find.textContaining('Aucune collecte lancée'), findsOneWidget);
       expect(find.textContaining('Aucun programme inventé'), findsWidgets);

@@ -31,9 +31,11 @@ void main() {
           mediaLibraryProvider(
             null,
           ).overrideWith((ref) => load?.call() ?? Future.value([asset])),
-          // Écran « Collecte des Programmes » : liste d'imports vide en test (pas d'appel réseau).
+          // Écran « Collecte des Programmes » : listes vides en test (pas d'appel réseau).
           curriculumImportsProvider
               .overrideWith((ref) => Future.value(<CurriculumImport>[])),
+          curriculumScrapeRunsProvider
+              .overrideWith((ref) => Future.value(<CurriculumScrapeRun>[])),
         ],
         child: MaterialApp(theme: ThemeData.dark(), home: child),
       );

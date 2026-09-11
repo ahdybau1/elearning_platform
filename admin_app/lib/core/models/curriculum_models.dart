@@ -58,6 +58,64 @@ class CurriculumImport {
       );
 }
 
+/// Un run de l'agent de scraping (découverte web + crawl récursif). Migration 84.
+class CurriculumScrapeRun {
+  final String id;
+  final String? countryCode;
+  final String scopeLabel;
+  final int maxDepth;
+  final int maxPages;
+  final String status; // discovering|crawling|extracting|proposed|failed|cancelled
+  final Map<String, dynamic> discovery;
+  final Map<String, dynamic> stats;
+  final String? importId;
+  final String? errorMessage;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  CurriculumScrapeRun({
+    required this.id,
+    this.countryCode,
+    required this.scopeLabel,
+    this.maxDepth = 2,
+    this.maxPages = 120,
+    required this.status,
+    Map<String, dynamic>? discovery,
+    Map<String, dynamic>? stats,
+    this.importId,
+    this.errorMessage,
+    required this.createdAt,
+    required this.updatedAt,
+  })  : discovery = discovery ?? const {},
+        stats = stats ?? const {};
+
+  int _s(String k) => (stats[k] as num?)?.toInt() ?? 0;
+  int get pagesFetched => _s('pages_fetched');
+  int get pagesQueued => _s('pages_queued');
+  int get pagesFailed => _s('pages_failed');
+  int get domains => _s('domains');
+  int get findings => _s('findings');
+  int get items => _s('items');
+  bool get running =>
+      status == 'discovering' || status == 'crawling' || status == 'extracting';
+
+  factory CurriculumScrapeRun.fromJson(Map<String, dynamic> j) =>
+      CurriculumScrapeRun(
+        id: j['id'] as String,
+        countryCode: j['country_code'] as String?,
+        scopeLabel: j['scope_label'] as String? ?? '',
+        maxDepth: (j['max_depth'] as int?) ?? 2,
+        maxPages: (j['max_pages'] as int?) ?? 120,
+        status: j['status'] as String? ?? 'discovering',
+        discovery: (j['discovery'] as Map?)?.cast<String, dynamic>(),
+        stats: (j['stats'] as Map?)?.cast<String, dynamic>(),
+        importId: j['import_id'] as String?,
+        errorMessage: j['error_message'] as String?,
+        createdAt: DateTime.parse(j['created_at'] as String),
+        updatedAt: DateTime.parse(j['updated_at'] as String),
+      );
+}
+
 class CurriculumImportItem {
   final String id;
   final String importId;
