@@ -2851,9 +2851,13 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
     // retenter la soumission sur celle déjà insérée.
     String? createdLessonId = existing?.id;
 
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
+    // Demande #4 (retour porteur 2026-09-12) : cet éditeur était une AlertDialog de taille fixe
+    // (max 1080px, ~82% de la hauteur) — « un panneau flottant », jamais un vrai espace de travail.
+    // Devient une page dédiée à part entière (Navigator.push), avec fil d'Ariane réel et bouton
+    // retour natif qui préserve la position de la liste de leçons en dessous.
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) {
           if (!hasStartedContextFetch) {
             hasStartedContextFetch = true;
@@ -2959,25 +2963,65 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
             }
           }
 
-          final dialogWidth = MediaQuery.of(context).size.width * 0.85;
-          return AlertDialog(
-            backgroundColor: AppTheme.primarySurface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: AppDialogTitle(
-              icon: Icons.menu_book_rounded,
-              text: isEditing
-                  ? 'Modifier la Leçon'
-                  : 'Éditeur de Leçon (Conforme au Programme)',
-              onClose: () => Navigator.pop(ctx),
-            ),
-            content: SizedBox(
-              width: dialogWidth > 1080 ? 1080 : dialogWidth,
-              height: MediaQuery.of(context).size.height * 0.82,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          return Scaffold(
+            backgroundColor: AppTheme.primaryDark,
+            appBar: AppBar(
+              backgroundColor: AppTheme.primarySurface,
+              elevation: 0,
+              titleSpacing: 12,
+              // Bouton retour natif (fourni automatiquement par AppBar dans une route poussée) :
+              // préserve la position de défilement de la liste de leçons sous-jacente, jamais un
+              // simple X qui referme un panneau flottant.
+              title: Row(
                 children: [
+                  const Icon(
+                    Icons.menu_book_rounded,
+                    color: AppTheme.accentBlue,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isEditing
+                              ? 'Modifier la Leçon'
+                              : 'Éditeur de Leçon (Conforme au Programme)',
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        // Fil d'Ariane réel (demande #4) : Matière › Chapitre — situe toujours la
+                        // leçon dans son contexte académique, sans avoir à rouvrir l'arbre.
+                        if (resolvedSubjectName != null ||
+                            resolvedChapterTitle != null)
+                          Text(
+                            [resolvedSubjectName, resolvedChapterTitle]
+                                .whereType<String>()
+                                .join(' › '),
+                            style: GoogleFonts.inter(
+                              color: Colors.white54,
+                              fontSize: 11.5,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            body: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(28, 20, 28, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   // Aperçus — toujours visibles, sans avoir à faire défiler le formulaire.
                   Wrap(
                     spacing: 12,
@@ -3432,8 +3476,16 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                 ],
               ),
             ),
-            actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-            actions: [
+          ),
+          bottomNavigationBar: Container(
+            padding: const EdgeInsets.fromLTRB(28, 14, 28, 14),
+            decoration: const BoxDecoration(
+              color: AppTheme.primarySurface,
+              border: Border(top: BorderSide(color: AppTheme.primaryBorder)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
               TextButton(
                 onPressed: isLoading ? null : () => Navigator.pop(ctx),
                 child: Text(
@@ -3560,10 +3612,12 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                             : 'Enregistrer & Soumettre',
                       ),
               ),
-            ],
+              ],
+            ),
+          ),
           );
         },
-      ),
+      )),
     );
   }
 
