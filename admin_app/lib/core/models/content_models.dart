@@ -282,6 +282,7 @@ class Exercise {
   final List<String> skills;
   final List<String> prerequisites;
   final String provenance; // 'manual' | 'ai_generated' | 'imported'
+  final int displayOrder; // WP1 — ordre dans le dossier (chapitre + trimestre), migration 81
 
   Exercise({
     required this.id,
@@ -304,6 +305,7 @@ class Exercise {
     List<String>? skills,
     List<String>? prerequisites,
     this.provenance = 'manual',
+    this.displayOrder = 0,
   })  : instructionsJson = instructionsJson ?? {},
         solutionJson = solutionJson ?? {},
         createdAt = createdAt ?? DateTime.now(),
@@ -345,6 +347,7 @@ class Exercise {
       skills: ((json['skills'] as List?) ?? const []).map((s) => s.toString()).toList(),
       prerequisites: ((json['prerequisites'] as List?) ?? const []).map((p) => p.toString()).toList(),
       provenance: json['provenance'] as String? ?? 'manual',
+      displayOrder: (json['display_order'] as int?) ?? 0,
     );
   }
 

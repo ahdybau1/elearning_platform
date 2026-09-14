@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_math_fork/flutter_math.dart';
+import '../../../core/widgets/math_text.dart';
 import '../../../core/design_system/tokens/elef_colors.dart';
 import '../../../core/design_system/tokens/elef_typography.dart';
 import '../../../core/design_system/tokens/elef_radius.dart';
@@ -1385,10 +1385,9 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
               ),
               const SizedBox(height: 12),
               Center(
-                child: Math.tex(
+                child: MathText.formula(
                   'f(x) = $expr',
-                  mathStyle: MathStyle.display,
-                  textStyle: const TextStyle(color: Colors.white, fontSize: 16),
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
                 ),
               ),
               const SizedBox(height: 12),
@@ -1453,7 +1452,7 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-              Text(
+              MathText(
                 block.body,
                 style: ElefTypography.bodyMedium.copyWith(color: ElefColors.textSecondary),
               ),
@@ -1573,7 +1572,7 @@ class _LessonBuilderScreenState extends ConsumerState<LessonBuilderScreen> {
                 ),
                 const SizedBox(height: 6),
               ],
-              Text(
+              MathText(
                 block.body,
                 style: ElefTypography.bodyLarge.copyWith(
                   color: ElefColors.textSecondary,

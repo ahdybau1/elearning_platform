@@ -12,6 +12,9 @@ class AcademicNode {
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<AcademicNode> children;
+  /// 'ok' | 'ambiguous' | 'incomplete' — « À vérifier » quand différent de 'ok' (migration 83).
+  final String verificationStatus;
+  final bool fromImport;
 
   AcademicNode({
     required this.id,
@@ -25,6 +28,8 @@ class AcademicNode {
     DateTime? createdAt,
     DateTime? updatedAt,
     List<AcademicNode>? children,
+    this.verificationStatus = 'ok',
+    this.fromImport = false,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now(),
         children = children ?? [];
@@ -56,6 +61,8 @@ class AcademicNode {
           ? DateTime.parse(json['updated_at'] as String)
           : DateTime.now(),
       children: parsedChildren,
+      verificationStatus: json['verification_status'] as String? ?? 'ok',
+      fromImport: json['curriculum_import_id'] != null,
     );
   }
 

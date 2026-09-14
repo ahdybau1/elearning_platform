@@ -3,13 +3,56 @@ import { createClient } from "npm:@supabase/supabase-js@2.39.0";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
   "";
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
 // Claude retiré le 2026-08-29 (demande explicite du porteur de projet) — voir le commentaire
 // équivalent dans ai-course-structuring/index.ts : ANTHROPIC_API_KEY n'a jamais été configurée.
 // Mode mock explicite (voir 06_ai_pipeline.md) : absent par défaut, jamais un comportement silencieux.
 const AI_MOCK_MODE = Deno.env.get("AI_MOCK_MODE") === "true";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+// Retour porteur (2026-09-12, point #3) : les exercices ne tenaient compte que de subject_id/
+// raw_notes — un exercice de 3ème et de Terminale C sortaient au même niveau. Même résolution de
+// contexte que ai-course-structuring (dupliquée ici : pas de dossier `_shared` dans ce projet, même
+// convention que les autres fonctions Edge autonomes).
+async function resolveCurricularContext(
+  chapterId: string | null,
+  subjectIdIn: string | null,
+): Promise<{ label: string; subjectId: string | null; programmeNeighbours: string[] }> {
+  if (!chapterId) return { label: "", subjectId: subjectIdIn, programmeNeighbours: [] };
+  const { data: chapter } = await supabase
+    .from("chapters")
+    .select("title, subject_id, class_node_id, display_order")
+    .eq("id", chapterId)
+    .maybeSingle();
+  if (!chapter) return { label: "", subjectId: subjectIdIn, programmeNeighbours: [] };
+
+  const subjectId = subjectIdIn ?? chapter.subject_id;
+  const { data: subject } = subjectId
+    ? await supabase.from("subjects").select("name").eq("id", subjectId).maybeSingle()
+    : { data: null };
+
+  const pathParts: string[] = [];
+  let currentId: string | null = chapter.class_node_id;
+  const visited = new Set<string>();
+  while (currentId && !visited.has(currentId)) {
+    visited.add(currentId);
+    const { data: node } = await supabase
+      .from("academic_nodes").select("name, parent_id").eq("id", currentId).maybeSingle();
+    if (!node) break;
+    pathParts.unshift(node.name as string);
+    currentId = node.parent_id as string | null;
+  }
+
+  const { data: siblings } = await supabase
+    .from("chapters").select("title, display_order")
+    .eq("subject_id", subjectId).eq("class_node_id", chapter.class_node_id)
+    .order("display_order");
+  const neighbours = ((siblings ?? []) as { title: string }[]).map((s) => s.title);
+
+  const label = [...pathParts, subject?.name, `Chapitre : ${chapter.title}`]
+    .filter(Boolean).join(" › ");
+  return { label, subjectId, programmeNeighbours: neighbours };
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,7 +62,7 @@ const corsHeaders = {
 };
 
 // CF-004 : contrat de sortie minimal §4 du cahier des charges Agents IA — additif uniquement.
-const AGENT_VERSION = "1.0.0";
+const AGENT_VERSION = "2.0.0";
 
 // Contenu utilisé UNIQUEMENT quand AI_MOCK_MODE=true — jamais comme repli silencieux en cas
 // d'échec des appels API réels (voir 06_ai_pipeline.md).
@@ -66,6 +109,7 @@ Deno.serve(async (req: Request) => {
       count,
       raw_notes,
       prompt_directives,
+      existing_exercises,
     } = await req.json();
 
     const exerciseCount = Math.min(Math.max(Number(count) || 5, 1), 20);
@@ -83,14 +127,20 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // 0. Contexte curriculaire réel (pays/section/enseignement/classe/série/matière/chapitre +
+    // position dans le programme) — sans lui, un exercice de 3ème et de Terminale C sortaient au
+    // même niveau de difficulté et de vocabulaire (retour porteur du 2026-09-12).
+    const ctx = await resolveCurricularContext(chapter_id ?? null, subject_id ?? null);
+    const effectiveSubjectId = ctx.subjectId;
+
     // 1. Récupération du catalogue pédagogique de la matière (Section 16.0 du CDC)
     let catalogPrompt =
       "Structure type : énoncé clair, corrigé pas à pas, niveau calibré.";
-    if (subject_id) {
+    if (effectiveSubjectId) {
       const { data: catalogItems } = await supabase
         .from("content_catalog")
         .select("element_type, description")
-        .eq("subject_id", subject_id);
+        .eq("subject_id", effectiveSubjectId);
 
       if (catalogItems && catalogItems.length > 0) {
         catalogPrompt = catalogItems
@@ -101,9 +151,30 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    const contextBlock = ctx.label
+      ? `Périmètre curriculaire réel (adapte impérativement le niveau, le vocabulaire, la longueur ` +
+        `des énoncés et la profondeur du corrigé à cette classe précise — ne traite jamais un ` +
+        `exercice de 3ème comme un exercice de Terminale, ni l'inverse) :\n${ctx.label}\n` +
+        (ctx.programmeNeighbours.length
+          ? `Programme complet de cette matière pour cette classe (ordre officiel, pour situer le ` +
+            `chapitre concerné) : ${ctx.programmeNeighbours.join(" → ")}\n`
+          : "")
+      : "";
+
+    // Évite de régénérer des doublons quand l'admin demande « encore quelques exercices » sur un
+    // chapitre qui en a déjà — répond au même principe de non-régression que le mode
+    // examples_only de ai-course-structuring (jamais perdre le travail déjà validé).
+    const existingSummary = Array.isArray(existing_exercises) && existing_exercises.length > 0
+      ? `Exercices déjà existants sur ce chapitre (NE PAS dupliquer un énoncé équivalent) :\n` +
+        (existing_exercises as { title?: string }[])
+          .slice(0, 30)
+          .map((e) => `- ${e.title ?? "(sans titre)"}`)
+          .join("\n") + "\n"
+      : "";
+
     const systemPrompt =
       `Tu es un expert pédagogique national et concepteur d'exercices scolaires d'excellence.
-Ta mission est de générer ${exerciseCount} exercice(s) de type "${
+${contextBlock}Ta mission est de générer ${exerciseCount} exercice(s) de type "${
         type ?? "entraînement"
       }", format "${format ?? "qcm"}", niveau de difficulté "${
         difficulty ?? "facile"
@@ -112,7 +183,7 @@ Ta mission est de générer ${exerciseCount} exercice(s) de type "${
 Typologie pédagogique de référence :
 ${catalogPrompt}
 
-Règles strictes :
+${existingSummary}Règles strictes :
 - Toutes les formules mathématiques, chimiques ou physiques DOIVENT être encadrées par des balises LaTeX : $...$ pour inline ou $$...$$ pour blocs séparés.
 - Le corrigé doit être pas-à-pas, justifié, rigoureux.
 - Si le format est "qcm", fournir exactement 4 options et l'index (0-3) de la bonne réponse.
@@ -133,23 +204,27 @@ ${
     }
 
 Génère un tableau JSON exact de ${exerciseCount} exercice(s) avec les clés :
-[
-  {
-    "title": "Titre court de l'exercice",
-    "statement": "Énoncé complet avec LaTeX si nécessaire",
-    "correction": "Corrigé pas-à-pas détaillé",
-    "options": ["Option A", "Option B", "Option C", "Option D"] ou null si non-QCM,
-    "correct_index": 0 à 3, ou null si non-QCM,
-    "hints": ["Indice 1 (léger)", "Indice 2 (plus précis)"],
-    "skills": ["Compétence courte 1", "Compétence courte 2"]
-  }
-]`;
+{
+  "exercises": [
+    {
+      "title": "Titre court de l'exercice",
+      "statement": "Énoncé complet avec LaTeX si nécessaire",
+      "correction": "Corrigé pas-à-pas détaillé",
+      "options": ["Option A", "Option B", "Option C", "Option D"] ou null si non-QCM,
+      "correct_index": 0 à 3, ou null si non-QCM,
+      "hints": ["Indice 1 (léger)", "Indice 2 (plus précis)"],
+      "skills": ["Compétence courte 1", "Compétence courte 2"]
+    }
+  ]
+}`;
 
     let exercises: Record<string, unknown>[] | null = null;
     let provider = "none";
     let modelUsed: string | null = null;
     let tokensUsed = 0;
     let costEstimate = 0;
+    // Diagnostic réel de l'échec (au lieu d'un message générique) — voir plus bas.
+    let diag = "";
 
     if (AI_MOCK_MODE) {
       exercises = buildMockExercises(
@@ -159,38 +234,51 @@ Génère un tableau JSON exact de ${exerciseCount} exercice(s) avec les clés :
       );
       provider = "mock";
       modelUsed = "mock";
-    } else if (GEMINI_API_KEY) {
+    } else {
+      // Passe par le Model Router multi-fournisseurs (ai-generate-text) : bascule automatique
+      // Gemini → Groq → Cerebras → OpenRouter → Mistral selon les clés configurées et les quotas —
+      // remplace l'ancien appel direct à Gemini seul (jamais de repli en cas d'épuisement du quota).
       try {
-        const geminiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{
-                role: "user",
-                parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }],
-              }],
-              generationConfig: {
-                responseMimeType: "application/json",
-                maxOutputTokens: 4096, // gemini-3.6-flash consomme des jetons de réflexion cachés — voir ai-tutor-chat
-              },
-            }),
+        const routerRes = await fetch(`${SUPABASE_URL}/functions/v1/ai-generate-text`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
           },
-        );
-
-        if (geminiRes.ok) {
-          const geminiData = await geminiRes.json();
-          const rawText =
-            geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-          exercises = JSON.parse(rawText);
-          provider = "gemini";
-          modelUsed = "gemini-3.6-flash";
-          tokensUsed = geminiData.usageMetadata?.totalTokenCount ?? 0;
-          costEstimate = 0;
+          body: JSON.stringify({
+            capability: "structuring_json",
+            system_prompt: systemPrompt,
+            user_prompt: userPrompt,
+            json: true,
+            max_tokens: 8192,
+            temperature: 0.5,
+          }),
+        });
+        const routerData = await routerRes.json();
+        if (!routerRes.ok) {
+          diag = `Model Router : ${routerData.error ?? `HTTP ${routerRes.status}`}` +
+            (routerData.provider_chain
+              ? ` [${routerData.provider_chain.map((a: { provider: string; reason: string }) => `${a.provider}=${a.reason}`).join(", ")}]`
+              : "");
+        } else {
+          const jsonText = (routerData.text ?? "")
+            .replace(/^```(?:json)?\s*/i, "")
+            .replace(/\s*```$/i, "")
+            .trim();
+          try {
+            const parsed = JSON.parse(jsonText);
+            exercises = Array.isArray(parsed) ? parsed : (parsed.exercises ?? null);
+            if (!exercises) throw new Error("clé 'exercises' absente de la réponse JSON");
+            provider = routerData._provider ?? "router";
+            modelUsed = routerData._model ?? null;
+          } catch (parseErr) {
+            diag = `JSON illisible du fournisseur ${routerData._provider} : ` +
+              `${(parseErr as Error).message}. Extrait : ${jsonText.slice(0, 160)}`;
+          }
         }
-      } catch (geminiErr) {
-        console.warn("Gemini API Error:", geminiErr);
+      } catch (routerErr) {
+        diag = `exception Model Router : ${(routerErr as Error).message}`;
+        console.warn("Model Router error:", routerErr);
       }
     }
 
@@ -202,8 +290,9 @@ Génère un tableau JSON exact de ${exerciseCount} exercice(s) avec les clés :
     // Aucun résultat réel et mode mock inactif : erreur explicite, jamais de contenu statique
     // déguisé en résultat réel (voir 06_ai_pipeline.md).
     if (!exercises) {
-      const errorMessage =
-        "Échec de la génération IA : Gemini n'a retourné aucun résultat exploitable.";
+      const errorMessage = diag
+        ? `Échec de la génération IA — ${diag}`
+        : "Échec de la génération IA : aucun fournisseur n'a retourné de résultat exploitable.";
       try {
         await supabase.from("ai_agent_calls").insert({
           request_id: requestId,
@@ -248,6 +337,7 @@ Génère un tableau JSON exact de ${exerciseCount} exercice(s) avec les clés :
         _agent_version: AGENT_VERSION,
         _model: modelUsed,
         _duration_ms: durationMs,
+        _curricular_context: ctx.label || null,
       }),
       {
         status: 200,

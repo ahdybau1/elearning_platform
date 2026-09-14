@@ -89,10 +89,11 @@ Deno.serve(async (req: Request) => {
 
     const inputWords = extractSignificantWords(text);
 
-    // 1. Récupération des chapitres avec libellés enrichis
+    // 1. Récupération des chapitres avec libellés enrichis. Le nom de la classe vient de
+    // academic_nodes via class_node_id (il n'existe pas de table academic_levels sur ce schéma).
     const { data: chapters } = await supabase
       .from("chapters")
-      .select("id, title, subject_id, class_node_id, subjects(name), academic_levels(name)")
+      .select("id, title, subject_id, class_node_id, subjects(name), academic_nodes:class_node_id(name)")
       .limit(200);
 
     // 2. Récupération des compétences
@@ -106,7 +107,7 @@ Deno.serve(async (req: Request) => {
       const score = keywordScore(inputWords, ch.title);
       if (score > 0) {
         const subjectName = (ch.subjects as any)?.name ?? "Général";
-        const levelName = (ch.academic_levels as any)?.name ?? "";
+        const levelName = (ch.academic_nodes as any)?.name ?? "";
         chapterCandidates.push({
           chapter_id: ch.id,
           title: ch.title,

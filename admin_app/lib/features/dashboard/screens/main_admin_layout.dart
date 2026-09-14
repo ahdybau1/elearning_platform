@@ -40,6 +40,8 @@ import '../../academic_tree/screens/curriculum_autopilot_screen.dart';
 import '../../users_roles/screens/active_sessions_screen.dart';
 import '../../content_management/screens/lesson_builder_screen.dart';
 import '../../content_management/screens/media_library_screen.dart';
+import '../../content_management/screens/ingestion_center_screen.dart';
+import '../../system_settings/screens/integrations_screen.dart';
 import '../../system_settings/screens/engine_center_screen.dart';
 
 class MainAdminLayout extends ConsumerStatefulWidget {
@@ -132,8 +134,8 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
         ),
         NavItem(
           id: 29,
-          title: 'Curriculum Autopilot (D.3)',
-          icon: Icons.auto_awesome_rounded,
+          title: 'Collecte des Programmes',
+          icon: Icons.travel_explore_rounded,
           allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu],
         ),
         NavItem(
@@ -147,6 +149,12 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
           title: 'Médiathèque & IA',
           icon: Icons.photo_library_rounded,
           allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu, AdminRole.enseignant],
+        ),
+        NavItem(
+          id: 33,
+          title: 'Sources & Ingestion',
+          icon: Icons.cloud_download_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu],
         ),
       ],
     ),
@@ -307,6 +315,12 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
           icon: Icons.precision_manufacturing_rounded,
           allowedRoles: [AdminRole.superAdmin],
         ),
+        NavItem(
+          id: 34,
+          title: 'Intégrations',
+          icon: Icons.cable_rounded,
+          allowedRoles: [AdminRole.superAdmin],
+        ),
       ],
     ),
   ];
@@ -422,6 +436,10 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
         return const MediaLibraryScreen();
       case 32:
         return const EngineCenterScreen();
+      case 33:
+        return const IngestionCenterScreen();
+      case 34:
+        return const IntegrationsScreen();
       default:
         return const DashboardOverviewScreen();
     }

@@ -8,6 +8,8 @@ import '../models/subscription_models.dart';
 import '../models/admin_models.dart';
 import '../models/community_models.dart';
 import '../models/system_models.dart';
+import '../models/ingestion_models.dart';
+import '../models/curriculum_models.dart';
 
 class SupabaseService {
   final SupabaseClient client;
@@ -432,6 +434,7 @@ class SupabaseService {
     if (_isValidUuid(lessonId)) query = query.eq('lesson_id', lessonId!);
     if (_isValidUuid(chapterId)) query = query.eq('chapter_id', chapterId!);
     final rows = await query
+        .order('display_order')
         .order('created_at', ascending: false)
         .then((rows) => rows as List);
     return (rows)
@@ -442,10 +445,30 @@ class SupabaseService {
   Future<List<Exercise>> fetchAllExercises({bool includeInactive = false}) async {
     var query = client.from('exercises').select();
     if (!includeInactive) query = query.eq('is_active', true);
-    final rows = await query.order('created_at', ascending: false).then((rows) => rows as List);
+    final rows = await query
+        .order('display_order')
+        .order('created_at', ascending: false)
+        .then((rows) => rows as List);
     return (rows)
         .map((r) => Exercise.fromJson(Map<String, dynamic>.from(r)))
         .toList();
+  }
+
+  /// WP1 — échange l'ordre de deux exercices d'un même dossier (réorganisation, consigne #2).
+  Future<void> swapExerciseOrder(
+    String aId,
+    int aOrder,
+    String bId,
+    int bOrder,
+  ) async {
+    await client
+        .from('exercises')
+        .update({'display_order': bOrder, 'updated_at': DateTime.now().toIso8601String()})
+        .eq('id', aId);
+    await client
+        .from('exercises')
+        .update({'display_order': aOrder, 'updated_at': DateTime.now().toIso8601String()})
+        .eq('id', bId);
   }
 
   // ─── Validation Queue ─────────────────────────────────────────
@@ -930,6 +953,402 @@ class SupabaseService {
     return (rows)
         .map((r) => AiAgentCall.fromJson(Map<String, dynamic>.from(r)))
         .toList();
+  }
+
+  // ─── AI Control Plane (WP2, migration 78) ─────────────────────
+
+  /// Met à jour la configuration niveau-agent (activation, revue humaine, dépendances).
+  /// Le trigger `trg_ai_agents_config_audit` journalise le changement dans `audit_log`.
+  Future<void> updateAiAgentConfig(
+    String agentRowId, {
+    bool? enabled,
+    bool? requiresHumanReview,
+    List<String>? dependsOn,
+    String? description,
+  }) async {
+    final patch = <String, dynamic>{'updated_at': DateTime.now().toIso8601String()};
+    if (enabled != null) patch['enabled'] = enabled;
+    if (requiresHumanReview != null) {
+      patch['requires_human_review'] = requiresHumanReview;
+    }
+    if (dependsOn != null) patch['depends_on'] = dependsOn;
+    if (description != null) patch['description'] = description;
+    await client.from('ai_agents').update(patch).eq('id', agentRowId);
+  }
+
+  /// Met à jour une version d'agent (prompt, outils/sources autorisés, limites, repli, statut).
+  Future<void> updateAiAgentVersion(
+    String versionId, {
+    String? promptTemplate,
+    String? promptNotes,
+    List<String>? allowedTools,
+    List<String>? allowedSources,
+    Map<String, dynamic>? limits,
+    Map<String, dynamic>? fallbackStrategy,
+    String? status,
+  }) async {
+    final patch = <String, dynamic>{};
+    if (promptTemplate != null) patch['prompt_template'] = promptTemplate;
+    if (promptNotes != null) patch['prompt_notes'] = promptNotes;
+    if (allowedTools != null) patch['allowed_tools'] = allowedTools;
+    if (allowedSources != null) patch['allowed_sources'] = allowedSources;
+    if (limits != null) patch['limits'] = limits;
+    if (fallbackStrategy != null) patch['fallback_strategy'] = fallbackStrategy;
+    if (status != null) patch['status'] = status;
+    if (patch.isEmpty) return;
+    await client.from('ai_agent_versions').update(patch).eq('id', versionId);
+  }
+
+  /// Console de test : exécute réellement l'agent via le harnais `ai-agent-invoke`,
+  /// journalise dans `ai_agent_runs` et renvoie la sortie structurée + la validation de schéma.
+  Future<Map<String, dynamic>> invokeAiAgent(
+    String agentKey,
+    Map<String, dynamic> input, {
+    String trigger = 'manual_test',
+  }) async {
+    final res = await client.functions.invoke(
+      'ai-agent-invoke',
+      body: {'agent_key': agentKey, 'input': input, 'trigger': trigger},
+    );
+    final data = res.data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {'error': 'Réponse inattendue du harnais.', '_raw': data};
+  }
+
+  Future<List<AiAgentRun>> fetchAiAgentRuns({String? agentKey, int limit = 50}) async {
+    var query = client.from('ai_agent_runs').select();
+    if (agentKey != null && agentKey.isNotEmpty) {
+      query = query.eq('agent_key', agentKey);
+    }
+    final rows = await query
+        .order('created_at', ascending: false)
+        .limit(limit)
+        .then((r) => r as List);
+    return rows
+        .map((r) => AiAgentRun.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  Future<List<AiWorkflow>> fetchAiWorkflows({int limit = 30}) async {
+    final rows = await client
+        .from('ai_workflows')
+        .select('*, ai_workflow_steps(*)')
+        .order('created_at', ascending: false)
+        .limit(limit)
+        .then((r) => r as List);
+    return rows
+        .map((r) => AiWorkflow.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  /// Démarre un workflow multi-agents via l'exécuteur `ai-workflow-run`.
+  /// `steps` = liste de `{agent_key, title}`.
+  Future<Map<String, dynamic>> startAiWorkflow({
+    required String workflowKey,
+    required String title,
+    required Map<String, dynamic> context,
+    required List<Map<String, String>> steps,
+  }) async {
+    final res = await client.functions.invoke('ai-workflow-run', body: {
+      'workflow_key': workflowKey,
+      'title': title,
+      'context': context,
+      'steps': steps,
+    });
+    final data = res.data;
+    return data is Map ? Map<String, dynamic>.from(data) : {'error': 'Réponse inattendue.'};
+  }
+
+  /// Reprend un workflow en échec à partir de la première étape non réussie.
+  Future<Map<String, dynamic>> resumeAiWorkflow(String workflowId) async {
+    final res = await client.functions
+        .invoke('ai-workflow-run', body: {'resume_id': workflowId});
+    final data = res.data;
+    return data is Map ? Map<String, dynamic>.from(data) : {'error': 'Réponse inattendue.'};
+  }
+
+  // ─── Centre Sources & Ingestion (WP3, migration 79) ───────────
+
+  Future<List<AiSource>> fetchIngestionSources() async {
+    final rows = await client
+        .from('ai_rag_sources')
+        .select()
+        .inFilter('source_type', ['manual_upload', 'url', 'document'])
+        .order('created_at', ascending: false)
+        .then((r) => r as List);
+    return rows
+        .map((r) => AiSource.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  Future<String> createIngestionSource({
+    required String title,
+    required String sourceType, // manual_upload | url | document
+    String? sourceUrl,
+    String? rawText,
+    Map<String, dynamic>? crawlRules,
+    String? schedule,
+    required bool accessTermsAck,
+    String? provenance,
+  }) async {
+    final data = <String, dynamic>{
+      'title': title,
+      'source_type': sourceType,
+      'access_terms_ack': accessTermsAck,
+      'status': 'active',
+    };
+    if (sourceUrl != null) data['source_url'] = sourceUrl;
+    if (rawText != null) data['raw_text'] = rawText;
+    if (crawlRules != null) data['crawl_rules'] = crawlRules;
+    if (schedule != null && schedule.isNotEmpty) data['schedule'] = schedule;
+    if (provenance != null) data['provenance'] = provenance;
+    final row =
+        await client.from('ai_rag_sources').insert(data).select('id').single();
+    return row['id'] as String;
+  }
+
+  Future<void> updateIngestionSource(
+    String id, {
+    String? title,
+    String? status,
+    Map<String, dynamic>? crawlRules,
+    String? schedule,
+    bool? accessTermsAck,
+  }) async {
+    final patch = <String, dynamic>{};
+    if (title != null) patch['title'] = title;
+    if (status != null) patch['status'] = status;
+    if (crawlRules != null) patch['crawl_rules'] = crawlRules;
+    if (schedule != null) patch['schedule'] = schedule;
+    if (accessTermsAck != null) patch['access_terms_ack'] = accessTermsAck;
+    if (patch.isEmpty) return;
+    await client.from('ai_rag_sources').update(patch).eq('id', id);
+  }
+
+  /// Met un job en file (`extract` pour un texte collé, `crawl` pour une URL, `classify`, `embed`).
+  Future<void> enqueueIngestionJob(String sourceId, String jobType) async {
+    await client.from('ai_ingestion_jobs').insert({
+      'source_id': sourceId,
+      'job_type': jobType,
+    });
+  }
+
+  /// Déclenche le worker d'ingestion (non bloquant côté UI : la progression est sur la ligne de job).
+  Future<Map<String, dynamic>> runIngestionWorker({String? jobId}) async {
+    final res = await client.functions.invoke(
+      'ingestion-worker',
+      body: jobId != null ? {'job_id': jobId} : {},
+    );
+    final data = res.data;
+    return data is Map
+        ? Map<String, dynamic>.from(data)
+        : {'error': 'Réponse inattendue du worker.'};
+  }
+
+  Future<void> cancelIngestionJob(String jobId) async {
+    await client
+        .from('ai_ingestion_jobs')
+        .update({'cancel_requested': true}).eq('id', jobId);
+  }
+
+  Future<void> retryIngestionJob(String jobId) async {
+    await client.from('ai_ingestion_jobs').update({
+      'status': 'queued',
+      'cancel_requested': false,
+      'next_retry_at': null,
+    }).eq('id', jobId);
+  }
+
+  Future<List<AiIngestionJob>> fetchIngestionJobs({String? sourceId}) async {
+    var query = client.from('ai_ingestion_jobs').select();
+    if (sourceId != null) query = query.eq('source_id', sourceId);
+    final rows = await query
+        .order('created_at', ascending: false)
+        .limit(100)
+        .then((r) => r as List);
+    return rows
+        .map((r) => AiIngestionJob.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  Future<List<AiExtractedDoc>> fetchExtractedDocs({String? reviewStatus}) async {
+    var query = client.from('ai_extracted_documents').select();
+    if (reviewStatus != null) query = query.eq('review_status', reviewStatus);
+    final rows = await query
+        .order('created_at', ascending: false)
+        .limit(100)
+        .then((r) => r as List);
+    return rows
+        .map((r) => AiExtractedDoc.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  // ─── Collecte de programmes → Arbre Académique (migration 83) ──
+
+  Future<List<CurriculumImport>> fetchCurriculumImports({int limit = 30}) async {
+    final rows = await client
+        .from('curriculum_imports')
+        .select()
+        .order('created_at', ascending: false)
+        .limit(limit)
+        .then((r) => r as List);
+    return rows
+        .map((r) => CurriculumImport.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  Future<List<CurriculumImportItem>> fetchCurriculumImportItems(
+      String importId) async {
+    final rows = await client
+        .from('curriculum_import_items')
+        .select()
+        .eq('import_id', importId)
+        .order('item_kind')
+        .order('display_order')
+        .then((r) => r as List);
+    return rows
+        .map((r) => CurriculumImportItem.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  /// Lance une collecte : recherche/crawl des sources → extraction → structuration →
+  /// écriture dans curriculum_import_items (statut 'proposed').
+  Future<Map<String, dynamic>> collectCurriculum({
+    String? scopeNodeId,
+    required List<String> seedUrls,
+  }) async {
+    final body = <String, dynamic>{'seed_urls': seedUrls};
+    if (scopeNodeId != null) body['scope_node_id'] = scopeNodeId;
+    final res = await client.functions.invoke('curriculum-collect', body: body);
+    final d = res.data;
+    return d is Map ? Map<String, dynamic>.from(d) : {'error': 'Réponse inattendue.'};
+  }
+
+  /// Applique les éléments d'un import dans l'arbre (dédup, statut « À vérifier », sans écraser).
+  Future<Map<String, dynamic>> applyCurriculumImport(
+    String importId, {
+    String mode = 'all', // all | verified_only | reapply
+    List<String>? itemIds,
+  }) async {
+    final body = <String, dynamic>{'import_id': importId, 'mode': mode};
+    if (itemIds != null) body['item_ids'] = itemIds;
+    final res = await client.functions.invoke('curriculum-apply', body: body);
+    final d = res.data;
+    return d is Map ? Map<String, dynamic>.from(d) : {'error': 'Réponse inattendue.'};
+  }
+
+  /// Annule un import : retire de l'arbre ses entités non éditées et sans contenu.
+  Future<Map<String, dynamic>> cancelCurriculumImport(String importId) async {
+    final res = await client.functions
+        .invoke('curriculum-cancel', body: {'import_id': importId});
+    final d = res.data;
+    return d is Map ? Map<String, dynamic>.from(d) : {'error': 'Réponse inattendue.'};
+  }
+
+  /// Marque un élément proposé comme vérifié / rejeté avant application.
+  Future<void> setCurriculumItemStatus(String itemId, String status) async {
+    await client
+        .from('curriculum_import_items')
+        .update({'status': status}).eq('id', itemId);
+  }
+
+  // ─── Agent de scraping curriculum (migration 84) ─────────────
+
+  Future<List<CurriculumScrapeRun>> fetchCurriculumScrapeRuns({int limit = 20}) async {
+    final rows = await client
+        .from('curriculum_scrape_runs')
+        .select()
+        .order('created_at', ascending: false)
+        .limit(limit)
+        .then((r) => r as List);
+    return rows
+        .map((r) => CurriculumScrapeRun.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  /// Démarre un run de scraping pour un pays : découverte web (CommonCrawl + grounding + Wikipédia
+  /// + registre) puis crawl récursif + extraction, avancés en tâche de fond (pg_cron).
+  Future<Map<String, dynamic>> startCurriculumScrape({
+    required String countryCode,
+    String? systemHint,
+    int maxDepth = 2,
+    int maxPages = 120,
+  }) async {
+    final body = <String, dynamic>{
+      'country_code': countryCode,
+      'max_depth': maxDepth,
+      'max_pages': maxPages,
+    };
+    if (systemHint != null && systemHint.isNotEmpty) body['system_hint'] = systemHint;
+    final res =
+        await client.functions.invoke('curriculum-scrape-start', body: body);
+    final d = res.data;
+    return d is Map ? Map<String, dynamic>.from(d) : {'error': 'Réponse inattendue.'};
+  }
+
+  /// Fait avancer manuellement un run (le cron le fait aussi automatiquement) :
+  /// crawl si `crawling`, extraction si `extracting`.
+  Future<Map<String, dynamic>> advanceCurriculumScrape(
+      String runId, String status) async {
+    final fn = status == 'extracting'
+        ? 'curriculum-scrape-extract'
+        : 'curriculum-crawl-worker';
+    final res = await client.functions
+        .invoke(fn, body: {'run_id': runId, if (fn.contains('crawl')) 'batch': 12 else 'pages': 5});
+    final d = res.data;
+    return d is Map ? Map<String, dynamic>.from(d) : {'error': 'Réponse inattendue.'};
+  }
+
+  Future<void> cancelCurriculumScrape(String runId) async {
+    await client
+        .from('curriculum_scrape_runs')
+        .update({'cancel_requested': true}).eq('id', runId);
+  }
+
+  // ─── Intégrations (WP4, migration 80) ────────────────────────
+
+  Future<List<Integration>> fetchIntegrations() async {
+    final rows = await client
+        .from('integrations')
+        .select()
+        .order('category')
+        .then((r) => r as List);
+    return rows
+        .map((r) => Integration.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  Future<void> setIntegrationEnabled(String key, bool enabled) async {
+    await client.from('integrations').update({'enabled': enabled}).eq('key', key);
+  }
+
+  /// Test de connexion réel via l'Edge Function `integration-healthcheck`
+  /// (écrit `connected` / `last_status` / `last_error` / `last_latency_ms` côté serveur).
+  Future<Map<String, dynamic>> testIntegration(String key) async {
+    final res = await client.functions
+        .invoke('integration-healthcheck', body: {'key': key});
+    final data = res.data;
+    return data is Map
+        ? Map<String, dynamic>.from(data)
+        : {'error': 'Réponse inattendue du test de connexion.'};
+  }
+
+  /// Revue humaine d'un extrait. `validated` → enfile automatiquement l'indexation RAG.
+  Future<void> reviewExtractedDoc(
+    String docId, {
+    required bool approve,
+    String? rejectionReason,
+    String? sourceId,
+  }) async {
+    await client.from('ai_extracted_documents').update({
+      'review_status': approve ? 'validated' : 'rejected',
+      'reviewed_at': DateTime.now().toIso8601String(),
+      if (!approve && rejectionReason != null)
+        'rejection_reason': rejectionReason,
+    }).eq('id', docId);
+    if (approve && sourceId != null) {
+      await enqueueIngestionJob(sourceId, 'embed');
+    }
   }
 
   // ─── WhatsApp Communities ────────────────────────────────────
@@ -2035,11 +2454,20 @@ class SupabaseService {
   /// 16.0 du CDC) : transforme des notes brutes en cours structuré (sections, formules LaTeX,
   /// pièges classiques, conseils d'examen, quiz). Retourne le JSON structuré tel quel — l'appelant
   /// décide comment le fusionner dans le contenu de la leçon.
+  ///
+  /// [mode] distingue trois opérations désormais séparées (retour porteur 2026-09-12, point #3) :
+  /// - 'plan'          : uniquement le plan du chapitre (rapide, à valider avant rédaction) ;
+  /// - 'full'          : leçon complète (comportement historique, par défaut) ;
+  /// - 'examples_only' : régénère UNIQUEMENT les exemples — [existingBlocks] doit alors contenir
+  ///   les blocs déjà rédigés (hors exemples) pour cohérence, et l'appelant fusionne le résultat
+  ///   sans jamais écraser les autres blocs (jamais de remplacement total).
   Future<Map<String, dynamic>> generateAiLessonDraft({
     String? chapterId,
     String? subjectId,
     required String rawNotes,
     String? promptDirectives,
+    String mode = 'full',
+    List<Map<String, dynamic>>? existingBlocks,
   }) async {
     final res = await client.functions.invoke(
       'ai-course-structuring',
@@ -2048,6 +2476,8 @@ class SupabaseService {
         'subject_id': subjectId,
         'raw_notes': rawNotes,
         'prompt_directives': promptDirectives,
+        'mode': mode,
+        'existing_blocks': ?existingBlocks,
       },
     );
     if (res.status != 200) {
@@ -2505,6 +2935,27 @@ class SupabaseService {
     return Exercise.fromJson(Map<String, dynamic>.from(rows.first));
   }
 
+  Future<Exercise?> duplicateExercise(String exerciseId, String adminId) async {
+    final ex = await getExercise(exerciseId);
+    if (ex == null) return null;
+    return createExercise(
+      lessonId: ex.lessonId,
+      chapterId: ex.chapterId,
+      classNodeId: ex.classNodeId,
+      termId: ex.termId,
+      type: ex.type,
+      difficulty: ex.difficulty,
+      format: ex.format,
+      title: '${ex.title} (Copie)',
+      instructionsJson: Map<String, dynamic>.from(ex.instructionsJson),
+      solutionJson: Map<String, dynamic>.from(ex.solutionJson),
+      minSubscriptionTier: ex.minSubscriptionTier,
+      skills: List<String>.from(ex.skills),
+      prerequisites: List<String>.from(ex.prerequisites),
+      provenance: 'manual',
+    );
+  }
+
   Future<List<ExerciseVersion>> fetchExerciseVersions(String exerciseId) async {
     final rows = await client
         .from('exercise_versions')
@@ -2529,6 +2980,8 @@ class SupabaseService {
     Map<String, dynamic>? solutionJson,
     String? minSubscriptionTier,
     bool? isActive,
+    bool updateLessonId = false,
+    String? lessonId,
     bool updateChapterId = false,
     String? chapterId,
     bool updateClassNodeId = false,
@@ -2569,6 +3022,7 @@ class SupabaseService {
       data['min_subscription_tier'] = minSubscriptionTier;
     }
     if (isActive != null) data['is_active'] = isActive;
+    if (updateLessonId) data['lesson_id'] = lessonId;
     if (updateChapterId) data['chapter_id'] = chapterId;
     if (updateClassNodeId) data['class_node_id'] = classNodeId;
     if (updateTermId) data['term_id'] = termId;
@@ -2599,6 +3053,7 @@ class SupabaseService {
     required int count,
     String? rawNotes,
     String? promptDirectives,
+    List<Map<String, dynamic>>? existingExercises,
   }) async {
     final res = await client.functions.invoke(
       'ai-exercise-generation',
@@ -2611,6 +3066,7 @@ class SupabaseService {
         'count': count,
         'raw_notes': rawNotes,
         'prompt_directives': promptDirectives,
+        'existing_exercises': ?existingExercises,
       },
     );
     if (res.status != 200) {

@@ -7,6 +7,8 @@ import '../models/subscription_models.dart';
 import '../models/admin_models.dart';
 import '../models/community_models.dart';
 import '../models/system_models.dart';
+import '../models/ingestion_models.dart';
+import '../models/curriculum_models.dart';
 
 final supabaseServiceProvider = Provider<SupabaseService>((ref) {
   final client = ref.watch(supabaseClientProvider);
@@ -349,10 +351,71 @@ final aiAgentCallsProvider =
   return service.fetchAiAgentCalls(days: days);
 });
 
-/// IA-001 (migration 55) : registre réel des agents IA (ADM-AI-001 Agent Registry).
+/// IA-001 (migration 55) + WP2 Control Plane (migration 78) : registre des agents IA.
 final aiAgentsProvider = FutureProvider<List<AiAgent>>((ref) async {
   final service = ref.watch(supabaseServiceProvider);
   return service.fetchAiAgents();
+});
+
+/// WP2 — historique d'exécutions unitaires (`ai_agent_runs`). `null` = tous les agents.
+final aiAgentRunsProvider =
+    FutureProvider.family<List<AiAgentRun>, String?>((ref, agentKey) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchAiAgentRuns(agentKey: agentKey);
+});
+
+/// WP2 — workflows multi-agents (`ai_workflows` + étapes).
+final aiWorkflowsProvider = FutureProvider<List<AiWorkflow>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchAiWorkflows();
+});
+
+// ─── WP3 — Centre Sources & Ingestion (migration 79) ──────────
+
+final ingestionSourcesProvider = FutureProvider<List<AiSource>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchIngestionSources();
+});
+
+/// `null` = tous les jobs ; sinon jobs d'une source précise.
+final ingestionJobsProvider =
+    FutureProvider.family<List<AiIngestionJob>, String?>((ref, sourceId) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchIngestionJobs(sourceId: sourceId);
+});
+
+/// `null` = tous les extraits ; sinon filtrés par statut de revue.
+final extractedDocsProvider =
+    FutureProvider.family<List<AiExtractedDoc>, String?>((ref, reviewStatus) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchExtractedDocs(reviewStatus: reviewStatus);
+});
+
+// ─── WP4 — Intégrations (migration 80) ───────────────────────
+
+final integrationsProvider = FutureProvider<List<Integration>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchIntegrations();
+});
+
+// ─── Collecte de programmes → Arbre (migration 83) ───────────
+
+final curriculumImportsProvider =
+    FutureProvider<List<CurriculumImport>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchCurriculumImports();
+});
+
+final curriculumImportItemsProvider =
+    FutureProvider.family<List<CurriculumImportItem>, String>((ref, importId) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchCurriculumImportItems(importId);
+});
+
+final curriculumScrapeRunsProvider =
+    FutureProvider<List<CurriculumScrapeRun>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchCurriculumScrapeRuns();
 });
 
 // ─── Dashboard KPI Counts ─────────────────────────────────────
