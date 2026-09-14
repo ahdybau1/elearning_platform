@@ -1,0 +1,295 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../core/theme/student_theme.dart';
+import '../../../core/auth/student_auth_provider.dart';
+import '../../../core/providers/student_providers.dart';
+import '../../../core/widgets/student_page_content.dart';
+import '../../../core/widgets/student_screen_header.dart';
+import '../../../design_system/tokens/app_radius.dart';
+import '../../../design_system/components/empty_state_view.dart';
+import '../../subscription/screens/boutique_shop_screen.dart';
+
+class ClassForumScreen extends ConsumerStatefulWidget {
+  const ClassForumScreen({super.key});
+
+  @override
+  ConsumerState<ClassForumScreen> createState() => _ClassForumScreenState();
+}
+
+class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
+  final TextEditingController _postCtrl = TextEditingController();
+  bool _isPosting = false;
+
+  Future<void> _sendPost(String classNodeId, String authorAccountId) async {
+    final content = _postCtrl.text.trim();
+    if (content.isEmpty || _isPosting) return;
+    setState(() => _isPosting = true);
+    try {
+      await ref.read(studentSupabaseServiceProvider).createForumPost(
+            classNodeId: classNodeId,
+            authorAccountId: authorAccountId,
+            content: content,
+          );
+      _postCtrl.clear();
+      ref.invalidate(studentForumPostsProvider(classNodeId));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Message publié.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Échec de la publication : $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isPosting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(studentAuthProvider);
+    final profile = authState.activeProfile;
+    final account = authState.account;
+    final postsAsync = ref.watch(
+      studentForumPostsProvider(profile?.classNodeId ?? ''),
+    );
+
+    return StudentPageContent(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+            child: StudentScreenHeader(
+              title: 'Forum de Classe (${profile?.className ?? ''})',
+              trailing: IconButton(
+                icon: Icon(
+                  Icons.shopping_bag_outlined,
+                  color: context.colors.accentPrimary,
+                ),
+                tooltip: 'Boutique de documents à la carte',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => Scaffold(
+                        backgroundColor: context.colors.background,
+                        appBar: AppBar(automaticallyImplyLeading: true),
+                        body: const BoutiqueShopScreen(),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          // Class Isolation Notice
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            color: context.colors.surface,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.shield_outlined,
+                  size: 16,
+                  color: context.colors.accentPrimary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Espace cloisonné : seuls les élèves de ${profile?.className ?? 'votre classe'} ont accès à ce fil.',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: context.colors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Posts Feed
+          Expanded(
+            child: postsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(
+                child: Text(
+                  'Erreur: $err',
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ),
+              data: (posts) {
+                if (posts.isEmpty) {
+                  return EmptyStateView(
+                    icon: Icons.forum_outlined,
+                    title: 'Aucun message pour le moment',
+                    description:
+                        'Soyez le premier à poser une question ou partager une astuce avec votre classe !',
+                    iconColor: context.colors.accentPrimary,
+                  );
+                }
+                return ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: posts.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 14),
+                  itemBuilder: (context, index) {
+                    final post = posts[index];
+
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: context.colors.card,
+                        borderRadius: AppRadius.radiusLarge,
+                        border: Border.all(color: context.colors.border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: StudentTheme.primaryGradient,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    post.authorName.isNotEmpty
+                                        ? post.authorName[0].toUpperCase()
+                                        : 'A',
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      post.authorName,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: context.colors.textPrimary,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Il y a quelques heures',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        color: context.colors.textMuted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: context.colors.surface,
+                                  borderRadius: AppRadius.radiusFull,
+                                ),
+                                child: Text(
+                                  'Élève',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: context.colors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            post.content,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: context.colors.textPrimary,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+
+          // Bottom New Post Bar
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: context.colors.surface,
+              border: Border(top: BorderSide(color: context.colors.border)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _postCtrl,
+                    style: TextStyle(
+                      color: context.colors.textPrimary,
+                      fontSize: 13,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Poser une question à la classe...',
+                      hintStyle: GoogleFonts.inter(
+                        color: context.colors.textMuted,
+                        fontSize: 13,
+                      ),
+                      filled: true,
+                      fillColor: context.colors.card,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: AppRadius.radiusFull,
+                        borderSide: BorderSide(color: context.colors.border),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                _isPosting
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : IconButton(
+                        icon: Icon(
+                          Icons.send_rounded,
+                          color: context.colors.accentPrimary,
+                        ),
+                        onPressed: (profile == null || account == null)
+                            ? null
+                            : () => _sendPost(profile.classNodeId, account.id),
+                      ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A new Flutter project.">
+
+  <!-- Balise manquante jusqu'ici (2026-08-30, cause réelle du responsive cassé sur un vrai
+       téléphone) : sans elle, un navigateur mobile suppose une page "desktop" de ~980-1024px et la
+       réduit visuellement pour qu'elle tienne à l'écran — MediaQuery.of(context).size.width voit
+       donc ~980px au lieu de la vraie largeur de l'écran, et le seuil isMobile (< 700) ne se
+       déclenche jamais. Une simulation desktop (Chrome DevTools/Playwright avec une taille de
+       fenêtre forcée) ne reproduit pas ce comportement, d'où le fait que le fix responsive semblait
+       correct en test mais restait cassé sur un vrai appareil. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="student_app">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>pq learn</title>
+  <link rel="manifest" href="manifest.json">
+
+  <!-- MathJax v3 (tex-svg) — Moteur de secours et haute fidélité conforme Cahier Technique §2 -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true
+      },
+      svg: {
+        fontCache: 'global'
+      }
+    };
+  </script>
+  <script type="text/javascript" id="MathJax-script" async
+    src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+  </script>
+</head>
+<body>
+  <!--
+    You can customize the "flutter_bootstrap.js" script.
+    This is useful to provide a custom configuration to the Flutter loader
+    or to give the user feedback during the initialization process.
+
+    For more details:
+    * https://docs.flutter.dev/platform-integration/web/initialization
+  -->
+  <!--
+    Auto-nettoyage : un ancien service worker (enregistré lors d'une visite précédente, avant qu'on
+    ne bascule cette build en --pwa-strategy=none) continue de servir un build en cache tant qu'il
+    n'est pas désinscrit explicitement — reconstruire le site ne suffit PAS à l'effacer côté
+    navigateur d'un visiteur déjà passé. Constaté réellement le 2026-08-30 : une correction responsive
+    déployée restait invisible sur un téléphone déjà venu une fois. Ce script s'exécute AVANT Flutter,
+    désinscrit tout service worker existant et vide le cache qu'il a pu créer, une fois pour toutes.
+  -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((reg) => reg.unregister());
+      });
+    }
+    if (window.caches) {
+      caches.keys().then((keys) => keys.forEach((key) => caches.delete(key)));
+    }
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
