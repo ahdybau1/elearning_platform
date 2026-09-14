@@ -1,5 +1,56 @@
 # Progression EDLEARN
 
+## 2026-09-11 — Ergonomie & Modernisation : Arbre Académique & Gestion des Leçons et Cours
+
+- **Étape 1 : Page Arbre Académique (`AcademicTreeScreen`) — LIVRÉ** :
+  - Remplacement du panneau latéral étriqué par une vue d'exploration fluide et spacieuse en pleine largeur (`isExploringNode` + `_currentNode`).
+  - Barre de navigation hiérarchique avec fil d'Ariane interactif et historique bidirectionnel (`Précédent`, `Suivant`, `Racine`).
+  - Raccourcis clavier physiques (`Alt+←`, `Alt+→`) et interception du bouton retour navigateur Web (`didPopRoute`).
+  - 9/9 tests passants dans `test/academic_tree_exploration_test.dart`.
+
+- **Étape 2 : Page Leçons & Cours (`LessonsManagerScreen`) — LIVRÉ** :
+  - **En-tête Spacieux & Aéré** : Titre moderne, badge de la classe activement sélectionnée et bouton d'action primaire `+ Créer un Chapitre`.
+  - **Barre de Métriques KPI en Direct** : 5 cartes de synthèse (Total Chapitres, Total Leçons, Leçons Publiées, En Validation, Éléments Archivés).
+  - **Barre de Filtres Modernisée** : Sélecteurs stylisés de Classe et Matière avec icônes disciplinaires, champ de recherche rapide avec bouton d'effacement en un clic, et toggle d'archivage ergonomique.
+  - **Dossiers Trimestriels Dépliables** : Cartes glassmorphiques avec bordure douce, icône de dossier thématique et compteurs de chapitres/leçons en pilules.
+  - **Cartes de Chapitres Restructurées** : Titre avec barré lors de l'archivage, badges de classe, trimestre, classes jumelées (`Jumelée avec : ...`), statut d'archivage, et barre d'actions épurée (`+ Ajouter une leçon`, `Modifier`, et menu contextuel `PopupMenuButton` pour la duplication et suppression).
+  - **Lignes de Leçons Fluides & Adaptatives** : Icône livre thématique selon publication/brouillon, badges de validation et de tier d'abonnement, accès direct au Studio, Aperçu, et Modifier, complétés d'un menu d'actions secondaires (PDF, Historique, Archiver, Supprimer).
+  - **Responsive Mobile / Tablette (< 650px & < 750px)** : Adaptation automatique évitant toute troncature verticale ou affamement du titre.
+  - **Non-Régression Stricte** : 100% des appels Supabase, jumelage de classes, fenêtres modales et logique de validation préservés.
+  - **Vérification** : `flutter analyze` 0 issue · 5/5 tests ergonomie `test/lessons_manager_ergonomics_test.dart` passants · 65/65 tests passants sur l'ensemble de la suite de tests de `admin_app` · Build Web de production généré avec succès (`build/web`).
+
+- **Étape 3 : Page Banque d'Exercices & Studio Dédié Plein Écran (`ExerciseStudioScreen` & `ExercisesManagerScreen`) — LIVRÉ** :
+  - **Studio d'Exercices Dédié Plein Écran (`ExerciseStudioScreen`)** :
+    - Fin définitive de la fenêtre modale étriquée et touffue : espace de création et d'édition en plein écran, aéré et professionnel, calqué sur les standards du `LessonBuilderScreen`.
+    - **Barre Supérieure Contextuelle** : Titre dynamique, badge d'état (`BROUILLON` / `PUBLIÉ`), switch de publication en direct, bouton de fermeture fluide et action primaire `Enregistrer l'Exercice` avec spinner de progression.
+    - **Onglet 1 — Énoncé & Médias** : Titre obligatoire, sélecteurs stylisés de typologie (`Entraînement`, `Évaluation`, etc.), format (`QCM`, `Réponse courte`, `Vrai/Faux`, etc.) et difficulté (`Facile`, `Intermédiaire`, `Approfondissement`), champ d'énoncé multi-lignes avec **aperçu LaTeX en temps réel** (`MathText`) et gestionnaire de pièces jointes médias.
+    - **Onglet 2 — Choix & Corrigé Pédagogique** : Constructeur d'options QCM dynamique (ajout/suppression d'options à la volée, désignation de la bonne réponse par pastille cliquable avec coche verte, feedback explicatif individualisé par option), champ de corrigé pas-à-pas avec aperçu LaTeX en direct, et gestionnaire d'indices progressifs (un par ligne).
+    - **Onglet 3 — Rattachement Académique & Métadonnées** : Sélecteur visuel interactif des **3 niveaux d'indépendance** (Niveau 1 : Leçon précise, Niveau 2 : Chapitre général, Niveau 3 : Type Examen indépendant), sélecteur sécurisé de classe/série (avec fallback anti-crash Flutter en cas de chargement asynchrone), formule d'abonnement requise (`Gratuit`, `Journalier`, `Mensuel`), et champs de compétences et prérequis académiques.
+  - **Gestionnaire d'Exercices Débarrassé et Calme (`ExercisesManagerScreen`)** :
+    - Élimination de plus de 1 150 lignes de code modal obsolète et étriqué au profit de redirections directes vers `ExerciseStudioScreen`.
+    - Cartes d'exercices spacieuses en pleine largeur avec pastilles de niveau, badges d'abonnement, indicateurs de difficulté, boutons `Aperçu` et `Ouvrir le Studio`, et menu contextuel complet (PDF, Historique, Archivage, Suppression).
+    - Métriques KPI interactives en direct, filtres segmentés par niveau et recherche instantanée.
+  - **Service Supabase & Non-Régression** :
+    - Mise à niveau de `SupabaseService.updateExercise` avec support de `updateLessonId`, `lessonId`, `updateChapterId`, `chapterId`, `updateClassNodeId`, et `updateTermId` pour les transferts fluides entre niveaux 1, 2 et 3.
+  - **Validation & Tests Automatisés** :
+    - `flutter analyze` : 0 issue sur l'ensemble des fichiers modifiés.
+    - `test/exercises_manager_ergonomics_test.dart` : 6/6 tests passants.
+  - **Étape 4 : Élimination du Scrolling Imbriqué & Espaces de Travail Dédiés Spacieux — LIVRÉ** :
+    - **Fin du « Scroll dans le Scroll » et des Accordéons Imbriqués** : Élimination totale des conteneurs à défilement imbriqués (`ListView` dans `ExpansionTile` dans `ListView`) et des boîtes étriquées qui nuisaient à la lisibilité et à l'ergonomie.
+    - **Double Volet Split Workspace pour `ExerciseStudioScreen`** :
+      - Mise en page bi-volet ergonomique (`flex: 11` pour l'éditeur, `flex: 9` pour le canevas interactif élève en direct dès `>= 1050px`, repli gracieux en colonne fluide sur résolutions inférieures).
+      - **Canevas Interactif en Direct (`_buildLiveCanvas`)** : Rendu LaTeX immédiat via `MathText`, simulation interactive des options de QCM cliquables avec validation visuelle instantanée, tiroir d'indices progressifs, et bascule Corrigé didactique pas-à-pas.
+      - En-tête responsive sans aucun débordement (`Wrap` et `isExpanded: true` sur tous les sélecteurs).
+    - **Architecture Master-Detail 3-Panes pour `ExercisesManagerScreen`** :
+      - **Barre de Scope Horizontale des Trimestres (`_buildTermScopeBar`)** : Remplacement des accordéons par des pilules de filtrage interactives avec badges de compteurs en direct.
+      - **Flux Catalogue Spacieux (`_buildExercisesFeed`)** : Liste d'exercices aérée en pleine largeur avec sélection active (`isSelected`) par surbrillance cyan, pastille d'état `Inspecté`, et raccourcis directs.
+      - **Inspecteur Didactique Dédié (`_buildExerciseInspector`)** : Panneau d'inspection grand format à droite affichant l'énoncé complet, les formules LaTeX rendues, les options QCM et le corrigé pédagogique dès la sélection d'un exercice dans le catalogue, avec état d'accueil invitant et en-tête adaptatif `Wrap`.
+    - **Validation & Non-Régression** :
+      - `flutter analyze` : 0 issue.
+      - Tests ergonomie & studio : 100% de réussite (`test/exercise_studio_test.dart` 3/3, `test/exercises_manager_ergonomics_test.dart` 6/6).
+      - Suite complète `admin_app` : 74/74 tests passants.
+      - Build Web de production généré avec succès (`build/web`).
+
 ## 2026-09-10/11 — Achèvement Administration : Control-Plane IA, Ingestion, Intégrations
 
 Branche `admin-completion` (WIP Antigravity préservé sur `main` @ `09d8d63`). Voir
@@ -483,5 +534,35 @@ Références : Feedback utilisateur sur smartphone, CDC Master §11.1 Apparence 
 - **Validation Qualité Globale** :
   - `student_app` : `dart analyze` **0 issues**, `flutter test` **48/48 tests passés (100%)**.
   - `admin_app` : `dart analyze` **0 issues**, `flutter test` **36/36 tests passés (100%)**.
+
+## 14 septembre 2026 — Refonte Architecturale Multi-Pages & Aération Didactique des Exercices Admin
+
+Références : Demande d'aération complète de l'interface des exercices ("chaque interface/box doit avoir sa propre page"), CDC Master §11 & Content Factory §8.
+
+- **Élimination de la surcharge mono-page (`ExercisesManagerScreen`)** :
+  - Remplacement de l'ancien panneau empilé (6 cartes KPI, 4 niveaux d'indépendance, inspecteur inline compressé) par un Hub structuré en deux espaces clairs :
+    1. *Exercices du Programme (Niveaux 1 & 2)* organisés par dossiers de chapitres déroulants avec cartes épurées.
+    2. *Examens & Concours (Niveau 3)* regroupant les épreuves indépendantes.
+  - Cartes d'exercices allégées avec boutons d'accès direct « Consulter » et « Aperçu », menu contextuel complet (Studio, Exporter PDF, Dupliquer, Supprimer/Archiver).
+  - En-tête et barre de recherche/filtres responsives (`LayoutBuilder`, `SingleChildScrollView` horizontal, encapsulation `Material`).
+- **Fiche d'Exercice Plein Écran Dédiée (`ExerciseDetailScreen`)** :
+  - Page plein écran avec `AppBar`, fil d'Ariane dynamique (`Banque > Classe > Matière > Chapitre`), bouton de bascule directe Statut (Publié / Brouillon).
+  - Zone didactique majeure : rendu LaTeX de l'énoncé via `MathText`, simulation interactive des choix d'élèves (marquage instantané vert/rouge, bouton Réinitialiser), corrigé pas-à-pas et indices progressifs.
+  - Panneau latéral de métadonnées pédagogiques (Classe, Chapitre, Trimestre, Format didactique, Type, Difficulté, Prérequis & Compétences).
+  - Raccourcis d'action : « Modifier dans le Studio », « Aperçu Élève », « Exporter en PDF », « Générer variante IA », « Dupliquer ».
+- **Immersion Élève Plein Écran (`ExerciseStudentPreviewScreen`)** :
+  - Remplace la modale étroite de 580px par une interface plein écran dédiée.
+  - Commutateur de viewport interactif : maquette Smartphone réaliste (390px) et mode Grand Écran / Tablette.
+  - Simulation complète du parcours élève (sélection d'options, validation, feedback didactique, révélation d'indices, réinitialisation).
+- **Studio de Génération IA Plein Écran (`ExerciseAiGenerationScreen`)** :
+  - Interface dédiée remplaçant la boîte de dialogue contextuelle.
+  - Formulaire de configuration contextuel (Classe, Chapitre, Typologie, Format didactique, Difficulté, Nombre d'exercices, Directives spécifiques).
+  - Liste de révision des exercices générés avec sélection par cases à cocher et import en lot direct dans la banque d'exercices.
+- **Service Supabase & Persistance (`SupabaseService`)** :
+  - Méthode `duplicateExercise(exerciseId, adminId)` ajoutée avec copie intégrale des instructions, corrigé, compétences et prérequis.
+- **Validation Qualité & Non-Régression** :
+  - `admin_app` : `flutter analyze` : **0 erreur, 0 avertissement, 0 info**.
+  - `admin_app` : `flutter test` : **75/75 tests passés (100%)** incluant `exercises_manager_ergonomics_test.dart` (7/7 tests passés), `exercise_studio_test.dart` et `lessons_manager_ergonomics_test.dart`.
+
 
 

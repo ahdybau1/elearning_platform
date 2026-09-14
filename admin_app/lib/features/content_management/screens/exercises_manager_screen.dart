@@ -7,15 +7,27 @@ import '../../../core/models/academic_node.dart';
 import '../../../core/models/content_models.dart';
 import '../../../core/models/enums.dart';
 import '../../../core/providers/data_providers.dart';
-import '../widgets/media_attachment_picker.dart';
 import '../utils/exercise_pdf_generator.dart';
 import '../../../core/widgets/app_dialog_title.dart';
-import '../../../core/widgets/math_text.dart';
+import 'exercise_ai_generation_screen.dart';
+import 'exercise_detail_screen.dart';
+import 'exercise_student_preview_screen.dart';
+import 'exercise_studio_screen.dart';
 
-/// Filtre "exercices non classés" (class_node_id NULL) — sentinelle distincte de `null` (qui
-/// signifie "toutes les classes") pour le filtre Classe de la barre de recherche.
+/// Sentinelle pour filtre "exercices non classés"
 const _unclassedFilterSentinel = '__non_classe__';
 
+enum ExerciseHubTab {
+  curriculum, // Niveaux 1 & 2 : Exercices rattachés au programme
+  exams, // Niveau 3 : Épreuves d'examens et concours indépendants
+}
+
+/// Écran principal de la Banque d'Exercices — Hub aéré et structuré en espaces dédiés.
+///
+/// Fin du tout-en-un touffu et des inspecteurs imbriqués :
+/// 1. Séparation nette entre **Exercices du Programme** et **Examens & Concours**.
+/// 2. Navigation contextuelle par Classe et Matière pour retrouver immédiatement ses chapitres.
+/// 3. Fiches d'exercices légères et respirantes avec consultation directe en plein écran ([ExerciseDetailScreen]).
 class ExercisesManagerScreen extends ConsumerStatefulWidget {
   const ExercisesManagerScreen({super.key});
 
@@ -26,8 +38,10 @@ class ExercisesManagerScreen extends ConsumerStatefulWidget {
 
 class _ExercisesManagerScreenState
     extends ConsumerState<ExercisesManagerScreen> {
-  String _selectedLevelFilter = 'Tous les niveaux';
+  ExerciseHubTab _activeTab = ExerciseHubTab.curriculum;
+
   String? _selectedClassFilterId;
+  String? _selectedSubjectFilterId;
   bool _showInactive = false;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
@@ -43,964 +57,50 @@ class _ExercisesManagerScreenState
         '00000000-0000-0000-0000-000000000001';
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final exercisesAsync = ref.watch(exercisesProvider(_showInactive));
-    final classNodesAsync = ref.watch(nodesByTypeProvider('class'));
-    final seriesNodesAsync = ref.watch(nodesByTypeProvider('series'));
-    final classOptions = <AcademicNode>[
-      ...classNodesAsync.valueOrNull ?? [],
-      ...seriesNodesAsync.valueOrNull ?? [],
-    ]..sort((a, b) => a.name.compareTo(b.name));
-
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header title & Action bar — Column plutôt que Row : un Wrap de plusieurs boutons comme
-          // simple frère d'un Expanded ne rétrécit jamais (même bug que academic_tree_screen.dart/
-          // pedagogical_catalog_screen.dart, retour utilisateur réel très insistant, 2026-08-30).
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Banque d\'Exercices Pédagogiques',
-                style: GoogleFonts.outfit(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Structure à 3 niveaux d\'indépendance (Leçon, Chapitre, Indépendant type examen)',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: AppTheme.textMuted,
-                ),
-              ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.accentCyan,
-                    ),
-                    onPressed: () => _showAiGenerationModal(context),
-                    icon: const Icon(Icons.psychology_rounded, size: 18),
-                    label: const Text('Générer par IA'),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () => _showCreateExerciseModal(context),
-                    icon: const Icon(Icons.add_rounded, size: 18),
-                    label: const Text('Créer un Exercice'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Independence Level Tabs
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _buildLevelTab('Tous les niveaux'),
-              _buildLevelTab('Niveau 1 : Leçon précise'),
-              _buildLevelTab('Niveau 2 : Chapitre général'),
-              _buildLevelTab('Niveau 3 : Indépendant (Type Examen)'),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Filters : recherche + classe + archives — un champ Expanded + un dropdown à largeur
-          // fixe (220) + un Switch/texte à largeur fixe dépassaient largement les 358px
-          // disponibles sur mobile (390 - padding), débordant hors écran des deux côtés (retour
-          // utilisateur réel, 2026-08-30). Sous 700px, les 3 éléments s'empilent pleine largeur.
-          Builder(
-            builder: (context) {
-              final searchField = Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: AppTheme.primarySurface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.primaryBorder),
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (v) =>
-                      setState(() => _searchQuery = v.trim().toLowerCase()),
-                  style: GoogleFonts.inter(color: Colors.white, fontSize: 13),
-                  decoration: InputDecoration(
-                    hintText: 'Rechercher un exercice par titre...',
-                    hintStyle: GoogleFonts.inter(color: AppTheme.textMuted),
-                    prefixIcon: const Icon(
-                      Icons.search_rounded,
-                      color: AppTheme.textMuted,
-                      size: 20,
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              );
-              final classDropdown = Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  color: AppTheme.primarySurface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.primaryBorder),
-                ),
-                // ignore: deprecated_member_use
-                child: DropdownButtonFormField<String?>(
-                  // ignore: deprecated_member_use
-                  value: _selectedClassFilterId,
-                  isDense: true,
-                  isExpanded: true,
-                  dropdownColor: AppTheme.primaryDark,
-                  style: GoogleFonts.inter(color: Colors.white, fontSize: 13),
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    border: InputBorder.none,
-                  ),
-                  items: [
-                    const DropdownMenuItem<String?>(
-                      value: null,
-                      child: Text('Toutes les classes'),
-                    ),
-                    const DropdownMenuItem<String?>(
-                      value: _unclassedFilterSentinel,
-                      child: Text('Non classé'),
-                    ),
-                    ...classOptions.map(
-                      (c) => DropdownMenuItem<String?>(
-                        value: c.id,
-                        child: Text(c.name, overflow: TextOverflow.ellipsis),
-                      ),
-                    ),
-                  ],
-                  onChanged: (v) => setState(() => _selectedClassFilterId = v),
-                ),
-              );
-              final archiveToggle = Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Switch(
-                    value: _showInactive,
-                    activeThumbColor: AppTheme.accentAmber,
-                    onChanged: (v) => setState(() => _showInactive = v),
-                  ),
-                  Text(
-                    'Afficher les archives',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: AppTheme.textMuted,
-                    ),
-                  ),
-                ],
-              );
-
-              if (MediaQuery.of(context).size.width < 700) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    searchField,
-                    const SizedBox(height: 12),
-                    classDropdown,
-                    const SizedBox(height: 4),
-                    archiveToggle,
-                  ],
-                );
-              }
-              return Row(
-                children: [
-                  Expanded(child: searchField),
-                  const SizedBox(width: 16),
-                  SizedBox(width: 220, child: classDropdown),
-                  const SizedBox(width: 16),
-                  archiveToggle,
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 20),
-
-          // Exercices — dossiers par Trimestre (même hiérarchie que Chapitres & Leçons), au lieu
-          // d'une simple grille plate.
-          Expanded(
-            child: exercisesAsync.when(
-              data: (exercises) {
-                final filtered = _filterExercises(exercises)
-                    .where(
-                      (e) =>
-                          _searchQuery.isEmpty ||
-                          e.title.toLowerCase().contains(_searchQuery),
-                    )
-                    .toList();
-                if (filtered.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'Aucun exercice trouvé. Créez un nouvel exercice ou utilisez la génération IA.',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                  );
-                }
-                return Consumer(
-                  builder: (context, ref, _) {
-                    final termsAsync = ref.watch(termsProvider(null));
-                    final terms = List<Term>.from(
-                      termsAsync.valueOrNull ?? <Term>[],
-                    )..sort((a, b) => a.startDate.compareTo(b.startDate));
-                    final byTerm = <String?, List<Exercise>>{};
-                    for (final e in filtered) {
-                      byTerm.putIfAbsent(e.termId, () => []).add(e);
-                    }
-                    final orderedTermIds = <String?>[
-                      ...terms.map((t) => t.id).where(byTerm.containsKey),
-                      if (byTerm.containsKey(null)) null,
-                    ];
-                    return ListView.builder(
-                      itemCount: orderedTermIds.length,
-                      itemBuilder: (context, idx) {
-                        final termId = orderedTermIds[idx];
-                        final term = terms
-                            .where((t) => t.id == termId)
-                            .firstOrNull;
-                        return _buildTermFolder(
-                          term,
-                          byTerm[termId]!,
-                          classOptions,
-                        );
-                      },
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(
-                child: Text(
-                  'Erreur: $err',
-                  style: GoogleFonts.inter(color: AppTheme.accentRose),
-                ),
-              ),
-            ),
-          ),
-        ],
+  void _openExerciseDetail(Exercise ex) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ExerciseDetailScreen(initialExercise: ex),
       ),
-    );
-  }
-
-  /// Dossier "Trimestre" regroupant les exercices qui y sont rattachés (directement pour les
-  /// indépendants Niveau 3, hérité du chapitre/leçon pour Niveau 1/2) — même hiérarchie que
-  /// _buildTermFolder dans lessons_manager_screen.dart, pour une organisation cohérente entre les
-  /// deux écrans plutôt qu'une grille plate sans classement.
-  Widget _buildTermFolder(
-    Term? term,
-    List<Exercise> exercises,
-    List<AcademicNode> classOptions,
-  ) {
-    final folderLabel = term == null
-        ? 'Sans trimestre assigné'
-        : '${term.name} — Année ${term.schoolYear}';
-    final independentExercises = exercises
-        .where((e) => e.chapterId == null && e.lessonId == null)
-        .toList();
-    final linkedExercises = exercises
-        .where((e) => e.chapterId != null || e.lessonId != null)
-        .toList();
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: term == null
-              ? AppTheme.accentAmber.withValues(alpha: 0.3)
-              : AppTheme.accentIndigo.withValues(alpha: 0.25),
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        clipBehavior: Clip.antiAlias,
-        child: ExpansionTile(
-          key: PageStorageKey('ex-term-${term?.id ?? 'none'}'),
-          initiallyExpanded: true,
-          backgroundColor: AppTheme.primaryDark.withValues(alpha: 0.3),
-          collapsedBackgroundColor: AppTheme.primaryDark.withValues(alpha: 0.3),
-          leading: Icon(
-            term == null ? Icons.folder_off_rounded : Icons.folder_rounded,
-            color: term == null ? AppTheme.accentAmber : AppTheme.accentIndigo,
-          ),
-          title: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  folderLabel,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.outfit(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: term == null ? AppTheme.accentAmber : Colors.white,
-                  ),
-                ),
-              ),
-              Text(
-                '${exercises.length} exercice(s)',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: AppTheme.textMuted,
-                ),
-              ),
-            ],
-          ),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (linkedExercises.isNotEmpty) ...[
-                    Text(
-                      'Rattachés à un chapitre/leçon',
-                      style: GoogleFonts.outfit(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    // crossAxisCount fixé à 2 sans seuil mobile : chaque carte d'exercice
-                    // n'avait plus que ~170px de large sur téléphone (retour utilisateur réel,
-                    // 2026-09-02).
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final isMobile = constraints.maxWidth < 500;
-                        return GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: isMobile ? 1 : 2,
-                                crossAxisSpacing: 16,
-                                mainAxisSpacing: 16,
-                                childAspectRatio: isMobile ? 2.6 : 2.0,
-                              ),
-                          itemCount: linkedExercises.length,
-                          itemBuilder: (context, idx) => _buildExerciseCard(
-                            linkedExercises[idx],
-                            classOptions,
-                            siblings: linkedExercises,
-                          ),
-                        );
-                      },
-                    ),
-                    if (independentExercises.isNotEmpty)
-                      const SizedBox(height: 20),
-                  ],
-                  if (independentExercises.isNotEmpty) ...[
-                    Text(
-                      'Indépendants (type examen)',
-                      style: GoogleFonts.outfit(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final isMobile = constraints.maxWidth < 500;
-                        return GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: isMobile ? 1 : 2,
-                                crossAxisSpacing: 16,
-                                mainAxisSpacing: 16,
-                                childAspectRatio: isMobile ? 2.6 : 2.0,
-                              ),
-                          itemCount: independentExercises.length,
-                          itemBuilder: (context, idx) => _buildExerciseCard(
-                            independentExercises[idx],
-                            classOptions,
-                            siblings: independentExercises,
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  List<Exercise> _filterExercises(List<Exercise> exercises) {
-    var result = exercises;
-    if (_selectedLevelFilter.contains('Leçon précise')) {
-      result = result.where((e) => e.lessonId != null).toList();
-    } else if (_selectedLevelFilter.contains('Chapitre général')) {
-      result = result
-          .where((e) => e.chapterId != null && e.lessonId == null)
-          .toList();
-    } else if (_selectedLevelFilter.contains('Indépendant')) {
-      result = result
-          .where((e) => e.lessonId == null && e.chapterId == null)
-          .toList();
-    }
-    if (_selectedClassFilterId == _unclassedFilterSentinel) {
-      result = result.where((e) => e.classNodeId == null).toList();
-    } else if (_selectedClassFilterId != null) {
-      result = result
-          .where((e) => e.classNodeId == _selectedClassFilterId)
-          .toList();
-    }
-    return result;
-  }
-
-  /// Échange l'ordre d'affichage de l'exercice avec son voisin dans le même dossier.
-  Future<void> _reorderExercise(Exercise ex, List<Exercise> siblings, int delta) async {
-    final idx = siblings.indexWhere((e) => e.id == ex.id);
-    final target = idx + delta;
-    if (idx < 0 || target < 0 || target >= siblings.length) return;
-    final other = siblings[target];
-    try {
-      await ref.read(supabaseServiceProvider).swapExerciseOrder(
-            ex.id,
-            ex.displayOrder,
-            other.id,
-            other.displayOrder,
-          );
+    ).then((_) {
       ref.invalidate(exercisesProvider);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Réordonnancement impossible : $e')));
-      }
-    }
+    });
   }
 
-  Widget _buildExerciseCard(
-    Exercise ex,
-    List<AcademicNode> classOptions, {
-    List<Exercise> siblings = const <Exercise>[],
-  }) {
-    final typeLabel = exerciseTypeToDb(ex.type);
-    final formatLabel = exerciseFormatToDb(ex.format);
-    final difficultyLabel = exerciseDifficultyToDb(ex.difficulty);
-    final idx = siblings.indexWhere((e) => e.id == ex.id);
-    final canReorder = siblings.length > 1 && idx >= 0;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.primarySurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: ex.isActive
-              ? AppTheme.primaryBorder
-              : AppTheme.accentAmber.withValues(alpha: 0.4),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(child: _buildContextChip(ex)),
-              const SizedBox(width: 8),
-              Row(
-                children: [
-                  if (!ex.isActive)
-                    Container(
-                      margin: const EdgeInsets.only(right: 6),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accentAmber.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'ARCHIVÉ',
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          color: AppTheme.accentAmber,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color:
-                          (ex.isPublished
-                                  ? AppTheme.accentEmerald
-                                  : Colors.white)
-                              .withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      ex.isPublished ? 'Publié' : 'Brouillon',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: ex.isPublished
-                            ? AppTheme.accentEmerald
-                            : Colors.white60,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.accentAmber.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      ex.minSubscriptionTier,
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: AppTheme.accentAmber,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          Text(
-            ex.title,
-            style: GoogleFonts.outfit(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    _buildClassBadge(ex, classOptions),
-                    _buildBadge(typeLabel, AppTheme.accentEmerald),
-                    _buildBadge(formatLabel, AppTheme.accentIndigo),
-                    _buildBadge(difficultyLabel, AppTheme.accentCyan),
-                  ],
-                ),
-              ),
-              if (canReorder) ...[
-                IconButton(
-                  icon: const Icon(Icons.arrow_upward_rounded,
-                      size: 16, color: Colors.white54),
-                  tooltip: 'Monter dans le dossier',
-                  padding: EdgeInsets.zero,
-                  constraints:
-                      const BoxConstraints(minWidth: 28, minHeight: 32),
-                  onPressed: idx == 0
-                      ? null
-                      : () => _reorderExercise(ex, siblings, -1),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.arrow_downward_rounded,
-                      size: 16, color: Colors.white54),
-                  tooltip: 'Descendre dans le dossier',
-                  padding: EdgeInsets.zero,
-                  constraints:
-                      const BoxConstraints(minWidth: 28, minHeight: 32),
-                  onPressed: idx == siblings.length - 1
-                      ? null
-                      : () => _reorderExercise(ex, siblings, 1),
-                ),
-              ],
-              IconButton(
-                icon: const Icon(
-                  Icons.picture_as_pdf_rounded,
-                  size: 18,
-                  color: AppTheme.accentRose,
-                ),
-                tooltip: 'Imprimer / Exporter en PDF',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                onPressed: () => _printExercise(ex),
-              ),
-              IconButton(
-                icon: const Icon(
-                  Icons.history_rounded,
-                  size: 18,
-                  color: AppTheme.accentCyan,
-                ),
-                tooltip: 'Historique des versions',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                onPressed: () => _showVersionHistoryModal(context, ex),
-              ),
-              IconButton(
-                icon: const Icon(
-                  Icons.edit_rounded,
-                  color: Colors.white70,
-                  size: 18,
-                ),
-                tooltip: 'Modifier',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                onPressed: () =>
-                    _showCreateExerciseModal(context, existing: ex),
-              ),
-              IconButton(
-                icon: Icon(
-                  ex.isActive ? Icons.archive_rounded : Icons.unarchive_rounded,
-                  size: 18,
-                  color: AppTheme.accentAmber,
-                ),
-                tooltip: ex.isActive ? 'Archiver' : 'Désarchiver',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                onPressed: () => ex.isActive
-                    ? _showDeactivateExerciseConfirmation(context, ex)
-                    : _showReactivateExerciseConfirmation(context, ex),
-              ),
-              if (!ex.isActive)
-                IconButton(
-                  icon: const Icon(
-                    Icons.delete_forever_rounded,
-                    size: 18,
-                    color: AppTheme.accentRose,
-                  ),
-                  tooltip: 'Supprimer définitivement',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 32,
-                  ),
-                  onPressed: () =>
-                      _showPermanentDeleteExerciseConfirmation(context, ex),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Titre réel du chapitre/leçon rattaché(e), résolu à la volée (léger, une seule ligne à la
-  /// fois) plutôt que d'afficher l'UUID brut tronqué comme auparavant.
-  Widget _buildContextChip(Exercise ex) {
-    if (ex.chapterId == null && ex.lessonId == null) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: AppTheme.primaryDark,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppTheme.primaryBorder),
-        ),
-        child: Text(
-          'Indépendant',
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            color: AppTheme.accentBlue,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      );
-    }
-    final service = ref.read(supabaseServiceProvider);
-    return FutureBuilder<String>(
-      future: ex.lessonId != null
-          ? service
-                .getLesson(ex.lessonId!)
-                .then(
-                  (l) => l != null ? 'Leçon : ${l.title}' : 'Leçon introuvable',
-                )
-          : service
-                .getChapter(ex.chapterId!)
-                .then(
-                  (c) => c != null
-                      ? 'Chapitre : ${c.title}'
-                      : 'Chapitre introuvable',
-                ),
-      builder: (context, snapshot) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: AppTheme.primaryDark,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppTheme.primaryBorder),
-          ),
-          child: Text(
-            snapshot.data ?? '…',
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              color: AppTheme.accentBlue,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  /// Dialogue de confirmation générique pour archiver/désarchiver/supprimer définitivement un
-  /// exercice — même pattern que celui de lessons_manager_screen.dart (dupliqué plutôt que
-  /// partagé : ce sont deux State privées de fichiers différents, pas d'endroit commun évident
-  /// pour ce widget sans élargir sa portée au-delà de ce qui est nécessaire ici).
-  Future<void> _showConfirmActionDialog(
-    BuildContext context, {
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required Widget content,
-    required String confirmLabel,
-    required Color confirmColor,
-    required Future<void> Function() onConfirm,
-    required String successMessage,
-    String? typedConfirmationTarget,
-  }) async {
-    bool isLoading = false;
-    String? errorText;
-    final typedController = TextEditingController();
-    bool matches = typedConfirmationTarget == null;
-
-    await showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => AlertDialog(
-          backgroundColor: AppTheme.primarySurface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: AppDialogTitle(
-            icon: icon,
-            iconColor: iconColor,
-            text: title,
-            onClose: () => Navigator.pop(ctx),
-          ),
-          content: SizedBox(
-            width: 460,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  content,
-                  if (typedConfirmationTarget != null) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      'Tapez "$typedConfirmationTarget" pour confirmer :',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: typedController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: typedConfirmationTarget,
-                        prefixIcon: const Icon(Icons.edit_rounded, size: 18),
-                      ),
-                      onChanged: (v) => setModalState(
-                        () => matches = v.trim() == typedConfirmationTarget,
-                      ),
-                    ),
-                  ],
-                  if (errorText != null) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accentRose.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: AppTheme.accentRose.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(
-                            Icons.error_outline_rounded,
-                            color: AppTheme.accentRose,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              errorText!,
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: AppTheme.accentRose,
-                                height: 1.4,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-          actions: [
-            TextButton(
-              onPressed: isLoading ? null : () => Navigator.pop(ctx),
-              child: const Text('Annuler'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: confirmColor),
-              onPressed: (isLoading || !matches)
-                  ? null
-                  : () async {
-                      setModalState(() {
-                        isLoading = true;
-                        errorText = null;
-                      });
-                      final messenger = ScaffoldMessenger.of(context);
-                      try {
-                        await onConfirm();
-                        ref.invalidate(exercisesProvider);
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        messenger.showSnackBar(
-                          SnackBar(
-                            backgroundColor: AppTheme.accentEmerald,
-                            content: Text(successMessage),
-                          ),
-                        );
-                      } catch (e) {
-                        setModalState(() {
-                          isLoading = false;
-                          errorText = '$e';
-                        });
-                      }
-                    },
-              child: isLoading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(confirmLabel),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showDeactivateExerciseConfirmation(BuildContext context, Exercise ex) {
-    final service = ref.read(supabaseServiceProvider);
-    _showConfirmActionDialog(
+  void _openStudio({Exercise? existing}) {
+    Navigator.push(
       context,
-      icon: Icons.archive_rounded,
-      iconColor: AppTheme.accentAmber,
-      title: 'Archiver "${ex.title}" ?',
-      content: Text(
-        'Cet exercice sera masqué aux élèves, pas supprimé — vous pourrez le désarchiver ou le '
-        'supprimer définitivement plus tard.',
-        style: GoogleFonts.inter(
-          fontSize: 13,
-          color: Colors.white70,
-          height: 1.4,
+      MaterialPageRoute(
+        builder: (_) => ExerciseStudioScreen(
+          exerciseId: existing?.id,
+          existingExercise: existing,
         ),
       ),
-      confirmLabel: 'Archiver',
-      confirmColor: AppTheme.accentAmber,
-      onConfirm: () => service.updateExercise(id: ex.id, isActive: false),
-      successMessage: 'Exercice "${ex.title}" archivé.',
-    );
+    ).then((_) {
+      ref.invalidate(exercisesProvider);
+    });
   }
 
-  void _showReactivateExerciseConfirmation(BuildContext context, Exercise ex) {
-    final service = ref.read(supabaseServiceProvider);
-    _showConfirmActionDialog(
+  void _openAiGenerator() {
+    Navigator.push(
       context,
-      icon: Icons.unarchive_rounded,
-      iconColor: AppTheme.accentEmerald,
-      title: 'Désarchiver "${ex.title}" ?',
-      content: Text(
-        'Cet exercice redeviendra actif et visible dans l\'application.',
-        style: GoogleFonts.inter(
-          fontSize: 13,
-          color: Colors.white70,
-          height: 1.4,
+      MaterialPageRoute(
+        builder: (_) => ExerciseAiGenerationScreen(
+          initialClassNodeId: _selectedClassFilterId,
         ),
       ),
-      confirmLabel: 'Désarchiver',
-      confirmColor: AppTheme.accentEmerald,
-      onConfirm: () => service.updateExercise(id: ex.id, isActive: true),
-      successMessage: 'Exercice "${ex.title}" désarchivé.',
-    );
+    ).then((_) {
+      ref.invalidate(exercisesProvider);
+    });
   }
 
-  void _showPermanentDeleteExerciseConfirmation(
-    BuildContext context,
-    Exercise ex,
-  ) {
-    final service = ref.read(supabaseServiceProvider);
-    _showConfirmActionDialog(
+  void _openStudentPreview(Exercise ex) {
+    Navigator.push(
       context,
-      icon: Icons.delete_forever_rounded,
-      iconColor: AppTheme.accentRose,
-      title: 'Supprimer définitivement "${ex.title}" ?',
-      content: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppTheme.accentRose.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppTheme.accentRose.withValues(alpha: 0.3)),
-        ),
-        child: Text(
-          'IRRÉVERSIBLE : cet exercice et toutes ses versions seront physiquement supprimés de la base.',
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            color: AppTheme.accentRose,
-            height: 1.4,
-          ),
-        ),
+      MaterialPageRoute(
+        builder: (_) => ExerciseStudentPreviewScreen(exercise: ex),
       ),
-      confirmLabel: 'Supprimer définitivement',
-      confirmColor: AppTheme.accentRose,
-      onConfirm: () =>
-          service.permanentlyDeleteExercise(ex.id, _currentAdminId()),
-      successMessage: 'Exercice "${ex.title}" supprimé définitivement.',
-      typedConfirmationTarget: ex.title,
     );
   }
 
@@ -1023,1896 +123,31 @@ class _ExercisesManagerScreenState
     );
   }
 
-  Widget _buildLevelTab(String label) {
-    final isSelected = _selectedLevelFilter == label;
-    return InkWell(
-      onTap: () => setState(() => _selectedLevelFilter = label),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? AppTheme.accentBlue : AppTheme.primarySurface,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected ? AppTheme.accentBlue : AppTheme.primaryBorder,
-          ),
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.outfit(
-            fontSize: 13,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected ? Colors.white : Colors.white70,
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Badge de classe/série ciblée. "Non classé" (rouge) signale un exercice indépendant qui n'a
-  /// jamais reçu de classe — corrigible en un clic via le formulaire d'édition.
-  Widget _buildClassBadge(Exercise ex, List<AcademicNode> classOptions) {
-    if (ex.classNodeId == null) {
-      return _buildBadge('Non classé', AppTheme.accentRose);
-    }
-    final matches = classOptions.where((c) => c.id == ex.classNodeId);
-    final label = matches.isNotEmpty ? matches.first.name : 'Classe inconnue';
-    return _buildBadge(label, AppTheme.accentBlue);
-  }
-
-  Widget _buildBadge(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.inter(
-          fontSize: 11,
-          color: color,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
-  void _showVersionHistoryModal(BuildContext context, Exercise exercise) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.primarySurface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: AppDialogTitle(
-          icon: Icons.history_rounded,
-          iconColor: AppTheme.accentCyan,
-          text: 'Historique : ${exercise.title}',
-          onClose: () => Navigator.pop(ctx),
-        ),
-        content: SizedBox(
-          width: 520,
-          height: 420,
-          child: Consumer(
-            builder: (context, ref, _) {
-              final versionsAsync = ref.watch(
-                exerciseVersionsProvider(exercise.id),
-              );
-              return versionsAsync.when(
-                data: (versions) {
-                  if (versions.isEmpty) {
-                    return Center(
-                      child: Text(
-                        'Aucune version antérieure enregistrée — cet exercice n\'a jamais été modifié depuis sa création.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          color: AppTheme.textMuted,
-                          fontSize: 13,
-                        ),
-                      ),
-                    );
-                  }
-                  return ListView.separated(
-                    itemCount: versions.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (context, idx) {
-                      final v = versions[idx];
-                      final statement =
-                          v.contentJson['instructions_json']?['statement']
-                              as String? ??
-                          '';
-                      return Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryDark,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppTheme.primaryBorder),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  'Version ${v.versionNumber}',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  v.publishedAt
-                                      .toLocal()
-                                      .toString()
-                                      .split('.')
-                                      .first,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    color: AppTheme.textMuted,
-                                  ),
-                                ),
-                                const Spacer(),
-                                TextButton(
-                                  onPressed: () async {
-                                    final confirm = await showDialog<bool>(
-                                      context: context,
-                                      builder: (c) => AlertDialog(
-                                        backgroundColor:
-                                            AppTheme.primarySurface,
-                                        title: AppDialogTitle(
-                                          icon: Icons.restore_rounded,
-                                          text: 'Restaurer cette version ?',
-                                          onClose: () =>
-                                              Navigator.pop(c, false),
-                                        ),
-                                        content: Text(
-                                          'L\'énoncé et le corrigé actuels seront remplacés par ceux de la version ${v.versionNumber}.',
-                                          style: GoogleFonts.inter(
-                                            color: Colors.white70,
-                                          ),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(c, false),
-                                            child: const Text('Annuler'),
-                                          ),
-                                          ElevatedButton(
-                                            onPressed: () =>
-                                                Navigator.pop(c, true),
-                                            child: const Text('Restaurer'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                    if (confirm != true) return;
-                                    final service = ref.read(
-                                      supabaseServiceProvider,
-                                    );
-                                    await service.updateExercise(
-                                      id: exercise.id,
-                                      instructionsJson:
-                                          Map<String, dynamic>.from(
-                                            v.contentJson['instructions_json']
-                                                    as Map? ??
-                                                {},
-                                          ),
-                                      solutionJson: Map<String, dynamic>.from(
-                                        v.contentJson['solution_json']
-                                                as Map? ??
-                                            {},
-                                      ),
-                                      editedBy: _currentAdminId(),
-                                    );
-                                    ref.invalidate(exercisesProvider);
-                                    ref.invalidate(
-                                      exerciseVersionsProvider(exercise.id),
-                                    );
-                                    if (context.mounted) Navigator.pop(context);
-                                  },
-                                  child: Text(
-                                    'Restaurer',
-                                    style: GoogleFonts.inter(
-                                      color: AppTheme.accentEmerald,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              statement.isEmpty ? '(énoncé vide)' : statement,
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: Colors.white70,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) => Center(
-                  child: Text(
-                    'Erreur: $err',
-                    style: GoogleFonts.inter(color: AppTheme.accentRose),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'Fermer',
-              style: GoogleFonts.inter(color: AppTheme.textMuted),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showCreateExerciseModal(BuildContext context, {Exercise? existing}) {
-    final isEditing = existing != null;
-    final titleController = TextEditingController(text: existing?.title ?? '');
-    final instructionsController = TextEditingController(
-      text: existing?.instructionsJson['statement'] as String? ?? '',
-    );
-    final solutionController = TextEditingController(
-      text: existing?.solutionJson['correction'] as String? ?? '',
-    );
-    ExerciseType selectedType = existing?.type ?? ExerciseType.training;
-    ExerciseFormat selectedFormat = existing?.format ?? ExerciseFormat.qcm;
-    ExerciseDifficulty selectedDifficulty =
-        existing?.difficulty ?? ExerciseDifficulty.facile;
-    String selectedTier = existing?.minSubscriptionTier ?? 'gratuit';
-    String? selectedChapterId = existing?.chapterId;
-    String? selectedClassNodeId = existing?.classNodeId;
-    String? selectedTermId = existing?.termId;
-    List<MediaAsset> attachedStatementMedia =
-        ((existing?.instructionsJson['media'] as List?) ?? [])
-            .map(
-              (m) => MediaAsset(
-                id: '',
-                filename: m['filename'] as String? ?? '',
-                type: m['type'] as String? ?? 'document',
-                url: m['url'] as String? ?? '',
-                uploadedBy: '',
-              ),
-            )
-            .toList();
-    List<MediaAsset> attachedSolutionMedia =
-        ((existing?.solutionJson['media'] as List?) ?? [])
-            .map(
-              (m) => MediaAsset(
-                id: '',
-                filename: m['filename'] as String? ?? '',
-                type: m['type'] as String? ?? 'document',
-                url: m['url'] as String? ?? '',
-                uploadedBy: '',
-              ),
-            )
-            .toList();
-    final existingOptions =
-        (existing?.instructionsJson['options'] as List?)
-            ?.map((o) => o.toString())
-            .toList() ??
-        <String>[];
-    final optionControllers =
-        (existingOptions.isEmpty ? ['', ''] : existingOptions)
-            .map((o) => TextEditingController(text: o))
-            .toList();
-    int? correctOptionIndex = existing?.solutionJson['correct_index'] as int?;
-    // CF-003 enrichissement (migration 54) : indices progressifs (dans instructions_json, contenu
-    // élève), compétences/prérequis (colonnes dédiées, tags libres — voir la migration pour le choix
-    // de ne pas figer de taxonomie ici).
-    final hintsController = TextEditingController(
-      text: (existing?.hints ?? const []).join('\n'),
-    );
-    final skillsController = TextEditingController(
-      text: (existing?.skills ?? const []).join(', '),
-    );
-    final prerequisitesController = TextEditingController(
-      text: (existing?.prerequisites ?? const []).join(', '),
-    );
-    String? submitError;
-    bool isLoading = false;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) {
-          final dialogWidth = MediaQuery.of(context).size.width * 0.85;
-          return AlertDialog(
-            backgroundColor: AppTheme.primarySurface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: AppDialogTitle(
-              icon: Icons.fitness_center_rounded,
-              text: isEditing
-                  ? 'Modifier l\'Exercice'
-                  : 'Créer un Exercice Pédagogique',
-              onClose: () => Navigator.pop(ctx),
-            ),
-            content: SizedBox(
-              width: dialogWidth > 1080 ? 1080 : dialogWidth,
-              height: MediaQuery.of(context).size.height * 0.82,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Aperçus — toujours visibles, sans avoir à faire défiler le formulaire.
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    children: [
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppTheme.accentRose,
-                          side: const BorderSide(color: AppTheme.accentRose),
-                        ),
-                        onPressed: () => _previewDraftAsPdf(
-                          existing: existing,
-                          selectedChapterId: selectedChapterId,
-                          title: titleController.text.trim(),
-                          type: selectedType,
-                          difficulty: selectedDifficulty,
-                          format: selectedFormat,
-                          tier: selectedTier,
-                          statement: instructionsController.text.trim(),
-                          correction: solutionController.text.trim(),
-                          options: optionControllers
-                              .map((c) => c.text.trim())
-                              .toList(),
-                          statementMedia: attachedStatementMedia,
-                        ),
-                        icon: const Icon(
-                          Icons.picture_as_pdf_rounded,
-                          size: 18,
-                        ),
-                        label: const Text('Aperçu PDF'),
-                      ),
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppTheme.accentCyan,
-                          side: const BorderSide(color: AppTheme.accentCyan),
-                        ),
-                        onPressed: () => _showStudentPreviewModal(
-                          context,
-                          title: titleController.text.trim().isEmpty
-                              ? '(Sans titre)'
-                              : titleController.text.trim(),
-                          type: selectedType,
-                          format: selectedFormat,
-                          difficulty: selectedDifficulty,
-                          statement: instructionsController.text.trim(),
-                          statementMedia: attachedStatementMedia,
-                          options: optionControllers
-                              .map((c) => c.text.trim())
-                              .where((o) => o.isNotEmpty)
-                              .toList(),
-                          correctIndex: correctOptionIndex,
-                          correction: solutionController.text.trim(),
-                        ),
-                        icon: const Icon(Icons.smartphone_rounded, size: 18),
-                        label: const Text('Aperçu App Élève'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Divider(height: 1, color: AppTheme.primaryBorder),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Colonne gauche : classification
-                        Expanded(
-                          flex: 4,
-                          child: SingleChildScrollView(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                TextField(
-                                  controller: titleController,
-                                  autofocus: true,
-                                  style: const TextStyle(color: Colors.white),
-                                  decoration: const InputDecoration(
-                                    labelText:
-                                        'Titre / Intitulé de l\'exercice',
-                                    prefixIcon: Icon(
-                                      Icons.title_rounded,
-                                      size: 20,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                _ChapterPicker(
-                                  selectedChapterId: selectedChapterId,
-                                  onChanged:
-                                      ({
-                                        chapterId,
-                                        classNodeId,
-                                        subjectId,
-                                        termId,
-                                      }) => setModalState(() {
-                                        selectedChapterId = chapterId;
-                                        selectedClassNodeId = classNodeId;
-                                        selectedTermId = termId;
-                                      }),
-                                ),
-                                const SizedBox(height: 16),
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      // ignore: deprecated_member_use
-                                      child:
-                                          DropdownButtonFormField<ExerciseType>(
-                                            // ignore: deprecated_member_use
-                                            value: selectedType,
-                                            isExpanded: true,
-                                            dropdownColor: AppTheme.primaryDark,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                            ),
-                                            decoration: const InputDecoration(
-                                              labelText: 'Type',
-                                            ),
-                                            items: const [
-                                              DropdownMenuItem(
-                                                value: ExerciseType.training,
-                                                child: Text('Entraînement'),
-                                              ),
-                                              DropdownMenuItem(
-                                                value: ExerciseType.evaluation,
-                                                child: Text('Évaluation'),
-                                              ),
-                                            ],
-                                            onChanged: (v) => setModalState(
-                                              () => selectedType =
-                                                  v ?? ExerciseType.training,
-                                            ),
-                                          ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      // ignore: deprecated_member_use
-                                      child:
-                                          DropdownButtonFormField<
-                                            ExerciseDifficulty
-                                          >(
-                                            // ignore: deprecated_member_use
-                                            value: selectedDifficulty,
-                                            isExpanded: true,
-                                            dropdownColor: AppTheme.primaryDark,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                            ),
-                                            decoration: const InputDecoration(
-                                              labelText: 'Difficulté',
-                                            ),
-                                            items: const [
-                                              DropdownMenuItem(
-                                                value:
-                                                    ExerciseDifficulty.facile,
-                                                child: Text('Facile'),
-                                              ),
-                                              DropdownMenuItem(
-                                                value: ExerciseDifficulty
-                                                    .intermediaire,
-                                                child: Text('Intermédiaire'),
-                                              ),
-                                              DropdownMenuItem(
-                                                value: ExerciseDifficulty
-                                                    .approfondissement,
-                                                child: Text('Approfondi'),
-                                              ),
-                                            ],
-                                            onChanged: (v) => setModalState(
-                                              () => selectedDifficulty =
-                                                  v ??
-                                                  ExerciseDifficulty.facile,
-                                            ),
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      // ignore: deprecated_member_use
-                                      child:
-                                          DropdownButtonFormField<
-                                            ExerciseFormat
-                                          >(
-                                            // ignore: deprecated_member_use
-                                            value: selectedFormat,
-                                            isExpanded: true,
-                                            dropdownColor: AppTheme.primaryDark,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                            ),
-                                            decoration: const InputDecoration(
-                                              labelText: 'Format',
-                                            ),
-                                            items: const [
-                                              DropdownMenuItem(
-                                                value: ExerciseFormat.qcm,
-                                                child: Text('QCM'),
-                                              ),
-                                              DropdownMenuItem(
-                                                value: ExerciseFormat
-                                                    .reponseCourte,
-                                                child: Text('Réponse courte'),
-                                              ),
-                                              DropdownMenuItem(
-                                                value: ExerciseFormat.redaction,
-                                                child: Text('Rédaction'),
-                                              ),
-                                              DropdownMenuItem(
-                                                value: ExerciseFormat
-                                                    .manuscritScan,
-                                                child: Text('Manuscrit scanné'),
-                                              ),
-                                              DropdownMenuItem(
-                                                value: ExerciseFormat.flashcard,
-                                                child: Text('Flashcard'),
-                                              ),
-                                            ],
-                                            onChanged: (v) => setModalState(
-                                              () => selectedFormat =
-                                                  v ?? ExerciseFormat.qcm,
-                                            ),
-                                          ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      // ignore: deprecated_member_use
-                                      child: DropdownButtonFormField<String>(
-                                        // ignore: deprecated_member_use
-                                        value: selectedTier,
-                                        isExpanded: true,
-                                        dropdownColor: AppTheme.primaryDark,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                        ),
-                                        decoration: const InputDecoration(
-                                          labelText: 'Accès requis',
-                                        ),
-                                        items: const [
-                                          DropdownMenuItem(
-                                            value: 'gratuit',
-                                            child: Text('Gratuit'),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'journalier',
-                                            child: Text('Journalier'),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'mensuel',
-                                            child: Text('Mensuel'),
-                                          ),
-                                        ],
-                                        onChanged: (v) => setModalState(
-                                          () => selectedTier = v ?? 'gratuit',
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (selectedFormat ==
-                                    ExerciseFormat.manuscritScan) ...[
-                                  const SizedBox(height: 16),
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.accentIndigo.withValues(
-                                        alpha: 0.1,
-                                      ),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: AppTheme.accentIndigo.withValues(
-                                          alpha: 0.3,
-                                        ),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Icon(
-                                          Icons.info_outline_rounded,
-                                          size: 16,
-                                          color: AppTheme.accentIndigo,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            'Format "Manuscrit scanné" : joignez la photo/scan de l\'énoncé et/ou du '
-                                            'corrigé via les pièces jointes ci-contre, à droite.',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 11,
-                                              color: Colors.white70,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 24),
-                        const VerticalDivider(
-                          width: 1,
-                          color: AppTheme.primaryBorder,
-                        ),
-                        const SizedBox(width: 24),
-                        // Colonne droite : contenu (énoncé, options, corrigé, pièces jointes)
-                        Expanded(
-                          flex: 6,
-                          child: SingleChildScrollView(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                TextField(
-                                  controller: instructionsController,
-                                  maxLines: 5,
-                                  style: const TextStyle(color: Colors.white),
-                                  decoration: const InputDecoration(
-                                    labelText: 'Énoncé de l\'exercice',
-                                  ),
-                                  onChanged: (_) => setModalState(() {}),
-                                ),
-                                const SizedBox(height: 10),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: MediaAttachmentPicker(
-                                    initialAssets: attachedStatementMedia,
-                                    onChanged: (assets) =>
-                                        attachedStatementMedia = assets,
-                                  ),
-                                ),
-                                if (selectedFormat == ExerciseFormat.qcm) ...[
-                                  const SizedBox(height: 20),
-                                  Text(
-                                    'Options de réponse (QCM)',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Cochez la bonne réponse.',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11,
-                                      color: AppTheme.textMuted,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  ...List.generate(optionControllers.length, (
-                                    i,
-                                  ) {
-                                    final letter = String.fromCharCode(65 + i);
-                                    return Padding(
-                                      padding: const EdgeInsets.only(bottom: 8),
-                                      child: Row(
-                                        children: [
-                                          // ignore: deprecated_member_use
-                                          Radio<int>(
-                                            value: i,
-                                            // ignore: deprecated_member_use
-                                            groupValue: correctOptionIndex,
-                                            activeColor: AppTheme.accentEmerald,
-                                            // ignore: deprecated_member_use
-                                            onChanged: (v) => setModalState(
-                                              () => correctOptionIndex = v,
-                                            ),
-                                          ),
-                                          Text(
-                                            letter,
-                                            style: GoogleFonts.outfit(
-                                              color: Colors.white70,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: TextField(
-                                              controller: optionControllers[i],
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 13,
-                                              ),
-                                              decoration: InputDecoration(
-                                                isDense: true,
-                                                hintText: 'Option $letter',
-                                              ),
-                                            ),
-                                          ),
-                                          if (optionControllers.length > 2)
-                                            IconButton(
-                                              icon: const Icon(
-                                                Icons.close_rounded,
-                                                size: 16,
-                                                color: AppTheme.accentRose,
-                                              ),
-                                              onPressed: () => setModalState(() {
-                                                optionControllers.removeAt(i);
-                                                if (correctOptionIndex == i) {
-                                                  correctOptionIndex = null;
-                                                } else if (correctOptionIndex !=
-                                                        null &&
-                                                    correctOptionIndex! > i) {
-                                                  correctOptionIndex =
-                                                      correctOptionIndex! - 1;
-                                                }
-                                              }),
-                                            ),
-                                        ],
-                                      ),
-                                    );
-                                  }),
-                                  if (optionControllers.length < 6)
-                                    TextButton.icon(
-                                      onPressed: () => setModalState(
-                                        () => optionControllers.add(
-                                          TextEditingController(),
-                                        ),
-                                      ),
-                                      icon: const Icon(
-                                        Icons.add_rounded,
-                                        size: 16,
-                                      ),
-                                      label: const Text('Ajouter une option'),
-                                    ),
-                                ],
-                                const SizedBox(height: 20),
-                                TextField(
-                                  controller: solutionController,
-                                  maxLines: 5,
-                                  style: const TextStyle(color: Colors.white),
-                                  decoration: const InputDecoration(
-                                    labelText: 'Corrigé (optionnel à ce stade)',
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: MediaAttachmentPicker(
-                                    initialAssets: attachedSolutionMedia,
-                                    onChanged: (assets) =>
-                                        attachedSolutionMedia = assets,
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                const Divider(
-                                  height: 1,
-                                  color: AppTheme.primaryBorder,
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'Pédagogie (optionnel)',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                TextField(
-                                  controller: hintsController,
-                                  maxLines: 3,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                  ),
-                                  decoration: const InputDecoration(
-                                    labelText:
-                                        'Indices progressifs (un par ligne)',
-                                    helperText:
-                                        'Du plus léger au plus explicite — jamais la réponse finale.',
-                                    isDense: true,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                TextField(
-                                  controller: skillsController,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                  ),
-                                  decoration: const InputDecoration(
-                                    labelText:
-                                        'Compétences mobilisées (séparées par des virgules)',
-                                    isDense: true,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                TextField(
-                                  controller: prerequisitesController,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                  ),
-                                  decoration: const InputDecoration(
-                                    labelText:
-                                        'Prérequis (séparés par des virgules)',
-                                    isDense: true,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (submitError != null) ...[
-                    const SizedBox(height: 12),
-                    _ErrorBanner(message: submitError!),
-                  ],
-                ],
-              ),
-            ),
-            actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-            actions: [
-              TextButton(
-                onPressed: isLoading ? null : () => Navigator.pop(ctx),
-                child: Text(
-                  'Annuler',
-                  style: GoogleFonts.inter(color: AppTheme.textMuted),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: isLoading
-                    ? null
-                    : () async {
-                        final title = titleController.text.trim();
-                        if (title.isEmpty) {
-                          setModalState(
-                            () => submitError = 'Le titre est obligatoire.',
-                          );
-                          return;
-                        }
-                        if (selectedChapterId == null &&
-                            selectedClassNodeId == null) {
-                          setModalState(
-                            () => submitError =
-                                'La classe/série est obligatoire pour un exercice indépendant (sans chapitre).',
-                          );
-                          return;
-                        }
-                        setModalState(() {
-                          submitError = null;
-                          isLoading = true;
-                        });
-                        try {
-                          final service = ref.read(supabaseServiceProvider);
-                          final statementMediaPayload = attachedStatementMedia
-                              .map(
-                                (a) => {
-                                  'url': a.url,
-                                  'filename': a.filename,
-                                  'type': a.type,
-                                },
-                              )
-                              .toList();
-                          final solutionMediaPayload = attachedSolutionMedia
-                              .map(
-                                (a) => {
-                                  'url': a.url,
-                                  'filename': a.filename,
-                                  'type': a.type,
-                                },
-                              )
-                              .toList();
-                          final options = optionControllers
-                              .map((c) => c.text.trim())
-                              .where((o) => o.isNotEmpty)
-                              .toList();
-                          final hints = hintsController.text
-                              .split('\n')
-                              .map((h) => h.trim())
-                              .where((h) => h.isNotEmpty)
-                              .toList();
-                          final skills = skillsController.text
-                              .split(',')
-                              .map((s) => s.trim())
-                              .where((s) => s.isNotEmpty)
-                              .toList();
-                          final prerequisites = prerequisitesController.text
-                              .split(',')
-                              .map((p) => p.trim())
-                              .where((p) => p.isNotEmpty)
-                              .toList();
-                          final instructionsJson = {
-                            'statement': instructionsController.text.trim(),
-                            'media': statementMediaPayload,
-                            if (selectedFormat == ExerciseFormat.qcm &&
-                                options.isNotEmpty)
-                              'options': options,
-                            if (hints.isNotEmpty) 'hints': hints,
-                          };
-                          final solutionJson = {
-                            'correction': solutionController.text.trim(),
-                            'media': solutionMediaPayload,
-                            if (selectedFormat == ExerciseFormat.qcm &&
-                                correctOptionIndex != null)
-                              'correct_index': correctOptionIndex,
-                          };
-
-                          if (isEditing) {
-                            await service.updateExercise(
-                              id: existing.id,
-                              title: title,
-                              type: selectedType,
-                              difficulty: selectedDifficulty,
-                              format: selectedFormat,
-                              instructionsJson: instructionsJson,
-                              solutionJson: solutionJson,
-                              minSubscriptionTier: selectedTier,
-                              updateChapterId: true,
-                              chapterId: selectedChapterId,
-                              updateClassNodeId: true,
-                              classNodeId: selectedClassNodeId,
-                              updateTermId: true,
-                              termId: selectedTermId,
-                              editedBy: _currentAdminId(),
-                              skills: skills,
-                              prerequisites: prerequisites,
-                            );
-                          } else {
-                            final exercise = await service.createExercise(
-                              chapterId: selectedChapterId,
-                              classNodeId: selectedClassNodeId,
-                              termId: selectedTermId,
-                              type: selectedType,
-                              difficulty: selectedDifficulty,
-                              format: selectedFormat,
-                              title: title,
-                              instructionsJson: instructionsJson,
-                              solutionJson: solutionJson,
-                              minSubscriptionTier: selectedTier,
-                              skills: skills,
-                              prerequisites: prerequisites,
-                            );
-
-                            if (exercise != null) {
-                              await service.submitOrAutoApprove(
-                                contentId: exercise.id,
-                                contentType: 'exercise',
-                                authorId: _currentAdminId(),
-                                isSuperAdmin:
-                                    ref
-                                        .read(authProvider)
-                                        .valueOrNull
-                                        ?.isSuperAdmin ??
-                                    false,
-                              );
-                            }
-                          }
-
-                          ref.invalidate(exercisesProvider);
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          if (context.mounted) {
-                            // ignore: use_build_context_synchronously
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                backgroundColor: AppTheme.accentEmerald,
-                                content: Text(
-                                  isEditing
-                                      ? 'Exercice "$title" mis à jour !'
-                                      : 'Exercice "$title" créé et soumis pour validation !',
-                                ),
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          setModalState(() {
-                            isLoading = false;
-                            submitError = '$e';
-                          });
-                        }
-                      },
-                child: isLoading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(
-                        isEditing
-                            ? 'Enregistrer les modifications'
-                            : 'Enregistrer l\'exercice',
-                      ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  /// Génère un PDF d'aperçu à partir de l'état courant du formulaire (pas encore enregistré),
-  /// pour que l'admin voie le rendu imprimé avant de sauvegarder — même générateur que
-  /// l'export PDF final (ExercisePdfGenerator), garantissant que l'aperçu est fidèle au résultat.
-  Future<void> _previewDraftAsPdf({
-    required Exercise? existing,
-    required String? selectedChapterId,
-    required String title,
-    required ExerciseType type,
-    required ExerciseDifficulty difficulty,
-    required ExerciseFormat format,
-    required String tier,
-    required String statement,
-    required String correction,
-    required List<String> options,
-    required List<MediaAsset> statementMedia,
-  }) async {
-    final service = ref.read(supabaseServiceProvider);
-    String subjectName = 'Matière';
-    String? chapterTitle;
-    if (selectedChapterId != null) {
-      final chapter = await service.getChapter(selectedChapterId);
-      if (chapter != null) {
-        chapterTitle = chapter.title;
-        final subject = await service.getSubject(chapter.subjectId);
-        if (subject != null) subjectName = subject.name;
+  Future<void> _reorderExercise(Exercise ex, List<Exercise> siblings, int delta) async {
+    final idx = siblings.indexWhere((e) => e.id == ex.id);
+    final target = idx + delta;
+    if (idx < 0 || target < 0 || target >= siblings.length) return;
+    final other = siblings[target];
+    try {
+      await ref.read(supabaseServiceProvider).swapExerciseOrder(
+        ex.id,
+        ex.displayOrder,
+        other.id,
+        other.displayOrder,
+      );
+      ref.invalidate(exercisesProvider);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur réorganisation: $e'), backgroundColor: AppTheme.accentRose),
+        );
       }
     }
-    final draft = Exercise(
-      id: existing?.id ?? 'apercu',
-      type: type,
-      difficulty: difficulty,
-      format: format,
-      title: title.isEmpty ? '(Sans titre)' : title,
-      minSubscriptionTier: tier,
-      instructionsJson: {
-        'statement': statement,
-        'media': statementMedia
-            .map((a) => {'url': a.url, 'filename': a.filename, 'type': a.type})
-            .toList(),
-        if (format == ExerciseFormat.qcm &&
-            options.where((o) => o.isNotEmpty).isNotEmpty)
-          'options': options.where((o) => o.isNotEmpty).toList(),
-      },
-      solutionJson: {'correction': correction},
-    );
-    await ExercisePdfGenerator.printOrSave(
-      exercise: draft,
-      subjectName: subjectName,
-      chapterTitle: chapterTitle,
-    );
-  }
-
-  /// Maquette illustrative de l'affichage côté application élève (celle-ci n'existe pas encore
-  /// dans ce dépôt — c'est une approximation fidèle au CDC, construite avec les mêmes données que
-  /// le PDF, pour que l'admin visualise le rendu avant publication plutôt qu'à l'aveugle.
-  void _showStudentPreviewModal(
-    BuildContext context, {
-    required String title,
-    required ExerciseType type,
-    required ExerciseFormat format,
-    required ExerciseDifficulty difficulty,
-    required String statement,
-    required List<MediaAsset> statementMedia,
-    required List<String> options,
-    required int? correctIndex,
-    required String correction,
-  }) {
-    bool showCorrection = false;
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setPreviewState) => Dialog(
-          backgroundColor: Colors.transparent,
-          child: Container(
-            width: 420,
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.85,
-            ),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F5FA),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black38,
-                  blurRadius: 24,
-                  offset: Offset(0, 12),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF1E3A8A),
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(24),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.smartphone_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Aperçu — Application Élève',
-                          style: GoogleFonts.outfit(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.close_rounded,
-                          color: Colors.white70,
-                          size: 20,
-                        ),
-                        onPressed: () => Navigator.pop(ctx),
-                      ),
-                    ],
-                  ),
-                ),
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: [
-                            _studentBadge(
-                              exerciseTypeToDb(type),
-                              const Color(0xFF1E3A8A),
-                            ),
-                            _studentBadge(
-                              exerciseFormatToDb(format),
-                              const Color(0xFF7C3AED),
-                            ),
-                            _studentBadge(
-                              exerciseDifficultyToDb(difficulty),
-                              const Color(0xFF0891B2),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          title,
-                          style: GoogleFonts.outfit(
-                            fontSize: 19,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF111827),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        MathText(
-                          statement.isEmpty
-                              ? 'Aucun énoncé rédigé pour le moment.'
-                              : statement,
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: const Color(0xFF374151),
-                            height: 1.5,
-                          ),
-                        ),
-                        if (statementMedia.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: statementMedia
-                                .map(
-                                  (m) => Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFE5E7EB),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.attach_file_rounded,
-                                          size: 14,
-                                          color: Color(0xFF4B5563),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          m.filename,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 11,
-                                            color: const Color(0xFF4B5563),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                        ],
-                        if (format == ExerciseFormat.qcm &&
-                            options.isNotEmpty) ...[
-                          const SizedBox(height: 20),
-                          ...List.generate(options.length, (i) {
-                            final letter = String.fromCharCode(65 + i);
-                            final isCorrect =
-                                showCorrection && correctIndex == i;
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isCorrect
-                                      ? const Color(0xFFD1FAE5)
-                                      : Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: isCorrect
-                                        ? const Color(0xFF10B981)
-                                        : const Color(0xFFE5E7EB),
-                                    width: isCorrect ? 2 : 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 12,
-                                      backgroundColor: isCorrect
-                                          ? const Color(0xFF10B981)
-                                          : const Color(0xFFEEF2FF),
-                                      child: Text(
-                                        letter,
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: isCorrect
-                                              ? Colors.white
-                                              : const Color(0xFF1E3A8A),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        options[i],
-                                        style: GoogleFonts.inter(
-                                          fontSize: 13,
-                                          color: const Color(0xFF111827),
-                                        ),
-                                      ),
-                                    ),
-                                    if (isCorrect)
-                                      const Icon(
-                                        Icons.check_circle_rounded,
-                                        color: Color(0xFF10B981),
-                                        size: 18,
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }),
-                        ],
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF1E3A8A),
-                              side: const BorderSide(color: Color(0xFF1E3A8A)),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                            onPressed: () => setPreviewState(
-                              () => showCorrection = !showCorrection,
-                            ),
-                            icon: Icon(
-                              showCorrection
-                                  ? Icons.visibility_off_rounded
-                                  : Icons.visibility_rounded,
-                              size: 18,
-                            ),
-                            label: Text(
-                              showCorrection
-                                  ? 'Masquer la correction'
-                                  : 'Voir la correction',
-                            ),
-                          ),
-                        ),
-                        if (showCorrection) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFD1FAE5),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              correction.isEmpty
-                                  ? 'Aucun corrigé rédigé pour le moment.'
-                                  : correction,
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: const Color(0xFF065F46),
-                                height: 1.5,
-                              ),
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 16),
-                        Text(
-                          'Aperçu illustratif — le rendu réel dans l\'application élève pourra différer légèrement.',
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            color: const Color(0xFF9CA3AF),
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _studentBadge(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.inter(
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
-      ),
-    );
-  }
-
-  void _showAiGenerationModal(BuildContext context) {
-    String? selectedSubjectId;
-    String? selectedChapterId;
-    String? selectedClassNodeId;
-    String? selectedTermId;
-    ExerciseType selectedType = ExerciseType.training;
-    ExerciseFormat selectedFormat = ExerciseFormat.qcm;
-    ExerciseDifficulty selectedDifficulty = ExerciseDifficulty.facile;
-    final countController = TextEditingController(text: '5');
-    final notesController = TextEditingController();
-    String? submitError;
-    bool isGenerating = false;
-    List<Map<String, dynamic>>? generated;
-    Set<int> selectedIndices = {};
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => AlertDialog(
-          backgroundColor: AppTheme.primarySurface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: AppDialogTitle(
-            icon: Icons.psychology_rounded,
-            iconColor: AppTheme.accentCyan,
-            text: 'Génération d\'Exercices par IA',
-            onClose: () => Navigator.pop(ctx),
-          ),
-          content: SizedBox(
-            width: 560,
-            height: MediaQuery.of(context).size.height * 0.65,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (generated == null) ...[
-                    _ChapterPicker(
-                      selectedChapterId: selectedChapterId,
-                      onChanged:
-                          ({chapterId, classNodeId, subjectId, termId}) =>
-                              setModalState(() {
-                                selectedChapterId = chapterId;
-                                selectedClassNodeId = classNodeId;
-                                selectedSubjectId = subjectId;
-                                selectedTermId = termId;
-                              }),
-                    ),
-                    const SizedBox(height: 16),
-                    // ignore: deprecated_member_use
-                    DropdownButtonFormField<ExerciseType>(
-                      // ignore: deprecated_member_use
-                      value: selectedType,
-                      dropdownColor: AppTheme.primaryDark,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(labelText: 'Type'),
-                      items: const [
-                        DropdownMenuItem(
-                          value: ExerciseType.training,
-                          child: Text('Entraînement'),
-                        ),
-                        DropdownMenuItem(
-                          value: ExerciseType.evaluation,
-                          child: Text('Évaluation'),
-                        ),
-                      ],
-                      onChanged: (v) => setModalState(
-                        () => selectedType = v ?? ExerciseType.training,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // ignore: deprecated_member_use
-                    DropdownButtonFormField<ExerciseFormat>(
-                      // ignore: deprecated_member_use
-                      value: selectedFormat,
-                      dropdownColor: AppTheme.primaryDark,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(labelText: 'Format'),
-                      items: const [
-                        DropdownMenuItem(
-                          value: ExerciseFormat.qcm,
-                          child: Text('QCM'),
-                        ),
-                        DropdownMenuItem(
-                          value: ExerciseFormat.reponseCourte,
-                          child: Text('Réponse courte'),
-                        ),
-                        DropdownMenuItem(
-                          value: ExerciseFormat.redaction,
-                          child: Text('Rédaction'),
-                        ),
-                      ],
-                      onChanged: (v) => setModalState(
-                        () => selectedFormat = v ?? ExerciseFormat.qcm,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // ignore: deprecated_member_use
-                    DropdownButtonFormField<ExerciseDifficulty>(
-                      // ignore: deprecated_member_use
-                      value: selectedDifficulty,
-                      dropdownColor: AppTheme.primaryDark,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(
-                        labelText: 'Difficulté',
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: ExerciseDifficulty.facile,
-                          child: Text('Facile'),
-                        ),
-                        DropdownMenuItem(
-                          value: ExerciseDifficulty.intermediaire,
-                          child: Text('Intermédiaire'),
-                        ),
-                        DropdownMenuItem(
-                          value: ExerciseDifficulty.approfondissement,
-                          child: Text('Approfondissement'),
-                        ),
-                      ],
-                      onChanged: (v) => setModalState(
-                        () =>
-                            selectedDifficulty = v ?? ExerciseDifficulty.facile,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: countController,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre d\'exercices à générer (1-20)',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: notesController,
-                      maxLines: 3,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(
-                        labelText: 'Notes / directives (optionnel)',
-                        hintText:
-                            'Ex: se concentrer sur les identités remarquables',
-                      ),
-                    ),
-                  ] else ...[
-                    Text(
-                      '${generated!.length} exercice(s) généré(s) — décochez ceux à ignorer, puis créez les exercices sélectionnés.',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ...List.generate(generated!.length, (i) {
-                      final ex = generated![i];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryDark,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppTheme.primaryBorder),
-                        ),
-                        child: CheckboxListTile(
-                          value: selectedIndices.contains(i),
-                          activeColor: AppTheme.accentEmerald,
-                          onChanged: (v) => setModalState(() {
-                            if (v == true) {
-                              selectedIndices.add(i);
-                            } else {
-                              selectedIndices.remove(i);
-                            }
-                          }),
-                          title: Text(
-                            ex['title'] as String? ?? 'Sans titre',
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
-                          subtitle: Text(
-                            ex['statement'] as String? ?? '',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.inter(
-                              color: AppTheme.textMuted,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ],
-                  if (submitError != null) ...[
-                    const SizedBox(height: 16),
-                    _ErrorBanner(message: submitError!),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-          actions: [
-            TextButton(
-              onPressed: isGenerating ? null : () => Navigator.pop(ctx),
-              child: const Text('Annuler'),
-            ),
-            if (generated == null)
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.accentCyan,
-                ),
-                onPressed: isGenerating
-                    ? null
-                    : () async {
-                        if (selectedChapterId == null &&
-                            selectedClassNodeId == null) {
-                          setModalState(
-                            () => submitError =
-                                'La classe/série est obligatoire pour générer un exercice indépendant (sans chapitre).',
-                          );
-                          return;
-                        }
-                        final count =
-                            int.tryParse(countController.text.trim()) ?? 5;
-                        setModalState(() {
-                          isGenerating = true;
-                          submitError = null;
-                        });
-                        try {
-                          final service = ref.read(supabaseServiceProvider);
-                          final result = await service.generateAiExercises(
-                            subjectId: selectedSubjectId,
-                            chapterId: selectedChapterId,
-                            type: selectedType,
-                            difficulty: selectedDifficulty,
-                            format: selectedFormat,
-                            count: count,
-                            rawNotes: notesController.text.trim().isEmpty
-                                ? null
-                                : notesController.text.trim(),
-                          );
-                          setModalState(() {
-                            isGenerating = false;
-                            generated = result;
-                            selectedIndices = Set.from(
-                              List.generate(result.length, (i) => i),
-                            );
-                          });
-                        } catch (e) {
-                          setModalState(() {
-                            isGenerating = false;
-                            submitError = '$e';
-                          });
-                        }
-                      },
-                icon: isGenerating
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.auto_awesome_rounded, size: 16),
-                label: Text(
-                  isGenerating ? 'Génération en cours...' : 'Générer',
-                ),
-              )
-            else
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.accentEmerald,
-                ),
-                onPressed: isGenerating || selectedIndices.isEmpty
-                    ? null
-                    : () async {
-                        setModalState(() => isGenerating = true);
-                        final service = ref.read(supabaseServiceProvider);
-                        var created = 0;
-                        // Snapshot de la sélection : en cas d'échec au milieu du lot (réseau...),
-                        // on retire du Set d'origine chaque index déjà créé AVANT de relancer
-                        // l'exception, pour qu'un nouveau clic sur "Créer" ne retente que les
-                        // exercices pas encore créés au lieu de dupliquer ceux déjà en base.
-                        for (final i in selectedIndices.toList()) {
-                          try {
-                            final item = generated![i];
-                            final options = (item['options'] as List?)
-                                ?.cast<String>();
-                            final correctIndex = item['correct_index'] as int?;
-                            final hints =
-                                (item['hints'] as List?)
-                                    ?.map((h) => h.toString())
-                                    .toList() ??
-                                const [];
-                            final skills =
-                                (item['skills'] as List?)
-                                    ?.map((s) => s.toString())
-                                    .toList() ??
-                                const [];
-                            final exercise = await service.createExercise(
-                              chapterId: selectedChapterId,
-                              classNodeId: selectedClassNodeId,
-                              termId: selectedTermId,
-                              type: selectedType,
-                              difficulty: selectedDifficulty,
-                              format: selectedFormat,
-                              title:
-                                  item['title'] as String? ?? 'Exercice généré',
-                              instructionsJson: {
-                                'statement': item['statement'] as String? ?? '',
-                                'options': ?options,
-                                'media': [],
-                                if (hints.isNotEmpty) 'hints': hints,
-                              },
-                              solutionJson: {
-                                'correction':
-                                    item['correction'] as String? ?? '',
-                                'correct_index': ?correctIndex,
-                              },
-                              skills: skills,
-                              provenance: 'ai_generated',
-                            );
-                            if (exercise != null) {
-                              await service.submitOrAutoApprove(
-                                contentId: exercise.id,
-                                contentType: 'exercise',
-                                authorId: _currentAdminId(),
-                                isSuperAdmin:
-                                    ref
-                                        .read(authProvider)
-                                        .valueOrNull
-                                        ?.isSuperAdmin ??
-                                    false,
-                              );
-                              created++;
-                              selectedIndices.remove(i);
-                            }
-                          } catch (e) {
-                            setModalState(() {
-                              isGenerating = false;
-                              submitError =
-                                  '$created exercice(s) créé(s) avant l\'erreur : $e. '
-                                  'Cliquez à nouveau pour retenter uniquement les restants.';
-                            });
-                            ref.invalidate(exercisesProvider);
-                            return;
-                          }
-                        }
-                        ref.invalidate(exercisesProvider);
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        if (context.mounted) {
-                          // ignore: use_build_context_synchronously
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              backgroundColor: AppTheme.accentEmerald,
-                              content: Text(
-                                '$created exercice(s) créé(s) et soumis pour validation !',
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                icon: isGenerating
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.check_rounded, size: 16),
-                label: Text('Créer ${selectedIndices.length} exercice(s)'),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Bandeau d'erreur réutilisable (messages d'exception potentiellement longs, affichés à part
-/// plutôt que dans un TextField.errorText).
-class _ErrorBanner extends StatelessWidget {
-  final String message;
-
-  const _ErrorBanner({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.accentRose.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppTheme.accentRose.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            Icons.error_outline_rounded,
-            color: AppTheme.accentRose,
-            size: 18,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              message,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: AppTheme.accentRose,
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Sélecteur Classe/Série → Matière → Chapitre (optionnel) → Trimestre pour rattacher un
-/// exercice — même cheminement que le sélecteur de chapitre dans lessons_manager_screen.dart.
-/// Choisir "Aucun" comme chapitre laisse l'exercice indépendant (Niveau 3 du CDC) ; dans ce cas
-/// la Classe/Série reste le seul champ que l'appelant doit rendre obligatoire, puisqu'aucun
-/// chapitre parent n'existe pour la déduire (le trigger SQL trg_sync_exercise_class_scope ne
-/// peut dériver class_node_id/term_id que si chapter_id ou lesson_id est renseigné).
-class _ChapterPicker extends ConsumerStatefulWidget {
-  final String? selectedChapterId;
-  final void Function({
-    required String? chapterId,
-    required String? classNodeId,
-    required String? subjectId,
-    required String? termId,
-  })
-  onChanged;
-
-  const _ChapterPicker({
-    required this.selectedChapterId,
-    required this.onChanged,
-  });
-
-  @override
-  ConsumerState<_ChapterPicker> createState() => _ChapterPickerState();
-}
-
-class _ChapterPickerState extends ConsumerState<_ChapterPicker> {
-  String? _selectedClassNodeId;
-  String? _selectedSubjectId;
-  String? _selectedChapterId;
-  String? _selectedTermId;
-  bool _resolvingInitial = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedChapterId = widget.selectedChapterId;
-    if (widget.selectedChapterId != null) {
-      _resolveInitial(widget.selectedChapterId!);
-    }
-  }
-
-  Future<void> _resolveInitial(String chapterId) async {
-    setState(() => _resolvingInitial = true);
-    final service = ref.read(supabaseServiceProvider);
-    final chapter = await service.getChapter(chapterId);
-    if (!mounted) return;
-    setState(() {
-      _resolvingInitial = false;
-      if (chapter != null) {
-        _selectedClassNodeId = chapter.classNodeId;
-        _selectedSubjectId = chapter.subjectId;
-        _selectedTermId = chapter.termId;
-      }
-    });
-  }
-
-  void _notify() {
-    widget.onChanged(
-      chapterId: _selectedChapterId,
-      classNodeId: _selectedClassNodeId,
-      subjectId: _selectedSubjectId,
-      termId: _selectedTermId,
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_resolvingInitial) {
-      return const LinearProgressIndicator();
-    }
-
+    final exercisesAsync = ref.watch(exercisesProvider(_showInactive));
     final classNodesAsync = ref.watch(nodesByTypeProvider('class'));
     final seriesNodesAsync = ref.watch(nodesByTypeProvider('series'));
     final classOptions = <AcademicNode>[
@@ -2920,217 +155,1041 @@ class _ChapterPickerState extends ConsumerState<_ChapterPicker> {
       ...seriesNodesAsync.valueOrNull ?? [],
     ]..sort((a, b) => a.name.compareTo(b.name));
 
-    final subjectsAsync = _selectedClassNodeId == null
-        ? null
-        : ref.watch(subjectsForClassProvider(_selectedClassNodeId!));
-    final subjects = subjectsAsync?.valueOrNull ?? [];
+    final allExercises = exercisesAsync.valueOrNull ?? <Exercise>[];
+    final curriculumCount = allExercises
+        .where((e) => e.lessonId != null || e.chapterId != null)
+        .length;
+    final examCount = allExercises
+        .where((e) => e.lessonId == null && e.chapterId == null)
+        .length;
 
-    final chaptersAsync =
-        (_selectedClassNodeId == null || _selectedSubjectId == null)
-        ? null
-        : ref.watch(
-            chaptersWithLessonsProvider((
-              subjectId: _selectedSubjectId!,
-              classNodeId: _selectedClassNodeId,
-              includeInactive: false,
-            )),
-          );
-    final chapters = chaptersAsync?.valueOrNull ?? [];
+    return Material(
+      color: AppTheme.primaryDark,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // En-tête Spacieux & Actions Nobles
+            _buildHeader(),
+            const SizedBox(height: 18),
 
-    final countryNodesAsync = ref.watch(nodesByTypeProvider('country'));
-    final countryId = countryNodesAsync.valueOrNull?.isNotEmpty == true
-        ? countryNodesAsync.valueOrNull!.first.id
-        : null;
-    final termsAsync = countryId == null
-        ? null
-        : ref.watch(termsProvider(countryId));
-    final terms = termsAsync?.valueOrNull ?? [];
+            // Sélecteur des 2 Espaces Dédiés (Pilules Supérieures)
+            _buildHubTabs(curriculumCount: curriculumCount, examCount: examCount),
+            const SizedBox(height: 16),
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ignore: deprecated_member_use
-        DropdownButtonFormField<String?>(
-          // ignore: deprecated_member_use
-          value: _selectedClassNodeId,
-          isExpanded: true,
-          dropdownColor: AppTheme.primaryDark,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            labelText: 'Classe / Série',
-            helperText:
-                'Obligatoire pour un exercice indépendant ; simple filtre de navigation sinon',
-            prefixIcon: Icon(Icons.school_rounded, size: 20),
-          ),
-          items: [
-            ...classOptions.map(
-              (c) => DropdownMenuItem<String?>(
-                value: c.id,
-                child: Text(c.name, overflow: TextOverflow.ellipsis),
-              ),
-            ),
-            // La classe du chapitre d'origine peut avoir été archivée depuis l'Arbre Académique :
-            // sans cette entrée, `value` ne correspondrait à aucun `item` et le dropdown planterait
-            // à l'ouverture du formulaire d'édition.
-            if (_selectedClassNodeId != null &&
-                !classOptions.any((c) => c.id == _selectedClassNodeId))
-              DropdownMenuItem<String?>(
-                value: _selectedClassNodeId,
-                child: Text(
-                  'Classe archivée (id: ${_selectedClassNodeId!.substring(0, 8)}…)',
-                  style: const TextStyle(color: AppTheme.accentAmber),
-                  overflow: TextOverflow.ellipsis,
+            // Barre de Filtres Contextuelle Aérée
+            _buildFilterBar(classOptions),
+            const SizedBox(height: 18),
+
+            // Zone Principale de Contenu
+            Expanded(
+              child: exercisesAsync.when(
+                data: (exercises) {
+                  return _buildContentList(exercises, classOptions);
+                },
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: AppTheme.accentCyan),
+                ),
+                error: (err, _) => Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline_rounded, size: 40, color: AppTheme.accentRose),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Erreur de chargement: $err',
+                        style: GoogleFonts.inter(color: AppTheme.accentRose),
+                      ),
+                      const SizedBox(height: 10),
+                      TextButton(
+                        onPressed: () => ref.invalidate(exercisesProvider),
+                        child: const Text('Réessayer'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
+            ),
           ],
-          onChanged: (v) => setState(() {
-            _selectedClassNodeId = v;
-            _selectedSubjectId = null;
-            _selectedChapterId = null;
-            _notify();
-          }),
         ),
-        if (_selectedClassNodeId != null) ...[
-          const SizedBox(height: 12),
-          subjects.isEmpty
-              ? Text(
-                  'Aucune matière liée à cette classe.',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: AppTheme.textMuted,
-                  ),
-                )
-              // ignore: deprecated_member_use
-              : DropdownButtonFormField<String?>(
-                  // ignore: deprecated_member_use
-                  value: _selectedSubjectId,
-                  isExpanded: true,
-                  dropdownColor: AppTheme.primaryDark,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Matière'),
-                  items: [
-                    ...subjects.map(
-                      (s) => DropdownMenuItem<String?>(
-                        value: s.id,
-                        child: Text(s.name),
-                      ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 800;
+
+        final titleArea = Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.accentIndigo.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.assignment_rounded,
+                color: AppTheme.accentIndigo,
+                size: 26,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Banque d\'Exercices',
+                    style: GoogleFonts.outfit(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
-                    if (_selectedSubjectId != null &&
-                        !subjects.any((s) => s.id == _selectedSubjectId))
-                      DropdownMenuItem<String?>(
-                        value: _selectedSubjectId,
-                        child: Text(
-                          'Matière archivée (id: ${_selectedSubjectId!.substring(0, 8)}…)',
-                          style: const TextStyle(color: AppTheme.accentAmber),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Évaluation et entraînement pédagogique structuré en 3 niveaux d\'indépendance (Leçon, Chapitre, Examen)',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+
+        final actionButtons = Wrap(
+          spacing: 10,
+          runSpacing: 8,
+          children: [
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentCyan,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: _openAiGenerator,
+              icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+              label: Text(
+                'Générateur IA',
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+            ),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentIndigo,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () => _openStudio(),
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: Text(
+                '+ Nouvel Exercice (Studio)',
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+            ),
+          ],
+        );
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppTheme.primarySurface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppTheme.primaryBorder),
+          ),
+          child: isCompact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    titleArea,
+                    const SizedBox(height: 16),
+                    actionButtons,
                   ],
-                  onChanged: (v) => setState(() {
-                    _selectedSubjectId = v;
-                    _selectedChapterId = null;
-                    _notify();
-                  }),
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: titleArea),
+                    const SizedBox(width: 16),
+                    actionButtons,
+                  ],
                 ),
-        ],
-        if (_selectedSubjectId != null) ...[
-          const SizedBox(height: 12),
-          // ignore: deprecated_member_use
-          DropdownButtonFormField<String?>(
-            // ignore: deprecated_member_use
-            value: _selectedChapterId,
-            isExpanded: true,
-            dropdownColor: AppTheme.primaryDark,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              labelText:
-                  'Chapitre (optionnel — laisser vide = exercice indépendant)',
+        );
+      },
+    );
+  }
+
+  Widget _buildHubTabs({required int curriculumCount, required int examCount}) {
+    return Container(
+      padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(
+        color: AppTheme.primarySurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.primaryBorder),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildTabItem(
+              tab: ExerciseHubTab.curriculum,
+              label: 'Exercices du Programme (Niveaux 1 & 2)',
+              count: curriculumCount,
+              icon: Icons.menu_book_rounded,
             ),
-            items: [
-              const DropdownMenuItem<String?>(
-                value: null,
-                child: Text('Aucun (exercice indépendant)'),
+            const SizedBox(width: 6),
+            _buildTabItem(
+              tab: ExerciseHubTab.exams,
+              label: 'Examens & Concours (Niveau 3)',
+              count: examCount,
+              icon: Icons.school_rounded,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabItem({
+    required ExerciseHubTab tab,
+    required String label,
+    required int count,
+    required IconData icon,
+  }) {
+    final isSelected = _activeTab == tab;
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: () => setState(() => _activeTab = tab),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppTheme.accentCyan.withValues(alpha: 0.16)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? AppTheme.accentCyan : Colors.transparent,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? AppTheme.accentCyan : AppTheme.textMuted,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? Colors.white : AppTheme.textMuted,
               ),
-              ...chapters.map(
-                (c) => DropdownMenuItem<String?>(
-                  value: c.id,
-                  child: Text(c.title, overflow: TextOverflow.ellipsis),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppTheme.accentCyan.withValues(alpha: 0.25)
+                    : AppTheme.primaryDark,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$count',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? AppTheme.accentCyan : Colors.white60,
                 ),
               ),
-              // Le chapitre d'origine peut avoir été archivé depuis cette même page : sans cette
-              // entrée, `value` ne correspondrait à aucun `item` et le dropdown planterait.
-              if (_selectedChapterId != null &&
-                  !chapters.any((c) => c.id == _selectedChapterId))
-                DropdownMenuItem<String?>(
-                  value: _selectedChapterId,
-                  child: Text(
-                    'Chapitre archivé (id: ${_selectedChapterId!.substring(0, 8)}…)',
-                    style: const TextStyle(color: AppTheme.accentAmber),
-                    overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterBar(List<AcademicNode> classOptions) {
+    final isFiltered = _searchQuery.isNotEmpty ||
+        _selectedClassFilterId != null ||
+        _selectedSubjectFilterId != null;
+
+    final searchField = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: AppTheme.primarySurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.primaryBorder),
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (v) => setState(() => _searchQuery = v.trim().toLowerCase()),
+        style: GoogleFonts.inter(color: Colors.white, fontSize: 13),
+        decoration: InputDecoration(
+          hintText: 'Rechercher un exercice par titre ou notion...',
+          hintStyle: GoogleFonts.inter(color: AppTheme.textMuted, fontSize: 13),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: AppTheme.textMuted,
+            size: 18,
+          ),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  tooltip: 'Effacer la recherche',
+                  icon: const Icon(Icons.clear_rounded, color: AppTheme.textMuted, size: 16),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+      ),
+    );
+
+    final classDropdown = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.primarySurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.primaryBorder),
+      ),
+      child: DropdownButtonFormField<String?>(
+        initialValue: _selectedClassFilterId,
+        isDense: true,
+        isExpanded: true,
+        dropdownColor: AppTheme.primaryDark,
+        style: GoogleFonts.inter(color: Colors.white, fontSize: 13),
+        decoration: const InputDecoration(
+          isDense: true,
+          border: InputBorder.none,
+          prefixIcon: Icon(Icons.school_outlined, color: AppTheme.textMuted, size: 18),
+        ),
+        items: [
+          const DropdownMenuItem<String?>(
+            value: null,
+            child: Text('Toutes les classes'),
+          ),
+          const DropdownMenuItem<String?>(
+            value: _unclassedFilterSentinel,
+            child: Text('Non classé'),
+          ),
+          ...classOptions.map(
+            (c) => DropdownMenuItem<String?>(
+              value: c.id,
+              child: Text(c.name, overflow: TextOverflow.ellipsis),
+            ),
+          ),
+        ],
+        onChanged: (v) {
+          setState(() {
+            _selectedClassFilterId = v;
+            _selectedSubjectFilterId = null;
+          });
+        },
+      ),
+    );
+
+    final archiveToggle = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.primarySurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.primaryBorder),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Switch(
+            value: _showInactive,
+            activeThumbColor: AppTheme.accentAmber,
+            onChanged: (v) => setState(() => _showInactive = v),
+          ),
+          Text(
+            'Archives',
+            style: GoogleFonts.inter(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+    );
+
+    final resetBtn = isFiltered
+        ? TextButton.icon(
+            onPressed: () {
+              setState(() {
+                _searchController.clear();
+                _searchQuery = '';
+                _selectedClassFilterId = null;
+                _selectedSubjectFilterId = null;
+              });
+            },
+            icon: const Icon(Icons.filter_alt_off_rounded, size: 16, color: AppTheme.accentRose),
+            label: Text(
+              'Réinitialiser',
+              style: GoogleFonts.inter(fontSize: 12, color: AppTheme.accentRose),
+            ),
+          )
+        : null;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 750;
+        if (isCompact) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              searchField,
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(child: classDropdown),
+                  const SizedBox(width: 12),
+                  archiveToggle,
+                  if (resetBtn != null) ...[
+                    const SizedBox(width: 8),
+                    resetBtn,
+                  ],
+                ],
+              ),
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: searchField),
+            const SizedBox(width: 12),
+            SizedBox(width: 210, child: classDropdown),
+            const SizedBox(width: 12),
+            archiveToggle,
+            if (resetBtn != null) ...[
+              const SizedBox(width: 8),
+              resetBtn,
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildContentList(List<Exercise> allExercises, List<AcademicNode> classOptions) {
+    // 1. Filtrer par recherche et classe
+    var filtered = allExercises.where((e) {
+      if (_searchQuery.isNotEmpty && !e.title.toLowerCase().contains(_searchQuery)) {
+        return false;
+      }
+      if (_selectedClassFilterId == _unclassedFilterSentinel && e.classNodeId != null) {
+        return false;
+      }
+      if (_selectedClassFilterId != null &&
+          _selectedClassFilterId != _unclassedFilterSentinel &&
+          e.classNodeId != _selectedClassFilterId) {
+        return false;
+      }
+      return true;
+    }).toList();
+
+    // 2. Filtrer par onglet actif
+    if (_activeTab == ExerciseHubTab.curriculum) {
+      // Niveaux 1 et 2
+      filtered = filtered
+          .where((e) => e.lessonId != null || e.chapterId != null)
+          .toList();
+    } else {
+      // Niveau 3 (Examens / indépendants)
+      filtered = filtered
+          .where((e) => e.lessonId == null && e.chapterId == null)
+          .toList();
+    }
+
+    if (filtered.isEmpty) {
+      return Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppTheme.primarySurface,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppTheme.primaryBorder),
+                ),
+                child: const Icon(Icons.quiz_outlined, size: 48, color: AppTheme.accentCyan),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Aucun exercice trouvé dans cette section',
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _searchQuery.isNotEmpty || _selectedClassFilterId != null
+                    ? 'Aucun exercice ne correspond à vos critères de recherche.'
+                    : (_activeTab == ExerciseHubTab.curriculum
+                        ? 'Créez votre premier exercice de cours ou générez-en un avec l\'IA.'
+                        : 'Aucune épreuve d\'examen ou de concours indépendant enregistrée.'),
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textMuted),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accentIndigo,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () => _openStudio(),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('+ Créer un exercice'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Regrouper par Chapitre si dans l'onglet Curriculum
+    if (_activeTab == ExerciseHubTab.curriculum) {
+      return _buildCurriculumGroupedList(filtered, classOptions);
+    }
+
+    // Afficher en grille / liste aérée si Examens
+    return _buildExamsList(filtered, classOptions);
+  }
+
+  Widget _buildCurriculumGroupedList(List<Exercise> exercises, List<AcademicNode> classOptions) {
+    // Regrouper par chapterId
+    final Map<String?, List<Exercise>> grouped = {};
+    for (final ex in exercises) {
+      grouped.putIfAbsent(ex.chapterId, () => []).add(ex);
+    }
+
+    final chapterEntries = grouped.entries.toList();
+
+    return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 32),
+      itemCount: chapterEntries.length,
+      itemBuilder: (context, index) {
+        final entry = chapterEntries[index];
+        final chapterId = entry.key;
+        final chapterExercises = entry.value;
+
+        return _ChapterExercisesFolder(
+          chapterId: chapterId,
+          exercises: chapterExercises,
+          classOptions: classOptions,
+          onOpenDetail: _openExerciseDetail,
+          onOpenStudio: (ex) => _openStudio(existing: ex),
+          onOpenPreview: _openStudentPreview,
+          onExportPdf: _printExercise,
+          onReorder: _reorderExercise,
+          onDelete: (ex) => _showDeactivateExerciseConfirmation(context, ex),
+          onDuplicate: (ex) {
+            ref.read(supabaseServiceProvider).duplicateExercise(ex.id, _currentAdminId()).then((_) {
+              ref.invalidate(exercisesProvider);
+            });
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildExamsList(List<Exercise> exercises, List<AcademicNode> classOptions) {
+    return ListView.separated(
+      padding: const EdgeInsets.only(bottom: 32),
+      itemCount: exercises.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final ex = exercises[index];
+        return _CleanExerciseCard(
+          exercise: ex,
+          classOptions: classOptions,
+          siblings: exercises,
+          onTap: () => _openExerciseDetail(ex),
+          onOpenStudio: () => _openStudio(existing: ex),
+          onOpenPreview: () => _openStudentPreview(ex),
+          onExportPdf: () => _printExercise(ex),
+          onReorder: (delta) => _reorderExercise(ex, exercises, delta),
+          onDelete: () => _showDeactivateExerciseConfirmation(context, ex),
+          onDuplicate: () {
+            ref.read(supabaseServiceProvider).duplicateExercise(ex.id, _currentAdminId()).then((_) {
+              ref.invalidate(exercisesProvider);
+            });
+          },
+        );
+      },
+    );
+  }
+
+  void _showDeactivateExerciseConfirmation(BuildContext context, Exercise ex) {
+    final service = ref.read(supabaseServiceProvider);
+    _showConfirmActionDialog(
+      context,
+      icon: Icons.archive_rounded,
+      iconColor: AppTheme.accentAmber,
+      title: 'Archiver "${ex.title}" ?',
+      content: Text(
+        'Cet exercice sera masqué aux élèves, pas supprimé — vous pourrez le désarchiver plus tard.',
+        style: GoogleFonts.inter(fontSize: 13, color: Colors.white70),
+      ),
+      confirmLabel: 'Archiver',
+      confirmColor: AppTheme.accentAmber,
+      onConfirm: () => service.updateExercise(id: ex.id, isActive: false),
+      successMessage: 'Exercice archivé.',
+    );
+  }
+
+  void _showConfirmActionDialog(
+    BuildContext context, {
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required Widget content,
+    required String confirmLabel,
+    required Color confirmColor,
+    required Future<void> Function() onConfirm,
+    required String successMessage,
+  }) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.primarySurface,
+        title: AppDialogTitle(
+          icon: icon,
+          iconColor: iconColor,
+          text: title,
+          onClose: () => Navigator.pop(ctx),
+        ),
+        content: content,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: confirmColor),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final messenger = ScaffoldMessenger.of(context);
+              await onConfirm();
+              ref.invalidate(exercisesProvider);
+              if (mounted) {
+                messenger.showSnackBar(
+                  SnackBar(content: Text(successMessage), backgroundColor: AppTheme.accentEmerald),
+                );
+              }
+            },
+            child: Text(confirmLabel),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Dossier de Chapitre affichant ses exercices rattachés de façon aérée.
+class _ChapterExercisesFolder extends ConsumerWidget {
+  final String? chapterId;
+  final List<Exercise> exercises;
+  final List<AcademicNode> classOptions;
+  final void Function(Exercise) onOpenDetail;
+  final void Function(Exercise) onOpenStudio;
+  final void Function(Exercise) onOpenPreview;
+  final void Function(Exercise) onExportPdf;
+  final Future<void> Function(Exercise, List<Exercise>, int) onReorder;
+  final void Function(Exercise) onDelete;
+  final void Function(Exercise) onDuplicate;
+
+  const _ChapterExercisesFolder({
+    required this.chapterId,
+    required this.exercises,
+    required this.classOptions,
+    required this.onOpenDetail,
+    required this.onOpenStudio,
+    required this.onOpenPreview,
+    required this.onExportPdf,
+    required this.onReorder,
+    required this.onDelete,
+    required this.onDuplicate,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final service = ref.watch(supabaseServiceProvider);
+
+    return FutureBuilder<Chapter?>(
+      future: chapterId != null ? service.getChapter(chapterId!) : Future.value(null),
+      builder: (context, snapshot) {
+        final chapterTitle = snapshot.data?.title ??
+            (chapterId == null ? 'Exercices sans chapitre rattaché' : 'Chapitre');
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.primaryBorder),
+          ),
+          child: Material(
+            color: AppTheme.primarySurface,
+            borderRadius: BorderRadius.circular(16),
+            clipBehavior: Clip.antiAlias,
+            child: Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                initiallyExpanded: true,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentCyan.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.folder_copy_rounded, color: AppTheme.accentCyan, size: 20),
+                ),
+                title: Text(
+                  chapterTitle,
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
-            ],
-            onChanged: (v) => setState(() {
-              _selectedChapterId = v;
-              if (v != null) {
-                final match = chapters.where((c) => c.id == v);
-                _selectedTermId = match.isNotEmpty ? match.first.termId : null;
-              }
-              _notify();
-            }),
-          ),
-        ],
-        if (_selectedChapterId != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            'Classe et trimestre hérités automatiquement du chapitre sélectionné.',
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              color: AppTheme.textMuted,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-        ] else if (_selectedClassNodeId != null) ...[
-          const SizedBox(height: 12),
-          // ignore: deprecated_member_use
-          DropdownButtonFormField<String?>(
-            // ignore: deprecated_member_use
-            value: _selectedTermId,
-            isExpanded: true,
-            dropdownColor: AppTheme.primaryDark,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              labelText: 'Trimestre (optionnel)',
-              prefixIcon: Icon(Icons.calendar_month_rounded, size: 20),
-            ),
-            items: [
-              const DropdownMenuItem<String?>(
-                value: null,
-                child: Text('Aucun trimestre spécifique'),
-              ),
-              // Les trimestres archivés restent sélectionnables uniquement s'ils sont déjà choisis
-              // (édition d'un exercice existant) — sinon exclus des nouvelles sélections.
-              ...terms
-                  .where((t) => t.isActive || t.id == _selectedTermId)
-                  .map(
-                    (t) => DropdownMenuItem<String?>(
-                      value: t.id,
-                      child: Text(
-                        t.isActive
-                            ? '${t.name} (${t.schoolYear})'
-                            : '${t.name} (${t.schoolYear}) — archivé',
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                subtitle: Text(
+                  '${exercises.length} exercice${exercises.length > 1 ? 's' : ''} d\'évaluation et d\'entraînement',
+                  style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted),
+                ),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      children: List.generate(exercises.length, (i) {
+                        final ex = exercises[i];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _CleanExerciseCard(
+                            exercise: ex,
+                            classOptions: classOptions,
+                            siblings: exercises,
+                            onTap: () => onOpenDetail(ex),
+                            onOpenStudio: () => onOpenStudio(ex),
+                            onOpenPreview: () => onOpenPreview(ex),
+                            onExportPdf: () => onExportPdf(ex),
+                            onReorder: (delta) => onReorder(ex, exercises, delta),
+                            onDelete: () => onDelete(ex),
+                            onDuplicate: () => onDuplicate(ex),
+                          ),
+                        );
+                      }),
                     ),
                   ),
-            ],
-            onChanged: (v) => setState(() {
-              _selectedTermId = v;
-              _notify();
-            }),
+                ],
+              ),
+            ),
           ),
-        ],
-      ],
+        );
+      },
+    );
+  }
+}
+
+/// Carte d'exercice épurée, noble et respirante.
+///
+/// Un clic franc sur la carte ouvre immédiatement la fiche détaillée en plein écran.
+class _CleanExerciseCard extends StatelessWidget {
+  final Exercise exercise;
+  final List<AcademicNode> classOptions;
+  final List<Exercise> siblings;
+  final VoidCallback onTap;
+  final VoidCallback onOpenStudio;
+  final VoidCallback onOpenPreview;
+  final VoidCallback onExportPdf;
+  final void Function(int delta) onReorder;
+  final VoidCallback onDelete;
+  final VoidCallback onDuplicate;
+
+  const _CleanExerciseCard({
+    required this.exercise,
+    required this.classOptions,
+    required this.siblings,
+    required this.onTap,
+    required this.onOpenStudio,
+    required this.onOpenPreview,
+    required this.onExportPdf,
+    required this.onReorder,
+    required this.onDelete,
+    required this.onDuplicate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final ex = exercise;
+    final idx = siblings.indexWhere((e) => e.id == ex.id);
+    final canReorder = siblings.length > 1 && idx >= 0;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryDark,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: ex.isActive
+                  ? AppTheme.primaryBorder
+                  : AppTheme.accentAmber.withValues(alpha: 0.4),
+            ),
+          ),
+          child: Row(
+            children: [
+              // Icône du format didactique
+              _buildFormatIcon(ex.format),
+              const SizedBox(width: 14),
+
+              // Informations principales
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ex.title,
+                      style: GoogleFonts.outfit(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        _buildBadge(exerciseTypeToDb(ex.type), AppTheme.accentEmerald),
+                        _buildBadge(exerciseFormatToDb(ex.format), AppTheme.accentIndigo),
+                        _buildBadge(exerciseDifficultyToDb(ex.difficulty), AppTheme.accentCyan),
+                        _buildBadge(
+                          ex.isPublished ? 'PUBLIÉ' : 'BROUILLON',
+                          ex.isPublished ? AppTheme.accentEmerald : AppTheme.accentAmber,
+                        ),
+                        if (!ex.isActive)
+                          _buildBadge('ARCHIVÉ', AppTheme.accentAmber),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
+
+              // Raccourcis d'ordonnancement (▲/▼)
+              if (canReorder) ...[
+                IconButton(
+                  icon: const Icon(Icons.arrow_upward_rounded, size: 16, color: Colors.white54),
+                  tooltip: 'Monter',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  onPressed: idx == 0 ? null : () => onReorder(-1),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.arrow_downward_rounded, size: 16, color: Colors.white54),
+                  tooltip: 'Descendre',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  onPressed: idx == siblings.length - 1 ? null : () => onReorder(1),
+                ),
+                const SizedBox(width: 8),
+              ],
+
+              // Bouton d'ouverture / inspection principale
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accentCyan.withValues(alpha: 0.15),
+                  foregroundColor: AppTheme.accentCyan,
+                  elevation: 0,
+                  side: const BorderSide(color: AppTheme.accentCyan),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: onTap,
+                icon: const Icon(Icons.visibility_rounded, size: 15),
+                label: Text(
+                  'Consulter',
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Bouton Aperçu direct
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.accentCyan,
+                  side: const BorderSide(color: AppTheme.accentCyan),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: onOpenPreview,
+                icon: const Icon(Icons.preview_rounded, size: 15),
+                label: Text(
+                  'Aperçu',
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Menu contextuel discret
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert_rounded, size: 18, color: Colors.white54),
+                color: AppTheme.primarySurface,
+                onSelected: (val) {
+                  if (val == 'studio') onOpenStudio();
+                  if (val == 'preview') onOpenPreview();
+                  if (val == 'pdf') onExportPdf();
+                  if (val == 'duplicate') onDuplicate();
+                  if (val == 'delete') onDelete();
+                },
+                itemBuilder: (ctx) => [
+                  const PopupMenuItem(
+                    value: 'studio',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_note_rounded, size: 16, color: AppTheme.accentIndigo),
+                        SizedBox(width: 8),
+                        Text('Modifier (Studio)', style: TextStyle(color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'preview',
+                    child: Row(
+                      children: [
+                        Icon(Icons.preview_rounded, size: 16, color: AppTheme.accentCyan),
+                        SizedBox(width: 8),
+                        Text('Aperçu Élève', style: TextStyle(color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'pdf',
+                    child: Row(
+                      children: [
+                        Icon(Icons.picture_as_pdf_rounded, size: 16, color: AppTheme.accentRose),
+                        SizedBox(width: 8),
+                        Text('Exporter PDF', style: TextStyle(color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'duplicate',
+                    child: Row(
+                      children: [
+                        Icon(Icons.copy_rounded, size: 16, color: AppTheme.accentEmerald),
+                        SizedBox(width: 8),
+                        Text('Dupliquer', style: TextStyle(color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.archive_rounded, size: 16, color: AppTheme.accentAmber),
+                        SizedBox(width: 8),
+                        Text('Archiver', style: TextStyle(color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormatIcon(ExerciseFormat format) {
+    IconData icon;
+    Color color;
+
+    switch (format) {
+      case ExerciseFormat.qcm:
+        icon = Icons.check_box_outlined;
+        color = AppTheme.accentCyan;
+        break;
+      case ExerciseFormat.reponseCourte:
+        icon = Icons.short_text_rounded;
+        color = AppTheme.accentEmerald;
+        break;
+      case ExerciseFormat.redaction:
+        icon = Icons.article_outlined;
+        color = AppTheme.accentIndigo;
+        break;
+      case ExerciseFormat.manuscritScan:
+        icon = Icons.document_scanner_rounded;
+        color = AppTheme.accentAmber;
+        break;
+      case ExerciseFormat.flashcard:
+        icon = Icons.style_rounded;
+        color = AppTheme.accentRose;
+        break;
+    }
+
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Center(
+        child: Icon(icon, size: 18, color: color),
+      ),
+    );
+  }
+
+  Widget _buildBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.inter(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
     );
   }
 }

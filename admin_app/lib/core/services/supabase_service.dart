@@ -2477,7 +2477,7 @@ class SupabaseService {
         'raw_notes': rawNotes,
         'prompt_directives': promptDirectives,
         'mode': mode,
-        if (existingBlocks != null) 'existing_blocks': existingBlocks,
+        'existing_blocks': ?existingBlocks,
       },
     );
     if (res.status != 200) {
@@ -2935,6 +2935,27 @@ class SupabaseService {
     return Exercise.fromJson(Map<String, dynamic>.from(rows.first));
   }
 
+  Future<Exercise?> duplicateExercise(String exerciseId, String adminId) async {
+    final ex = await getExercise(exerciseId);
+    if (ex == null) return null;
+    return createExercise(
+      lessonId: ex.lessonId,
+      chapterId: ex.chapterId,
+      classNodeId: ex.classNodeId,
+      termId: ex.termId,
+      type: ex.type,
+      difficulty: ex.difficulty,
+      format: ex.format,
+      title: '${ex.title} (Copie)',
+      instructionsJson: Map<String, dynamic>.from(ex.instructionsJson),
+      solutionJson: Map<String, dynamic>.from(ex.solutionJson),
+      minSubscriptionTier: ex.minSubscriptionTier,
+      skills: List<String>.from(ex.skills),
+      prerequisites: List<String>.from(ex.prerequisites),
+      provenance: 'manual',
+    );
+  }
+
   Future<List<ExerciseVersion>> fetchExerciseVersions(String exerciseId) async {
     final rows = await client
         .from('exercise_versions')
@@ -2959,6 +2980,8 @@ class SupabaseService {
     Map<String, dynamic>? solutionJson,
     String? minSubscriptionTier,
     bool? isActive,
+    bool updateLessonId = false,
+    String? lessonId,
     bool updateChapterId = false,
     String? chapterId,
     bool updateClassNodeId = false,
@@ -2999,6 +3022,7 @@ class SupabaseService {
       data['min_subscription_tier'] = minSubscriptionTier;
     }
     if (isActive != null) data['is_active'] = isActive;
+    if (updateLessonId) data['lesson_id'] = lessonId;
     if (updateChapterId) data['chapter_id'] = chapterId;
     if (updateClassNodeId) data['class_node_id'] = classNodeId;
     if (updateTermId) data['term_id'] = termId;
@@ -3042,7 +3066,7 @@ class SupabaseService {
         'count': count,
         'raw_notes': rawNotes,
         'prompt_directives': promptDirectives,
-        if (existingExercises != null) 'existing_exercises': existingExercises,
+        'existing_exercises': ?existingExercises,
       },
     );
     if (res.status != 200) {

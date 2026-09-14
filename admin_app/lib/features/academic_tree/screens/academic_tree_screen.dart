@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
@@ -9,6 +10,15 @@ import '../../../core/services/supabase_service.dart';
 import '../../../core/providers/data_providers.dart';
 import '../../../core/widgets/app_dialog_title.dart';
 
+/// Écran de gestion de l'Arbre Académique — Refonte ergonomique pleine largeur par exploration
+/// de niveaux (Level-by-Level Exploration).
+///
+/// L'ancien système à double colonne (arbre étroit à gauche + détails écrasés à droite) est
+/// complètement remplacé : chaque niveau (Pays, Section, Enseignement, Classe, Série) s'affiche
+/// désormais dans une vue dédiée spacieuse occupant 100% de la largeur et de la hauteur utiles.
+/// La navigation s'effectue par fil d'Ariane interactif et bouton retour, avec conservation de
+/// l'ensemble des opérations métiers (création, édition, duplication, archivage, réactivation,
+/// suppression définitive, fusion et jumelage).
 class AcademicTreeScreen extends ConsumerStatefulWidget {
   const AcademicTreeScreen({super.key});
 
@@ -16,17 +26,50 @@ class AcademicTreeScreen extends ConsumerStatefulWidget {
   ConsumerState<AcademicTreeScreen> createState() => _AcademicTreeScreenState();
 }
 
-class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
-  String? _selectedNodeId;
-  AcademicNode? _selectedNode;
+class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen>
+    with WidgetsBindingObserver {
+  /// Pile ordonnée des identifiants de nœuds représentant le chemin actuellement affiché.
+  /// Liste vide = niveau racine (accueil des Pays).
+  List<String> _pathNodeIds = [];
+
+  /// Historique des chemins précédents (pile de retour en arrière).
+  final List<List<String>> _historyPast = [];
+
+  /// Historique des chemins suivants (pile d'avance vers l'avant après un retour).
+  final List<List<String>> _historyFuture = [];
+
+  bool get _canGoBack => _historyPast.isNotEmpty || _pathNodeIds.isNotEmpty;
+  bool get _canGoForward => _historyFuture.isNotEmpty;
+
   bool _showInactive = false;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
+  /// Filtre local à l'intérieur de la liste des enfants d'un nœud.
+  String _childSearchQuery = '';
+  final TextEditingController _childSearchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
+    _childSearchController.dispose();
     super.dispose();
+  }
+
+  @override
+  Future<bool> didPopRoute() async {
+    if (_canGoBack) {
+      _goBack();
+      return true;
+    }
+    return false;
   }
 
   String _currentAdminId() {
@@ -34,9 +77,7 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
         '00000000-0000-0000-0000-000000000001';
   }
 
-  /// Reconstruit la carte id → nœud à partir de l'arbre chargé, pour retrouver un nœud
-  /// sélectionné après un rafraîchissement (le stream Supabase reconstruit toute la liste)
-  /// et pour calculer des chemins hiérarchiques complets (fusion de classes).
+  /// Reconstruit la carte id → nœud à partir de l'arbre chargé.
   Map<String, AcademicNode> _flattenById(List<AcademicNode> roots) {
     final map = <String, AcademicNode>{};
     void walk(AcademicNode n) {
@@ -52,6 +93,23 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
     return map;
   }
 
+  /// Liste des ancêtres d'un nœud dans l'ordre racine -> parent.
+  List<AcademicNode> _getAncestors(
+    String nodeId,
+    Map<String, AcademicNode> byId,
+  ) {
+    final ancestors = <AcademicNode>[];
+    var current = byId[nodeId];
+    while (current != null &&
+        current.parentId != null &&
+        byId.containsKey(current.parentId)) {
+      final parent = byId[current.parentId]!;
+      ancestors.insert(0, parent);
+      current = parent;
+    }
+    return ancestors;
+  }
+
   String _nodePath(AcademicNode node, Map<String, AcademicNode> byId) {
     final parts = <String>[node.name];
     var current = node;
@@ -62,844 +120,3099 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
     return parts.reversed.join(' › ');
   }
 
-  bool _matchesSearch(AcademicNode node, String query) {
-    if (query.isEmpty) return true;
+  int _countDescendants(AcademicNode node) {
+    var count = 0;
+    for (final child in node.children) {
+      count += 1 + _countDescendants(child);
+    }
+    return count;
+  }
+
+  /// Récupère le nombre d'élèves pour un nœud de manière sécurisée (sans crash si le service est indisponible).
+  Future<int> _countProfiles(String nodeId) async {
+    try {
+      final service = ref.read(supabaseServiceProvider);
+      return await service.countProfilesForNode(nodeId);
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// Recherche récursive sur tous les nœuds de l'arbre pour les résultats de recherche globale.
+  List<AcademicNode> _searchAllNodes(
+    List<AcademicNode> roots,
+    String query,
+  ) {
+    final results = <AcademicNode>[];
+    if (query.isEmpty) return results;
     final q = query.toLowerCase();
-    if (node.name.toLowerCase().contains(q)) return true;
-    if (node.code != null && node.code!.toLowerCase().contains(q)) return true;
-    return node.children.any((c) => _matchesSearch(c, query));
+
+    void walk(AcademicNode n) {
+      final matchesName = n.name.toLowerCase().contains(q);
+      final matchesCode = n.code != null && n.code!.toLowerCase().contains(q);
+      if (matchesName || matchesCode) {
+        results.add(n);
+      }
+      for (final c in n.children) {
+        walk(c);
+      }
+    }
+
+    for (final r in roots) {
+      walk(r);
+    }
+    return results;
+  }
+
+  bool _pathEquals(List<String> a, List<String> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  /// Nettoie la pile de chemin si certains nœuds n'existent plus suite à une suppression ou
+  /// un rechargement sans archived.
+  void _sanitizePath(Map<String, AcademicNode> byId) {
+    final validPath = <String>[];
+    for (final id in _pathNodeIds) {
+      if (byId.containsKey(id)) {
+        validPath.add(id);
+      } else {
+        break;
+      }
+    }
+    if (validPath.length != _pathNodeIds.length) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _pathNodeIds = validPath;
+            _historyPast.removeWhere((p) => p.any((id) => !byId.containsKey(id)));
+            _historyFuture.removeWhere((p) => p.any((id) => !byId.containsKey(id)));
+          });
+        }
+      });
+    }
+  }
+
+  /// Navigue vers un nouveau chemin en enregistrant l'état dans l'historique de retour.
+  void _navigateToPath(List<String> newPath, {bool clearFuture = true}) {
+    if (_pathEquals(_pathNodeIds, newPath)) return;
+    setState(() {
+      _historyPast.add(List<String>.from(_pathNodeIds));
+      _pathNodeIds = List<String>.from(newPath);
+      if (clearFuture) {
+        _historyFuture.clear();
+      }
+      _searchController.clear();
+      _searchQuery = '';
+      _childSearchController.clear();
+      _childSearchQuery = '';
+    });
+  }
+
+  /// Recule d'un écran dans l'historique de navigation ("Retour en arrière").
+  void _goBack() {
+    if (_historyPast.isNotEmpty) {
+      setState(() {
+        _historyFuture.add(List<String>.from(_pathNodeIds));
+        _pathNodeIds = _historyPast.removeLast();
+        _searchController.clear();
+        _searchQuery = '';
+        _childSearchController.clear();
+        _childSearchQuery = '';
+      });
+    } else if (_pathNodeIds.isNotEmpty) {
+      setState(() {
+        _historyFuture.add(List<String>.from(_pathNodeIds));
+        _pathNodeIds = _pathNodeIds.sublist(0, _pathNodeIds.length - 1);
+        _searchController.clear();
+        _searchQuery = '';
+        _childSearchController.clear();
+        _childSearchQuery = '';
+      });
+    }
+  }
+
+  /// Avance d'un écran dans l'historique après avoir reculé ("Aller en avant").
+  void _goForward() {
+    if (_historyFuture.isNotEmpty) {
+      setState(() {
+        _historyPast.add(List<String>.from(_pathNodeIds));
+        _pathNodeIds = _historyFuture.removeLast();
+        _searchController.clear();
+        _searchQuery = '';
+        _childSearchController.clear();
+        _childSearchQuery = '';
+      });
+    }
+  }
+
+  /// Revient directement à l'accueil / racine de l'arbre académique (les Pays).
+  void _goToRoot() {
+    if (_pathNodeIds.isNotEmpty) {
+      _navigateToPath(const []);
+    }
+  }
+
+  /// Revient au niveau parent direct.
+  void _navigateUp() {
+    if (_pathNodeIds.isNotEmpty) {
+      final parentPath = _pathNodeIds.sublist(0, _pathNodeIds.length - 1);
+      if (_historyPast.isNotEmpty && _pathEquals(_historyPast.last, parentPath)) {
+        _goBack();
+      } else {
+        _navigateToPath(parentPath);
+      }
+    }
+  }
+
+  /// Revient à un niveau précis du fil d'Ariane.
+  void _navigateToIndex(int index) {
+    if (index < 0) {
+      _goToRoot();
+    } else if (index < _pathNodeIds.length - 1) {
+      _navigateToPath(_pathNodeIds.sublist(0, index + 1));
+    }
+  }
+
+  /// Ouvre directement un nœud en reconstituant tout son fil d'Ariane.
+  void _jumpToNode(AcademicNode target, Map<String, AcademicNode> byId) {
+    final ancestors = _getAncestors(target.id, byId);
+    final newPath = ancestors.map((a) => a.id).toList()..add(target.id);
+    _navigateToPath(newPath);
+  }
+
+  /// Pénètre dans un nœud enfant (navigation vers le niveau inférieur).
+  void _enterNode(AcademicNode child) {
+    _navigateToPath([..._pathNodeIds, child.id]);
   }
 
   @override
   Widget build(BuildContext context) {
     final treeAsync = ref.watch(academicTreeStreamProvider(_showInactive));
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Column plutôt que Row : un Wrap placé comme simple frère d'un Expanded dans un Row ne
-          // rétrécit jamais (il calcule sa largeur "tout sur une ligne" en space illimité avant que
-          // le Row ne distribue quoi que ce soit) — avec 3 boutons ici, ça affamait complètement le
-          // titre jusqu'à l'écraser à une lettre par ligne sur mobile (retour utilisateur réel très
-          // insistant, 2026-08-30 : "son responsive est tel nul"). Titre/sous-titre toujours en haut
-          // sur toute la largeur, boutons dans leur propre Wrap en dessous, chacun avec sa pleine
-          // largeur disponible — plus jamais de compétition pour l'espace entre les deux.
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Gestion de l\'Arbre Académique',
-                style: GoogleFonts.outfit(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Structure générique à profondeur variable (Pays → Section → Enseignement → Classe → Série)',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: AppTheme.textMuted,
-                ),
-              ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () => _showAddNodeModal(
-                      context,
-                      parentNode: null,
-                      nodeTypeOptions: const [NodeType.country],
-                    ),
-                    icon: const Icon(Icons.add_rounded, size: 18),
-                    label: const Text('Ajouter un Pays'),
-                  ),
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: AppTheme.primaryBorder),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: treeAsync.valueOrNull == null
-                        ? null
-                        : () => _showMergeClassesModal(
-                            context,
-                            treeAsync.valueOrNull!,
-                          ),
-                    icon: const Icon(
-                      Icons.call_merge_rounded,
-                      size: 18,
-                      color: AppTheme.accentIndigo,
-                    ),
-                    label: Text(
-                      'Fusionner des Classes',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: AppTheme.primaryBorder),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: treeAsync.valueOrNull == null
-                        ? null
-                        : () => _showTwinGroupsModal(
-                            context,
-                            treeAsync.valueOrNull!,
-                          ),
-                    icon: const Icon(
-                      Icons.link_rounded,
-                      size: 18,
-                      color: AppTheme.accentCyan,
-                    ),
-                    label: Text(
-                      'Jumeler des Classes',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true): () {
+          if (_canGoBack) _goBack();
+        },
+        const SingleActivator(LogicalKeyboardKey.arrowRight, alt: true): () {
+          if (_canGoForward) _goForward();
+        },
+      },
+      child: Focus(
+        autofocus: true,
+        child: PopScope(
+          canPop: !_canGoBack,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop && _canGoBack) {
+              _goBack();
+            }
+          },
+          child: treeAsync.when(
+            data: (tree) {
+              final byId = _flattenById(tree);
+              _sanitizePath(byId);
 
-          // Barre de recherche + filtre d'archivés
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primarySurface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.primaryBorder),
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (v) => setState(() => _searchQuery = v.trim()),
-                    style: GoogleFonts.inter(color: Colors.white, fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Rechercher un nœud par nom ou code...',
-                      hintStyle: GoogleFonts.inter(color: AppTheme.textMuted),
-                      prefixIcon: const Icon(
-                        Icons.search_rounded,
-                        color: AppTheme.textMuted,
-                        size: 20,
-                      ),
-                      suffixIcon: _searchQuery.isEmpty
-                          ? null
-                          : IconButton(
-                              icon: const Icon(
-                                Icons.close_rounded,
-                                size: 18,
-                                color: AppTheme.textMuted,
-                              ),
-                              onPressed: () => setState(() {
-                                _searchController.clear();
-                                _searchQuery = '';
-                              }),
-                            ),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Row(
-                children: [
-                  Switch(
-                    value: _showInactive,
-                    activeThumbColor: AppTheme.accentAmber,
-                    onChanged: (v) => setState(() => _showInactive = v),
-                  ),
-                  Text(
-                    'Afficher les nœuds archivés',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: AppTheme.textMuted,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
+              // Si la pile n'est pas vide et que le nœud terminal existe dans byId, on affiche
+              // la vue pleine page dédiée à ce nœud.
+              if (_pathNodeIds.isNotEmpty && byId.containsKey(_pathNodeIds.last)) {
+                final currentNode = byId[_pathNodeIds.last]!;
+                final breadcrumbNodes = _pathNodeIds
+                    .map((id) => byId[id])
+                    .whereType<AcademicNode>()
+                    .toList();
 
-          // Expanded(flex:3)/Expanded(flex:2) fonctionnent aussi bien dans un Column que dans un
-          // Row (les deux sont des Flex) — sous 900px, on passe donc en pile verticale plutôt
-          // qu'en 2 colonnes écrasées à ~40% de large chacune (retour utilisateur réel, arbre et
-          // fiche détail illisibles sur mobile, 2026-08-30), sans dupliquer le contenu.
-          // Sous 900px, l'arbre et le panneau détail n'étaient plus deux colonnes côte à côte
-          // mais deux CARTES bordées empilées — visuellement une boîte dans une boîte, sans
-          // raison de l'être puisqu'elles sont déjà seules sur un écran borné (retour
-          // utilisateur réel très explicite, 2026-09-01 : "trop de box et d'élément dans un
-          // même interface" — même principe que WhatsApp mobile vs desktop : pas la même
-          // structure repliée, une structure différente). Sur mobile : plus de Container
-          // bordé du tout, juste un intitulé de section + un Divider, tout dans UNE seule
-          // liste qui défile — jamais de scroll imbriqué. Le layout desktop (deux panneaux
-          // encadrés côte à côte) reste inchangé, la séparation visuelle s'y justifie.
-          Expanded(
-            child: Builder(
-              builder: (context) {
-                final isMobile = MediaQuery.of(context).size.width < 900;
-
-                return treeAsync.when(
-                  data: (tree) {
-                    final byId = _flattenById(tree);
-                    // Resynchronise la fiche sélectionnée avec les données fraîches du stream
-                    // (ex: après un renommage) sans perdre la sélection.
-                    if (_selectedNodeId != null &&
-                        byId.containsKey(_selectedNodeId)) {
-                      _selectedNode = byId[_selectedNodeId];
-                    } else if (_selectedNodeId != null) {
-                      _selectedNodeId = null;
-                      _selectedNode = null;
-                    }
-
-                    final visibleRoots = tree
-                        .where((n) => _matchesSearch(n, _searchQuery))
-                        .toList();
-
-                    final treeHeader = Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Arborescence Académique',
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                            style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${byId.length} nœud(s)',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            color: AppTheme.textMuted,
-                          ),
-                        ),
-                      ],
-                    );
-                    final typeLegend = Wrap(
-                      spacing: 14,
-                      runSpacing: 6,
-                      children: NodeType.values
-                          .map(
-                            (t) => Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: nodeTypeColors[t] ?? AppTheme.textMuted,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  nodeTypeLabels[t] ?? t.name,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    color: AppTheme.textMuted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                          .toList(),
-                    );
-                    final treeEmptyMessage = tree.isEmpty
-                        ? 'Aucun pays configuré. Cliquez sur "Ajouter un Pays" pour commencer.'
-                        : visibleRoots.isEmpty
-                        ? 'Aucun résultat pour "$_searchQuery".'
-                        : null;
-                    final treeNodeWidgets = visibleRoots
-                        .map((node) => _buildTreeNodeWidget(node, level: 0))
-                        .toList();
-
-                    final detailWhenEmpty = isMobile
-                        // Mobile : un indice tenant sur une ligne, pas un grand encadré vide
-                        // qui occupe la moitié de l'écran pour ne rien dire.
-                        ? Row(
-                            children: [
-                              const Icon(
-                                Icons.touch_app_rounded,
-                                size: 18,
-                                color: AppTheme.textMuted,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  'Touchez un nœud ci-dessus pour voir ses détails.',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: AppTheme.textMuted,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        : Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.touch_app_rounded,
-                                  size: 48,
-                                  color: AppTheme.textMuted,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Sélectionnez un nœud dans l\'arbre pour afficher ses détails et effectuer des opérations (Créer enfant, Modifier, Dupliquer, Supprimer).',
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    color: AppTheme.textMuted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                    final detailContent = _selectedNode == null
-                        ? detailWhenEmpty
-                        : _buildNodeDetailsInspector(_selectedNode!, tree);
-
-                    if (isMobile) {
-                      return ListView(
-                        children: [
-                          treeHeader,
-                          const SizedBox(height: 10),
-                          typeLegend,
-                          const SizedBox(height: 12),
-                          const Divider(),
-                          const SizedBox(height: 4),
-                          if (treeEmptyMessage != null)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              child: Text(
-                                treeEmptyMessage,
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: AppTheme.textMuted,
-                                ),
-                              ),
-                            )
-                          else
-                            ...treeNodeWidgets,
-                          const SizedBox(height: 12),
-                          const Divider(),
-                          const SizedBox(height: 12),
-                          Text(
-                            _selectedNode == null
-                                ? 'DÉTAILS'
-                                : _selectedNode!.name.toUpperCase(),
-                            style: GoogleFonts.outfit(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.6,
-                              color: AppTheme.textMuted,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          detailContent,
-                        ],
-                      );
-                    }
-
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primarySurface,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: AppTheme.primaryBorder),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                treeHeader,
-                                const SizedBox(height: 10),
-                                typeLegend,
-                                const SizedBox(height: 12),
-                                const Divider(),
-                                Expanded(
-                                  child: treeEmptyMessage != null
-                                      ? Center(
-                                          child: Text(
-                                            treeEmptyMessage,
-                                            style: GoogleFonts.inter(
-                                              fontSize: 13,
-                                              color: AppTheme.textMuted,
-                                            ),
-                                          ),
-                                        )
-                                      : ListView(children: treeNodeWidgets),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 24),
-                        Expanded(
-                          flex: 2,
-                          child: Container(
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primarySurface,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: AppTheme.primaryBorder),
-                            ),
-                            child: detailContent,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (err, _) => Center(
-                    child: Text(
-                      'Erreur: $err',
-                      style: GoogleFonts.inter(color: AppTheme.accentRose),
-                    ),
-                  ),
+                return _buildDedicatedNodeView(
+                  context,
+                  currentNode: currentNode,
+                  breadcrumbNodes: breadcrumbNodes,
+                  tree: tree,
+                  byId: byId,
                 );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+              }
 
-  Widget _buildTreeNodeWidget(AcademicNode node, {required int level}) {
-    final isSelected = _selectedNodeId == node.id;
-    final typeColor = nodeTypeColors[node.nodeType] ?? AppTheme.textMuted;
-    final effectiveColor = !node.isActive ? Colors.white24 : typeColor;
-
-    return Container(
-      margin: EdgeInsets.only(left: level * 22.0, top: 3, bottom: 3),
-      decoration: BoxDecoration(
-        color: isSelected
-            ? AppTheme.accentBlue.withValues(alpha: 0.14)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
-        border: Border(
-          left: BorderSide(
-            color: isSelected
-                ? AppTheme.accentBlue
-                : (level > 0 ? AppTheme.primaryBorder : Colors.transparent),
-            width: isSelected ? 3 : 2,
-          ),
-        ),
-      ),
-      // Material transparent entre le Container coloré (sélection) et l'ExpansionTile (qui rend un
-      // ListTile en interne) : sans lui, le ListTile peint son fond/ink splash sur ce Material,
-      // mais le Container au-dessus a lui aussi une couleur — Flutter considère alors que ce fond
-      // serait invisible et lève une assertion. Même correctif que la barre latérale.
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
-        clipBehavior: Clip.antiAlias,
-        child: Theme(
-          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-          child: ExpansionTile(
-            key: Key(node.id),
-            initiallyExpanded: true,
-            shape: const Border(),
-            collapsedShape: const Border(),
-            tilePadding: const EdgeInsets.only(left: 10, right: 8),
-            iconColor: AppTheme.textMuted,
-            collapsedIconColor: AppTheme.textMuted,
-            onExpansionChanged: (_) => setState(() {
-              _selectedNodeId = node.id;
-              _selectedNode = node;
-            }),
-            leading: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: effectiveColor.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: Icon(
-                nodeTypeIcons[node.nodeType] ?? Icons.folder_rounded,
-                color: effectiveColor,
-                size: 17,
-              ),
-            ),
-            title: InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: () => setState(() {
-                _selectedNodeId = node.id;
-                _selectedNode = node;
-              }),
+              // Sinon, on affiche la vue Racine (Accueil de l'arbre académique avec les Pays).
+              return _buildRootView(context, tree: tree, byId: byId);
+            },
+            loading: () => const Center(
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        node.name,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.outfit(
-                          fontSize: 14,
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.w500,
-                          color: node.isActive ? Colors.white : Colors.white38,
-                          decoration: node.isActive
-                              ? null
-                              : TextDecoration.lineThrough,
-                          decorationColor: Colors.white38,
-                        ),
-                      ),
-                    ),
-                    if (node.verificationStatus != 'ok') ...[
-                      const SizedBox(width: 6),
-                      Tooltip(
-                        message: node.verificationStatus == 'incomplete'
-                            ? 'Structure incomplète — à compléter'
-                            : 'Élément importé ambigu — à vérifier avant publication',
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppTheme.accentAmber.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text('À VÉRIFIER',
-                              style: GoogleFonts.inter(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.accentAmber)),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: effectiveColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        nodeTypeLabels[node.nodeType] ?? node.nodeType.name,
-                        style: GoogleFonts.inter(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                          color: effectiveColor,
-                        ),
-                      ),
-                    ),
-                    if (node.code != null) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryDark,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: AppTheme.primaryBorder),
-                        ),
-                        child: Text(
-                          node.code!,
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            color: AppTheme.textMuted,
-                          ),
-                        ),
-                      ),
-                    ],
-                    if (!node.isActive) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.accentAmber.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          'ARCHIVÉ',
-                          style: GoogleFonts.inter(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.accentAmber,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+                padding: EdgeInsets.all(40),
+                child: CircularProgressIndicator(),
               ),
             ),
-            trailing: node.children.isNotEmpty ? null : const SizedBox.shrink(),
-            children: node.children
-                .map((child) => _buildTreeNodeWidget(child, level: level + 1))
-                .toList(),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNodeDetailsInspector(
-    AcademicNode node,
-    List<AcademicNode> tree,
-  ) {
-    final service = ref.read(supabaseServiceProvider);
-    final childTypes =
-        childNodeTypeOptions[node.nodeType] ?? const <NodeType>[];
-    final siblings =
-        _findSiblingsGroup(tree, node.id) ?? const <AcademicNode>[];
-    final indexInSiblings = siblings.indexWhere((n) => n.id == node.id);
-    final canMoveUp = indexInSiblings > 0;
-    final canMoveDown =
-        indexInSiblings >= 0 && indexInSiblings < siblings.length - 1;
-
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: (nodeTypeColors[node.nodeType] ?? Colors.white)
-                    .withValues(alpha: 0.2),
-                child: Icon(
-                  nodeTypeIcons[node.nodeType] ?? Icons.folder_rounded,
-                  color: nodeTypeColors[node.nodeType] ?? Colors.white,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
+            error: (err, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    const Icon(
+                      Icons.error_outline_rounded,
+                      size: 48,
+                      color: AppTheme.accentRose,
+                    ),
+                    const SizedBox(height: 16),
                     Text(
-                      node.name,
+                      'Erreur de chargement de l\'arbre académique',
                       style: GoogleFonts.outfit(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
+                    const SizedBox(height: 8),
                     Text(
-                      'Type: ${nodeTypeLabels[node.nodeType] ?? node.nodeType.toString().split('.').last} • Code: ${node.code ?? "N/A"}',
+                      '$err',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        color: AppTheme.accentRose,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      onPressed: () => ref.invalidate(academicTreeStreamProvider),
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Réessayer'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // VUE RACINE : ACCUEIL ARBRE ACADÉMIQUE (LES PAYS)
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  Widget _buildRootView(
+    BuildContext context, {
+    required List<AcademicNode> tree,
+    required Map<String, AcademicNode> byId,
+  }) {
+    final searchResults = _searchQuery.isNotEmpty
+        ? _searchAllNodes(tree, _searchQuery)
+        : <AcademicNode>[];
+
+    final totalNodesCount = byId.length;
+    final totalCountries = tree.length;
+    final archivedCount = byId.values.where((n) => !n.isActive).length;
+    final toVerifyCount =
+        byId.values.where((n) => n.verificationStatus != 'ok').length;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Barre de navigation d'historique unifiée (Précédent / Suivant / Racine)
+          _buildNavigationToolbar(breadcrumbNodes: const []),
+          const SizedBox(height: 20),
+
+          // En-tête principal avec titre et actions globales
+          _buildRootHeader(context, tree: tree),
+          const SizedBox(height: 24),
+
+          // Barre de métriques et KPI globaux
+          _buildGlobalKpiRow(
+            totalNodes: totalNodesCount,
+            totalCountries: totalCountries,
+            archivedCount: archivedCount,
+            toVerifyCount: toVerifyCount,
+          ),
+          const SizedBox(height: 24),
+
+          // Barre de recherche globale et filtre archivés
+          _buildGlobalSearchFilterBar(),
+          const SizedBox(height: 24),
+
+          // Contenu principal : Résultats de recherche OU Grille des Pays
+          if (_searchQuery.isNotEmpty)
+            _buildGlobalSearchResultsSection(searchResults, byId)
+          else
+            _buildCountriesGridSection(tree, byId),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRootHeader(
+    BuildContext context, {
+    required List<AcademicNode> tree,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 1050;
+
+        final titleBlock = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentEmerald.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.accentEmerald.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.account_tree_rounded,
+                    color: AppTheme.accentEmerald,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Arbre Académique & Systèmes Éducatifs',
+                        style: GoogleFonts.outfit(
+                          fontSize: isCompact ? 22 : 26,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Structure hiérarchique à profondeur variable (Pays → Section → Enseignement → Classe → Série)',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+
+        final actionButtons = Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          alignment: isCompact ? WrapAlignment.start : WrapAlignment.end,
+          children: [
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentEmerald,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () => _showAddNodeModal(
+                context,
+                parentNode: null,
+                nodeTypeOptions: const [NodeType.country],
+              ),
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: Text(
+                'Ajouter un Pays',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+              ),
+            ),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                side: const BorderSide(color: AppTheme.primaryBorder),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: tree.isEmpty
+                  ? null
+                  : () => _showMergeClassesModal(context, tree),
+              icon: const Icon(
+                Icons.call_merge_rounded,
+                size: 18,
+                color: AppTheme.accentIndigo,
+              ),
+              label: Text(
+                'Fusionner des Classes',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+              ),
+            ),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                side: const BorderSide(color: AppTheme.primaryBorder),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: tree.isEmpty
+                  ? null
+                  : () => _showTwinGroupsModal(context, tree),
+              icon: const Icon(
+                Icons.link_rounded,
+                size: 18,
+                color: AppTheme.accentCyan,
+              ),
+              label: Text(
+                'Jumeler des Classes',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        );
+
+        if (isCompact) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              titleBlock,
+              const SizedBox(height: 16),
+              actionButtons,
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(child: titleBlock),
+            const SizedBox(width: 24),
+            actionButtons,
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildGlobalKpiRow({
+    required int totalNodes,
+    required int totalCountries,
+    required int archivedCount,
+    required int toVerifyCount,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double cardWidth;
+        if (constraints.maxWidth < 420) {
+          cardWidth = constraints.maxWidth;
+        } else if (constraints.maxWidth < 680) {
+          cardWidth = (constraints.maxWidth - 12) / 2;
+        } else {
+          cardWidth = (constraints.maxWidth - 36) / 4;
+        }
+
+        final items = [
+          _buildKpiCard(
+            label: 'Nœuds au Total',
+            value: '$totalNodes',
+            icon: Icons.account_tree_outlined,
+            color: AppTheme.accentBlue,
+            width: cardWidth,
+          ),
+          _buildKpiCard(
+            label: 'Pays Actifs / Déclarés',
+            value: '$totalCountries',
+            icon: Icons.public_rounded,
+            color: AppTheme.accentEmerald,
+            width: cardWidth,
+          ),
+          _buildKpiCard(
+            label: 'Nœuds Archivés',
+            value: '$archivedCount',
+            icon: Icons.inventory_2_outlined,
+            color: AppTheme.accentAmber,
+            width: cardWidth,
+          ),
+          _buildKpiCard(
+            label: 'À Vérifier (Import)',
+            value: '$toVerifyCount',
+            icon: Icons.warning_amber_rounded,
+            color: toVerifyCount > 0 ? AppTheme.accentRose : AppTheme.textMuted,
+            width: cardWidth,
+          ),
+        ];
+
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: items,
+        );
+      },
+    );
+  }
+
+  Widget _buildKpiCard({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+    required double width,
+  }) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      decoration: BoxDecoration(
+        color: AppTheme.primarySurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.primaryBorder),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  style: GoogleFonts.outfit(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: AppTheme.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlobalSearchFilterBar() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 720;
+
+        final searchField = Container(
+          decoration: BoxDecoration(
+            color: AppTheme.primarySurface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.primaryBorder),
+          ),
+          child: TextField(
+            controller: _searchController,
+            onChanged: (v) => setState(() => _searchQuery = v.trim()),
+            style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+            decoration: InputDecoration(
+              hintText:
+                  'Rechercher n\'importe quel nœud (pays, section, classe, série)...',
+              hintStyle: GoogleFonts.inter(
+                color: AppTheme.textMuted,
+                fontSize: 13,
+              ),
+              prefixIcon: const Icon(
+                Icons.search_rounded,
+                color: AppTheme.textMuted,
+                size: 20,
+              ),
+              suffixIcon: _searchQuery.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                        color: AppTheme.textMuted,
+                      ),
+                      onPressed: () => setState(() {
+                        _searchController.clear();
+                        _searchQuery = '';
+                      }),
+                    ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 14,
+                horizontal: 16,
+              ),
+            ),
+          ),
+        );
+
+        final archiveSwitch = Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppTheme.primarySurface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.primaryBorder),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Switch(
+                value: _showInactive,
+                activeThumbColor: AppTheme.accentAmber,
+                onChanged: (v) => setState(() => _showInactive = v),
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  'Afficher les archivés',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white70,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+
+        if (isCompact) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              searchField,
+              const SizedBox(height: 12),
+              Align(alignment: Alignment.centerLeft, child: archiveSwitch),
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: searchField),
+            const SizedBox(width: 16),
+            archiveSwitch,
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildGlobalSearchResultsSection(
+    List<AcademicNode> results,
+    Map<String, AcademicNode> byId,
+  ) {
+    if (results.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+        decoration: BoxDecoration(
+          color: AppTheme.primarySurface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.primaryBorder),
+        ),
+        child: Column(
+          children: [
+            const Icon(
+              Icons.search_off_rounded,
+              size: 48,
+              color: AppTheme.textMuted,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Aucun nœud ne correspond à "$_searchQuery"',
+              style: GoogleFonts.outfit(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Essayez un autre mot-clé ou vérifiez que l\'élément n\'est pas archivé.',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: AppTheme.textMuted,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Résultats de la recherche',
+              style: GoogleFonts.outfit(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppTheme.accentBlue.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${results.length}',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.accentBlue,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: results.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (context, index) {
+            final node = results[index];
+            final fullPath = _nodePath(node, byId);
+            final typeColor =
+                nodeTypeColors[node.nodeType] ?? AppTheme.accentBlue;
+
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => _jumpToNode(node, byId),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primarySurface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.primaryBorder),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: typeColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          nodeTypeIcons[node.nodeType] ?? Icons.folder_rounded,
+                          color: typeColor,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    node.name,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: typeColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    nodeTypeLabels[node.nodeType] ??
+                                        node.nodeType.name,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: typeColor,
+                                    ),
+                                  ),
+                                ),
+                                if (!node.isActive) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.accentAmber
+                                          .withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      'ARCHIVÉ',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.accentAmber,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              fullPath,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: AppTheme.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(color: AppTheme.primaryBorder),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: () => _jumpToNode(node, byId),
+                        icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                        label: const Text('Ouvrir'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCountriesGridSection(
+    List<AcademicNode> countries,
+    Map<String, AcademicNode> byId,
+  ) {
+    if (countries.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+        decoration: BoxDecoration(
+          color: AppTheme.primarySurface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.primaryBorder),
+        ),
+        child: Column(
+          children: [
+            const Icon(
+              Icons.public_off_rounded,
+              size: 52,
+              color: AppTheme.textMuted,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Aucun pays configuré pour le moment',
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Commencez par ajouter le premier pays pour structurer vos programmes éducatifs.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: AppTheme.textMuted,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentEmerald,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 14,
+                ),
+              ),
+              onPressed: () => _showAddNodeModal(
+                context,
+                parentNode: null,
+                nodeTypeOptions: const [NodeType.country],
+              ),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Ajouter un Premier Pays'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Pays & Systèmes Nationaux',
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Sélectionnez un pays pour explorer ses sections, enseignements, classes et séries.',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '${countries.length} pays',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: AppTheme.textMuted,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final double cardWidth;
+            if (constraints.maxWidth >= 1050) {
+              cardWidth = (constraints.maxWidth - 36) / 3;
+            } else if (constraints.maxWidth >= 680) {
+              cardWidth = (constraints.maxWidth - 18) / 2;
+            } else {
+              cardWidth = constraints.maxWidth;
+            }
+
+            return Wrap(
+              spacing: 18,
+              runSpacing: 18,
+              children: countries
+                  .map(
+                    (country) => _buildCountryCard(
+                      country: country,
+                      width: cardWidth,
+                      byId: byId,
+                      allCountries: countries,
+                    ),
+                  )
+                  .toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCountryCard({
+    required AcademicNode country,
+    required double width,
+    required Map<String, AcademicNode> byId,
+    required List<AcademicNode> allCountries,
+  }) {
+    final totalDescendants = _countDescendants(country);
+    final directChildrenCount = country.children.length;
+
+    final indexInCountries = allCountries.indexWhere((c) => c.id == country.id);
+    final canMoveUp = indexInCountries > 0;
+    final canMoveDown =
+        indexInCountries >= 0 && indexInCountries < allCountries.length - 1;
+
+    return Container(
+      width: width,
+      decoration: BoxDecoration(
+        color: AppTheme.primarySurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: country.isActive
+              ? AppTheme.primaryBorder
+              : AppTheme.primaryBorder.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _enterNode(country),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Ligne du haut : Icône de pays, Nom, Badges et Menu contextuel
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentEmerald.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppTheme.accentEmerald.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.flag_rounded,
+                        color: AppTheme.accentEmerald,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            country.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.outfit(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              color: country.isActive
+                                  ? Colors.white
+                                  : Colors.white54,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              if (country.code != null) ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryDark,
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color: AppTheme.primaryBorder,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    country.code!,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.textMuted,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: country.isActive
+                                      ? AppTheme.accentEmerald
+                                          .withValues(alpha: 0.15)
+                                      : AppTheme.accentAmber
+                                          .withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  country.isActive ? 'ACTIF' : 'ARCHIVÉ',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: country.isActive
+                                        ? AppTheme.accentEmerald
+                                        : AppTheme.accentAmber,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      icon: const Icon(
+                        Icons.more_vert_rounded,
+                        color: AppTheme.textMuted,
+                        size: 20,
+                      ),
+                      color: AppTheme.primaryDark,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: const BorderSide(color: AppTheme.primaryBorder),
+                      ),
+                      onSelected: (action) {
+                        switch (action) {
+                          case 'edit':
+                            _showEditNodeModal(context, country);
+                            break;
+                          case 'duplicate':
+                            _duplicateNode(context, country);
+                            break;
+                          case 'up':
+                            if (canMoveUp) {
+                              _moveNode(allCountries, indexInCountries, -1);
+                            }
+                            break;
+                          case 'down':
+                            if (canMoveDown) {
+                              _moveNode(allCountries, indexInCountries, 1);
+                            }
+                            break;
+                          case 'archive':
+                            _showDeactivateConfirmation(
+                              context,
+                              country,
+                              ref.read(supabaseServiceProvider),
+                            );
+                            break;
+                          case 'unarchive':
+                            _showReactivateConfirmation(
+                              context,
+                              country,
+                              ref.read(supabaseServiceProvider),
+                            );
+                            break;
+                          case 'delete':
+                            _showPermanentDeleteConfirmation(
+                              context,
+                              country,
+                              ref.read(supabaseServiceProvider),
+                            );
+                            break;
+                        }
+                      },
+                      itemBuilder: (ctx) => [
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_rounded, size: 16),
+                              SizedBox(width: 10),
+                              Text('Modifier'),
+                            ],
+                          ),
+                        ),
+                        if (canMoveUp)
+                          const PopupMenuItem(
+                            value: 'up',
+                            child: Row(
+                              children: [
+                                Icon(Icons.arrow_upward_rounded, size: 16),
+                                SizedBox(width: 10),
+                                Text('Monter dans l\'ordre'),
+                              ],
+                            ),
+                          ),
+                        if (canMoveDown)
+                          const PopupMenuItem(
+                            value: 'down',
+                            child: Row(
+                              children: [
+                                Icon(Icons.arrow_downward_rounded, size: 16),
+                                SizedBox(width: 10),
+                                Text('Descendre dans l\'ordre'),
+                              ],
+                            ),
+                          ),
+                        const PopupMenuItem(
+                          value: 'duplicate',
+                          child: Row(
+                            children: [
+                              Icon(Icons.copy_rounded, size: 16),
+                              SizedBox(width: 10),
+                              Text('Dupliquer le pays'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(),
+                        if (country.isActive)
+                          const PopupMenuItem(
+                            value: 'archive',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.visibility_off_rounded,
+                                  size: 16,
+                                  color: AppTheme.accentAmber,
+                                ),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Archiver',
+                                  style: TextStyle(color: AppTheme.accentAmber),
+                                ),
+                              ],
+                            ),
+                          )
+                        else ...[
+                          const PopupMenuItem(
+                            value: 'unarchive',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.visibility_rounded,
+                                  size: 16,
+                                  color: AppTheme.accentEmerald,
+                                ),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Désarchiver',
+                                  style:
+                                      TextStyle(color: AppTheme.accentEmerald),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.delete_forever_rounded,
+                                  size: 16,
+                                  color: AppTheme.accentRose,
+                                ),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Supprimer définitivement',
+                                  style: TextStyle(color: AppTheme.accentRose),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+
+                // Statistiques résumées du pays
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryDark.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AppTheme.primaryBorder.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Text(
+                              '$directChildrenCount',
+                              style: GoogleFonts.outfit(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              'Éléments directs',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: AppTheme.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        height: 24,
+                        width: 1,
+                        color: AppTheme.primaryBorder,
+                      ),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Text(
+                              '$totalDescendants',
+                              style: GoogleFonts.outfit(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.accentCyan,
+                              ),
+                            ),
+                            Text(
+                              'Total sous-nœuds',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: AppTheme.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+
+                // Bouton d'exploration vers la vue dédiée du pays
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          AppTheme.accentEmerald.withValues(alpha: 0.15),
+                      foregroundColor: AppTheme.accentEmerald,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(
+                          color: AppTheme.accentEmerald.withValues(alpha: 0.3),
+                        ),
+                      ),
+                    ),
+                    onPressed: () => _enterNode(country),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'Explorer le système',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.arrow_forward_rounded, size: 16),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // VUE DÉDIÉE PLEINE LARGEUR D'UN NŒUD (EXPLORATION PROGRESSIVE)
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  Widget _buildDedicatedNodeView(
+    BuildContext context, {
+    required AcademicNode currentNode,
+    required List<AcademicNode> breadcrumbNodes,
+    required List<AcademicNode> tree,
+    required Map<String, AcademicNode> byId,
+  }) {
+    final siblings =
+        _findSiblingsGroup(tree, currentNode.id) ?? const <AcademicNode>[];
+    final indexInSiblings = siblings.indexWhere((n) => n.id == currentNode.id);
+    final canMoveUp = indexInSiblings > 0;
+    final canMoveDown =
+        indexInSiblings >= 0 && indexInSiblings < siblings.length - 1;
+
+    final childTypes =
+        childNodeTypeOptions[currentNode.nodeType] ?? const <NodeType>[];
+    final totalDescendants = _countDescendants(currentNode);
+
+    // Filtrage local des enfants si l'administrateur cherche dans la liste
+    final visibleChildren = currentNode.children.where((c) {
+      if (_childSearchQuery.isEmpty) return true;
+      final q = _childSearchQuery.toLowerCase();
+      final matchesName = c.name.toLowerCase().contains(q);
+      final matchesCode = c.code != null && c.code!.toLowerCase().contains(q);
+      return matchesName || matchesCode;
+    }).toList();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. Barre de navigation unifiée (Précédent / Suivant / Racine / Fil d'Ariane)
+          _buildNavigationToolbar(breadcrumbNodes: breadcrumbNodes),
+          const SizedBox(height: 16),
+
+          // 2. Bouton de retour bien visible vers le niveau supérieur
+          _buildBackNavigationRow(breadcrumbNodes),
+          const SizedBox(height: 20),
+
+          // 3. Grande Hero Card dédiée au nœud courant
+          _buildNodeHeroCard(
+            context,
+            node: currentNode,
+            childTypes: childTypes,
+            canMoveUp: canMoveUp,
+            canMoveDown: canMoveDown,
+            siblings: siblings,
+            indexInSiblings: indexInSiblings,
+          ),
+          const SizedBox(height: 24),
+
+          // 4. Statistiques & indicateurs utiles du nœud
+          _buildNodeStatsRow(
+            currentNode: currentNode,
+            totalDescendants: totalDescendants,
+          ),
+          const SizedBox(height: 28),
+
+          // 5. Section des éléments enfants du nœud
+          _buildChildNodesSection(
+            context,
+            currentNode: currentNode,
+            visibleChildren: visibleChildren,
+            allChildren: currentNode.children,
+            childTypes: childTypes,
+            byId: byId,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // BARRE DE NAVIGATION UNIFIÉE (PRÉCÉDENT / SUIVANT / ACCUEIL / FIL D'ARIANE)
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  Widget _buildNavigationToolbar({
+    required List<AcademicNode> breadcrumbNodes,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 700;
+
+        final backBtn = _buildNavButton(
+          label: isNarrow ? '' : 'Précédent',
+          icon: Icons.arrow_back_rounded,
+          tooltip: _canGoBack
+              ? 'Page précédente (Alt + ←)'
+              : 'Aucune page précédente',
+          isEnabled: _canGoBack,
+          isForward: false,
+          onPressed: _canGoBack ? _goBack : null,
+        );
+
+        final forwardBtn = _buildNavButton(
+          label: isNarrow ? '' : 'Suivant',
+          icon: Icons.arrow_forward_rounded,
+          tooltip: _canGoForward
+              ? 'Page suivante (Alt + →)'
+              : 'Aucune page suivante',
+          isEnabled: _canGoForward,
+          isForward: true,
+          onPressed: _canGoForward ? _goForward : null,
+        );
+
+        final homeBtn = Tooltip(
+          message: 'Retour à l\'accueil des Pays',
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: _pathNodeIds.isEmpty ? null : _goToRoot,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: _pathNodeIds.isEmpty
+                    ? AppTheme.accentEmerald.withValues(alpha: 0.12)
+                    : Colors.white.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: _pathNodeIds.isEmpty
+                      ? AppTheme.accentEmerald.withValues(alpha: 0.3)
+                      : AppTheme.primaryBorder,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.home_rounded,
+                    size: 16,
+                    color: _pathNodeIds.isEmpty
+                        ? AppTheme.accentEmerald
+                        : (_canGoBack ? Colors.white70 : AppTheme.textMuted),
+                  ),
+                  if (!isNarrow) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      'Racine',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _pathNodeIds.isEmpty
+                            ? AppTheme.accentEmerald
+                            : (_canGoBack ? Colors.white70 : AppTheme.textMuted),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppTheme.primarySurface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppTheme.primaryBorder),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Contrôles de navigation historique
+              backBtn,
+              const SizedBox(width: 6),
+              forwardBtn,
+              const SizedBox(width: 6),
+              homeBtn,
+
+              // Séparateur vertical
+              Container(
+                height: 22,
+                width: 1,
+                margin: const EdgeInsets.symmetric(horizontal: 10),
+                color: AppTheme.primaryBorder,
+              ),
+
+              // Fil d'Ariane interactif ou statut racine
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      if (breadcrumbNodes.isEmpty) ...[
+                        const Icon(
+                          Icons.account_tree_outlined,
+                          size: 15,
+                          color: AppTheme.accentEmerald,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Systèmes Éducatifs (Vue Racine)',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.accentEmerald,
+                          ),
+                        ),
+                      ] else ...[
+                        // Racine cliquable
+                        InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: _goToRoot,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 4,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.account_tree_outlined,
+                                  size: 14,
+                                  color: AppTheme.textMuted,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Arbre académique',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppTheme.textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        for (int i = 0; i < breadcrumbNodes.length; i++) ...[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Text(
+                              '›',
+                              style: GoogleFonts.inter(
+                                fontSize: 15,
+                                color: AppTheme.textMuted.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ),
+                          Builder(
+                            builder: (context) {
+                              final node = breadcrumbNodes[i];
+                              final isLast = i == breadcrumbNodes.length - 1;
+                              final typeColor =
+                                  nodeTypeColors[node.nodeType] ??
+                                  AppTheme.accentBlue;
+                              final nodeIcon =
+                                  nodeTypeIcons[node.nodeType] ??
+                                  Icons.folder_rounded;
+
+                              if (isLast) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: typeColor.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: typeColor.withValues(alpha: 0.35),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(nodeIcon, size: 14, color: typeColor),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        node.name,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+
+                              return InkWell(
+                                borderRadius: BorderRadius.circular(8),
+                                onTap: () => _navigateToIndex(i),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 4,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        nodeIcon,
+                                        size: 13,
+                                        color: AppTheme.textMuted,
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        node.name,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          color: AppTheme.textMuted,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+
+              // Raccourcis clavier discrets à droite
+              if (!isNarrow) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: AppTheme.primaryBorder.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.keyboard_rounded,
+                        size: 12,
+                        color: AppTheme.textMuted,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Alt + ← / →',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNavButton({
+    required String label,
+    required IconData icon,
+    required String tooltip,
+    required bool isEnabled,
+    required bool isForward,
+    required VoidCallback? onPressed,
+  }) {
+    final activeBg = isForward
+        ? AppTheme.accentEmerald.withValues(alpha: 0.12)
+        : AppTheme.accentBlue.withValues(alpha: 0.12);
+    final activeBorder = isForward
+        ? AppTheme.accentEmerald.withValues(alpha: 0.35)
+        : AppTheme.accentBlue.withValues(alpha: 0.35);
+    final activeFg = isForward ? AppTheme.accentEmerald : AppTheme.accentBlue;
+
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onPressed,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: isEnabled ? activeBg : Colors.white.withValues(alpha: 0.02),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isEnabled
+                  ? activeBorder
+                  : AppTheme.primaryBorder.withValues(alpha: 0.5),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!isForward) ...[
+                Icon(
+                  icon,
+                  size: 16,
+                  color: isEnabled
+                      ? activeFg
+                      : AppTheme.textMuted.withValues(alpha: 0.4),
+                ),
+                if (label.isNotEmpty) const SizedBox(width: 6),
+              ],
+              if (label.isNotEmpty)
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isEnabled
+                        ? Colors.white
+                        : AppTheme.textMuted.withValues(alpha: 0.4),
+                  ),
+                ),
+              if (isForward) ...[
+                if (label.isNotEmpty) const SizedBox(width: 6),
+                Icon(
+                  icon,
+                  size: 16,
+                  color: isEnabled
+                      ? activeFg
+                      : AppTheme.textMuted.withValues(alpha: 0.4),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackNavigationRow(List<AcademicNode> breadcrumbNodes) {
+    final parentName = breadcrumbNodes.length > 1
+        ? breadcrumbNodes[breadcrumbNodes.length - 2].name
+        : 'l\'accueil (Pays)';
+
+    return Row(
+      children: [
+        Flexible(
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: const BorderSide(color: AppTheme.primaryBorder),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: _navigateUp,
+            icon: const Icon(Icons.arrow_back_rounded, size: 16),
+            label: Text(
+              'Retour à $parentName',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNodeHeroCard(
+    BuildContext context, {
+    required AcademicNode node,
+    required List<NodeType> childTypes,
+    required bool canMoveUp,
+    required bool canMoveDown,
+    required List<AcademicNode> siblings,
+    required int indexInSiblings,
+  }) {
+    final typeColor = nodeTypeColors[node.nodeType] ?? AppTheme.accentBlue;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 800;
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppTheme.primarySurface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppTheme.primaryBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Ligne principale : Grand avatar, Nom, Métadonnées et Réordonnancement
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: typeColor.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: typeColor.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Icon(
+                      nodeTypeIcons[node.nodeType] ?? Icons.folder_rounded,
+                      color: typeColor,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 18),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                node.name,
+                                style: GoogleFonts.outfit(
+                                  fontSize: isCompact ? 22 : 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            // Badge Type
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: typeColor.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                nodeTypeLabels[node.nodeType] ??
+                                    node.nodeType.name,
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: typeColor,
+                                ),
+                              ),
+                            ),
+                            // Badge Code
+                            if (node.code != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryDark,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: AppTheme.primaryBorder,
+                                  ),
+                                ),
+                                child: Text(
+                                  'CODE: ${node.code!}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textMuted,
+                                  ),
+                                ),
+                              ),
+                            // Badge Statut Actif / Archivé
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: node.isActive
+                                    ? AppTheme.accentEmerald
+                                        .withValues(alpha: 0.15)
+                                    : AppTheme.accentAmber
+                                        .withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                node.isActive ? 'ACTIF' : 'ARCHIVÉ',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: node.isActive
+                                      ? AppTheme.accentEmerald
+                                      : AppTheme.accentAmber,
+                                ),
+                              ),
+                            ),
+                            // Badge Vérification si importé
+                            if (node.verificationStatus != 'ok')
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.accentAmber
+                                      .withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  node.verificationStatus == 'incomplete'
+                                      ? 'INCOMPLET'
+                                      : 'À VÉRIFIER',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.accentAmber,
+                                  ),
+                                ),
+                              ),
+                            // ID Copiable
+                            InkWell(
+                              borderRadius: BorderRadius.circular(6),
+                              onTap: () {
+                                Clipboard.setData(ClipboardData(text: node.id));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('ID copié dans le presse-papier'),
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                              },
+                              child: Tooltip(
+                                message: 'Cliquer pour copier l\'ID complet',
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryDark,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: AppTheme.primaryBorder,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.copy_rounded,
+                                        size: 11,
+                                        color: AppTheme.textMuted,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'ID: ${node.id.substring(0, 8)}...',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          color: AppTheme.textMuted,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (siblings.length > 1) ...[
+                    const SizedBox(width: 12),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryDark,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppTheme.primaryBorder),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.arrow_upward_rounded,
+                              size: 18,
+                            ),
+                            tooltip: 'Monter dans l\'ordre',
+                            color: canMoveUp ? Colors.white : Colors.white24,
+                            onPressed: canMoveUp
+                                ? () => _moveNode(siblings, indexInSiblings, -1)
+                                : null,
+                          ),
+                          Container(
+                            height: 18,
+                            width: 1,
+                            color: AppTheme.primaryBorder,
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.arrow_downward_rounded,
+                              size: 18,
+                            ),
+                            tooltip: 'Descendre dans l\'ordre',
+                            color: canMoveDown ? Colors.white : Colors.white24,
+                            onPressed: canMoveDown
+                                ? () => _moveNode(siblings, indexInSiblings, 1)
+                                : null,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 22),
+              const Divider(),
+              const SizedBox(height: 18),
+
+              // Barre des actions opérationnelles sur ce nœud
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  if (childTypes.isNotEmpty)
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.accentEmerald,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 13,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () => _showAddNodeModal(
+                        context,
+                        parentNode: node,
+                        nodeTypeOptions: childTypes,
+                      ),
+                      icon: const Icon(
+                        Icons.add_circle_outline_rounded,
+                        size: 17,
+                      ),
+                      label: Text(
+                        childTypes.length == 1
+                            ? 'Ajouter ${nodeTypeLabels[childTypes.first]}'
+                            : 'Ajouter un sous-élément',
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: AppTheme.primaryBorder),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 13,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () => _showEditNodeModal(context, node),
+                    icon: const Icon(Icons.edit_rounded, size: 16),
+                    label: const Text('Modifier'),
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: AppTheme.primaryBorder),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 13,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () => _duplicateNode(context, node),
+                    icon: const Icon(Icons.copy_rounded, size: 16),
+                    label: const Text('Dupliquer le sous-arbre'),
+                  ),
+                  if (node.isActive)
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.accentAmber,
+                        side: const BorderSide(color: AppTheme.accentAmber),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 13,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () => _showDeactivateConfirmation(
+                        context,
+                        node,
+                        ref.read(supabaseServiceProvider),
+                      ),
+                      icon: const Icon(
+                        Icons.visibility_off_rounded,
+                        size: 16,
+                        color: AppTheme.accentAmber,
+                      ),
+                      label: const Text('Archiver'),
+                    )
+                  else ...[
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.accentEmerald,
+                        side: const BorderSide(color: AppTheme.accentEmerald),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 13,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () => _showReactivateConfirmation(
+                        context,
+                        node,
+                        ref.read(supabaseServiceProvider),
+                      ),
+                      icon: const Icon(
+                        Icons.visibility_rounded,
+                        size: 16,
+                        color: AppTheme.accentEmerald,
+                      ),
+                      label: const Text('Désarchiver'),
+                    ),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.accentRose,
+                        side: const BorderSide(color: AppTheme.accentRose),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 13,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () => _showPermanentDeleteConfirmation(
+                        context,
+                        node,
+                        ref.read(supabaseServiceProvider),
+                      ),
+                      icon: const Icon(
+                        Icons.delete_forever_rounded,
+                        size: 16,
+                        color: AppTheme.accentRose,
+                      ),
+                      label: const Text('Supprimer Définitivement'),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNodeStatsRow({
+    required AcademicNode currentNode,
+    required int totalDescendants,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double cardWidth;
+        if (constraints.maxWidth < 420) {
+          cardWidth = constraints.maxWidth;
+        } else if (constraints.maxWidth < 680) {
+          cardWidth = (constraints.maxWidth - 12) / 2;
+        } else {
+          cardWidth = (constraints.maxWidth - 36) / 4;
+        }
+
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            _buildKpiCard(
+              label: 'Enfants Directs',
+              value: '${currentNode.children.length}',
+              icon: Icons.subdirectory_arrow_right_rounded,
+              color: AppTheme.accentBlue,
+              width: cardWidth,
+            ),
+            _buildKpiCard(
+              label: 'Descendants Totaux',
+              value: '$totalDescendants',
+              icon: Icons.hub_rounded,
+              color: AppTheme.accentIndigo,
+              width: cardWidth,
+            ),
+            // Compte réel des profils élèves rattachés
+            FutureBuilder<int>(
+              future: _countProfiles(currentNode.id),
+              builder: (context, snapshot) {
+                final valueText = snapshot.connectionState ==
+                        ConnectionState.waiting
+                    ? '...'
+                    : (snapshot.hasError ? '—' : '${snapshot.data ?? 0}');
+                return _buildKpiCard(
+                  label: 'Élèves Rattachés',
+                  value: valueText,
+                  icon: Icons.people_outline_rounded,
+                  color: AppTheme.accentEmerald,
+                  width: cardWidth,
+                );
+              },
+            ),
+            // Matières enseignées si c'est une classe ou série
+            if (currentNode.nodeType == NodeType.classType ||
+                currentNode.nodeType == NodeType.series)
+              Consumer(
+                builder: (context, ref, _) {
+                  final subjectsAsync =
+                      ref.watch(subjectsForClassProvider(currentNode.id));
+                  final valueText = subjectsAsync.when(
+                    data: (subs) => '${subs.length}',
+                    loading: () => '...',
+                    error: (_, _) => '—',
+                  );
+                  return _buildKpiCard(
+                    label: 'Matières Associées',
+                    value: valueText,
+                    icon: Icons.menu_book_rounded,
+                    color: AppTheme.accentCyan,
+                    width: cardWidth,
+                  );
+                },
+              )
+            else
+              _buildKpiCard(
+                label: 'Niveau Hiérarchique',
+                value: nodeTypeLabels[currentNode.nodeType] ?? '',
+                icon: Icons.layers_outlined,
+                color: AppTheme.textMuted,
+                width: cardWidth,
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildChildNodesSection(
+    BuildContext context, {
+    required AcademicNode currentNode,
+    required List<AcademicNode> visibleChildren,
+    required List<AcademicNode> allChildren,
+    required List<NodeType> childTypes,
+    required Map<String, AcademicNode> byId,
+  }) {
+    // Cas 1 : Niveau terminal (Série)
+    if (childTypes.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(
+          color: AppTheme.primarySurface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.primaryBorder),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.accentCyan.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_circle_outline_rounded,
+                size: 32,
+                color: AppTheme.accentCyan,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Niveau Terminal de l\'Arbre Académique',
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 580),
+              child: Text(
+                'Une Série est le niveau le plus fin de l\'arborescence. Aucun sous-nœud académique ne '
+                'peut y être rattaché. C\'est à ce niveau que sont rattachées les Matières, Chapitres, '
+                'Leçons, Exercices et Épreuves d\'examens.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: AppTheme.textMuted,
+                  height: 1.5,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Cas 2 : Nœud sans aucun enfant pour le moment
+    if (allChildren.isEmpty) {
+      final targetChildLabel = childTypes.length == 1
+          ? nodeTypeLabels[childTypes.first]
+          : 'sous-élément';
+
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(36),
+        decoration: BoxDecoration(
+          color: AppTheme.primarySurface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.primaryBorder),
+        ),
+        child: Column(
+          children: [
+            const Icon(
+              Icons.folder_open_rounded,
+              size: 48,
+              color: AppTheme.textMuted,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Aucun élément enfant rattaché à "${currentNode.name}"',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Ajoutez le premier $targetChildLabel pour continuer la configuration de ce palier.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: AppTheme.textMuted,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentEmerald,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 13,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: () => _showAddNodeModal(
+                context,
+                parentNode: currentNode,
+                nodeTypeOptions: childTypes,
+              ),
+              icon: const Icon(Icons.add_rounded),
+              label: Text('Ajouter un $targetChildLabel'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Cas 3 : Liste des enfants existants
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          'Éléments Rattachés',
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.outfit(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.accentBlue.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${allChildren.length}',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.accentBlue,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Cliquez sur un élément pour explorer son sous-niveau complet.',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (childTypes.isNotEmpty) ...[
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accentEmerald,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () => _showAddNodeModal(
+                  context,
+                  parentNode: currentNode,
+                  nodeTypeOptions: childTypes,
+                ),
+                icon: const Icon(Icons.add_rounded, size: 16),
+                label: const Text('Ajouter'),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Filtre rapide des enfants si plus de 3 enfants
+        if (allChildren.length > 3) ...[
+          Container(
+            decoration: BoxDecoration(
+              color: AppTheme.primarySurface,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppTheme.primaryBorder),
+            ),
+            child: TextField(
+              controller: _childSearchController,
+              onChanged: (v) => setState(() => _childSearchQuery = v.trim()),
+              style: GoogleFonts.inter(color: Colors.white, fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'Filtrer les éléments par nom ou code...',
+                hintStyle: GoogleFonts.inter(
+                  color: AppTheme.textMuted,
+                  fontSize: 12,
+                ),
+                prefixIcon: const Icon(
+                  Icons.filter_list_rounded,
+                  color: AppTheme.textMuted,
+                  size: 18,
+                ),
+                suffixIcon: _childSearchQuery.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          size: 16,
+                          color: AppTheme.textMuted,
+                        ),
+                        onPressed: () => setState(() {
+                          _childSearchController.clear();
+                          _childSearchQuery = '';
+                        }),
+                      ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 14,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // Grille responsive des cartes enfants
+        if (visibleChildren.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Text(
+                'Aucun élément ne correspond à "$_childSearchQuery".',
+                style: GoogleFonts.inter(
+                  color: AppTheme.textMuted,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          )
+        else
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final double cardWidth;
+              if (constraints.maxWidth >= 1050) {
+                cardWidth = (constraints.maxWidth - 36) / 3;
+              } else if (constraints.maxWidth >= 680) {
+                cardWidth = (constraints.maxWidth - 18) / 2;
+              } else {
+                cardWidth = constraints.maxWidth;
+              }
+
+              return Wrap(
+                spacing: 18,
+                runSpacing: 18,
+                children: visibleChildren
+                    .map(
+                      (child) => _buildChildNodeCard(
+                        childNode: child,
+                        width: cardWidth,
+                        siblings: allChildren,
+                        byId: byId,
+                      ),
+                    )
+                    .toList(),
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _buildChildNodeCard({
+    required AcademicNode childNode,
+    required double width,
+    required List<AcademicNode> siblings,
+    required Map<String, AcademicNode> byId,
+  }) {
+    final typeColor = nodeTypeColors[childNode.nodeType] ?? AppTheme.accentBlue;
+    final totalSubDescendants = _countDescendants(childNode);
+    final directChildren = childNode.children.length;
+
+    final indexInSiblings = siblings.indexWhere((s) => s.id == childNode.id);
+    final canMoveUp = indexInSiblings > 0;
+    final canMoveDown =
+        indexInSiblings >= 0 && indexInSiblings < siblings.length - 1;
+
+    return Container(
+      width: width,
+      decoration: BoxDecoration(
+        color: AppTheme.primarySurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: childNode.isActive
+              ? AppTheme.primaryBorder
+              : AppTheme.primaryBorder.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _enterNode(childNode),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: typeColor.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        nodeTypeIcons[childNode.nodeType] ??
+                            Icons.folder_rounded,
+                        color: typeColor,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            childNode.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.outfit(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: childNode.isActive
+                                  ? Colors.white
+                                  : Colors.white54,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: typeColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  nodeTypeLabels[childNode.nodeType] ??
+                                      childNode.nodeType.name,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: typeColor,
+                                  ),
+                                ),
+                              ),
+                              if (childNode.code != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryDark,
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color: AppTheme.primaryBorder,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    childNode.code!,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.textMuted,
+                                    ),
+                                  ),
+                                ),
+                              if (!childNode.isActive)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.accentAmber
+                                        .withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'ARCHIVÉ',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.accentAmber,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      icon: const Icon(
+                        Icons.more_vert_rounded,
+                        color: AppTheme.textMuted,
+                        size: 18,
+                      ),
+                      color: AppTheme.primaryDark,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: const BorderSide(color: AppTheme.primaryBorder),
+                      ),
+                      onSelected: (action) {
+                        switch (action) {
+                          case 'edit':
+                            _showEditNodeModal(context, childNode);
+                            break;
+                          case 'duplicate':
+                            _duplicateNode(context, childNode);
+                            break;
+                          case 'up':
+                            if (canMoveUp) {
+                              _moveNode(siblings, indexInSiblings, -1);
+                            }
+                            break;
+                          case 'down':
+                            if (canMoveDown) {
+                              _moveNode(siblings, indexInSiblings, 1);
+                            }
+                            break;
+                          case 'archive':
+                            _showDeactivateConfirmation(
+                              context,
+                              childNode,
+                              ref.read(supabaseServiceProvider),
+                            );
+                            break;
+                          case 'unarchive':
+                            _showReactivateConfirmation(
+                              context,
+                              childNode,
+                              ref.read(supabaseServiceProvider),
+                            );
+                            break;
+                          case 'delete':
+                            _showPermanentDeleteConfirmation(
+                              context,
+                              childNode,
+                              ref.read(supabaseServiceProvider),
+                            );
+                            break;
+                        }
+                      },
+                      itemBuilder: (ctx) => [
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_rounded, size: 16),
+                              SizedBox(width: 10),
+                              Text('Modifier'),
+                            ],
+                          ),
+                        ),
+                        if (canMoveUp)
+                          const PopupMenuItem(
+                            value: 'up',
+                            child: Row(
+                              children: [
+                                Icon(Icons.arrow_upward_rounded, size: 16),
+                                SizedBox(width: 10),
+                                Text('Monter'),
+                              ],
+                            ),
+                          ),
+                        if (canMoveDown)
+                          const PopupMenuItem(
+                            value: 'down',
+                            child: Row(
+                              children: [
+                                Icon(Icons.arrow_downward_rounded, size: 16),
+                                SizedBox(width: 10),
+                                Text('Descendre'),
+                              ],
+                            ),
+                          ),
+                        const PopupMenuItem(
+                          value: 'duplicate',
+                          child: Row(
+                            children: [
+                              Icon(Icons.copy_rounded, size: 16),
+                              SizedBox(width: 10),
+                              Text('Dupliquer'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(),
+                        if (childNode.isActive)
+                          const PopupMenuItem(
+                            value: 'archive',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.visibility_off_rounded,
+                                  size: 16,
+                                  color: AppTheme.accentAmber,
+                                ),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Archiver',
+                                  style: TextStyle(color: AppTheme.accentAmber),
+                                ),
+                              ],
+                            ),
+                          )
+                        else ...[
+                          const PopupMenuItem(
+                            value: 'unarchive',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.visibility_rounded,
+                                  size: 16,
+                                  color: AppTheme.accentEmerald,
+                                ),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Désarchiver',
+                                  style:
+                                      TextStyle(color: AppTheme.accentEmerald),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.delete_forever_rounded,
+                                  size: 16,
+                                  color: AppTheme.accentRose,
+                                ),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Supprimer définitivement',
+                                  style: TextStyle(color: AppTheme.accentRose),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // Ligne d'information : nombre d'enfants
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      directChildren > 0
+                          ? '$directChildren élément(s) rattaché(s)'
+                          : 'Aucun sous-élément',
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         color: AppTheme.textMuted,
                       ),
                     ),
+                    if (totalSubDescendants > directChildren)
+                      Text(
+                        '($totalSubDescendants total)',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: AppTheme.textMuted.withValues(alpha: 0.8),
+                        ),
+                      ),
                   ],
                 ),
-              ),
-              if (siblings.length > 1)
-                Column(
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.keyboard_arrow_up_rounded,
-                        size: 20,
-                      ),
-                      tooltip: 'Monter',
-                      constraints: const BoxConstraints(),
-                      padding: const EdgeInsets.all(2),
-                      color: canMoveUp ? Colors.white70 : Colors.white24,
-                      onPressed: canMoveUp
-                          ? () => _moveNode(siblings, indexInSiblings, -1)
-                          : null,
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        size: 20,
-                      ),
-                      tooltip: 'Descendre',
-                      constraints: const BoxConstraints(),
-                      padding: const EdgeInsets.all(2),
-                      color: canMoveDown ? Colors.white70 : Colors.white24,
-                      onPressed: canMoveDown
-                          ? () => _moveNode(siblings, indexInSiblings, 1)
-                          : null,
-                    ),
-                  ],
-                ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          const Divider(),
-          const SizedBox(height: 16),
+                const SizedBox(height: 14),
 
-          _buildInspectorDetailRow('Identifiant Unique :', node.id),
-          _buildInspectorDetailRow(
-            'Statut :',
-            node.isActive ? 'Actif' : 'Archivé',
-          ),
-          _buildInspectorDetailRow(
-            'Date de création :',
-            node.createdAt.toLocal().toString().split('.').first,
-          ),
-          const SizedBox(height: 24),
-
-          Text(
-            'Opérations sur ce Nœud',
-            style: GoogleFonts.outfit(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              if (childTypes.isNotEmpty)
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.accentEmerald,
+                // Bouton d'action "Explorer"
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: AppTheme.primaryBorder),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    onPressed: () => _enterNode(childNode),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'Explorer',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.arrow_forward_rounded, size: 14),
+                      ],
+                    ),
                   ),
-                  onPressed: () => _showAddNodeModal(
-                    context,
-                    parentNode: node,
-                    nodeTypeOptions: childTypes,
-                  ),
-                  icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
-                  label: const Text('Ajouter un élément'),
-                ),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: AppTheme.primaryBorder),
-                ),
-                onPressed: () => _showEditNodeModal(context, node),
-                icon: const Icon(Icons.edit_rounded, size: 16),
-                label: const Text('Modifier'),
-              ),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: AppTheme.primaryBorder),
-                ),
-                onPressed: () => _duplicateNode(context, node),
-                icon: const Icon(Icons.copy_rounded, size: 16),
-                label: const Text('Dupliquer l\'Arbre'),
-              ),
-              if (node.isActive)
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.accentAmber,
-                    side: const BorderSide(color: AppTheme.accentAmber),
-                  ),
-                  onPressed: () =>
-                      _showDeactivateConfirmation(context, node, service),
-                  icon: const Icon(
-                    Icons.visibility_off_rounded,
-                    size: 16,
-                    color: AppTheme.accentAmber,
-                  ),
-                  label: const Text('Archiver'),
-                )
-              else ...[
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.accentEmerald,
-                    side: const BorderSide(color: AppTheme.accentEmerald),
-                  ),
-                  onPressed: () =>
-                      _showReactivateConfirmation(context, node, service),
-                  icon: const Icon(
-                    Icons.visibility_rounded,
-                    size: 16,
-                    color: AppTheme.accentEmerald,
-                  ),
-                  label: const Text('Désarchiver'),
-                ),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.accentRose,
-                    side: const BorderSide(color: AppTheme.accentRose),
-                  ),
-                  onPressed: () =>
-                      _showPermanentDeleteConfirmation(context, node, service),
-                  icon: const Icon(
-                    Icons.delete_forever_rounded,
-                    size: 16,
-                    color: AppTheme.accentRose,
-                  ),
-                  label: const Text('Supprimer Définitivement'),
                 ),
               ],
-            ],
+            ),
           ),
-          if (!node.isActive) ...[
-            const SizedBox(height: 12),
-            Text(
-              'Nœud archivé : masqué aux élèves. Désarchivez-le pour le restaurer (lui et ses '
-              'descendants), ou supprimez-le définitivement (irréversible, refusé si des élèves y '
-              'sont encore rattachés).',
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                color: AppTheme.textMuted,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-          if (childTypes.isEmpty) ...[
-            const SizedBox(height: 12),
-            Text(
-              'Une Série est le niveau le plus fin de l\'arbre : elle ne peut pas avoir de sous-nœud.',
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                color: AppTheme.textMuted,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // LOGIQUES MÉTIERS, ACTIONS & MODALES (100% NON-RÉGRESSION)
+  // ══════════════════════════════════════════════════════════════════════════════
 
   List<AcademicNode>? _findSiblingsGroup(
     List<AcademicNode> nodes,
@@ -938,35 +3251,6 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
     }
   }
 
-  Widget _buildInspectorDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textMuted),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showAddNodeModal(
     BuildContext context, {
     required AcademicNode? parentNode,
@@ -984,8 +3268,8 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
     final countryId = parentNode == null
         ? null
         : (parentNode.nodeType == NodeType.country
-              ? parentNode.id
-              : parentNode.countryId);
+            ? parentNode.id
+            : parentNode.countryId);
     String? fieldError;
     String? submitError;
     bool isLoading = false;
@@ -999,8 +3283,7 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
             borderRadius: BorderRadius.circular(16),
           ),
           title: AppDialogTitle(
-            icon:
-                nodeTypeIcons[selectedNodeType] ??
+            icon: nodeTypeIcons[selectedNodeType] ??
                 Icons.add_circle_outline_rounded,
             iconColor:
                 nodeTypeColors[selectedNodeType] ?? AppTheme.accentEmerald,
@@ -1116,8 +3399,6 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
                       });
                       try {
                         final service = ref.read(supabaseServiceProvider);
-                        // La journalisation d'audit est automatique côté base (trigger
-                        // audit_academic_nodes) — aucun appel applicatif nécessaire ici.
                         await service.createNode(
                           parentId: parentId,
                           name: name,
@@ -1280,9 +3561,6 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
                       color: AppTheme.primaryDark,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    // Material transparent requis entre le Container coloré et le SwitchListTile
-                    // (rend un ListTile en interne) — même correctif que l'arbre et la barre
-                    // latérale : sinon assertion "background color may be invisible".
                     child: Material(
                       color: Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
@@ -1518,12 +3796,6 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
                         );
                         ref.invalidate(academicTreeStreamProvider);
                         ref.invalidate(nodesByTypeProvider);
-                        if (mounted) {
-                          setState(() {
-                            _selectedNodeId = null;
-                            _selectedNode = null;
-                          });
-                        }
                         nav.pop();
                       } catch (e) {
                         setModalState(() => isLoading = false);
@@ -1745,10 +4017,7 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
                         ref.invalidate(academicTreeStreamProvider);
                         ref.invalidate(nodesByTypeProvider);
                         if (mounted) {
-                          setState(() {
-                            _selectedNodeId = null;
-                            _selectedNode = null;
-                          });
+                          _navigateUp();
                         }
                         nav.pop();
                       } catch (e) {
@@ -1777,15 +4046,13 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
 
   void _showMergeClassesModal(BuildContext context, List<AcademicNode> tree) {
     final byId = _flattenById(tree);
-    final mergeable =
-        byId.values
-            .where(
-              (n) =>
-                  n.nodeType == NodeType.classType ||
-                  n.nodeType == NodeType.series,
-            )
-            .toList()
-          ..sort((a, b) => _nodePath(a, byId).compareTo(_nodePath(b, byId)));
+    final mergeable = byId.values
+        .where(
+          (n) =>
+              n.nodeType == NodeType.classType || n.nodeType == NodeType.series,
+        )
+        .toList()
+      ..sort((a, b) => _nodePath(a, byId).compareTo(_nodePath(b, byId)));
 
     if (mergeable.length < 2) {
       showDialog(
@@ -1945,9 +4212,8 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
                         );
                         return impactAsync.when(
                           data: (rows) {
-                            final nonZero = rows
-                                .where((r) => r.rowCount > 0)
-                                .toList();
+                            final nonZero =
+                                rows.where((r) => r.rowCount > 0).toList();
                             if (nonZero.isEmpty) {
                               return Text(
                                 'Aucune donnée rattachée à cette classe.',
@@ -2090,20 +4356,15 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
     );
   }
 
-  /// Gestion des groupes de classes jumelées (migration 19) — relation réelle et persistée,
-  /// distincte de la fusion : aucune classe archivée, juste "ces classes partagent le programme"
-  /// et peuvent se propager du contenu entre elles depuis Chapitres & Leçons.
   void _showTwinGroupsModal(BuildContext context, List<AcademicNode> tree) {
     final byId = _flattenById(tree);
-    final candidates =
-        byId.values
-            .where(
-              (n) =>
-                  n.nodeType == NodeType.classType ||
-                  n.nodeType == NodeType.series,
-            )
-            .toList()
-          ..sort((a, b) => _nodePath(a, byId).compareTo(_nodePath(b, byId)));
+    final candidates = byId.values
+        .where(
+          (n) =>
+              n.nodeType == NodeType.classType || n.nodeType == NodeType.series,
+        )
+        .toList()
+      ..sort((a, b) => _nodePath(a, byId).compareTo(_nodePath(b, byId)));
 
     Set<String> newGroupSelection = {};
     final labelController = TextEditingController();
@@ -2229,9 +4490,11 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
                                               onPressed: isLoading
                                                   ? null
                                                   : () async {
-                                                      final confirm = await showDialog<bool>(
+                                                      final confirm =
+                                                          await showDialog<bool>(
                                                         context: context,
-                                                        builder: (c) => AlertDialog(
+                                                        builder: (c) =>
+                                                            AlertDialog(
                                                           backgroundColor:
                                                               AppTheme
                                                                   .primarySurface,
@@ -2244,40 +4507,42 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
                                                                 'Dissoudre ce groupe ?',
                                                             onClose: () =>
                                                                 Navigator.pop(
-                                                                  c,
-                                                                  false,
-                                                                ),
+                                                              c,
+                                                              false,
+                                                            ),
                                                           ),
                                                           content: Text(
                                                             'Les classes ne seront plus considérées comme jumelées. Aucune donnée existante n\'est supprimée.',
-                                                            style:
-                                                                GoogleFonts.inter(
-                                                                  color: Colors
-                                                                      .white70,
-                                                                ),
+                                                            style: GoogleFonts
+                                                                .inter(
+                                                              color: Colors
+                                                                  .white70,
+                                                            ),
                                                           ),
                                                           actions: [
                                                             TextButton(
                                                               onPressed: () =>
                                                                   Navigator.pop(
-                                                                    c,
-                                                                    false,
-                                                                  ),
+                                                                c,
+                                                                false,
+                                                              ),
                                                               child: const Text(
                                                                 'Annuler',
                                                               ),
                                                             ),
                                                             ElevatedButton(
-                                                              style: ElevatedButton.styleFrom(
+                                                              style:
+                                                                  ElevatedButton
+                                                                      .styleFrom(
                                                                 backgroundColor:
                                                                     AppTheme
                                                                         .accentRose,
                                                               ),
                                                               onPressed: () =>
                                                                   Navigator.pop(
-                                                                    c,
-                                                                    true,
-                                                                  ),
+                                                                c,
+                                                                true,
+                                                              ),
                                                               child: const Text(
                                                                 'Dissoudre',
                                                               ),
@@ -2293,9 +4558,9 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
                                                       );
                                                       await service
                                                           .dissolveClassTwinGroup(
-                                                            g.id,
-                                                            _currentAdminId(),
-                                                          );
+                                                        g.id,
+                                                        _currentAdminId(),
+                                                      );
                                                       ref.invalidate(
                                                         twinGroupsProvider,
                                                       );
@@ -2349,10 +4614,10 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
                                                           );
                                                           await service
                                                               .removeClassFromTwinGroup(
-                                                                g.id,
-                                                                m.classNodeId,
-                                                                _currentAdminId(),
-                                                              );
+                                                            g.id,
+                                                            m.classNodeId,
+                                                            _currentAdminId(),
+                                                          );
                                                           ref.invalidate(
                                                             twinGroupsProvider,
                                                           );
@@ -2560,9 +4825,7 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen> {
   }
 }
 
-/// Bandeau d'erreur réutilisable pour les formulaires de cette page : les messages d'exception
-/// Postgrest peuvent être longs, donc affichés à part plutôt que dans un TextField.errorText
-/// (pensé pour rester court et net) qui les tronquerait ou déformerait le champ.
+/// Bandeau d'erreur réutilisable pour les formulaires de cette page.
 class _ErrorBanner extends StatelessWidget {
   final String message;
 

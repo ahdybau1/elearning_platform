@@ -170,387 +170,928 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
               includeInactive: _showInactive,
             )),
           );
+    final countriesAsync = ref.watch(nodesByTypeProvider('country'));
+    final countryId = countriesAsync.valueOrNull?.isNotEmpty == true
+        ? countriesAsync.valueOrNull!.first.id
+        : null;
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title & Action Bar
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Gestion des Leçons & Cours',
-                      style: GoogleFonts.outfit(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Rédaction, versioning et rattachement aux Trimestres (mécanisme déblocage automatique)',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed:
-                    _selectedSubjectId == null || _selectedClassNodeId == null
-                    ? null
-                    : () => _showChapterEditorModal(
-                        context,
-                        _selectedSubjectId!,
-                        classOptions,
-                        defaultClassNodeId: _selectedClassNodeId,
-                        countryId:
-                            ref
-                                    .read(nodesByTypeProvider('country'))
-                                    .valueOrNull
-                                    ?.isNotEmpty ==
-                                true
-                            ? ref
-                                  .read(nodesByTypeProvider('country'))
-                                  .valueOrNull!
-                                  .first
-                                  .id
-                            : null,
-                      ),
-                icon: const Icon(Icons.create_new_folder_rounded, size: 18),
-                label: const Text('Créer un Chapitre'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Filters Bar
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.primarySurface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.primaryBorder),
-            ),
-            child: Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 20,
-              runSpacing: 12,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.filter_list_rounded,
-                      color: AppTheme.accentBlue,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Classe :',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    SizedBox(
-                      width: 220,
-                      child: classOptions.isEmpty
-                          ? Text(
-                              'Aucune classe configurée',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: AppTheme.accentRose,
-                              ),
-                            )
-                          // ignore: deprecated_member_use
-                          : DropdownButtonFormField<String>(
-                              // ignore: deprecated_member_use
-                              value: _selectedClassNodeId,
-                              isDense: true,
-                              isExpanded: true,
-                              dropdownColor: AppTheme.primaryDark,
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 13,
-                              ),
-                              decoration: const InputDecoration(
-                                isDense: true,
-                                border: InputBorder.none,
-                              ),
-                              items: classOptions
-                                  .map(
-                                    (n) => DropdownMenuItem(
-                                      value: n.id,
-                                      child: Text(
-                                        '${n.name}${n.code != null ? " (${n.code})" : ""}',
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (v) => setState(() {
-                                _selectedClassNodeId = v;
-                                _selectedSubjectId = null;
-                              }),
-                            ),
-                    ),
-                  ],
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Matière :',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    SizedBox(
-                      width: 200,
-                      child: subjects.isEmpty
-                          ? Text(
-                              _selectedClassNodeId == null
-                                  ? '—'
-                                  : 'Aucune matière liée à cette classe',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: AppTheme.textMuted,
-                              ),
-                            )
-                          // ignore: deprecated_member_use
-                          : DropdownButtonFormField<String>(
-                              // ignore: deprecated_member_use
-                              value: _selectedSubjectId,
-                              isDense: true,
-                              isExpanded: true,
-                              dropdownColor: AppTheme.primaryDark,
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 13,
-                              ),
-                              decoration: const InputDecoration(
-                                isDense: true,
-                                border: InputBorder.none,
-                              ),
-                              items: subjects
-                                  .map(
-                                    (s) => DropdownMenuItem(
-                                      value: s.id,
-                                      child: Text(
-                                        s.name,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (v) =>
-                                  setState(() => _selectedSubjectId = v),
-                            ),
-                    ),
-                  ],
-                ),
-                SizedBox(
-                  width: 240,
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (v) => setState(() => _searchQuery = v.trim()),
-                    style: GoogleFonts.inter(color: Colors.white, fontSize: 13),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      hintText: 'Rechercher un chapitre/leçon...',
-                      hintStyle: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: AppTheme.textMuted,
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.search_rounded,
-                        size: 18,
-                        color: AppTheme.textMuted,
-                      ),
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Switch(
-                      value: _showInactive,
-                      activeThumbColor: AppTheme.accentAmber,
-                      onChanged: (v) => setState(() => _showInactive = v),
-                    ),
-                    Text(
-                      'Afficher les archives',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          _buildHeader(context, classOptions, countryId),
           const SizedBox(height: 16),
-
-          // Content
+          _buildFiltersBar(classOptions, subjects),
+          const SizedBox(height: 16),
           Expanded(
-            child: _selectedSubjectId == null
-                ? Center(
-                    child: Text(
-                      classOptions.isEmpty
-                          ? 'Configurez d\'abord l\'Arbre Académique (au moins une Classe).'
-                          : 'Sélectionnez une classe puis une matière pour voir les chapitres.',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                  )
-                : chaptersAsync!.when(
-                    data: (chapters) {
-                      final visible = chapters
-                          .where((c) => _matchesSearch(c, _searchQuery))
-                          .toList();
-                      if (chapters.isEmpty) {
-                        return Center(
-                          child: Text(
-                            'Aucun chapitre pour cette matière. Cliquez sur "Créer un Chapitre" pour commencer.',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              color: AppTheme.textMuted,
-                            ),
-                          ),
-                        );
-                      }
-                      if (visible.isEmpty) {
-                        return Center(
-                          child: Text(
-                            'Aucun résultat pour "$_searchQuery".',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              color: AppTheme.textMuted,
-                            ),
-                          ),
-                        );
-                      }
-                      final allLessonIds = chapters
-                          .expand((c) => c.lessons)
-                          .map((l) => l.id)
-                          .toList();
-                      if (_validationStatusFuture == null ||
-                          _lastValidationLessonIds == null ||
-                          !_sameIds(_lastValidationLessonIds!, allLessonIds)) {
-                        _lastValidationLessonIds = allLessonIds;
-                        _validationStatusFuture = ref
-                            .read(supabaseServiceProvider)
-                            .fetchValidationStatusForContentIds(allLessonIds);
-                      }
-                      return FutureBuilder<Map<String, String>>(
-                        future: _validationStatusFuture,
-                        builder: (context, statusSnapshot) {
-                          final statusMap = statusSnapshot.data ?? const {};
-                          return Consumer(
-                            builder: (context, ref, _) {
-                              final countriesAsync = ref.watch(
-                                nodesByTypeProvider('country'),
-                              );
-                              final countryId =
-                                  countriesAsync.valueOrNull?.isNotEmpty == true
-                                  ? countriesAsync.valueOrNull!.first.id
-                                  : null;
-                              final termsAsync = countryId == null
-                                  ? const AsyncValue<List<Term>>.data([])
-                                  : ref.watch(termsProvider(countryId));
-                              final terms =
-                                  List<Term>.from(
-                                    termsAsync.valueOrNull ?? <Term>[],
-                                  )..sort(
-                                    (a, b) =>
-                                        a.startDate.compareTo(b.startDate),
-                                  );
-                              final termNames = <String, String>{
-                                for (final t in terms) t.id: t.name,
-                              };
-                              final subjectName = subjects
-                                  .firstWhere(
-                                    (s) => s.id == _selectedSubjectId,
-                                    orElse: () =>
-                                        Subject(id: '', name: '', code: ''),
-                                  )
-                                  .name;
-
-                              // Dossiers par Trimestre (qui porte lui-même l'année scolaire) :
-                              // Classe/Matière → Trimestre → Chapitre → Leçon, comme demandé —
-                              // pas juste un badge, une vraie hiérarchie de dossiers dépliables.
-                              final byTerm = <String?, List<Chapter>>{};
-                              for (final c in visible) {
-                                byTerm.putIfAbsent(c.termId, () => []).add(c);
-                              }
-                              final orderedTermIds = <String?>[
-                                ...terms
-                                    .map((t) => t.id)
-                                    .where(byTerm.containsKey),
-                                if (byTerm.containsKey(null)) null,
-                              ];
-
-                              return ListView.builder(
-                                itemCount: orderedTermIds.length,
-                                itemBuilder: (context, idx) {
-                                  final termId = orderedTermIds[idx];
-                                  final term = terms
-                                      .where((t) => t.id == termId)
-                                      .firstOrNull;
-                                  final chaptersInFolder = byTerm[termId]!;
-                                  return _buildTermFolder(
-                                    term,
-                                    chaptersInFolder,
-                                    termNames,
-                                    statusMap,
-                                    countryId,
-                                    subjectName,
-                                    classOptions,
-                                  );
-                                },
-                              );
-                            },
-                          );
-                        },
-                      );
-                    },
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (err, _) => Center(
-                      child: Text(
-                        'Erreur: $err',
-                        style: GoogleFonts.inter(color: AppTheme.accentRose),
-                      ),
-                    ),
-                  ),
+            child: _buildContentArea(
+              context,
+              classOptions,
+              subjects,
+              chaptersAsync,
+              countryId,
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// Dossier "Trimestre" (porte l'année scolaire via term.schoolYear) regroupant les chapitres qui
-  /// y sont rattachés — la hiérarchie demandée : Classe/Matière → Trimestre → Chapitre → Leçon,
-  /// affichée comme de vrais dossiers dépliables plutôt qu'un simple badge sur chaque chapitre.
+  Widget _buildHeader(
+    BuildContext context,
+    List<AcademicNode> classOptions,
+    String? countryId,
+  ) {
+    final selectedClass = classOptions
+        .where((c) => c.id == _selectedClassNodeId)
+        .firstOrNull;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 750;
+        final titleContent = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentBlue.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AppTheme.accentBlue.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.auto_stories_rounded,
+                    color: AppTheme.accentBlue,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Gestion des Leçons & Cours',
+                        style: GoogleFonts.outfit(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Rédaction, versioning et rattachement aux Trimestres (déblocage automatique)',
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: AppTheme.textMuted,
+                              ),
+                            ),
+                          ),
+                          if (selectedClass != null) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppTheme.accentIndigo.withValues(
+                                  alpha: 0.15,
+                                ),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: AppTheme.accentIndigo.withValues(
+                                    alpha: 0.3,
+                                  ),
+                                ),
+                              ),
+                              child: Text(
+                                selectedClass.name,
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.accentIndigo,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+
+        final createButton = ElevatedButton.icon(
+          onPressed:
+              _selectedSubjectId == null || _selectedClassNodeId == null
+                  ? null
+                  : () => _showChapterEditorModal(
+                      context,
+                      _selectedSubjectId!,
+                      classOptions,
+                      defaultClassNodeId: _selectedClassNodeId,
+                      countryId: countryId,
+                    ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.accentBlue,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            elevation: 2,
+          ),
+          icon: const Icon(Icons.create_new_folder_rounded, size: 18),
+          label: Text(
+            'Créer un Chapitre',
+            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+        );
+
+        if (isMobile) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [titleContent, const SizedBox(height: 12), createButton],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(child: titleContent),
+            const SizedBox(width: 16),
+            createButton,
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildFiltersBar(
+    List<AcademicNode> classOptions,
+    List<Subject> subjects,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: AppTheme.primarySurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.primaryBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 16,
+        runSpacing: 12,
+        children: [
+          // Sélecteur de classe
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentBlue.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Icon(
+                  Icons.school_rounded,
+                  color: AppTheme.accentBlue,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Classe :',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white70,
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 200,
+                child: classOptions.isEmpty
+                    ? Text(
+                        'Aucune classe configurée',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppTheme.accentRose,
+                        ),
+                      )
+                    : DropdownButtonFormField<String>(
+                        // ignore: deprecated_member_use
+                        value: _selectedClassNodeId,
+                        isDense: true,
+                        isExpanded: true,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: Colors.white,
+                        ),
+                        dropdownColor: AppTheme.primarySurface,
+                        decoration: InputDecoration(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          filled: true,
+                          fillColor: AppTheme.primaryDark,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: AppTheme.primaryBorder,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: AppTheme.primaryBorder,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: AppTheme.accentBlue,
+                            ),
+                          ),
+                        ),
+                        items: classOptions
+                            .map(
+                              (c) => DropdownMenuItem(
+                                value: c.id,
+                                child: Text(
+                                  c.name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) =>
+                            setState(() => _selectedClassNodeId = v),
+                      ),
+              ),
+            ],
+          ),
+
+          // Sélecteur de matière
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentIndigo.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Icon(
+                  Icons.category_rounded,
+                  color: AppTheme.accentIndigo,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Matière :',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white70,
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 200,
+                child: subjects.isEmpty
+                    ? Text(
+                        'Aucune matière disponible',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppTheme.accentRose,
+                        ),
+                      )
+                    : DropdownButtonFormField<String>(
+                        // ignore: deprecated_member_use
+                        value: _selectedSubjectId,
+                        isDense: true,
+                        isExpanded: true,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: Colors.white,
+                        ),
+                        dropdownColor: AppTheme.primarySurface,
+                        decoration: InputDecoration(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          filled: true,
+                          fillColor: AppTheme.primaryDark,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: AppTheme.primaryBorder,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: AppTheme.primaryBorder,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: AppTheme.accentIndigo,
+                            ),
+                          ),
+                        ),
+                        items: subjects
+                            .map(
+                              (s) => DropdownMenuItem(
+                                value: s.id,
+                                child: Text(
+                                  s.name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) =>
+                            setState(() => _selectedSubjectId = v),
+                      ),
+              ),
+            ],
+          ),
+
+          // Champ de recherche rapide
+          SizedBox(
+            width: 250,
+            child: TextField(
+              controller: _searchController,
+              onChanged: (v) => setState(() => _searchQuery = v.trim()),
+              style: GoogleFonts.inter(color: Colors.white, fontSize: 13),
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                hintText: 'Rechercher un chapitre/leçon...',
+                hintStyle: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: AppTheme.textMuted,
+                ),
+                filled: true,
+                fillColor: AppTheme.primaryDark,
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  size: 16,
+                  color: AppTheme.textMuted,
+                ),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          size: 16,
+                          color: AppTheme.textMuted,
+                        ),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: AppTheme.primaryBorder),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: AppTheme.primaryBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: AppTheme.accentCyan),
+                ),
+              ),
+            ),
+          ),
+
+          // Toggle Afficher les archives
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryDark.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: _showInactive
+                    ? AppTheme.accentAmber.withValues(alpha: 0.4)
+                    : AppTheme.primaryBorder,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Switch(
+                  value: _showInactive,
+                  activeThumbColor: AppTheme.accentAmber,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  onChanged: (v) => setState(() => _showInactive = v),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Afficher les archives',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: _showInactive
+                        ? AppTheme.accentAmber
+                        : AppTheme.textMuted,
+                    fontWeight: _showInactive
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContentArea(
+    BuildContext context,
+    List<AcademicNode> classOptions,
+    List<Subject> subjects,
+    AsyncValue<List<Chapter>>? chaptersAsync,
+    String? countryId,
+  ) {
+    if (_selectedSubjectId == null) {
+      return _buildNoSubjectState(classOptions);
+    }
+
+    if (chaptersAsync == null || chaptersAsync.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          semanticsLabel: 'Chargement des chapitres',
+        ),
+      );
+    }
+
+    if (chaptersAsync.hasError) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline_rounded, color: AppTheme.accentRose, size: 40),
+            const SizedBox(height: 12),
+            Text(
+              'Erreur: ${chaptersAsync.error}',
+              style: GoogleFonts.inter(color: AppTheme.accentRose),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () {
+                if (_selectedSubjectId != null) {
+                  ref.invalidate(
+                    chaptersWithLessonsProvider((
+                      subjectId: _selectedSubjectId!,
+                      classNodeId: _selectedClassNodeId,
+                      includeInactive: _showInactive,
+                    )),
+                  );
+                }
+              },
+              child: const Text('Réessayer'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final chapters = chaptersAsync.valueOrNull ?? [];
+    final visible = chapters
+        .where((c) => _matchesSearch(c, _searchQuery))
+        .toList();
+
+    if (chapters.isEmpty) {
+      return _buildEmptyChaptersState(context, classOptions, countryId);
+    }
+
+    if (visible.isEmpty) {
+      return _buildEmptySearchState();
+    }
+
+    final allLessonIds = chapters
+        .expand((c) => c.lessons)
+        .map((l) => l.id)
+        .toList();
+
+    if (_validationStatusFuture == null ||
+        _lastValidationLessonIds == null ||
+        !_sameIds(_lastValidationLessonIds!, allLessonIds)) {
+      _lastValidationLessonIds = allLessonIds;
+      _validationStatusFuture = ref
+          .read(supabaseServiceProvider)
+          .fetchValidationStatusForContentIds(allLessonIds);
+    }
+
+    return FutureBuilder<Map<String, String>>(
+      future: _validationStatusFuture,
+      builder: (context, statusSnapshot) {
+        final statusMap = statusSnapshot.data ?? const {};
+
+        return Consumer(
+          builder: (context, ref, _) {
+            final termsAsync = countryId == null
+                ? const AsyncValue<List<Term>>.data([])
+                : ref.watch(termsProvider(countryId));
+            final terms = List<Term>.from(
+              termsAsync.valueOrNull ?? <Term>[],
+            )..sort((a, b) => a.startDate.compareTo(b.startDate));
+            final termNames = <String, String>{
+              for (final t in terms) t.id: t.name,
+            };
+            final subjectName = subjects
+                .firstWhere(
+                  (s) => s.id == _selectedSubjectId,
+                  orElse: () => Subject(id: '', name: '', code: ''),
+                )
+                .name;
+
+            final byTerm = <String?, List<Chapter>>{};
+            for (final c in visible) {
+              byTerm.putIfAbsent(c.termId, () => []).add(c);
+            }
+            final orderedTermIds = <String?>[
+              ...terms.map((t) => t.id).where(byTerm.containsKey),
+              if (byTerm.containsKey(null)) null,
+            ];
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildKpiMetricsRow(chapters, statusMap),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: orderedTermIds.length,
+                    itemBuilder: (context, idx) {
+                      final termId = orderedTermIds[idx];
+                      final term = terms
+                          .where((t) => t.id == termId)
+                          .firstOrNull;
+                      final chaptersInFolder = byTerm[termId]!;
+                      return _buildTermFolder(
+                        term,
+                        chaptersInFolder,
+                        termNames,
+                        statusMap,
+                        countryId,
+                        subjectName,
+                        classOptions,
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildKpiMetricsRow(
+    List<Chapter> chapters,
+    Map<String, String> statusMap,
+  ) {
+    final totalChapters = chapters.length;
+    final allLessons = chapters.expand((c) => c.lessons).toList();
+    final totalLessons = allLessons.length;
+    final publishedLessons = allLessons.where((l) => l.isPublished).length;
+    final inValidationLessons = allLessons
+        .where((l) => statusMap[l.id] == 'en_attente')
+        .length;
+    final archivedCount = chapters.where((c) => !c.isActive).length +
+        allLessons.where((l) => !l.isActive).length;
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildKpiCard(
+            label: 'Total Chapitres',
+            value: '$totalChapters',
+            icon: Icons.folder_rounded,
+            color: AppTheme.accentBlue,
+          ),
+          const SizedBox(width: 12),
+          _buildKpiCard(
+            label: 'Total Leçons',
+            value: '$totalLessons',
+            icon: Icons.menu_book_rounded,
+            color: AppTheme.accentIndigo,
+          ),
+          const SizedBox(width: 12),
+          _buildKpiCard(
+            label: 'Leçons Publiées',
+            value: '$publishedLessons',
+            icon: Icons.check_circle_rounded,
+            color: AppTheme.accentEmerald,
+          ),
+          const SizedBox(width: 12),
+          _buildKpiCard(
+            label: 'En Validation',
+            value: '$inValidationLessons',
+            icon: Icons.hourglass_top_rounded,
+            color: AppTheme.accentAmber,
+          ),
+          const SizedBox(width: 12),
+          _buildKpiCard(
+            label: 'Éléments Archivés',
+            value: '$archivedCount',
+            icon: Icons.archive_rounded,
+            color: AppTheme.textMuted,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildKpiCard({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.primarySurface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppTheme.primaryBorder),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 16),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                value,
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: AppTheme.textMuted,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoSubjectState(List<AcademicNode> classOptions) {
+    final message = classOptions.isEmpty
+        ? 'Configurez d\'abord l\'Arbre Académique (au moins une Classe).'
+        : 'Sélectionnez une classe puis une matière pour voir les chapitres.';
+
+    return Center(
+      child: SingleChildScrollView(
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          constraints: const BoxConstraints(maxWidth: 480),
+          decoration: BoxDecoration(
+            color: AppTheme.primarySurface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.primaryBorder),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentBlue.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.auto_stories_outlined,
+                  color: AppTheme.accentBlue,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Prêt pour l\'exploration de contenu',
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: AppTheme.textMuted,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyChaptersState(
+    BuildContext context,
+    List<AcademicNode> classOptions,
+    String? countryId,
+  ) {
+    return Center(
+      child: SingleChildScrollView(
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          constraints: const BoxConstraints(maxWidth: 480),
+          decoration: BoxDecoration(
+            color: AppTheme.primarySurface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.primaryBorder),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentIndigo.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.folder_open_rounded,
+                  color: AppTheme.accentIndigo,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Aucun chapitre configuré',
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Aucun chapitre pour cette matière. Cliquez sur "Créer un Chapitre" pour commencer.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: AppTheme.textMuted,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed:
+                    _selectedSubjectId == null || _selectedClassNodeId == null
+                        ? null
+                        : () => _showChapterEditorModal(
+                            context,
+                            _selectedSubjectId!,
+                            classOptions,
+                            defaultClassNodeId: _selectedClassNodeId,
+                            countryId: countryId,
+                          ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accentBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                icon: const Icon(Icons.add_rounded, size: 16),
+                label: const Text('Créer le premier chapitre'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptySearchState() {
+    return Center(
+      child: SingleChildScrollView(
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          constraints: const BoxConstraints(maxWidth: 480),
+          decoration: BoxDecoration(
+            color: AppTheme.primarySurface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.primaryBorder),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentAmber.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.search_off_rounded,
+                  color: AppTheme.accentAmber,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Aucun résultat',
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Aucun résultat pour "$_searchQuery".',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: AppTheme.textMuted,
+                ),
+              ),
+              const SizedBox(height: 14),
+              OutlinedButton.icon(
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _searchQuery = '');
+                },
+                icon: const Icon(Icons.clear_rounded, size: 16),
+                label: const Text('Effacer la recherche'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTermFolder(
     Term? term,
     List<Chapter> chapters,
@@ -571,12 +1112,12 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        color: Colors.transparent,
+        color: AppTheme.primarySurface.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: term == null
-              ? AppTheme.accentAmber.withValues(alpha: 0.3)
-              : AppTheme.accentIndigo.withValues(alpha: 0.25),
+              ? AppTheme.accentAmber.withValues(alpha: 0.35)
+              : AppTheme.accentIndigo.withValues(alpha: 0.3),
         ),
       ),
       child: Material(
@@ -588,9 +1129,18 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
           initiallyExpanded: true,
           backgroundColor: AppTheme.primaryDark.withValues(alpha: 0.3),
           collapsedBackgroundColor: AppTheme.primaryDark.withValues(alpha: 0.3),
-          leading: Icon(
-            term == null ? Icons.folder_off_rounded : Icons.folder_rounded,
-            color: term == null ? AppTheme.accentAmber : AppTheme.accentIndigo,
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: (term == null ? AppTheme.accentAmber : AppTheme.accentIndigo)
+                  .withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              term == null ? Icons.folder_off_rounded : Icons.folder_rounded,
+              color: term == null ? AppTheme.accentAmber : AppTheme.accentIndigo,
+              size: 20,
+            ),
           ),
           title: Row(
             children: [
@@ -605,18 +1155,28 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                   ),
                 ),
               ),
-              Text(
-                '${chapters.length} chapitre(s) • $activeLessonsCount leçon(s)',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: AppTheme.textMuted,
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryDark,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppTheme.primaryBorder),
+                ),
+                child: Text(
+                  '${chapters.length} chapitre(s) • $activeLessonsCount leçon(s)',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.textMuted,
+                  ),
                 ),
               ),
             ],
           ),
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
               child: Column(
                 children: chapters
                     .map(
@@ -655,26 +1215,30 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
               ?.name;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: AppTheme.primarySurface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: chapter.isActive
               ? AppTheme.primaryBorder
               : AppTheme.accentAmber.withValues(alpha: 0.4),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         clipBehavior: Clip.antiAlias,
         child: ExpansionTile(
           key: PageStorageKey(chapter.id),
           initiallyExpanded: true,
-          // Column plutôt que Row(Expanded(titre), badge, badge, badge, ...) : jusqu'à 5 badges à
-          // largeur fixe après l'Expanded écrasaient le titre du chapitre à 1-2 caractères sur
-          // mobile (retour utilisateur réel, titre tronqué à "E...", 2026-08-30).
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -796,11 +1360,22 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                         ),
                       ),
                     ),
-                  Text(
-                    '${chapter.lessons.length} leçon(s)',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: AppTheme.textMuted,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryDark,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTheme.primaryBorder),
+                    ),
+                    child: Text(
+                      '${chapter.lessons.length} leçon(s)',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: AppTheme.textMuted,
+                      ),
                     ),
                   ),
                 ],
@@ -810,10 +1385,10 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
           subtitle:
               chapter.introduction != null && chapter.introduction!.isNotEmpty
               ? Padding(
-                  padding: const EdgeInsets.only(top: 4),
+                  padding: const EdgeInsets.only(top: 6),
                   child: Text(
                     chapter.introduction!,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
                       fontSize: 12,
@@ -858,21 +1433,35 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                     const SizedBox(height: 12),
                   ],
                   if (chapter.lessons.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        'Aucune leçon dans ce chapitre.',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: AppTheme.textMuted,
-                        ),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryDark.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.primaryBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            color: AppTheme.textMuted,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Aucune leçon dans ce chapitre.',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: AppTheme.textMuted,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     )
                   else
-                    // Une recherche qui matche le TITRE du chapitre garde toutes ses leçons
-                    // visibles ; une recherche qui matche seulement des leçons (le chapitre lui-
-                    // même ne matchant pas) ne montre que celles-là, sinon la recherche semble ne
-                    // rien filtrer du tout à l'intérieur d'un chapitre.
                     ...(_searchQuery.isEmpty ||
                                 chapter.title.toLowerCase().contains(
                                   _searchQuery.toLowerCase(),
@@ -893,141 +1482,11 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                             chapter.title,
                           ),
                         ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      TextButton.icon(
-                        onPressed: () => _showLessonEditorModal(
-                          context,
-                          chapter.id,
-                          chapter.lessons.length,
-                        ),
-                        icon: const Icon(Icons.add_rounded, size: 16),
-                        label: const Text('Ajouter une leçon ici'),
-                      ),
-                      TextButton.icon(
-                        onPressed: () => _showChapterEditorModal(
-                          context,
-                          chapter.subjectId,
-                          classOptions,
-                          existing: chapter,
-                          countryId: countryId,
-                        ),
-                        icon: const Icon(
-                          Icons.edit_rounded,
-                          size: 16,
-                          color: AppTheme.accentBlue,
-                        ),
-                        label: Text(
-                          'Modifier',
-                          style: GoogleFonts.inter(color: AppTheme.accentBlue),
-                        ),
-                      ),
-                      TextButton.icon(
-                        onPressed: () => _showDuplicateChapterModal(
-                          context,
-                          chapter,
-                          classOptions,
-                        ),
-                        icon: const Icon(
-                          Icons.copy_all_rounded,
-                          size: 16,
-                          color: AppTheme.accentIndigo,
-                        ),
-                        label: Text(
-                          'Dupliquer vers une autre classe',
-                          style: GoogleFonts.inter(
-                            color: AppTheme.accentIndigo,
-                          ),
-                        ),
-                      ),
-                      if (chapter.classNodeId != null)
-                        Consumer(
-                          builder: (context, ref, _) {
-                            final twinAsync = ref.watch(
-                              twinGroupForClassProvider((
-                                classNodeId: chapter.classNodeId,
-                                subjectId: chapter.subjectId,
-                              )),
-                            );
-                            final twin = twinAsync.valueOrNull;
-                            final siblingCount =
-                                twin?.members
-                                    .where(
-                                      (m) =>
-                                          m.classNodeId != chapter.classNodeId,
-                                    )
-                                    .length ??
-                                0;
-                            if (siblingCount == 0) {
-                              return const SizedBox.shrink();
-                            }
-                            return TextButton.icon(
-                              onPressed: () => _showDuplicateToTwinGroupModal(
-                                context,
-                                chapter,
-                                twin!,
-                              ),
-                              icon: const Icon(
-                                Icons.link_rounded,
-                                size: 16,
-                                color: AppTheme.accentCyan,
-                              ),
-                              label: Text(
-                                'Dupliquer vers les classes jumelées ($siblingCount)',
-                                style: GoogleFonts.inter(
-                                  color: AppTheme.accentCyan,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      TextButton.icon(
-                        onPressed: () => chapter.isActive
-                            ? _showDeactivateChapterConfirmation(
-                                context,
-                                chapter,
-                              )
-                            : _showReactivateChapterConfirmation(
-                                context,
-                                chapter,
-                              ),
-                        icon: Icon(
-                          chapter.isActive
-                              ? Icons.archive_rounded
-                              : Icons.unarchive_rounded,
-                          size: 16,
-                          color: AppTheme.accentAmber,
-                        ),
-                        label: Text(
-                          chapter.isActive
-                              ? 'Archiver ce chapitre'
-                              : 'Désarchiver ce chapitre',
-                          style: GoogleFonts.inter(color: AppTheme.accentAmber),
-                        ),
-                      ),
-                      if (!chapter.isActive)
-                        TextButton.icon(
-                          onPressed: () =>
-                              _showPermanentDeleteChapterConfirmation(
-                                context,
-                                chapter,
-                              ),
-                          icon: const Icon(
-                            Icons.delete_forever_rounded,
-                            size: 16,
-                            color: AppTheme.accentRose,
-                          ),
-                          label: Text(
-                            'Supprimer définitivement',
-                            style: GoogleFonts.inter(
-                              color: AppTheme.accentRose,
-                            ),
-                          ),
-                        ),
-                    ],
+                  const SizedBox(height: 12),
+                  _buildChapterActionToolbar(
+                    chapter,
+                    countryId,
+                    classOptions,
                   ),
                 ],
               ),
@@ -1035,6 +1494,224 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildChapterActionToolbar(
+    Chapter chapter,
+    String? countryId,
+    List<AcademicNode> classOptions,
+  ) {
+    return Consumer(
+      builder: (context, ref, _) {
+        final twinAsync = chapter.classNodeId != null
+            ? ref.watch(
+                twinGroupForClassProvider((
+                  classNodeId: chapter.classNodeId,
+                  subjectId: chapter.subjectId,
+                )),
+              )
+            : null;
+        final twin = twinAsync?.valueOrNull;
+        final siblingCount =
+            twin?.members
+                .where((m) => m.classNodeId != chapter.classNodeId)
+                .length ??
+            0;
+
+        return Row(
+          children: [
+            // Bouton principal : Ajouter une leçon
+            ElevatedButton.icon(
+              onPressed: () => _showLessonEditorModal(
+                context,
+                chapter.id,
+                chapter.lessons.length,
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentBlue.withValues(alpha: 0.15),
+                foregroundColor: AppTheme.accentBlue,
+                elevation: 0,
+                side: BorderSide(
+                  color: AppTheme.accentBlue.withValues(alpha: 0.4),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+              ),
+              icon: const Icon(Icons.add_rounded, size: 16),
+              label: Text(
+                'Ajouter une leçon ici',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // Bouton Modifier chapitre
+            OutlinedButton.icon(
+              onPressed: () => _showChapterEditorModal(
+                context,
+                chapter.subjectId,
+                classOptions,
+                existing: chapter,
+                countryId: countryId,
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.accentBlue,
+                side: const BorderSide(color: AppTheme.primaryBorder),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+              ),
+              icon: const Icon(Icons.edit_rounded, size: 14),
+              label: Text(
+                'Modifier',
+                style: GoogleFonts.inter(fontSize: 12),
+              ),
+            ),
+            const Spacer(),
+
+            // Menu des actions secondaires du chapitre
+            PopupMenuButton<String>(
+              icon: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryDark,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.primaryBorder),
+                ),
+                child: const Icon(
+                  Icons.more_vert_rounded,
+                  size: 16,
+                  color: AppTheme.textMuted,
+                ),
+              ),
+              tooltip: 'Options du chapitre',
+              color: AppTheme.primarySurface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: const BorderSide(color: AppTheme.primaryBorder),
+              ),
+              onSelected: (action) {
+                switch (action) {
+                  case 'duplicate_class':
+                    _showDuplicateChapterModal(context, chapter, classOptions);
+                    break;
+                  case 'duplicate_twins':
+                    if (twin != null) {
+                      _showDuplicateToTwinGroupModal(context, chapter, twin);
+                    }
+                    break;
+                  case 'toggle_archive':
+                    if (chapter.isActive) {
+                      _showDeactivateChapterConfirmation(context, chapter);
+                    } else {
+                      _showReactivateChapterConfirmation(context, chapter);
+                    }
+                    break;
+                  case 'delete_permanent':
+                    _showPermanentDeleteChapterConfirmation(context, chapter);
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'duplicate_class',
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.copy_all_rounded,
+                        size: 16,
+                        color: AppTheme.accentIndigo,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Dupliquer vers une autre classe',
+                        style: GoogleFonts.inter(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                if (siblingCount > 0)
+                  PopupMenuItem(
+                    value: 'duplicate_twins',
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.link_rounded,
+                          size: 16,
+                          color: AppTheme.accentCyan,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Dupliquer vers les classes jumelées ($siblingCount)',
+                          style: GoogleFonts.inter(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  value: 'toggle_archive',
+                  child: Row(
+                    children: [
+                      Icon(
+                        chapter.isActive
+                            ? Icons.archive_rounded
+                            : Icons.unarchive_rounded,
+                        size: 16,
+                        color: AppTheme.accentAmber,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        chapter.isActive
+                            ? 'Archiver ce chapitre'
+                            : 'Désarchiver ce chapitre',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppTheme.accentAmber,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (!chapter.isActive)
+                  PopupMenuItem(
+                    value: 'delete_permanent',
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.delete_forever_rounded,
+                          size: 16,
+                          color: AppTheme.accentRose,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Supprimer définitivement',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: AppTheme.accentRose,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -1080,23 +1757,14 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
             color: AppTheme.accentCyan,
           ),
           tooltip: 'Ouvrir dans le Studio de Cours',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           onPressed: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
               builder: (_) => LessonBuilderScreen(initialLessonId: lesson.id),
             ),
           ),
         ),
-      IconButton(
-        icon: const Icon(
-          Icons.history_rounded,
-          size: 18,
-          color: AppTheme.accentCyan,
-        ),
-        tooltip: 'Historique des versions',
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-        onPressed: () => _showLessonVersionHistoryModal(context, lesson),
-      ),
       IconButton(
         icon: const Icon(
           Icons.visibility_rounded,
@@ -1121,21 +1789,6 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
       ),
       IconButton(
         icon: const Icon(
-          Icons.picture_as_pdf_rounded,
-          size: 18,
-          color: AppTheme.accentRose,
-        ),
-        tooltip: 'Imprimer / Exporter en PDF',
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-        onPressed: () => LessonPdfGenerator.printOrSave(
-          lesson: lesson,
-          subjectName: subjectName,
-          chapterTitle: chapterTitle,
-        ),
-      ),
-      IconButton(
-        icon: const Icon(
           Icons.edit_rounded,
           size: 18,
           color: AppTheme.accentBlue,
@@ -1150,38 +1803,149 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
           existing: lesson,
         ),
       ),
-      IconButton(
-        icon: Icon(
-          lesson.isActive ? Icons.archive_rounded : Icons.unarchive_rounded,
+      PopupMenuButton<String>(
+        icon: const Icon(
+          Icons.more_vert_rounded,
           size: 18,
-          color: AppTheme.accentAmber,
+          color: AppTheme.textMuted,
         ),
-        tooltip: lesson.isActive ? 'Archiver' : 'Désarchiver',
+        tooltip: 'Autres actions',
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-        onPressed: () => lesson.isActive
-            ? _showDeactivateLessonConfirmation(context, lesson)
-            : _showReactivateLessonConfirmation(context, lesson),
-      ),
-      if (!lesson.isActive)
-        IconButton(
-          icon: const Icon(
-            Icons.delete_forever_rounded,
-            size: 18,
-            color: AppTheme.accentRose,
-          ),
-          tooltip: 'Supprimer définitivement',
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          onPressed: () =>
-              _showPermanentDeleteLessonConfirmation(context, lesson),
+        color: AppTheme.primarySurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: const BorderSide(color: AppTheme.primaryBorder),
         ),
+        onSelected: (action) {
+          switch (action) {
+            case 'pdf':
+              LessonPdfGenerator.printOrSave(
+                lesson: lesson,
+                subjectName: subjectName,
+                chapterTitle: chapterTitle,
+              );
+              break;
+            case 'history':
+              _showLessonVersionHistoryModal(context, lesson);
+              break;
+            case 'toggle_archive':
+              if (lesson.isActive) {
+                _showDeactivateLessonConfirmation(context, lesson);
+              } else {
+                _showReactivateLessonConfirmation(context, lesson);
+              }
+              break;
+            case 'delete_permanent':
+              _showPermanentDeleteLessonConfirmation(context, lesson);
+              break;
+          }
+        },
+        itemBuilder: (context) => [
+          PopupMenuItem(
+            value: 'pdf',
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.picture_as_pdf_rounded,
+                  size: 16,
+                  color: AppTheme.accentRose,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Imprimer / Exporter en PDF',
+                  style: GoogleFonts.inter(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'history',
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.history_rounded,
+                  size: 16,
+                  color: AppTheme.accentCyan,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Historique des versions',
+                  style: GoogleFonts.inter(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          const PopupMenuDivider(),
+          PopupMenuItem(
+            value: 'toggle_archive',
+            child: Row(
+              children: [
+                Icon(
+                  lesson.isActive
+                      ? Icons.archive_rounded
+                      : Icons.unarchive_rounded,
+                  size: 16,
+                  color: AppTheme.accentAmber,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  lesson.isActive ? 'Archiver' : 'Désarchiver',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: AppTheme.accentAmber,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!lesson.isActive)
+            PopupMenuItem(
+              value: 'delete_permanent',
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.delete_forever_rounded,
+                    size: 16,
+                    color: AppTheme.accentRose,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Supprimer définitivement',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AppTheme.accentRose,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
     ];
 
-    final leadingIcon = Icon(
-      lesson.isActive ? Icons.menu_book_rounded : Icons.visibility_off_rounded,
-      size: 18,
-      color: lesson.isActive ? AppTheme.accentBlue : Colors.white24,
+    final leadingIcon = Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: (lesson.isActive
+                ? (lesson.isPublished
+                    ? AppTheme.accentEmerald
+                    : AppTheme.accentBlue)
+                : Colors.white24)
+            .withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Icon(
+        lesson.isActive
+            ? Icons.menu_book_rounded
+            : Icons.visibility_off_rounded,
+        size: 16,
+        color: lesson.isActive
+            ? (lesson.isPublished
+                ? AppTheme.accentEmerald
+                : AppTheme.accentBlue)
+            : Colors.white24,
+      ),
     );
 
     return Container(
@@ -1192,14 +1956,9 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppTheme.primaryBorder),
       ),
-      // Column plutôt que Row(icône, Expanded(titre+badges), 5-6 IconButton) : les boutons
-      // d'action à largeur fixe affamaient le titre+badges sur mobile jusqu'à quelques pixels de
-      // large (retour utilisateur réel, badge "Publiée" écrit à la verticale lettre par lettre,
-      // 2026-08-30). Sous 700px, titre+badges passent en pleine largeur et les boutons se
-      // regroupent dans un Wrap en dessous.
-      child: Builder(
-        builder: (context) {
-          if (MediaQuery.of(context).size.width < 700) {
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 650) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1210,8 +1969,11 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
                     titleAndBadges,
                   ],
                 ),
-                const SizedBox(height: 6),
-                Wrap(spacing: 2, runSpacing: 2, children: actionButtons),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: actionButtons,
+                ),
               ],
             );
           }
