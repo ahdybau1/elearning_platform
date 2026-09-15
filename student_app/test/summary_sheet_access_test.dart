@@ -63,7 +63,12 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Leçon 2 sur 2'), findsOneWidget);
-      await tester.tap(find.byTooltip('Laboratoire interactif de la dérivée'));
+      // Le laboratoire est désormais regroupé dans le menu « Outils de la leçon »
+      // (barre d'action allégée, retour porteur ergonomie) plutôt qu'une icône
+      // dédiée directement dans la barre d'app.
+      await tester.tap(find.byTooltip('Outils de la leçon'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Laboratoire interactif'));
       await tester.pumpAndSettle();
       expect(find.byType(DerivativeLabScreen), findsOneWidget);
       await tester.ensureVisible(find.text('REVENIR AU COURS'));
@@ -117,14 +122,14 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Texte du cours.'), findsOneWidget);
-      expect(
-        find.byTooltip('Fiche Mémo Synthèse HD (Zoom & Formules)'),
-        hasSheet ? findsOneWidget : findsNothing,
-      );
+      // La bannière d'accès à la fiche mémo n'a plus d'icône isolée avec info-bulle
+      // (barre d'action allégée) : elle s'affiche directement dans le corps de la
+      // page, avec un bouton « Ouvrir » explicite.
       expect(
         find.text('FICHE DE SYNTHÈSE HD'),
         hasSheet ? findsOneWidget : findsNothing,
       );
+      expect(find.text('Ouvrir'), hasSheet ? findsOneWidget : findsNothing);
       expect(find.text('Résumé : Suites Réelles'), findsNothing);
       if (hasSheet) {
         await tester.tap(find.text('Ouvrir'));
@@ -166,12 +171,14 @@ void main() {
       // not for the entire screen to stop scheduling frames.
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
+      // Bouton texte explicite (« Fiche mémo »), plus une icône isolée avec
+      // info-bulle — cohérent avec les zones tactiles agrandies de la refonte.
       expect(
-        find.byTooltip('Fiche Mémo Synthèse HD'),
+        find.text('Fiche mémo'),
         hasSheet ? findsOneWidget : findsNothing,
       );
       if (hasSheet) {
-        await tester.tap(find.byTooltip('Fiche Mémo Synthèse HD'));
+        await tester.tap(find.text('Fiche mémo'));
         await tester.pumpAndSettle();
         expect(
           tester
@@ -206,32 +213,12 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
-    testWidgets(
-      'Viewer reports offline limitation without claiming a save at $width',
-      (tester) async {
-        viewport(tester, width);
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: StudentTheme.darkTheme,
-            home: SummarySheetViewerModal(
-              sheet: SummarySheetRegistry.sheets.first,
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-        await tester.tap(find.byTooltip('Enregistrement hors ligne — à venir'));
-        await tester.pumpAndSettle();
-        expect(
-          find.text('L’enregistrement hors ligne n’est pas encore disponible.'),
-          findsOneWidget,
-        );
-        expect(
-          find.text('Fiche de synthèse disponible hors-ligne.'),
-          findsNothing,
-        );
-        expect(tester.takeException(), isNull);
-      },
-    );
+    // Le bouton « enregistrement hors ligne » (désactivé, annonçant une fonction
+    // « à venir ») a été retiré de SummarySheetViewerModal (retour porteur : ne
+    // jamais afficher un contrôle qui ne fait rien — voir commit
+    // "fix(student): remove remaining misleading controls"). Le test correspondant
+    // testait donc un contrôle trompeur volontairement supprimé ; il n'a plus lieu
+    // d'être plutôt que d'être ré-écrit sur un sélecteur qui n'existe plus.
   }
 
   testWidgets(
