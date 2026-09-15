@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/theme/student_theme.dart';
 import '../../../core/theme/subject_visuals.dart';
 import '../../../core/providers/student_providers.dart';
@@ -62,10 +63,43 @@ class ChaptersListScreen extends ConsumerWidget {
             Expanded(
               child: chaptersAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) => Center(
-                  child: Text(
-                    'Erreur: $err',
-                    style: const TextStyle(color: Colors.red),
+                error: (_, __) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.cloud_off_rounded,
+                          size: 44,
+                          color: context.colors.textSecondary,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Impossible de charger les chapitres',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Vérifie ta connexion puis réessaie.',
+                          style: TextStyle(color: context.colors.textSecondary),
+                        ),
+                        const SizedBox(height: 16),
+                        FilledButton.icon(
+                          onPressed: () => ref.invalidate(
+                            studentChaptersProvider(
+                              ChaptersQuery(
+                                subjectId: subjectId,
+                                classNodeId: classNodeId,
+                              ),
+                            ),
+                          ),
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text('Réessayer'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 data: (chapters) {
@@ -208,387 +242,390 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
               : context.colors.border.withValues(alpha: 0.4),
         ),
       ),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              width: 6,
-              decoration: BoxDecoration(
-                gradient: isUnlocked
-                    ? LinearGradient(
-                        colors: widget.visual.gradient,
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      )
-                    : null,
-                color: isUnlocked ? null : context.colors.border,
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isUnlocked
-                                ? widget.visual.gradient.first.withValues(
-                                    alpha: 0.18,
-                                  )
-                                : Colors.grey.withValues(alpha: 0.15),
-                            borderRadius: AppRadius.radiusSmall,
-                          ),
-                          child: Text(
-                            'Chapitre ${widget.index + 1}',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: isUnlocked
-                                  ? widget.visual.gradient.first
-                                  : Colors.grey,
-                            ),
-                          ),
-                        ),
-                        if (!isUnlocked)
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.lock_clock_rounded,
-                                size: 14,
-                                color: context.colors.accentAmber,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                chapter.termName ?? 'À venir',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  color: context.colors.accentAmber,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          )
-                        else
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.check_circle_outline_rounded,
-                                size: 14,
-                                color: context.colors.accentEmerald,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Disponible',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  color: context.colors.accentEmerald,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      chapter.title,
-                      style: GoogleFonts.outfit(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: isUnlocked
-                            ? context.colors.textPrimary
-                            : context.colors.textSecondary,
-                      ),
-                    ),
-                    if (chapter.introduction != null) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        chapter.introduction!,
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: context.colors.textSecondary,
-                          height: 1.3,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${chapter.lessonsCount} leçons • ${chapter.exercisesCount} exercices',
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: context.colors.textMuted,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 4,
-                          runSpacing: 8,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            if (isUnlocked) ...[
-                              IconButton(
-                                visualDensity: VisualDensity.compact,
-                                icon: const Icon(
-                                  Icons.history_edu_rounded,
-                                  size: 18,
-                                  color: Color(0xFF38BDF8),
-                                ),
-                                tooltip: 'Introduction & Applications',
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ChapterIntroScreen(
-                                        chapterId: chapter.id,
-                                        introduction: chapter.introduction,
-                                        subjectName:
-                                            (widget.subjectName ??
-                                                    'MATHEMATIQUES')
-                                                .toUpperCase(),
-                                        chapterTitle: chapter.title,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                              IconButton(
-                                visualDensity: VisualDensity.compact,
-                                icon: const Icon(
-                                  Icons.alt_route_rounded,
-                                  size: 18,
-                                  color: Color(0xFF10B981),
-                                ),
-                                tooltip: 'Parcours d\'exercices adaptatif',
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ExercisePathScreen(
-                                        subjectName:
-                                            (widget.subjectName ??
-                                                    'MATHEMATIQUES')
-                                                .toUpperCase(),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                              if (summarySheet != null)
-                                IconButton(
-                                  visualDensity: VisualDensity.compact,
-                                  icon: const Icon(
-                                    Icons.auto_stories_rounded,
-                                    size: 18,
-                                    color: Color(0xFFF59E0B),
-                                  ),
-                                  tooltip: 'Fiche Mémo Synthèse HD',
-                                  onPressed: () {
-                                    SummarySheetViewerModal.show(
-                                      context,
-                                      summarySheet,
-                                    );
-                                  },
-                                ),
-                              if (chapter.lessonsCount > 1)
-                                IconButton(
-                                  visualDensity: VisualDensity.compact,
-                                  icon: Icon(
-                                    _isExpanded
-                                        ? Icons.keyboard_arrow_up_rounded
-                                        : Icons.keyboard_arrow_down_rounded,
-                                    color: context.colors.textSecondary,
-                                  ),
-                                  tooltip: _isExpanded
-                                      ? 'Masquer les leçons'
-                                      : 'Voir les leçons',
-                                  onPressed: () => setState(
-                                    () => _isExpanded = !_isExpanded,
-                                  ),
-                                ),
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: widget.visual.gradient.first,
-                                  foregroundColor: Colors.black,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 8,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: AppRadius.radiusSmall,
-                                  ),
-                                ),
-                                onPressed: () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/lesson-reader',
-                                    arguments: {
-                                      'chapterId': chapter.id,
-                                      'chapterTitle': chapter.title,
-                                    },
-                                  );
-                                },
-                                icon: const Icon(
-                                  Icons.play_arrow_rounded,
-                                  size: 16,
-                                ),
-                                label: const Text(
-                                  'Ouvrir le cours',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ] else
-                              OutlinedButton.icon(
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: context.colors.textSecondary,
-                                  side: BorderSide(
-                                    color: context.colors.border,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                ),
-                                onPressed: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        chapter.termName != null
-                                            ? 'Ce chapitre sera débloqué automatiquement au ${chapter.termName}.'
-                                            : 'Ce chapitre sera débloqué automatiquement à la date prévue.',
-                                      ),
-                                    ),
-                                  );
-                                },
-                                icon: const Icon(
-                                  Icons.lock_outline_rounded,
-                                  size: 14,
-                                ),
-                                label: const Text(
-                                  'Bientôt débloqué',
-                                  style: TextStyle(fontSize: 11),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-
-                    // Vue dépliée des leçons du chapitre pour accès 1-clic direct
-                    if (isUnlocked && _isExpanded) ...[
-                      const SizedBox(height: 16),
-                      Divider(color: context.colors.border, height: 1),
-                      const SizedBox(height: 12),
-                      Consumer(
-                        builder: (context, ref, _) {
-                          final lessonsAsync = ref.watch(
-                            studentLessonsProvider(chapter.id),
-                          );
-                          return lessonsAsync.when(
-                            loading: () => const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            ),
-                            error: (err, _) => Text(
-                              'Erreur: $err',
-                              style: const TextStyle(
-                                color: Colors.red,
-                                fontSize: 12,
-                              ),
-                            ),
-                            data: (lessons) {
-                              if (lessons.isEmpty) {
-                                return Text(
-                                  'Aucune leçon disponible pour l\'instant.',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: context.colors.textMuted,
-                                  ),
-                                );
-                              }
-                              return Column(
-                                children: lessons.asMap().entries.map((entry) {
-                                  final idx = entry.key;
-                                  final lesson = entry.value;
-                                  return InkWell(
-                                    onTap: () {
-                                      Navigator.pushNamed(
-                                        context,
-                                        '/lesson-reader',
-                                        arguments: {
-                                          'chapterId': chapter.id,
-                                          'chapterTitle': chapter.title,
-                                          'initialLessonId': lesson.id,
-                                        },
-                                      );
-                                    },
-                                    borderRadius: AppRadius.radiusSmall,
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 8,
-                                        horizontal: 4,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.play_circle_outline_rounded,
-                                            size: 16,
-                                            color: widget.visual.gradient.first,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              '${idx + 1}. ${lesson.title}',
-                                              style: GoogleFonts.inter(
-                                                fontSize: 13,
-                                                color:
-                                                    context.colors.textPrimary,
-                                              ),
-                                            ),
-                                          ),
-                                          Text(
-                                            '${lesson.readingTimeMinutes} min',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 11,
-                                              color: context.colors.textMuted,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ],
-                  ],
+      child: Semantics(
+        container: true,
+        label: 'Chapitre ${widget.index + 1}, ${chapter.title}',
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                width: 6,
+                decoration: BoxDecoration(
+                  gradient: isUnlocked
+                      ? LinearGradient(
+                          colors: widget.visual.gradient,
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        )
+                      : null,
+                  color: isUnlocked ? null : context.colors.border,
                 ),
               ),
-            ),
-          ],
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isUnlocked
+                                  ? widget.visual.gradient.first.withValues(
+                                      alpha: 0.18,
+                                    )
+                                  : Colors.grey.withValues(alpha: 0.15),
+                              borderRadius: AppRadius.radiusSmall,
+                            ),
+                            child: Text(
+                              'Chapitre ${widget.index + 1}',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: isUnlocked
+                                    ? widget.visual.gradient.first
+                                    : Colors.grey,
+                              ),
+                            ),
+                          ),
+                          if (!isUnlocked)
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.lock_clock_rounded,
+                                  size: 14,
+                                  color: context.colors.accentAmber,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  chapter.termName ?? 'À venir',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: context.colors.accentAmber,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.check_circle_outline_rounded,
+                                  size: 14,
+                                  color: context.colors.accentEmerald,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Disponible',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: context.colors.accentEmerald,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        chapter.title,
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isUnlocked
+                              ? context.colors.textPrimary
+                              : context.colors.textSecondary,
+                        ),
+                      ),
+                      if (chapter.introduction != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          chapter.introduction!,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: context.colors.textSecondary,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${chapter.lessonsCount} leçons • ${chapter.exercisesCount} exercices',
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: context.colors.textMuted,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 4,
+                            runSpacing: 8,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              if (isUnlocked) ...[
+                                OutlinedButton.icon(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ChapterIntroScreen(
+                                          chapterId: chapter.id,
+                                          introduction: chapter.introduction,
+                                          subjectName:
+                                              (widget.subjectName ??
+                                                      'MATHEMATIQUES')
+                                                  .toUpperCase(),
+                                          chapterTitle: chapter.title,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(
+                                    Icons.history_edu_rounded,
+                                    size: 18,
+                                  ),
+                                  label: const Text('Introduction'),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ExercisePathScreen(
+                                          subjectName:
+                                              (widget.subjectName ??
+                                                      'MATHEMATIQUES')
+                                                  .toUpperCase(),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(
+                                    Icons.alt_route_rounded,
+                                    size: 18,
+                                  ),
+                                  label: const Text('Exercices'),
+                                ),
+                                if (summarySheet != null)
+                                  OutlinedButton.icon(
+                                    onPressed: () {
+                                      SummarySheetViewerModal.show(
+                                        context,
+                                        summarySheet,
+                                      );
+                                    },
+                                    icon: const Icon(
+                                      Icons.auto_stories_rounded,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Fiche mémo'),
+                                  ),
+                                if (chapter.lessonsCount > 1)
+                                  OutlinedButton.icon(
+                                    icon: Icon(
+                                      _isExpanded
+                                          ? Icons.keyboard_arrow_up_rounded
+                                          : Icons.keyboard_arrow_down_rounded,
+                                      color: context.colors.textSecondary,
+                                    ),
+                                    onPressed: () => setState(
+                                      () => _isExpanded = !_isExpanded,
+                                    ),
+                                    label: Text(
+                                      _isExpanded ? 'Masquer' : 'Leçons',
+                                    ),
+                                  ),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        widget.visual.gradient.first,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 8,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: AppRadius.radiusSmall,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/lesson-reader',
+                                      arguments: {
+                                        'chapterId': chapter.id,
+                                        'chapterTitle': chapter.title,
+                                      },
+                                    );
+                                  },
+                                  icon: const Icon(
+                                    Icons.play_arrow_rounded,
+                                    size: 16,
+                                  ),
+                                  label: const Text(
+                                    'Ouvrir le cours',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ] else
+                                OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor:
+                                        context.colors.textSecondary,
+                                    side: BorderSide(
+                                      color: context.colors.border,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          chapter.termName != null
+                                              ? 'Ce chapitre sera débloqué automatiquement au ${chapter.termName}.'
+                                              : 'Ce chapitre sera débloqué automatiquement à la date prévue.',
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(
+                                    Icons.lock_outline_rounded,
+                                    size: 14,
+                                  ),
+                                  label: const Text(
+                                    'Bientôt débloqué',
+                                    style: TextStyle(fontSize: 11),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                      // Vue dépliée des leçons du chapitre pour accès 1-clic direct
+                      if (isUnlocked && _isExpanded) ...[
+                        const SizedBox(height: 16),
+                        Divider(color: context.colors.border, height: 1),
+                        const SizedBox(height: 12),
+                        Consumer(
+                          builder: (context, ref, _) {
+                            final lessonsAsync = ref.watch(
+                              studentLessonsProvider(chapter.id),
+                            );
+                            return lessonsAsync.when(
+                              loading: () => const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
+                              error: (err, _) => Text(
+                                'Erreur: $err',
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              data: (lessons) {
+                                if (lessons.isEmpty) {
+                                  return Text(
+                                    'Aucune leçon disponible pour l\'instant.',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: context.colors.textMuted,
+                                    ),
+                                  );
+                                }
+                                return Column(
+                                  children: lessons.asMap().entries.map((
+                                    entry,
+                                  ) {
+                                    final idx = entry.key;
+                                    final lesson = entry.value;
+                                    return InkWell(
+                                      onTap: () {
+                                        Navigator.pushNamed(
+                                          context,
+                                          '/lesson-reader',
+                                          arguments: {
+                                            'chapterId': chapter.id,
+                                            'chapterTitle': chapter.title,
+                                            'initialLessonId': lesson.id,
+                                          },
+                                        );
+                                      },
+                                      borderRadius: AppRadius.radiusSmall,
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8,
+                                          horizontal: 4,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.play_circle_outline_rounded,
+                                              size: 16,
+                                              color:
+                                                  widget.visual.gradient.first,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                '${idx + 1}. ${lesson.title}',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 13,
+                                                  color: context
+                                                      .colors
+                                                      .textPrimary,
+                                                ),
+                                              ),
+                                            ),
+                                            Text(
+                                              '${lesson.readingTimeMinutes} min',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 11,
+                                                color: context.colors.textMuted,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
