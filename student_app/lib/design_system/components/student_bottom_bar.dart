@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+
 import '../../core/theme/student_theme.dart';
-import '../tokens/app_colors.dart';
 import '../tokens/app_radius.dart';
 import '../tokens/app_typography.dart';
 
@@ -37,9 +37,7 @@ class StudentBottomBar extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
-        border: Border(
-          top: BorderSide(color: colors.border, width: 1),
-        ),
+        border: Border(top: BorderSide(color: colors.border, width: 1)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.15),
@@ -58,7 +56,10 @@ class StudentBottomBar extends StatelessWidget {
                 onTap: onHide,
                 borderRadius: AppRadius.radiusFull,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 2,
+                    horizontal: 16,
+                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -86,54 +87,58 @@ class StudentBottomBar extends StatelessWidget {
                 children: List.generate(items.length, (index) {
                   final item = items[index];
                   final isSelected = index == currentIndex;
-                  final isAi = index == 3; // Mise en valeur discrète du Tuteur IA
+                  final activeColor = colors.accentPrimary;
+                  final inactiveColor = colors.textMuted;
 
-              final activeColor = isAi ? AppColors.cyanAccent : colors.accentPrimary;
-              final inactiveColor = colors.textMuted;
-
-              return Expanded(
-                child: InkWell(
-                  onTap: () => onTap(index),
-                  borderRadius: AppRadius.radiusLarge,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isSelected ? 12 : 0,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected ? activeColor.withValues(alpha: 0.15) : Colors.transparent,
-                          borderRadius: AppRadius.radiusFull,
-                        ),
-                        child: Icon(
-                          isSelected ? (item.activeIcon ?? item.icon) : item.icon,
-                          size: 22,
-                          color: isSelected ? activeColor : inactiveColor,
-                        ),
+                  return Expanded(
+                    child: InkWell(
+                      onTap: () => onTap(index),
+                      borderRadius: AppRadius.radiusLarge,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isSelected ? 12 : 0,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? activeColor.withValues(alpha: 0.15)
+                                  : Colors.transparent,
+                              borderRadius: AppRadius.radiusFull,
+                            ),
+                            child: Icon(
+                              isSelected
+                                  ? (item.activeIcon ?? item.icon)
+                                  : item.icon,
+                              size: 22,
+                              color: isSelected ? activeColor : inactiveColor,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            item.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.label(
+                              color: isSelected ? activeColor : inactiveColor,
+                              weight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        item.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.label(
-                          color: isSelected ? activeColor : inactiveColor,
-                          weight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-          ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ],
         ),
-      ],
-    ),
-  ),
-);
+      ),
+    );
   }
 }

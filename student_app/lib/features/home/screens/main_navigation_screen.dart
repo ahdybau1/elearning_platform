@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../design_system/components/student_bottom_bar.dart';
-import 'home_dashboard_screen.dart';
+import 'home_learning_screen.dart';
 import '../../profile/screens/student_profile_screen.dart';
 import '../../settings/screens/settings_screen.dart';
 import '../../courses/screens/subjects_list_screen.dart';
@@ -14,6 +15,7 @@ import '../../exams/screens/official_exams_screen.dart';
 import '../../exams/screens/establishment_papers_screen.dart';
 import '../../exams/screens/mock_exam_arena_screen.dart';
 import '../../ai_tutor/screens/ai_tutor_chat_screen.dart';
+import '../../progress/screens/progress_overview_screen.dart';
 import '../../community/screens/class_forum_screen.dart';
 import '../../community/screens/study_communities_screen.dart';
 import '../../subscription/screens/boutique_shop_screen.dart';
@@ -26,7 +28,11 @@ class _NavPage {
   final String title;
   final IconData icon;
   final Widget screen;
-  const _NavPage({required this.title, required this.icon, required this.screen});
+  const _NavPage({
+    required this.title,
+    required this.icon,
+    required this.screen,
+  });
 }
 
 class _NavModule {
@@ -47,7 +53,8 @@ class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
 
   @override
-  ConsumerState<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  ConsumerState<MainNavigationScreen> createState() =>
+      _MainNavigationScreenState();
 }
 
 class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
@@ -94,48 +101,129 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     final exam = examAsync?.valueOrNull;
 
     return [
-      _NavModule(title: 'Mon espace', pages: [
-        _NavPage(title: 'Tableau de Bord', icon: Icons.dashboard_rounded, screen: const HomeDashboardScreen()),
-        _NavPage(title: 'Mon Profil', icon: Icons.person_outline_rounded, screen: const StudentProfileScreen()),
-        _NavPage(title: 'Paramètres', icon: Icons.settings_outlined, screen: const SettingsScreen()),
-      ]),
-      _NavModule(title: 'Apprentissage', pages: [
-        _NavPage(title: 'Mes Matières & Cours', icon: Icons.menu_book_rounded, screen: const SubjectsListScreen()),
-        _NavPage(title: 'Exercices', icon: Icons.edit_note_rounded, screen: const ExercisesHubScreen()),
-        _NavPage(title: 'Tuteur Numérique', icon: Icons.auto_awesome_rounded, screen: const AiTutorChatScreen()),
-      ]),
-      _NavModule(title: 'Évaluation', pages: [
-        if (exam != null)
+      _NavModule(
+        title: 'Mon espace',
+        pages: [
           _NavPage(
-            title: 'Anciens Sujets ${exam.name}',
-            icon: Icons.workspace_premium_rounded,
-            screen: const OfficialExamsScreen(),
+            title: 'Accueil',
+            icon: Icons.home_rounded,
+            screen: const HomeLearningScreen(),
           ),
-        _NavPage(title: 'Épreuves par Établissement', icon: Icons.apartment_rounded, screen: const EstablishmentPapersScreen()),
-        _NavPage(title: 'Examens Blancs & Olympiades', icon: Icons.emoji_events_rounded, screen: const MockExamArenaScreen()),
-      ]),
-      _NavModule(title: 'Communauté', pages: [
-        _NavPage(title: 'Forum de Classe', icon: Icons.forum_rounded, screen: const ClassForumScreen()),
-        _NavPage(title: 'Communautés d\'Étude', icon: Icons.groups_rounded, screen: const StudyCommunitiesScreen()),
-      ]),
-      _NavModule(title: 'Services', pages: [
-        _NavPage(title: 'Documents à la Carte', icon: Icons.storefront_rounded, screen: const BoutiqueShopScreen()),
-        _NavPage(title: 'Soutien / Dons', icon: Icons.favorite_outline_rounded, screen: const DonationsScreen()),
-      ]),
-      _NavModule(title: 'Support', pages: [
-        _NavPage(title: 'Messagerie & Tickets', icon: Icons.support_agent_rounded, screen: const SupportTicketsScreen()),
-      ]),
+          _NavPage(
+            title: 'Ma Progression',
+            icon: Icons.insights_rounded,
+            screen: const ProgressOverviewScreen(),
+          ),
+          _NavPage(
+            title: 'Mon Profil',
+            icon: Icons.person_outline_rounded,
+            screen: const StudentProfileScreen(),
+          ),
+          _NavPage(
+            title: 'Paramètres',
+            icon: Icons.settings_outlined,
+            screen: const SettingsScreen(),
+          ),
+        ],
+      ),
+      _NavModule(
+        title: 'Apprentissage',
+        pages: [
+          _NavPage(
+            title: 'Mes Matières & Cours',
+            icon: Icons.menu_book_rounded,
+            screen: const SubjectsListScreen(),
+          ),
+          _NavPage(
+            title: 'Exercices',
+            icon: Icons.edit_note_rounded,
+            screen: const ExercisesHubScreen(),
+          ),
+          _NavPage(
+            title: 'Tuteur Numérique',
+            icon: Icons.auto_awesome_rounded,
+            screen: const AiTutorChatScreen(),
+          ),
+        ],
+      ),
+      _NavModule(
+        title: 'Évaluation',
+        pages: [
+          if (exam != null)
+            _NavPage(
+              title: 'Anciens Sujets ${exam.name}',
+              icon: Icons.workspace_premium_rounded,
+              screen: const OfficialExamsScreen(),
+            ),
+          _NavPage(
+            title: 'Épreuves par Établissement',
+            icon: Icons.apartment_rounded,
+            screen: const EstablishmentPapersScreen(),
+          ),
+          _NavPage(
+            title: 'Examens Blancs & Olympiades',
+            icon: Icons.emoji_events_rounded,
+            screen: const MockExamArenaScreen(),
+          ),
+        ],
+      ),
+      _NavModule(
+        title: 'Communauté',
+        pages: [
+          _NavPage(
+            title: 'Forum de Classe',
+            icon: Icons.forum_rounded,
+            screen: const ClassForumScreen(),
+          ),
+          _NavPage(
+            title: 'Communautés d\'Étude',
+            icon: Icons.groups_rounded,
+            screen: const StudyCommunitiesScreen(),
+          ),
+        ],
+      ),
+      _NavModule(
+        title: 'Services',
+        pages: [
+          _NavPage(
+            title: 'Documents à la Carte',
+            icon: Icons.storefront_rounded,
+            screen: const BoutiqueShopScreen(),
+          ),
+          _NavPage(
+            title: 'Soutien / Dons',
+            icon: Icons.favorite_outline_rounded,
+            screen: const DonationsScreen(),
+          ),
+        ],
+      ),
+      _NavModule(
+        title: 'Support',
+        pages: [
+          _NavPage(
+            title: 'Messagerie & Tickets',
+            icon: Icons.support_agent_rounded,
+            screen: const SupportTicketsScreen(),
+          ),
+        ],
+      ),
     ];
   }
 
   // Même logique que `_buildNavTile` de admin_app : fond de sélection porté par un Container
   // (pas ListTile.selectedTileColor, invisible sous le DecoratedBox de la barre latérale), survol
   // discret, icône/texte mis en avant quand sélectionné.
-  Widget _buildNavTile({required _NavPage page, required bool isSelected, required VoidCallback onTap}) {
+  Widget _buildNavTile({
+    required _NavPage page,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
     return Container(
       margin: const EdgeInsets.only(left: 12, right: 8, top: 2, bottom: 2),
       decoration: BoxDecoration(
-        color: isSelected ? context.colors.accentPrimary.withValues(alpha: 0.15) : Colors.transparent,
+        color: isSelected
+            ? context.colors.accentPrimary.withValues(alpha: 0.15)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Material(
@@ -144,16 +232,25 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
         clipBehavior: Clip.antiAlias,
         child: ListTile(
           dense: true,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           hoverColor: Colors.white.withValues(alpha: 0.05),
-          leading: Icon(page.icon, size: 20,
-              color: isSelected ? context.colors.accentPrimary : context.colors.textSecondary),
+          leading: Icon(
+            page.icon,
+            size: 20,
+            color: isSelected
+                ? context.colors.accentPrimary
+                : context.colors.textSecondary,
+          ),
           title: Text(
             page.title,
             style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              color: isSelected ? context.colors.textPrimary : context.colors.textSecondary,
+              color: isSelected
+                  ? context.colors.textPrimary
+                  : context.colors.textSecondary,
             ),
           ),
           onTap: onTap,
@@ -165,7 +262,11 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   /// Contenu de la barre latérale, partagé entre le mode permanent (desktop/tablette large, dans le
   /// `Row` du `body`) et le mode tiroir (`Drawer`, mobile — `isDrawer: true` force la barre à rester
   /// dépliée, "réduire la barre" n'aurait aucun sens dans un tiroir qui se referme déjà tout seul).
-  Widget _buildSidebarContent(List<_NavModule> studentModules, List<_NavPage> pages, {required bool isDrawer}) {
+  Widget _buildSidebarContent(
+    List<_NavModule> studentModules,
+    List<_NavPage> pages, {
+    required bool isDrawer,
+  }) {
     final collapsed = isDrawer ? false : _isSidebarCollapsed;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,8 +284,12 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
           child: ListView(
             padding: const EdgeInsets.symmetric(vertical: 8),
             children: studentModules.map((module) {
-              final isExpanded = collapsed ? false : _expandedModules.contains(module.title);
-              final isModuleActive = module.pages.contains(pages.isEmpty ? null : pages[_selectedFlatIndex]);
+              final isExpanded = collapsed
+                  ? false
+                  : _expandedModules.contains(module.title);
+              final isModuleActive = module.pages.contains(
+                pages.isEmpty ? null : pages[_selectedFlatIndex],
+              );
 
               void selectPage(int flatIndex) {
                 setState(() => _selectedFlatIndex = flatIndex);
@@ -212,7 +317,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: isModuleActive
                           ? context.colors.accentPrimary.withValues(alpha: 0.08)
@@ -220,7 +328,9 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                       borderRadius: AppRadius.radiusMedium,
                       border: Border.all(
                         color: isModuleActive
-                            ? context.colors.accentPrimary.withValues(alpha: 0.25)
+                            ? context.colors.accentPrimary.withValues(
+                                alpha: 0.25,
+                              )
                             : Colors.transparent,
                         width: 1,
                       ),
@@ -238,7 +348,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                           }
                         }),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                           child: Row(
                             children: [
                               Icon(
@@ -254,7 +367,9 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                                   module.title,
                                   style: GoogleFonts.outfit(
                                     fontSize: 13,
-                                    fontWeight: isModuleActive ? FontWeight.bold : FontWeight.w600,
+                                    fontWeight: isModuleActive
+                                        ? FontWeight.bold
+                                        : FontWeight.w600,
                                     color: isModuleActive
                                         ? context.colors.accentPrimary
                                         : context.colors.textPrimary,
@@ -262,9 +377,14 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: context.colors.textMuted.withValues(alpha: 0.12),
+                                  color: context.colors.textMuted.withValues(
+                                    alpha: 0.12,
+                                  ),
                                   borderRadius: AppRadius.radiusFull,
                                 ),
                                 child: Text(
@@ -294,7 +414,11 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                   ),
                   if (isExpanded)
                     Container(
-                      margin: const EdgeInsets.only(left: 20, top: 2, bottom: 4),
+                      margin: const EdgeInsets.only(
+                        left: 20,
+                        top: 2,
+                        bottom: 4,
+                      ),
                       decoration: BoxDecoration(
                         border: Border(
                           left: BorderSide(
@@ -322,20 +446,33 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
         // Réduire la barre — uniquement pertinent en mode permanent (desktop/tablette).
         if (!isDrawer)
           InkWell(
-            onTap: () => setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
+            onTap: () =>
+                setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
             child: Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(border: Border(top: BorderSide(color: context.colors.border))),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: context.colors.border)),
+              ),
               child: Row(
-                mainAxisAlignment: _isSidebarCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
+                mainAxisAlignment: _isSidebarCollapsed
+                    ? MainAxisAlignment.center
+                    : MainAxisAlignment.start,
                 children: [
                   Icon(
-                    _isSidebarCollapsed ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
+                    _isSidebarCollapsed
+                        ? Icons.chevron_right_rounded
+                        : Icons.chevron_left_rounded,
                     color: context.colors.textMuted,
                   ),
                   if (!_isSidebarCollapsed) ...[
                     const SizedBox(width: 12),
-                    Text('Réduire la barre', style: GoogleFonts.inter(fontSize: 12, color: context.colors.textMuted)),
+                    Text(
+                      'Réduire la barre',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: context.colors.textMuted,
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -357,209 +494,295 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     final isMobile = screenWidth < _kMobileBreakpoint;
 
     // Correspondance dynamique des 5 onglets mobiles prioritaires
-    final homeIndex = pages.indexWhere((p) => p.screen is HomeDashboardScreen);
-    final coursesIndex = pages.indexWhere((p) => p.screen is SubjectsListScreen);
-    final exercisesIndex = pages.indexWhere((p) => p.screen is ExercisesHubScreen);
-    final aiIndex = pages.indexWhere((p) => p.screen is AiTutorChatScreen);
-    final profileIndex = pages.indexWhere((p) => p.screen is StudentProfileScreen);
+    final homeIndex = pages.indexWhere((p) => p.screen is HomeLearningScreen);
+    final coursesIndex = pages.indexWhere(
+      (p) => p.screen is SubjectsListScreen,
+    );
+    final exercisesIndex = pages.indexWhere(
+      (p) => p.screen is ExercisesHubScreen,
+    );
+    final progressIndex = pages.indexWhere(
+      (p) => p.screen is ProgressOverviewScreen,
+    );
+    final profileIndex = pages.indexWhere(
+      (p) => p.screen is StudentProfileScreen,
+    );
 
     final bottomNavTargetIndices = [
       homeIndex != -1 ? homeIndex : 0,
       coursesIndex != -1 ? coursesIndex : 0,
       exercisesIndex != -1 ? exercisesIndex : 0,
-      aiIndex != -1 ? aiIndex : 0,
+      progressIndex != -1 ? progressIndex : 0,
       profileIndex != -1 ? profileIndex : 0,
     ];
 
-    final currentBottomIndex = bottomNavTargetIndices.indexOf(_selectedFlatIndex);
+    final currentBottomIndex = bottomNavTargetIndices.indexOf(
+      _selectedFlatIndex,
+    );
 
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: context.colors.background,
-      drawer: isMobile
-          ? Drawer(
-              backgroundColor: context.colors.surface,
-              width: 280,
-              child: SafeArea(child: _buildSidebarContent(studentModules, pages, isDrawer: true)),
-            )
-          : null,
-      bottomNavigationBar: (isMobile && _isBottomBarVisible)
-          ? StudentBottomBar(
-              currentIndex: currentBottomIndex,
-              onTap: (index) {
-                if (index >= 0 && index < bottomNavTargetIndices.length) {
-                  setState(() => _selectedFlatIndex = bottomNavTargetIndices[index]);
-                }
-              },
-              onHide: () => setState(() => _isBottomBarVisible = false),
-              items: const [
-                StudentBottomBarItem(
-                  icon: Icons.home_outlined,
-                  activeIcon: Icons.home_rounded,
-                  label: 'Accueil',
+    return Actions(
+      actions: {
+        MainTabIntent: CallbackAction<MainTabIntent>(
+          onInvoke: (intent) {
+            if (intent.index >= 0 &&
+                intent.index < bottomNavTargetIndices.length) {
+              setState(
+                () => _selectedFlatIndex = bottomNavTargetIndices[intent.index],
+              );
+            }
+            return null;
+          },
+        ),
+      },
+      child: Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: context.colors.background,
+        drawer: isMobile
+            ? Drawer(
+                backgroundColor: context.colors.surface,
+                width: 280,
+                child: SafeArea(
+                  child: _buildSidebarContent(
+                    studentModules,
+                    pages,
+                    isDrawer: true,
+                  ),
                 ),
-                StudentBottomBarItem(
-                  icon: Icons.menu_book_outlined,
-                  activeIcon: Icons.menu_book_rounded,
-                  label: 'Cours',
+              )
+            : null,
+        bottomNavigationBar: (isMobile && _isBottomBarVisible)
+            ? StudentBottomBar(
+                currentIndex: currentBottomIndex,
+                onTap: (index) {
+                  if (index >= 0 && index < bottomNavTargetIndices.length) {
+                    setState(
+                      () => _selectedFlatIndex = bottomNavTargetIndices[index],
+                    );
+                  }
+                },
+                onHide: () => setState(() => _isBottomBarVisible = false),
+                items: const [
+                  StudentBottomBarItem(
+                    icon: Icons.home_outlined,
+                    activeIcon: Icons.home_rounded,
+                    label: 'Accueil',
+                  ),
+                  StudentBottomBarItem(
+                    icon: Icons.menu_book_outlined,
+                    activeIcon: Icons.menu_book_rounded,
+                    label: 'Cours',
+                  ),
+                  StudentBottomBarItem(
+                    icon: Icons.edit_note_outlined,
+                    activeIcon: Icons.edit_note_rounded,
+                    label: 'Exercices',
+                  ),
+                  StudentBottomBarItem(
+                    icon: Icons.insights_outlined,
+                    activeIcon: Icons.insights_rounded,
+                    label: 'Progression',
+                  ),
+                  StudentBottomBarItem(
+                    icon: Icons.person_outline_rounded,
+                    activeIcon: Icons.person_rounded,
+                    label: 'Profil',
+                  ),
+                ],
+              )
+            : null,
+        body: Row(
+          children: [
+            // Sidebar permanente — uniquement au-delà du seuil mobile (voir `drawer` ci-dessus pour
+            // l'équivalent en dessous).
+            if (!isMobile)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: _isSidebarCollapsed ? 80 : 260,
+                decoration: BoxDecoration(
+                  color: context.colors.surface,
+                  border: Border(
+                    right: BorderSide(color: context.colors.border),
+                  ),
                 ),
-                StudentBottomBarItem(
-                  icon: Icons.edit_note_outlined,
-                  activeIcon: Icons.edit_note_rounded,
-                  label: 'Exercices',
+                child: _buildSidebarContent(
+                  studentModules,
+                  pages,
+                  isDrawer: false,
                 ),
-                StudentBottomBarItem(
-                  icon: Icons.auto_awesome_outlined,
-                  activeIcon: Icons.auto_awesome_rounded,
-                  label: 'Tuteur IA',
-                ),
-                StudentBottomBarItem(
-                  icon: Icons.person_outline_rounded,
-                  activeIcon: Icons.person_rounded,
-                  label: 'Profil',
-                ),
-              ],
-            )
-          : null,
-      body: Row(
-        children: [
-          // Sidebar permanente — uniquement au-delà du seuil mobile (voir `drawer` ci-dessus pour
-          // l'équivalent en dessous).
-          if (!isMobile)
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: _isSidebarCollapsed ? 80 : 260,
-              decoration: BoxDecoration(
-                color: context.colors.surface,
-                border: Border(right: BorderSide(color: context.colors.border)),
               ),
-              child: _buildSidebarContent(studentModules, pages, isDrawer: false),
-            ),
 
-          // Espace de travail principal : une seule barre du haut partagée (contexte + profil),
-          // puis le contenu de la page sans AppBar individuelle.
-          Expanded(
-            child: Column(
-              children: [
-                Container(
-                  height: 70,
-                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 28),
-                  decoration: BoxDecoration(
-                    color: context.colors.surface,
-                    border: Border(bottom: BorderSide(color: context.colors.border, width: 1)),
-                  ),
-                  child: Row(
-                    children: [
-                      if (isMobile) ...[
-                        IconButton(
-                          icon: Icon(Icons.menu_rounded, color: context.colors.textSecondary),
-                          tooltip: 'Menu',
-                          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-                        ),
-                        const SizedBox(width: 4),
-                      ],
-                      Flexible(
-                        child: Text(
-                          isMobile ? (pages.isEmpty ? '' : pages[_selectedFlatIndex].title) : 'Espace Élève (${profile?.className ?? '...'})',
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: context.colors.textSecondary),
+            // Espace de travail principal : une seule barre du haut partagée (contexte + profil),
+            // puis le contenu de la page sans AppBar individuelle.
+            Expanded(
+              child: Column(
+                children: [
+                  Container(
+                    height: 70,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 12 : 28,
+                    ),
+                    decoration: BoxDecoration(
+                      color: context.colors.surface,
+                      border: Border(
+                        bottom: BorderSide(
+                          color: context.colors.border,
+                          width: 1,
                         ),
                       ),
-                      const Spacer(),
-                      if (isMobile) ...[
-                        IconButton(
-                          tooltip: _isBottomBarVisible
-                              ? 'Agrandir l’écran (Masquer le menu du bas)'
-                              : 'Réafficher le menu du bas',
-                          icon: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: !_isBottomBarVisible
-                                  ? context.colors.accentPrimary.withValues(alpha: 0.15)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        if (isMobile) ...[
+                          IconButton(
+                            icon: Icon(
+                              Icons.menu_rounded,
+                              color: context.colors.textSecondary,
                             ),
-                            child: Icon(
-                              _isBottomBarVisible
-                                  ? Icons.fullscreen_rounded
-                                  : Icons.fullscreen_exit_rounded,
-                              size: 22,
-                              color: !_isBottomBarVisible
-                                  ? context.colors.accentPrimary
-                                  : context.colors.textSecondary,
+                            tooltip: 'Menu',
+                            onPressed: () =>
+                                _scaffoldKey.currentState?.openDrawer(),
+                          ),
+                          const SizedBox(width: 4),
+                        ],
+                        Flexible(
+                          child: Text(
+                            isMobile
+                                ? (pages.isEmpty
+                                      ? ''
+                                      : pages[_selectedFlatIndex].title)
+                                : 'Espace Élève (${profile?.className ?? '...'})',
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: context.colors.textSecondary,
                             ),
                           ),
-                          onPressed: () => setState(() => _isBottomBarVisible = !_isBottomBarVisible),
                         ),
-                        const SizedBox(width: 4),
-                      ],
-                      // Un seul profil sur ce compte : StudentAuthGate (main.dart) saute déjà
-                      // ProfileSwitcherScreen dans ce cas précis (voir `profiles.length == 1`,
-                      // avant même de regarder hasConfirmedProfileThisBoot) — un bouton "Changer
-                      // de Profil" cliquable ici n'aurait donc structurellement AUCUN effet
-                      // visible, ce qui était exactement le bug rapporté (« rien ne se passe »).
-                      // Masqué sur mobile (place limitée, action secondaire) — reste accessible
-                      // depuis Mon Profil.
-                      if (!isMobile && authState.profiles.length > 1) ...[
-                        OutlinedButton.icon(
-                          onPressed: () => ref.read(studentAuthProvider.notifier).resetProfileSelection(),
-                          icon: const Icon(Icons.swap_horiz_rounded, size: 16),
-                          label: const Text('Changer de Classe'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: context.colors.textSecondary,
-                            side: BorderSide(color: context.colors.border),
+                        const Spacer(),
+                        if (isMobile) ...[
+                          IconButton(
+                            tooltip: _isBottomBarVisible
+                                ? 'Agrandir l’écran (Masquer le menu du bas)'
+                                : 'Réafficher le menu du bas',
+                            icon: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: !_isBottomBarVisible
+                                    ? context.colors.accentPrimary.withValues(
+                                        alpha: 0.15,
+                                      )
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                _isBottomBarVisible
+                                    ? Icons.fullscreen_rounded
+                                    : Icons.fullscreen_exit_rounded,
+                                size: 22,
+                                color: !_isBottomBarVisible
+                                    ? context.colors.accentPrimary
+                                    : context.colors.textSecondary,
+                              ),
+                            ),
+                            onPressed: () => setState(
+                              () => _isBottomBarVisible = !_isBottomBarVisible,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                        ],
+                        // Un seul profil sur ce compte : StudentAuthGate (main.dart) saute déjà
+                        // ProfileSwitcherScreen dans ce cas précis (voir `profiles.length == 1`,
+                        // avant même de regarder hasConfirmedProfileThisBoot) — un bouton "Changer
+                        // de Profil" cliquable ici n'aurait donc structurellement AUCUN effet
+                        // visible, ce qui était exactement le bug rapporté (« rien ne se passe »).
+                        // Masqué sur mobile (place limitée, action secondaire) — reste accessible
+                        // depuis Mon Profil.
+                        if (!isMobile && authState.profiles.length > 1) ...[
+                          OutlinedButton.icon(
+                            onPressed: () => ref
+                                .read(studentAuthProvider.notifier)
+                                .resetProfileSelection(),
+                            icon: const Icon(
+                              Icons.swap_horiz_rounded,
+                              size: 16,
+                            ),
+                            label: const Text('Changer de Classe'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: context.colors.textSecondary,
+                              side: BorderSide(color: context.colors.border),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                        IconButton(
+                          tooltip: 'Verrouiller',
+                          icon: Icon(
+                            Icons.lock_outline_rounded,
+                            color: context.colors.textSecondary,
+                            size: 20,
+                          ),
+                          onPressed: () =>
+                              ref.read(studentAuthProvider.notifier).signOut(),
+                        ),
+                        const SizedBox(width: 8),
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: context.colors.accentPrimary,
+                          child: Text(
+                            (authState.account?.firstName.isNotEmpty == true)
+                                ? authState.account!.firstName[0].toUpperCase()
+                                : 'É',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        // Nom/rôle à côté de l'avatar : seulement s'il reste de la place (desktop).
+                        if (!isMobile) ...[
+                          const SizedBox(width: 10),
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${authState.account?.firstName ?? ''} ${authState.account?.lastName ?? ''}'
+                                    .trim(),
+                                style: GoogleFonts.outfit(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: context.colors.textPrimary,
+                                ),
+                              ),
+                              Text(
+                                'Élève',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: context.colors.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
-                      IconButton(
-                        tooltip: 'Verrouiller',
-                        icon: Icon(Icons.lock_outline_rounded, color: context.colors.textSecondary, size: 20),
-                        onPressed: () => ref.read(studentAuthProvider.notifier).signOut(),
-                      ),
-                      const SizedBox(width: 8),
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: context.colors.accentPrimary,
-                        child: Text(
-                          (authState.account?.firstName.isNotEmpty == true)
-                              ? authState.account!.firstName[0].toUpperCase()
-                              : 'É',
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.black),
-                        ),
-                      ),
-                      // Nom/rôle à côté de l'avatar : seulement s'il reste de la place (desktop).
-                      if (!isMobile) ...[
-                        const SizedBox(width: 10),
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${authState.account?.firstName ?? ''} ${authState.account?.lastName ?? ''}'.trim(),
-                              style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
-                            ),
-                            Text('Élève', style: GoogleFonts.inter(fontSize: 11, color: context.colors.textMuted)),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Container(
-                    color: context.colors.background,
-                    child: IndexedStack(
-                      index: _selectedFlatIndex,
-                      children: pages.map((p) => p.screen).toList(),
                     ),
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: Container(
+                      color: context.colors.background,
+                      child: IndexedStack(
+                        index: _selectedFlatIndex,
+                        children: pages.map((p) => p.screen).toList(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
