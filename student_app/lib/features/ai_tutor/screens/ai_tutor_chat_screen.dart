@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/widgets/student_page_content.dart';
@@ -25,8 +26,7 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
   final List<Map<String, String>> _messages = [
     {
       'sender': 'ai',
-      'text':
-          'Bonjour ! Je suis ton Tuteur Numérique, entièrement gratuit et sans limite. Pose-moi une question sur ton cours ou bloque sur un exercice, et je te guiderai pas-à-pas sans te donner la réponse toute faite !',
+      'text': 'Bonjour ! Je suis ton Tuteur Numérique, entièrement gratuit et sans limite. Pose-moi une question sur ton cours ou bloque sur un exercice, et je te guiderai pas-à-pas sans te donner la réponse toute faite !',
     },
   ];
 
@@ -79,7 +79,9 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                   decoration: BoxDecoration(
                     color: AppColors.cyanAccent.withValues(alpha: 0.15),
                     borderRadius: AppRadius.radiusMedium,
-                    border: Border.all(color: AppColors.cyanAccent.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: AppColors.cyanAccent.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: const Icon(
                     Icons.auto_awesome_rounded,
@@ -107,11 +109,20 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
-                              color: context.colors.accentEmerald.withValues(alpha: 0.15),
+                              color: context.colors.accentEmerald.withValues(
+                                alpha: 0.15,
+                              ),
                               borderRadius: AppRadius.radiusSmall,
-                              border: Border.all(color: context.colors.accentEmerald.withValues(alpha: 0.3)),
+                              border: Border.all(
+                                color: context.colors.accentEmerald.withValues(
+                                  alpha: 0.3,
+                                ),
+                              ),
                             ),
                             child: Text(
                               'GRATUIT & ILLIMITÉ',
@@ -139,7 +150,11 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                 ),
                 if (_messages.length > 1)
                   IconButton(
-                    icon: Icon(Icons.refresh_rounded, color: context.colors.textMuted, size: 20),
+                    icon: Icon(
+                      Icons.refresh_rounded,
+                      color: context.colors.textMuted,
+                      size: 20,
+                    ),
                     tooltip: 'Nouvelle conversation',
                     onPressed: () {
                       setState(() {
@@ -199,7 +214,9 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                 final isAi = msg['sender'] == 'ai';
 
                 return Row(
-                  mainAxisAlignment: isAi ? MainAxisAlignment.start : MainAxisAlignment.end,
+                  mainAxisAlignment: isAi
+                      ? MainAxisAlignment.start
+                      : MainAxisAlignment.end,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (isAi) ...[
@@ -209,7 +226,9 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: AppColors.cyanAccent.withValues(alpha: 0.15),
-                          border: Border.all(color: AppColors.cyanAccent.withValues(alpha: 0.4)),
+                          border: Border.all(
+                            color: AppColors.cyanAccent.withValues(alpha: 0.4),
+                          ),
                         ),
                         child: const Icon(
                           Icons.auto_awesome_rounded,
@@ -221,16 +240,27 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                     ],
                     Flexible(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
-                          color: isAi ? context.colors.card : context.colors.accentIndigo,
+                          color: isAi
+                              ? context.colors.card
+                              : context.colors.accentIndigo,
                           borderRadius: BorderRadius.only(
                             topLeft: const Radius.circular(AppRadius.r16),
                             topRight: const Radius.circular(AppRadius.r16),
-                            bottomLeft: Radius.circular(isAi ? AppRadius.r4 : AppRadius.r16),
-                            bottomRight: Radius.circular(isAi ? AppRadius.r16 : AppRadius.r4),
+                            bottomLeft: Radius.circular(
+                              isAi ? AppRadius.r4 : AppRadius.r16,
+                            ),
+                            bottomRight: Radius.circular(
+                              isAi ? AppRadius.r16 : AppRadius.r4,
+                            ),
                           ),
-                          border: isAi ? Border.all(color: context.colors.border) : null,
+                          border: isAi
+                              ? Border.all(color: context.colors.border)
+                              : null,
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(alpha: 0.05),
@@ -325,9 +355,11 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                   Expanded(
                     child: TextField(
                       controller: _msgCtrl,
+                      enabled: !_isTyping,
                       style: TextStyle(color: context.colors.textPrimary),
                       decoration: InputDecoration(
-                        hintText: 'Pose ta question sur le cours ou un exercice...',
+                        hintText:
+                            'Pose ta question sur le cours ou un exercice...',
                         hintStyle: GoogleFonts.inter(
                           color: context.colors.textMuted,
                           fontSize: 13,
@@ -348,7 +380,10 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: AppRadius.radiusFull,
-                          borderSide: const BorderSide(color: AppColors.cyanAccent, width: 1.5),
+                          borderSide: const BorderSide(
+                            color: AppColors.cyanAccent,
+                            width: 1.5,
+                          ),
                         ),
                       ),
                       onSubmitted: (text) => _sendMessage(text),
@@ -366,7 +401,10 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                         color: Colors.black,
                         size: 20,
                       ),
-                      onPressed: () => _sendMessage(_msgCtrl.text),
+                      tooltip: 'Envoyer la question',
+                      onPressed: _isTyping
+                          ? null
+                          : () => _sendMessage(_msgCtrl.text),
                     ),
                   ),
                 ],
@@ -378,39 +416,8 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
     );
   }
 
-  String _buildDeterministicTutorResponse(String text) {
-    final lower = text.toLowerCase();
-    if (lower.contains('2x') || lower.contains('polyn') || lower.contains('courbe') || lower.contains('discriminant') || lower.contains('delta')) {
-      return 'Voici l\'analyse méthodique du polynôme \$P(x) = 2x^2 - 4x - 6\$ :\n\n'
-          '1. **Forme canonique** : En factorisant par 2, \$P(x) = 2(x^2 - 2x - 3) = 2(x - 1)^2 - 8\$. Le sommet de la parabole est \$S(1, -8)\$.\n\n'
-          '2. **Discriminant** : \$\\Delta = b^2 - 4ac = (-4)^2 - 4(2)(-6) = 16 + 48 = 64 = 8^2 > 0\$.\n\n'
-          '3. **Racines réelles** : Deux solutions distinctes \$x_1 = \\frac{4 - 8}{4} = -1\$ et \$x_2 = \\frac{4 + 8}{4} = 3\$.\n\n'
-          '4. **Dérivée & Variations** : \$P\'(x) = 4x - 4\$. La fonction est strictement décroissante sur \$]-\\infty, 1]\$ puis strictement croissante sur \$[1, +\\infty[\$.\n\n'
-          '👉 Tu peux cliquer sur les boutons ci-dessous pour tracer la courbe interactive et faire varier la tangente !';
-    }
-    if (lower.contains('valeurs intermédiaires') || lower.contains('tvi')) {
-      return 'Le **Théorème des Valeurs Intermédiaires (TVI)** est fondamental :\n\n'
-          'Si une fonction \$f\$ est continue sur un intervalle \$[a, b]\$, alors pour tout réel \$k\$ compris entre \$f(a)\$ et \$f(b)\$, il existe au moins un réel \$c \\in [a, b]\$ tel que \$f(c) = k\$.\n\n'
-          'Si de plus \$f\$ est **strictement monotone**, cette solution \$c\$ est unique (Corollaire du TVI).';
-    }
-    if (lower.contains('complexe')) {
-      return 'Pour les nombres complexes \$z = a + ib\$ :\n\n'
-          '- Module : \$|z| = \\sqrt{a^2 + b^2}\$\n'
-          '- Conjugué : \$\\bar{z} = a - ib\$\n'
-          '- Forme trigonométrique : \$z = r(\\cos(\\theta) + i\\sin(\\theta)) = r e^{i\\theta}\$.\n\n'
-          'Le piège classique à l\'examen est d\'oublier que \$\\sqrt{-1} = i\$ et que \$i^2 = -1\$.';
-    }
-    if (lower.contains('suite')) {
-      return 'Pour une suite géométrique de premier terme \$u_0\$ et de raison \$q\$ :\n\n'
-          '- Terme général : \$u_n = u_0 \\cdot q^n\$\n'
-          '- Somme des termes : \$S_n = u_0 \\cdot \\frac{1 - q^{n+1}}{1 - q}\$ (pour \$q \\neq 1\$)\n'
-          '- Limite : si \$-1 < q < 1\$, \$\\lim_{n \\to +\\infty} q^n = 0\$.';
-    }
-    return 'Je suis à tes côtés pour t\'expliquer ! Quelle est l\'étape précise de ton raisonnement où tu bloques ?';
-  }
-
   Future<void> _sendMessage(String text) async {
-    if (text.trim().isEmpty) return;
+    if (text.trim().isEmpty || _isTyping) return;
     final profile = ref.read(studentAuthProvider).activeProfile;
 
     setState(() {
@@ -421,14 +428,16 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
     _scrollToBottom();
 
     try {
-      final response = await Supabase.instance.client.functions.invoke(
-        'ai-tutor-chat',
-        body: {
-          'message': text.trim(),
-          'class_name': profile?.className,
-          'history': _messages.take(_messages.length - 1).toList(),
-        },
-      ).timeout(const Duration(seconds: 4));
+      final response = await Supabase.instance.client.functions
+          .invoke(
+            'ai-tutor-chat',
+            body: {
+              'message': text.trim(),
+              'class_name': profile?.className,
+              'history': _messages.take(_messages.length - 1).toList(),
+            },
+          )
+          .timeout(const Duration(seconds: 4));
 
       if (!mounted) return;
 
@@ -439,7 +448,7 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
         _isTyping = false;
         _messages.add({
           'sender': 'ai',
-          'text': reply ?? _buildDeterministicTutorResponse(text),
+          'text': reply?.trim().isNotEmpty == true ? reply! : 'Le tuteur n\'a pas pu produire de réponse. Réessaie dans un instant.',
         });
       });
       _scrollToBottom();
@@ -449,7 +458,7 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
         _isTyping = false;
         _messages.add({
           'sender': 'ai',
-          'text': _buildDeterministicTutorResponse(text),
+          'text': 'Le service du Tuteur Numérique est momentanément indisponible. Ta question n\'a pas été remplacée par une réponse simulée : tu peux la renvoyer dans un instant.',
         });
       });
       _scrollToBottom();

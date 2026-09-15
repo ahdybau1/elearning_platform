@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/theme/student_theme.dart';
 
 class PaywallModal extends ConsumerStatefulWidget {
@@ -21,10 +22,6 @@ class PaywallModal extends ConsumerStatefulWidget {
 
 class _PaywallModalState extends ConsumerState<PaywallModal> {
   int _selectedTierIndex = 1; // 0: Découverte, 1: Mensuel, 2: Annuel
-  String _selectedOperator = 'Orange Money';
-  final TextEditingController _momoPhoneCtrl = TextEditingController(
-    text: '+237 699 12 34 56',
-  );
 
   final List<Map<String, dynamic>> _tiers = [
     {
@@ -104,7 +101,7 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Paiement Mobile Money 100% sécurisé et activation instantanée.',
+              'Comparez les formules. Le paiement sera activé après la connexion sécurisée d\'un opérateur Mobile Money.',
               style: GoogleFonts.inter(
                 fontSize: 13,
                 color: context.colors.textSecondary,
@@ -164,58 +161,38 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
 
             const SizedBox(height: 16),
 
-            // Operator Selection
-            Text(
-              'Moyen de paiement Mobile Money :',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: context.colors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 10,
-              children: ['Orange Money', 'MTN MoMo', 'Wave', 'Moov Money'].map((
-                op,
-              ) {
-                final isSel = _selectedOperator == op;
-                return ChoiceChip(
-                  label: Text(op),
-                  selected: isSel,
-                  onSelected: (_) => setState(() => _selectedOperator = op),
-                  selectedColor: context.colors.accentPrimary.withValues(
-                    alpha: 0.2,
-                  ),
-                  backgroundColor: context.colors.surface,
-                  labelStyle: GoogleFonts.inter(
-                    color: isSel ? context.colors.accentPrimary : context.colors.textPrimary,
-                    fontSize: 12,
-                    fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
-                  ),
-                );
-              }).toList(),
-            ),
+            const SizedBox(height: 12),
 
-            const SizedBox(height: 16),
-
-            // Phone Input
-            TextField(
-              controller: _momoPhoneCtrl,
-              keyboardType: TextInputType.phone,
-              style: TextStyle(color: context.colors.textPrimary),
-              decoration: InputDecoration(
-                labelText: 'Numéro de compte pour le prélèvement',
-                labelStyle: TextStyle(color: context.colors.textSecondary),
-                filled: true,
-                fillColor: context.colors.surface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: context.colors.accentAmber.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: context.colors.accentAmber.withValues(alpha: 0.35),
                 ),
               ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    color: context.colors.accentAmber,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Aucun prélèvement ne sera effectué tant que le paiement n\'est pas connecté.',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: context.colors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // Pay Button
             ElevatedButton(
@@ -227,24 +204,9 @@ class _PaywallModalState extends ConsumerState<PaywallModal> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              onPressed: () {
-                // Aucun agrégateur Mobile Money réel n'est encore connecté (voir
-                // docs/cahier_des_charges.md §32.1 — Campay/NotchPay/Monetbil, clés API à obtenir
-                // par l'utilisateur). L'ancien flux simulait un succès après 2s et débloquait
-                // l'abonnement localement sans aucune transaction réelle : retiré, remplacé par un
-                // message honnête plutôt que de faire croire à un paiement effectué.
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    backgroundColor: context.colors.accentAmber,
-                    content: Text(
-                      'Paiement Mobile Money pas encore disponible : configuration de l\'agrégateur en attente.',
-                    ),
-                  ),
-                );
-              },
+              onPressed: null,
               child: Text(
-                'Payer ${selectedTier['price']} (${selectedTier['duration']})',
+                'Paiement bientôt disponible • ${selectedTier['price']}',
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.bold,
                   fontSize: 15,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
@@ -29,8 +30,17 @@ class BoutiqueShopScreen extends ConsumerWidget {
     return StudentPageContent(
       child: documentsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(
-          child: Text('Erreur : $err', style: TextStyle(color: context.colors.accentRose)),
+        error: (_, _) => EmptyStateView(
+          icon: Icons.cloud_off_rounded,
+          title: 'Boutique indisponible',
+          description: 'Impossible de charger les documents supplémentaires.',
+          iconColor: context.colors.accentAmber,
+          actionLabel: 'Réessayer',
+          onAction: () {
+            if (profile != null) {
+              ref.invalidate(shopDocumentsProvider(profile.classNodeId));
+            }
+          },
         ),
         data: (documents) {
           return ListView(
@@ -64,10 +74,12 @@ class BoutiqueShopScreen extends ConsumerWidget {
                   iconColor: context.colors.accentIndigo,
                 )
               else
-                ...documents.map((doc) => Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: _buildDocCard(context, doc),
-                    )),
+                ...documents.map(
+                  (doc) => Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: _buildDocCard(context, doc),
+                  ),
+                ),
             ],
           );
         },
@@ -120,10 +132,12 @@ class BoutiqueShopScreen extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 14),
-        ...sheets.map((sheet) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _buildSummarySheetCard(context, sheet),
-            )),
+        ...sheets.map(
+          (sheet) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _buildSummarySheetCard(context, sheet),
+          ),
+        ),
       ],
     );
   }
@@ -136,10 +150,7 @@ class BoutiqueShopScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: context.colors.card,
         borderRadius: AppRadius.radiusLarge,
-        border: Border.all(
-          color: accentColor.withAlpha(80),
-          width: 1.2,
-        ),
+        border: Border.all(color: accentColor.withAlpha(80), width: 1.2),
         boxShadow: [
           BoxShadow(
             color: accentColor.withAlpha(20),
@@ -284,13 +295,19 @@ class BoutiqueShopScreen extends ConsumerWidget {
             const SizedBox(height: 4),
             Text(
               doc.description!,
-              style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: context.colors.textSecondary,
+              ),
             ),
           ],
           const SizedBox(height: 4),
           Text(
             '${doc.downloadsCount} téléchargement${doc.downloadsCount > 1 ? 's' : ''}',
-            style: GoogleFonts.inter(fontSize: 12, color: context.colors.textMuted),
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: context.colors.textMuted,
+            ),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -305,27 +322,10 @@ class BoutiqueShopScreen extends ConsumerWidget {
                   borderRadius: AppRadius.radiusSmall,
                 ),
               ),
-              onPressed: () {
-                // Aucun agrégateur Mobile Money réel n'est encore connecté (voir
-                // docs/cahier_des_charges.md §32.1) — un faux message de succès local ferait
-                // croire à un achat réel sans transaction ni téléchargement. On le dit
-                // honnêtement plutôt que de simuler la réussite.
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    backgroundColor: context.colors.accentAmber,
-                    content: const Text(
-                      'Paiement Mobile Money pas encore disponible : configuration de l\'agrégateur en attente.',
-                    ),
-                  ),
-                );
-              },
-              icon: Icon(
-                Icons.shopping_cart_checkout_rounded,
-                size: 16,
-                color: context.colors.accentPrimary,
-              ),
+              onPressed: null,
+              icon: Icon(Icons.schedule_rounded, size: 16),
               label: Text(
-                'Acheter pour ${doc.price.toStringAsFixed(0)} FCFA (Mobile Money)',
+                'Achat bientôt disponible • ${doc.price.toStringAsFixed(0)} FCFA',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 13,

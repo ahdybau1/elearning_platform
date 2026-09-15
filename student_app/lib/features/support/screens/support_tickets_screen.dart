@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
@@ -55,10 +56,14 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                       return ticketsAsync.when(
                         loading: () =>
                             const Center(child: CircularProgressIndicator()),
-                        error: (err, _) => Center(
-                          child: Text(
-                            'Erreur : $err',
-                            style: const TextStyle(color: Colors.red),
+                        error: (_, _) => EmptyStateView(
+                          icon: Icons.cloud_off_rounded,
+                          title: 'Support indisponible',
+                          description: 'Impossible de charger vos demandes pour le moment.',
+                          iconColor: context.colors.accentAmber,
+                          actionLabel: 'Réessayer',
+                          onAction: () => ref.invalidate(
+                            supportTicketsProvider(account.id),
                           ),
                         ),
                         data: (tickets) {
@@ -66,11 +71,11 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                             return EmptyStateView(
                               icon: Icons.support_agent_rounded,
                               title: 'Aucun ticket pour le moment',
-                              description:
-                                  'Une question, un problème de paiement ou un bug ? Contactez l\'administration.',
+                              description: 'Une question, un problème de paiement ou un bug ? Contactez l\'administration.',
                               iconColor: context.colors.accentPrimary,
                               actionLabel: 'Créer un ticket',
-                              onAction: () => _showNewTicketDialog(context, account.id),
+                              onAction: () =>
+                                  _showNewTicketDialog(context, account.id),
                             );
                           }
                           return ListView.separated(
@@ -329,11 +334,15 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                             );
                         ref.invalidate(supportTicketsProvider(accountId));
                         if (ctx.mounted) Navigator.pop(ctx);
-                      } catch (e) {
+                      } catch (_) {
                         setDialogState(() => isSubmitting = false);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Erreur : $e')),
+                            const SnackBar(
+                              content: Text(
+                                'Envoi impossible pour le moment. Vérifiez votre connexion puis réessayez.',
+                              ),
+                            ),
                           );
                         }
                       }

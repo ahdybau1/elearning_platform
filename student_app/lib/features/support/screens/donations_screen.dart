@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/theme/student_theme.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/widgets/student_page_content.dart';
@@ -11,21 +12,10 @@ import '../../../design_system/components/empty_state_view.dart';
 /// §12 du cahier des charges. Le catalogue des causes est réel (charity_campaigns, lecture
 /// publique). Les dons eux-mêmes restent bloqués : la table `donations` n'a aucune policy
 /// d'insertion cliente — un don ne peut être enregistré que via un agrégateur Mobile Money réel
-/// (Campay/NotchPay/Monetbil), qui n'est pas encore connecté. On l'annonce honnêtement au clic
-/// plutôt que de simuler un don réussi.
+/// (Campay/NotchPay/Monetbil), qui n'est pas encore connecté. Les actions restent donc
+/// désactivées plutôt que de simuler un don réussi.
 class DonationsScreen extends ConsumerWidget {
   const DonationsScreen({super.key});
-
-  void _showUnavailable(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: context.colors.accentAmber,
-        content: const Text(
-          'Les dons Mobile Money ne sont pas encore disponibles : agrégateur de paiement en attente de configuration.',
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -88,9 +78,9 @@ class DonationsScreen extends ConsumerWidget {
                       borderRadius: AppRadius.radiusMedium,
                     ),
                   ),
-                  onPressed: () => _showUnavailable(context),
+                  onPressed: null,
                   child: const Text(
-                    'Faire un don libre',
+                    'Dons bientôt disponibles',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -116,9 +106,13 @@ class DonationsScreen extends ConsumerWidget {
                 child: CircularProgressIndicator(),
               ),
             ),
-            error: (err, _) => Text(
-              'Erreur : $err',
-              style: const TextStyle(color: Colors.red),
+            error: (_, _) => EmptyStateView(
+              icon: Icons.cloud_off_rounded,
+              title: 'Campagnes indisponibles',
+              description: 'Impossible de charger les campagnes de soutien pour le moment.',
+              iconColor: context.colors.accentAmber,
+              actionLabel: 'Réessayer',
+              onAction: () => ref.invalidate(charityCampaignsProvider),
             ),
             data: (campaigns) {
               if (campaigns.isEmpty) {
@@ -186,9 +180,13 @@ class DonationsScreen extends ConsumerWidget {
                                 ),
                               ),
                             ),
-                            TextButton(
-                              onPressed: () => _showUnavailable(context),
-                              child: const Text('Faire un don'),
+                            TextButton.icon(
+                              onPressed: null,
+                              icon: const Icon(
+                                Icons.schedule_rounded,
+                                size: 16,
+                              ),
+                              label: const Text('Bientôt disponible'),
                             ),
                           ],
                         ),

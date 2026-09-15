@@ -604,4 +604,13 @@ Références : CDC Master §11, audit `STUDENT_APP_CURRENT_STATE.md`, demande de
   - ajout d'une sémantique de bouton à la modification de la photo de profil ;
   - remplacement du commutateur actif « Sous-titres vidéo », sans effet tant qu'aucun lecteur vidéo n'existe, par une information non interactive « À venir » ;
   - conservation des réglages réellement persistés dans `account_settings` : notifications, thème, taille du texte, contraste et visibilité du profil.
+- **Lot 8 — tuteur, communauté et support résilients** :
+  - suppression du secours pédagogique prédéfini présenté silencieusement comme une réponse du Tuteur Numérique lorsque l'Edge Function `ai-tutor-chat` échoue ; l'indisponibilité est désormais explicite et le double envoi est bloqué pendant la requête ;
+  - conservation du contrat réel de l'Edge Function, de l'historique, du profil de classe, du rendu mathématique, de l'OCR et du grapheur ;
+  - remplacement des erreurs techniques brutes des communautés WhatsApp, du forum de classe et des tickets de support par des états utilisateur avec relance des providers ;
+  - suppression de l'exposition du lien d'invitation WhatsApp dans les messages d'erreur et maintien des créations réelles de publications et de tickets.
+- **Lot 9 — boutique, abonnements et dons sans faux paiement** :
+  - conservation des catalogues Supabase réels, des fiches mémo consultables, des prix et de la progression des campagnes ;
+  - retrait de la saisie Mobile Money et des boutons actifs tant qu'aucun agrégateur n'est raccordé : les actions d'achat, d'abonnement et de don sont maintenant clairement désactivées ;
+  - remplacement des erreurs techniques brutes par des états de reprise, sans enregistrer ni simuler une transaction locale.
 - **Limite de validation de l'environnement Codex** : formatage Dart et `git diff --check` réussis. L'exécution Flutter locale reste à effectuer sous VS Code, le SDK de cet environnement étant bloqué pendant sa résolution réseau ; ce lot n'est pas déclaré entièrement validé avant `flutter analyze` et `flutter test`.

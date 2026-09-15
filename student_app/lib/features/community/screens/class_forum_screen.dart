@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
@@ -26,7 +27,9 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
     if (content.isEmpty || _isPosting) return;
     setState(() => _isPosting = true);
     try {
-      await ref.read(studentSupabaseServiceProvider).createForumPost(
+      await ref
+          .read(studentSupabaseServiceProvider)
+          .createForumPost(
             classNodeId: classNodeId,
             authorAccountId: authorAccountId,
             content: content,
@@ -34,14 +37,17 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
       _postCtrl.clear();
       ref.invalidate(studentForumPostsProvider(classNodeId));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Message publié.')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Message publié.')));
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Échec de la publication : $e')),
+          const SnackBar(
+            content: Text(
+              'Publication impossible pour le moment. Vérifiez votre connexion puis réessayez.',
+            ),
+          ),
         );
       }
     } finally {
@@ -116,10 +122,15 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
           Expanded(
             child: postsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(
-                child: Text(
-                  'Erreur: $err',
-                  style: const TextStyle(color: Colors.red),
+              error: (_, _) => EmptyStateView(
+                icon: Icons.cloud_off_rounded,
+                title: 'Forum indisponible',
+                description:
+                    'Impossible de charger les messages de votre classe.',
+                iconColor: context.colors.accentAmber,
+                actionLabel: 'Réessayer',
+                onAction: () => ref.invalidate(
+                  studentForumPostsProvider(profile?.classNodeId ?? ''),
                 ),
               ),
               data: (posts) {
@@ -127,8 +138,7 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
                   return EmptyStateView(
                     icon: Icons.forum_outlined,
                     title: 'Aucun message pour le moment',
-                    description:
-                        'Soyez le premier à poser une question ou partager une astuce avec votre classe !',
+                    description: 'Soyez le premier à poser une question ou partager une astuce avec votre classe !',
                     iconColor: context.colors.accentPrimary,
                   );
                 }
@@ -243,6 +253,7 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
                 Expanded(
                   child: TextField(
                     controller: _postCtrl,
+                    enabled: profile != null && account != null && !_isPosting,
                     style: TextStyle(
                       color: context.colors.textPrimary,
                       fontSize: 13,
@@ -281,6 +292,7 @@ class _ClassForumScreenState extends ConsumerState<ClassForumScreen> {
                           Icons.send_rounded,
                           color: context.colors.accentPrimary,
                         ),
+                        tooltip: 'Publier le message',
                         onPressed: (profile == null || account == null)
                             ? null
                             : () => _sendPost(profile.classNodeId, account.id),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
@@ -38,17 +39,23 @@ class StudyCommunitiesScreen extends ConsumerWidget {
                       return communityAsync.when(
                         loading: () =>
                             const Center(child: CircularProgressIndicator()),
-                        error: (err, _) => Text(
-                          'Erreur : $err',
-                          style: const TextStyle(color: Colors.red),
+                        error: (_, _) => EmptyStateView(
+                          icon: Icons.cloud_off_rounded,
+                          title: 'Communauté indisponible',
+                          description: 'Impossible de charger le groupe de votre classe pour le moment.',
+                          iconColor: context.colors.accentAmber,
+                          actionLabel: 'Réessayer',
+                          onAction: () => ref.invalidate(
+                            whatsappCommunityProvider(profile.classNodeId),
+                          ),
                         ),
                         data: (community) {
                           if (community == null) {
                             return EmptyStateView(
                               icon: Icons.groups_outlined,
-                              title: 'Aucune communauté active pour ${profile.className}',
-                              description:
-                                  'Soit l\'administration n\'a pas encore créé de groupe pour votre classe, soit votre palier d\'abonnement actuel n\'y donne pas accès.',
+                              title:
+                                  'Aucune communauté active pour ${profile.className}',
+                              description: 'Soit l\'administration n\'a pas encore créé de groupe pour votre classe, soit votre palier d\'abonnement actuel n\'y donne pas accès.',
                               iconColor: context.colors.accentEmerald,
                             );
                           }
@@ -121,10 +128,15 @@ class StudyCommunitiesScreen extends ConsumerWidget {
             ),
             onPressed: () async {
               final uri = Uri.tryParse(inviteLink);
-              if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+              if (uri == null ||
+                  !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Impossible d\'ouvrir le lien : $inviteLink')),
+                    const SnackBar(
+                      content: Text(
+                        'Impossible d\'ouvrir WhatsApp. Vérifiez que l\'application est installée.',
+                      ),
+                    ),
                   );
                 }
               }
