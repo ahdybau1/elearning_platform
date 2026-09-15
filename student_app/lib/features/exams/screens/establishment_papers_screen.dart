@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
@@ -83,9 +84,22 @@ class _EstablishmentPapersScreenState
                   const SizedBox(height: 10),
                   establishmentsAsync.when(
                     loading: () => const LinearProgressIndicator(),
-                    error: (err, _) => Text(
-                      'Erreur : $err',
-                      style: const TextStyle(color: Colors.red),
+                    error: (_, __) => Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Établissements indisponibles.',
+                            style: TextStyle(
+                              color: context.colors.textSecondary,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () =>
+                              ref.invalidate(establishmentsProvider),
+                          child: const Text('Réessayer'),
+                        ),
+                      ],
                     ),
                     data: (establishments) => SizedBox(
                       height: 40,
@@ -129,17 +143,23 @@ class _EstablishmentPapersScreenState
                         return papersAsync.when(
                           loading: () =>
                               const Center(child: CircularProgressIndicator()),
-                          error: (err, _) => Text(
-                            'Erreur : $err',
-                            style: const TextStyle(color: Colors.red),
+                          error: (_, __) => _PapersLoadError(
+                            onRetry: () => ref.invalidate(
+                              establishmentPapersProvider(
+                                EstablishmentPapersQuery(
+                                  classNodeId: profile.classNodeId,
+                                  establishmentId: _selectedEstablishmentId,
+                                ),
+                              ),
+                            ),
                           ),
                           data: (papers) {
                             if (papers.isEmpty) {
                               return EmptyStateView(
                                 icon: Icons.folder_off_outlined,
-                                title: 'Aucune épreuve disponible pour le moment',
-                                description:
-                                    'Les établissements et enseignants n\'ont pas encore publié d\'épreuve pour votre classe.',
+                                title:
+                                    'Aucune épreuve disponible pour le moment',
+                                description: 'Les établissements et enseignants n\'ont pas encore publié d\'épreuve pour votre classe.',
                                 iconColor: context.colors.accentPrimary,
                               );
                             }
@@ -163,9 +183,7 @@ class _EstablishmentPapersScreenState
 
   Widget _filterChip(String label, bool selected, VoidCallback onTap) {
     return ChoiceChip(
-      shape: RoundedRectangleBorder(
-        borderRadius: AppRadius.radiusFull,
-      ),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusFull),
       label: Text(label, style: GoogleFonts.inter(fontSize: 12)),
       selected: selected,
       onSelected: (_) => onTap(),
@@ -182,7 +200,8 @@ class _EstablishmentPapersScreenState
   Future<void> _openDocument(BuildContext context, String? url) async {
     if (url == null || url.isEmpty) return;
     final uri = Uri.tryParse(url);
-    if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+    if (uri == null ||
+        !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Impossible d\'ouvrir le document : $url')),
@@ -275,7 +294,8 @@ class _EstablishmentPapersScreenState
                     context,
                     MaterialPageRoute(
                       builder: (_) => ExamQuestionsScreen(
-                        title: '${paper.subjectName ?? 'Matière'} — ${paper.year}',
+                        title:
+                            '${paper.subjectName ?? 'Matière'} — ${paper.year}',
                         documentUrl: paper.documentUrl,
                         establishmentPaperId: paper.id,
                       ),
@@ -292,6 +312,40 @@ class _EstablishmentPapersScreenState
                   onPressed: () => _openDocument(context, paper.correctionUrl),
                 ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PapersLoadError extends StatelessWidget {
+  const _PapersLoadError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.cloud_off_rounded,
+            size: 44,
+            color: context.colors.textSecondary,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Impossible de charger les épreuves',
+            style: Theme.of(context).textTheme.titleMedium,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Réessayer'),
           ),
         ],
       ),

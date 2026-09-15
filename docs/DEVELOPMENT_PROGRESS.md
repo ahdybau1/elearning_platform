@@ -595,4 +595,9 @@ Références : CDC Master §11, audit `STUDENT_APP_CURRENT_STATE.md`, demande de
   - suppression du vocabulaire XP non adossé à un agrégat backend ; affichage des points définis par les exercices ;
   - correction du calcul local : une rédaction ou réponse courte non évaluée automatiquement ne reçoit plus artificiellement tous les points ; seuls les QCM corrects alimentent le total confirmé ;
   - états d'erreur Hub/Runner remplacés par une information utilisateur et une relance des providers réels.
+- **Lot 6 — examens, annales et événements** :
+  - annales officielles : récupération des erreurs de l'examen et des sujets avec relance des providers, contraste du bouton Corrigé corrigé ;
+  - épreuves d'établissement : récupération séparée du catalogue d'établissements et des sujets filtrés sans exposer les erreurs techniques ;
+  - examens blancs et olympiades : état de panne avec relance du flux de la classe et message neutre si le classement est temporairement indisponible ;
+  - conservation stricte du cloisonnement par profil/classe, des documents externes, questions publiées, résultats, classements et demandes de deuxième correction.
 - **Limite de validation de l'environnement Codex** : formatage Dart et `git diff --check` réussis. L'exécution Flutter locale reste à effectuer sous VS Code, le SDK de cet environnement étant bloqué pendant sa résolution réseau ; ce lot n'est pas déclaré entièrement validé avant `flutter analyze` et `flutter test`.

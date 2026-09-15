@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
@@ -24,11 +25,16 @@ class OfficialExamsScreen extends ConsumerWidget {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final examAsync = ref.watch(officialExamForClassProvider(profile.classNodeId));
+    final examAsync = ref.watch(
+      officialExamForClassProvider(profile.classNodeId),
+    );
 
     return examAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, _) => Center(child: Text('Erreur : $err', style: const TextStyle(color: Colors.red))),
+      error: (_, __) => _ExamLoadError(
+        onRetry: () =>
+            ref.invalidate(officialExamForClassProvider(profile.classNodeId)),
+      ),
       data: (exam) {
         if (exam == null) {
           return _NoExamScaffold(className: profile.className);
@@ -92,12 +98,19 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
               trailing: TextButton.icon(
                 style: TextButton.styleFrom(
                   foregroundColor: context.colors.accentAmber,
-                  backgroundColor: context.colors.accentAmber.withValues(alpha: 0.1),
-                  shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusSmall),
+                  backgroundColor: context.colors.accentAmber.withValues(
+                    alpha: 0.1,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppRadius.radiusSmall,
+                  ),
                 ),
                 onPressed: () => Navigator.pushNamed(context, '/mock-arena'),
                 icon: const Icon(Icons.emoji_events_rounded, size: 16),
-                label: const Text('Examens Blancs', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                label: const Text(
+                  'Examens Blancs',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                ),
               ),
             ),
           ),
@@ -105,12 +118,20 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
             child: Row(
               children: [
-                Icon(Icons.workspace_premium_rounded, color: context.colors.accentIndigo, size: 18),
+                Icon(
+                  Icons.workspace_premium_rounded,
+                  color: context.colors.accentIndigo,
+                  size: 18,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     '${widget.exam.name} • ${widget.className}',
-                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: context.colors.textPrimary),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: context.colors.textPrimary,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -143,19 +164,25 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
           Expanded(
             child: papersAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(child: Text('Erreur : $err', style: const TextStyle(color: Colors.red))),
+              error: (_, __) => _ExamLoadError(
+                onRetry: () =>
+                    ref.invalidate(examPapersProvider(widget.exam.id)),
+              ),
               data: (papers) {
                 if (papers.isEmpty) {
                   return EmptyStateView(
                     icon: Icons.folder_off_outlined,
                     title: 'Aucun sujet archivé pour le moment',
-                    description: 'Les annales de ${widget.exam.name} seront ajoutées progressivement par l\'administration.',
+                    description:
+                        'Les annales de ${widget.exam.name} seront ajoutées progressivement par l\'administration.',
                   );
                 }
 
                 final groups = <String, List<ExamPaper>>{};
                 for (final p in papers) {
-                  final key = _groupBySubject ? (p.subjectName ?? 'Matière') : p.year.toString();
+                  final key = _groupBySubject
+                      ? (p.subjectName ?? 'Matière')
+                      : p.year.toString();
                   groups.putIfAbsent(key, () => []).add(p);
                 }
 
@@ -180,7 +207,11 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
                               const SizedBox(width: 8),
                               Text(
                                 entry.key,
-                                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+                                style: GoogleFonts.outfit(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: context.colors.textPrimary,
+                                ),
                               ),
                             ],
                           ),
@@ -199,7 +230,11 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
     );
   }
 
-  Widget _buildToggleButton({required String label, required bool isSelected, required VoidCallback onTap}) {
+  Widget _buildToggleButton({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: AppRadius.radiusSmall,
@@ -224,7 +259,8 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
   Future<void> _openDocument(BuildContext context, String? url) async {
     if (url == null || url.isEmpty) return;
     final uri = Uri.tryParse(url);
-    if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+    if (uri == null ||
+        !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Impossible d\'ouvrir le document : $url')),
@@ -249,13 +285,23 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _groupBySubject ? 'Session ${paper.year}' : (paper.subjectName ?? 'Matière'),
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+                  _groupBySubject
+                      ? 'Session ${paper.year}'
+                      : (paper.subjectName ?? 'Matière'),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: context.colors.textPrimary,
+                  ),
                 ),
                 if (paper.processingStatus == 'published')
                   Text(
                     'Corrigé détaillé disponible',
-                    style: GoogleFonts.inter(fontSize: 11, color: context.colors.accentEmerald, fontWeight: FontWeight.w500),
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: context.colors.accentEmerald,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
               ],
             ),
@@ -265,7 +311,9 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
               foregroundColor: context.colors.textPrimary,
               side: BorderSide(color: context.colors.border),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusSmall),
+              shape: RoundedRectangleBorder(
+                borderRadius: AppRadius.radiusSmall,
+              ),
             ),
             onPressed: () => _openDocument(context, paper.documentUrl),
             icon: const Icon(Icons.description_outlined, size: 15),
@@ -276,9 +324,14 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: context.colors.accentPrimary,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusSmall),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: AppRadius.radiusSmall,
+                ),
               ),
               onPressed: () => Navigator.push(
                 context,
@@ -291,10 +344,50 @@ class _ExamPapersViewState extends ConsumerState<_ExamPapersView> {
                 ),
               ),
               icon: const Icon(Icons.visibility_rounded, size: 15),
-              label: const Text('Corrigé', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              label: const Text(
+                'Corrigé',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _ExamLoadError extends StatelessWidget {
+  const _ExamLoadError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.cloud_off_rounded,
+              size: 44,
+              color: context.colors.textSecondary,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Impossible de charger les annales',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Réessayer'),
+            ),
+          ],
+        ),
       ),
     );
   }

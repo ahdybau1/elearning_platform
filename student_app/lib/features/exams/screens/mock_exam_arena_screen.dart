@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
@@ -36,7 +37,10 @@ class MockExamArenaScreen extends ConsumerWidget {
             const SizedBox(height: 6),
             Text(
               'Épreuves nationales de votre classe (${profile?.className ?? ''}) — la correction se fait hors-ligne, les résultats et le classement apparaissent ici une fois publiés.',
-              style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: context.colors.textSecondary,
+              ),
             ),
             const SizedBox(height: 24),
             eventsAsync.when(
@@ -44,9 +48,12 @@ class MockExamArenaScreen extends ConsumerWidget {
                 padding: EdgeInsets.symmetric(vertical: 40),
                 child: Center(child: CircularProgressIndicator()),
               ),
-              error: (err, _) => Text(
-                'Erreur : $err',
-                style: TextStyle(color: context.colors.accentRose),
+              error: (_, __) => _EventsLoadError(
+                onRetry: profile == null
+                    ? null
+                    : () => ref.invalidate(
+                        classEventsProvider(profile.classNodeId),
+                      ),
               ),
               data: (events) {
                 if (events.isEmpty) {
@@ -83,9 +90,15 @@ class _EventCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final resultAsync = event.hasEnded
-        ? ref.watch(myEventResultProvider(MyEventResultQuery(eventId: event.id, profileId: profileId)))
+        ? ref.watch(
+            myEventResultProvider(
+              MyEventResultQuery(eventId: event.id, profileId: profileId),
+            ),
+          )
         : null;
-    final accent = event.isOlympiad ? context.colors.accentAmber : context.colors.accentIndigo;
+    final accent = event.isOlympiad
+        ? context.colors.accentAmber
+        : context.colors.accentIndigo;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -101,14 +114,21 @@ class _EventCard extends ConsumerWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.15),
                   borderRadius: AppRadius.radiusSmall,
                 ),
                 child: Text(
                   event.isOlympiad ? 'OLYMPIADE' : 'CONCOURS BLANC',
-                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: accent),
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: accent,
+                  ),
                 ),
               ),
               const Spacer(),
@@ -119,7 +139,9 @@ class _EventCard extends ConsumerWidget {
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
-                  color: event.hasEnded ? context.colors.textMuted : context.colors.accentEmerald,
+                  color: event.hasEnded
+                      ? context.colors.textMuted
+                      : context.colors.accentEmerald,
                 ),
               ),
             ],
@@ -127,23 +149,37 @@ class _EventCard extends ConsumerWidget {
           const SizedBox(height: 10),
           Text(
             event.title,
-            style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+            style: GoogleFonts.outfit(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: context.colors.textPrimary,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             '${_formatDate(event.startDate)} → ${_formatDate(event.endDate)} · ${event.pricingMode == 'inclus' ? 'Inclus dans votre abonnement' : '${event.price.toStringAsFixed(0)} FCFA'}',
-            style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: context.colors.textSecondary,
+            ),
           ),
           const SizedBox(height: 14),
           if (event.hasEnded && resultAsync != null)
             resultAsync.when(
-              loading: () => const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+              loading: () => const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
               error: (_, _) => const SizedBox.shrink(),
               data: (result) {
                 if (result == null) {
                   return Text(
                     'Résultat pas encore publié pour vous.',
-                    style: GoogleFonts.inter(fontSize: 12, color: context.colors.textMuted),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: context.colors.textMuted,
+                    ),
                   );
                 }
                 return Row(
@@ -163,7 +199,10 @@ class _EventCard extends ConsumerWidget {
                             const SizedBox(width: 10),
                             Text(
                               'Rang #${result.rank}',
-                              style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: context.colors.textSecondary,
+                              ),
                             ),
                           ],
                         ],
@@ -171,11 +210,17 @@ class _EventCard extends ConsumerWidget {
                     ),
                     TextButton(
                       onPressed: () => _showLeaderboard(context, ref),
-                      child: Text('Classement', style: TextStyle(color: context.colors.accentPrimary)),
+                      child: Text(
+                        'Classement',
+                        style: TextStyle(color: context.colors.accentPrimary),
+                      ),
                     ),
                     TextButton(
                       onPressed: () => _showDisputeDialog(context, ref, result),
-                      child: Text('Contester', style: TextStyle(color: context.colors.accentRose)),
+                      child: Text(
+                        'Contester',
+                        style: TextStyle(color: context.colors.accentRose),
+                      ),
                     ),
                   ],
                 );
@@ -200,7 +245,10 @@ class _EventCard extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: context.colors.card,
-        title: Text(event.title, style: TextStyle(color: context.colors.textPrimary)),
+        title: Text(
+          event.title,
+          style: TextStyle(color: context.colors.textPrimary),
+        ),
         content: Text(
           'Type : ${event.isOlympiad ? 'Olympiade' : 'Concours blanc'}\n'
           'Période : ${_formatDate(event.startDate)} → ${_formatDate(event.endDate)}\n'
@@ -212,7 +260,10 @@ class _EventCard extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Fermer', style: TextStyle(color: context.colors.accentPrimary)),
+            child: Text(
+              'Fermer',
+              style: TextStyle(color: context.colors.accentPrimary),
+            ),
           ),
         ],
       ),
@@ -224,18 +275,26 @@ class _EventCard extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: context.colors.card,
-        title: Text('Classement — ${event.title}', style: TextStyle(color: context.colors.textPrimary, fontSize: 16)),
+        title: Text(
+          'Classement — ${event.title}',
+          style: TextStyle(color: context.colors.textPrimary, fontSize: 16),
+        ),
         content: SizedBox(
           width: 360,
           child: Consumer(
             builder: (context, ref, _) {
-              final leaderboardAsync = ref.watch(eventLeaderboardProvider(event.id));
+              final leaderboardAsync = ref.watch(
+                eventLeaderboardProvider(event.id),
+              );
               return leaderboardAsync.when(
                 loading: () => const Padding(
                   padding: EdgeInsets.all(20),
                   child: Center(child: CircularProgressIndicator()),
                 ),
-                error: (err, _) => Text('Erreur : $err', style: TextStyle(color: context.colors.accentRose)),
+                error: (_, __) => Text(
+                  'Classement temporairement indisponible.',
+                  style: TextStyle(color: context.colors.textSecondary),
+                ),
                 data: (entries) {
                   if (entries.isEmpty) {
                     return Text(
@@ -253,13 +312,18 @@ class _EventCard extends ConsumerWidget {
                         final entry = entries[i];
                         final isTop3 = (entry.rank ?? 99) <= 3;
                         return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
                             color: context.colors.surface,
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color: isTop3
-                                  ? context.colors.accentAmber.withValues(alpha: 0.4)
+                                  ? context.colors.accentAmber.withValues(
+                                      alpha: 0.4,
+                                    )
                                   : context.colors.border,
                             ),
                           ),
@@ -269,14 +333,19 @@ class _EventCard extends ConsumerWidget {
                                 entry.rank != null ? '#${entry.rank}' : '—',
                                 style: GoogleFonts.inter(
                                   fontWeight: FontWeight.bold,
-                                  color: isTop3 ? context.colors.accentAmber : context.colors.textPrimary,
+                                  color: isTop3
+                                      ? context.colors.accentAmber
+                                      : context.colors.textPrimary,
                                 ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
                                   '${entry.firstName} (${entry.className})',
-                                  style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
+                                  style: TextStyle(
+                                    color: context.colors.textPrimary,
+                                    fontSize: 13,
+                                  ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -301,14 +370,21 @@ class _EventCard extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Fermer', style: TextStyle(color: context.colors.accentPrimary)),
+            child: Text(
+              'Fermer',
+              style: TextStyle(color: context.colors.accentPrimary),
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _showDisputeDialog(BuildContext context, WidgetRef ref, MyEventResult result) {
+  void _showDisputeDialog(
+    BuildContext context,
+    WidgetRef ref,
+    MyEventResult result,
+  ) {
     final reasonCtrl = TextEditingController();
     bool isSubmitting = false;
     showDialog(
@@ -320,7 +396,13 @@ class _EventCard extends ConsumerWidget {
             children: [
               Icon(Icons.gavel_rounded, color: context.colors.accentRose),
               const SizedBox(width: 10),
-              Text('Demande de 2e Correcteur', style: TextStyle(color: context.colors.textPrimary, fontSize: 16)),
+              Text(
+                'Demande de 2e Correcteur',
+                style: TextStyle(
+                  color: context.colors.textPrimary,
+                  fontSize: 16,
+                ),
+              ),
             ],
           ),
           content: Column(
@@ -329,19 +411,27 @@ class _EventCard extends ConsumerWidget {
             children: [
               Text(
                 'Votre copie sera transmise à un examinateur indépendant, sans communication de la 1ère note, pour garantir l\'équité (§11 du cahier des charges).',
-                style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: context.colors.textSecondary,
+                ),
               ),
               const SizedBox(height: 14),
               TextField(
                 controller: reasonCtrl,
                 maxLines: 3,
-                style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
+                style: TextStyle(
+                  color: context.colors.textPrimary,
+                  fontSize: 13,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Précisez l\'exercice ou la question contestée...',
                   hintStyle: TextStyle(color: context.colors.textMuted),
                   filled: true,
                   fillColor: context.colors.surface,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
             ],
@@ -349,16 +439,23 @@ class _EventCard extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
-              child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
+              child: Text(
+                'Annuler',
+                style: TextStyle(color: context.colors.textSecondary),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentRose),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.colors.accentRose,
+              ),
               onPressed: isSubmitting
                   ? null
                   : () async {
                       if (reasonCtrl.text.trim().isEmpty) return;
                       setDialogState(() => isSubmitting = true);
-                      final error = await ref.read(studentSupabaseServiceProvider).submitGradeDispute(
+                      final error = await ref
+                          .read(studentSupabaseServiceProvider)
+                          .submitGradeDispute(
                             eventResultId: result.id,
                             reason: reasonCtrl.text.trim(),
                             originalScore: result.score,
@@ -380,10 +477,58 @@ class _EventCard extends ConsumerWidget {
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
-                  : const Text('Soumettre', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                  : const Text(
+                      'Soumettre',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EventsLoadError extends StatelessWidget {
+  const _EventsLoadError({required this.onRetry});
+
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.cloud_off_rounded,
+              size: 44,
+              color: context.colors.textSecondary,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Impossible de charger les événements',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            if (onRetry != null) ...[
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Réessayer'),
+              ),
+            ],
           ],
         ),
       ),
