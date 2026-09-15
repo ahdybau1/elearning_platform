@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../design_system/tokens/app_colors.dart';
 import '../../../design_system/tokens/app_radius.dart';
 import 'variation_table_exercise_screen.dart';
@@ -43,7 +44,10 @@ class ExercisePathScreen extends StatelessWidget {
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -77,17 +81,23 @@ class ExercisePathScreen extends StatelessWidget {
                         // Badge Niveau actuel
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFF1E293B),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                                color: const Color(0xFF6366F1).withAlpha(120)),
+                              color: const Color(0xFF6366F1).withAlpha(120),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.bar_chart_rounded,
-                                  color: Color(0xFF38BDF8), size: 18),
+                              const Icon(
+                                Icons.bar_chart_rounded,
+                                color: Color(0xFF38BDF8),
+                                size: 18,
+                              ),
                               const SizedBox(width: 6),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,7 +105,9 @@ class ExercisePathScreen extends StatelessWidget {
                                   const Text(
                                     'Ton niveau actuel :',
                                     style: TextStyle(
-                                        color: Color(0xFF94A3B8), fontSize: 9),
+                                      color: Color(0xFF94A3B8),
+                                      fontSize: 9,
+                                    ),
                                   ),
                                   Text(
                                     '$currentLevel',
@@ -121,8 +133,7 @@ class ExercisePathScreen extends StatelessWidget {
                       levelNumber: 1,
                       badgeText: 'PRÉREQUIS',
                       title: 'Calcul algébrique et lecture graphique',
-                      subtitle:
-                          'Puissances, fractions, équations, lecture de courbes.',
+                      subtitle: 'Puissances, fractions, équations, lecture de courbes.',
                       progressText: '12/12',
                       progressRatio: 1.0,
                       isCompleted: true,
@@ -219,12 +230,16 @@ class ExercisePathScreen extends StatelessWidget {
                         color: const Color(0xFF0F172A),
                         borderRadius: BorderRadius.circular(AppRadius.card),
                         border: Border.all(
-                            color: const Color(0xFF0284C7).withAlpha(80)),
+                          color: const Color(0xFF0284C7).withAlpha(80),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.info_outline_rounded,
-                              color: Color(0xFF38BDF8), size: 24),
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            color: Color(0xFF38BDF8),
+                            size: 24,
+                          ),
                           const SizedBox(width: 12),
                           const Expanded(
                             child: Column(
@@ -249,8 +264,11 @@ class ExercisePathScreen extends StatelessWidget {
                               ],
                             ),
                           ),
-                          const Icon(Icons.insights_rounded,
-                              color: Color(0xFF38BDF8), size: 26),
+                          const Icon(
+                            Icons.insights_rounded,
+                            color: Color(0xFF38BDF8),
+                            size: 26,
+                          ),
                         ],
                       ),
                     ),
@@ -267,20 +285,20 @@ class ExercisePathScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFF0F172A),
                 border: Border(
-                  top: BorderSide(
-                    color: Colors.white.withAlpha(20),
-                    width: 1,
-                  ),
+                  top: BorderSide(color: Colors.white.withAlpha(20), width: 1),
                 ),
               ),
               child: Row(
                 children: [
                   OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.emoji_events_outlined,
-                        color: Color(0xFFFBBF24), size: 18),
+                    onPressed: null,
+                    icon: const Icon(
+                      Icons.emoji_events_outlined,
+                      color: Color(0xFFFBBF24),
+                      size: 18,
+                    ),
                     label: const Text(
-                      'ESSAYER UN DÉFI\nOptionnel • Plus corsé',
+                      'DÉFI À VENIR\nOptionnel • Plus corsé',
                       style: TextStyle(
                         fontSize: 11,
                         color: Colors.white,
@@ -290,7 +308,9 @@ class ExercisePathScreen extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Color(0xFFF59E0B)),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppRadius.card),
                       ),
@@ -308,7 +328,9 @@ class ExercisePathScreen extends StatelessWidget {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF7E22CE), // Violet actif
+                        backgroundColor: const Color(
+                          0xFF7E22CE,
+                        ), // Violet actif
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -379,19 +401,18 @@ class ExercisePathScreen extends StatelessWidget {
           height: 36,
           margin: const EdgeInsets.only(top: 8),
           decoration: BoxDecoration(
-            color: isActive ? nodeColor : (isCompleted ? nodeColor : const Color(0xFF1E293B)),
+            color: isActive
+                ? nodeColor
+                : (isCompleted ? nodeColor : const Color(0xFF1E293B)),
             shape: BoxShape.circle,
-            border: Border.all(
-              color: nodeColor,
-              width: isActive ? 3 : 2,
-            ),
+            border: Border.all(color: nodeColor, width: isActive ? 3 : 2),
             boxShadow: isActive
                 ? [
                     BoxShadow(
                       color: nodeColor.withAlpha(120),
                       blurRadius: 10,
                       spreadRadius: 2,
-                    )
+                    ),
                   ]
                 : null,
           ),
@@ -399,16 +420,19 @@ class ExercisePathScreen extends StatelessWidget {
             child: isCompleted
                 ? const Icon(Icons.check_rounded, color: Colors.white, size: 20)
                 : (isLocked
-                    ? const Icon(Icons.lock_rounded,
-                        color: Color(0xFF94A3B8), size: 16)
-                    : Text(
-                        '$levelNumber',
-                        style: TextStyle(
-                          color: isActive ? Colors.white : nodeColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      )),
+                      ? const Icon(
+                          Icons.lock_rounded,
+                          color: Color(0xFF94A3B8),
+                          size: 16,
+                        )
+                      : Text(
+                          '$levelNumber',
+                          style: TextStyle(
+                            color: isActive ? Colors.white : nodeColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        )),
           ),
         ),
         const SizedBox(width: 14),
@@ -420,12 +444,16 @@ class ExercisePathScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: isActive
                   ? const Color(0xFFFAF5FF)
-                  : (isLocked ? const Color(0xFFF1F5F9).withAlpha(220) : Colors.white),
+                  : (isLocked
+                        ? const Color(0xFFF1F5F9).withAlpha(220)
+                        : Colors.white),
               borderRadius: BorderRadius.circular(AppRadius.card),
               border: Border.all(
                 color: isActive
                     ? const Color(0xFFA855F7)
-                    : (isLocked ? const Color(0xFFE2E8F0) : const Color(0xFFCBD5E1)),
+                    : (isLocked
+                          ? const Color(0xFFE2E8F0)
+                          : const Color(0xFFCBD5E1)),
                 width: isActive ? 2 : 1,
               ),
               boxShadow: [
@@ -447,7 +475,9 @@ class ExercisePathScreen extends StatelessWidget {
                       style: TextStyle(
                         color: isLocked
                             ? const Color(0xFF64748B)
-                            : (isActive ? const Color(0xFF7E22CE) : const Color(0xFF0F766E)),
+                            : (isActive
+                                  ? const Color(0xFF7E22CE)
+                                  : const Color(0xFF0F766E)),
                         fontWeight: FontWeight.bold,
                         fontSize: 10.5,
                         letterSpacing: 1.0,
@@ -456,7 +486,9 @@ class ExercisePathScreen extends StatelessWidget {
                     if (isCompleted)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFDCFCE7),
                           borderRadius: BorderRadius.circular(12),
@@ -464,8 +496,11 @@ class ExercisePathScreen extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: const [
-                            Icon(Icons.check_circle_rounded,
-                                color: Color(0xFF16A34A), size: 13),
+                            Icon(
+                              Icons.check_circle_rounded,
+                              color: Color(0xFF16A34A),
+                              size: 13,
+                            ),
                             SizedBox(width: 4),
                             Text(
                               'Maîtrisé',
@@ -482,8 +517,11 @@ class ExercisePathScreen extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.lock_rounded,
-                              color: Color(0xFF64748B), size: 12),
+                          const Icon(
+                            Icons.lock_rounded,
+                            color: Color(0xFF64748B),
+                            size: 12,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             unlockInfo,
@@ -556,9 +594,7 @@ class ExercisePathScreen extends StatelessWidget {
       margin: const EdgeInsets.only(left: 17),
       height: 20,
       width: 2.5,
-      color: isCompleted
-          ? AppColors.tealSuccess
-          : const Color(0xFF334155),
+      color: isCompleted ? AppColors.tealSuccess : const Color(0xFF334155),
     );
   }
 }

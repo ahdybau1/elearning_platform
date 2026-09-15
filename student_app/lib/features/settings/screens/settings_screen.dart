@@ -35,8 +35,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           .read(studentAuthProvider.notifier)
           .updateSettings(partial);
       if (error != null && context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Erreur : $error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Modification impossible pour le moment.'),
+          ),
+        );
       }
     }
 
@@ -289,7 +292,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       SnackBar(
         content: Text(
           error != null
-              ? 'Erreur : $error'
+              ? 'Demande impossible pour le moment. Réessayez.'
               : requestType == 'export'
               ? 'Demande d\'export enregistrée — l\'administration vous contactera.'
               : 'Demande de suppression enregistrée — l\'administration vous contactera.',
@@ -545,7 +548,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       if (ctx.mounted) Navigator.pop(ctx);
                       if (context.mounted && error != null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Erreur : $error')),
+                          const SnackBar(
+                            content: Text(
+                              'Modification impossible pour le moment.',
+                            ),
+                          ),
                         );
                       }
                     },

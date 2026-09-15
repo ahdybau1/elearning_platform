@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/models/summary_sheet_registry.dart';
 import '../../../design_system/tokens/app_colors.dart';
 import '../../../design_system/tokens/app_radius.dart';
@@ -89,33 +90,6 @@ class _SummarySheetViewerModalState extends State<SummarySheetViewerModal> {
               tooltip: 'Réinitialiser le zoom',
               onPressed: _resetZoom,
             ),
-          IconButton(
-            icon: const Icon(Icons.offline_pin_outlined, color: Colors.white70),
-            tooltip: 'Enregistrement hors ligne — à venir',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  backgroundColor: const Color(0xFF0F172A),
-                  behavior: SnackBarBehavior.floating,
-                  content: Row(
-                    children: const [
-                      Icon(
-                        Icons.info_outline_rounded,
-                        color: Colors.white70,
-                        size: 20,
-                      ),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'L’enregistrement hors ligne n’est pas encore disponible.',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
         ],
       ),
       body: SafeArea(

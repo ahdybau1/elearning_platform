@@ -613,4 +613,9 @@ Références : CDC Master §11, audit `STUDENT_APP_CURRENT_STATE.md`, demande de
   - conservation des catalogues Supabase réels, des fiches mémo consultables, des prix et de la progression des campagnes ;
   - retrait de la saisie Mobile Money et des boutons actifs tant qu'aucun agrégateur n'est raccordé : les actions d'achat, d'abonnement et de don sont maintenant clairement désactivées ;
   - remplacement des erreurs techniques brutes par des états de reprise, sans enregistrer ni simuler une transaction locale.
+- **Lot 10 — nettoyage transversal final des parcours élève** :
+  - suppression du dernier bouton hors-ligne non implémenté dans la visionneuse de fiches ;
+  - désactivation et libellé explicite des deux actions sans comportement dans les laboratoires d'entraînement (défi et justification) ;
+  - retrait des détails d'erreur backend encore exposés dans l'onboarding, le profil, les paramètres, le portail parent, l'ancien tableau de bord, les chapitres et la réclamation d'examen ;
+  - aucune mutation de schéma, RLS, contenu ou contrat Admin → Supabase → Élève.
 - **Limite de validation de l'environnement Codex** : formatage Dart et `git diff --check` réussis. L'exécution Flutter locale reste à effectuer sous VS Code, le SDK de cet environnement étant bloqué pendant sa résolution réseau ; ce lot n'est pas déclaré entièrement validé avant `flutter analyze` et `flutter test`.

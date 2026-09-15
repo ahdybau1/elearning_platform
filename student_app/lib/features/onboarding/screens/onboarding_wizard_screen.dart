@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
@@ -100,8 +101,7 @@ class _OnboardingWizardScreenState
     if (schoolYear == null) {
       setState(() {
         _isSubmitting = false;
-        _errorMessage =
-            'Aucune année scolaire active n\'a été configurée par l\'administration pour ce pays. Réessayez plus tard.';
+        _errorMessage = 'Aucune année scolaire active n\'a été configurée par l\'administration pour ce pays. Réessayez plus tard.';
       });
       return;
     }
@@ -126,12 +126,18 @@ class _OnboardingWizardScreenState
             backgroundColor: context.colors.card,
             title: Row(
               children: [
-                Icon(Icons.warning_amber_rounded, color: context.colors.accentAmber),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: context.colors.accentAmber,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'Profil déjà existant ?',
-                    style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.outfit(
+                      color: context.colors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -139,17 +145,31 @@ class _OnboardingWizardScreenState
             content: Text(
               'Un profil avec le même prénom, nom et date de naissance existe déjà pour cette classe, sur un autre compte. '
               'Si c\'est vous, connectez-vous plutôt avec ce compte existant. Si vous êtes des jumeaux/jumelles dans la même classe, continuez normalement.',
-              style: GoogleFonts.inter(color: context.colors.textSecondary, fontSize: 13),
+              style: GoogleFonts.inter(
+                color: context.colors.textSecondary,
+                fontSize: 13,
+              ),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
-                child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
+                child: Text(
+                  'Annuler',
+                  style: TextStyle(color: context.colors.textSecondary),
+                ),
               ),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentAmber),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.colors.accentAmber,
+                ),
                 onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Continuer quand même', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Continuer quand même',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
@@ -594,8 +614,10 @@ class _OnboardingWizardScreenState
           child: CircularProgressIndicator(),
         ),
       ),
-      error: (err, _) =>
-          Text('Erreur : $err', style: const TextStyle(color: Colors.red)),
+      error: (_, _) => Text(
+        'Impossible de charger les classes. Vérifiez votre connexion puis réessayez.',
+        style: TextStyle(color: context.colors.textSecondary),
+      ),
       data: (children) {
         if (children.isEmpty) {
           if (_selectedPath.isEmpty) {

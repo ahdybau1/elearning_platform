@@ -46,8 +46,9 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
     if (!mounted) return;
     setState(() => _isRedeemingParentCode = false);
     if (error != null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Erreur : $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Code invalide ou liaison impossible.')),
+      );
     } else {
       _parentCodeCtrl.clear();
       ScaffoldMessenger.of(
@@ -89,13 +90,14 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
           .read(studentAuthProvider.notifier)
           .updatePhotoUrl(publicUrl);
       if (mounted && error != null) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Erreur : $error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Mise à jour de la photo impossible.')),
+        );
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Échec de l\'envoi de la photo : $e')),
+          const SnackBar(content: Text('Envoi de la photo impossible.')),
         );
       }
     } finally {
@@ -1057,7 +1059,9 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                       if (ctx.mounted) Navigator.pop(ctx);
                       if (mounted && error != null) {
                         messenger.showSnackBar(
-                          SnackBar(content: Text('Erreur : $error')),
+                          const SnackBar(
+                            content: Text('Modification du profil impossible.'),
+                          ),
                         );
                       }
                     },
@@ -1131,8 +1135,9 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
         .archiveProfile(p.id);
     if (!mounted) return;
     if (error != null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Erreur : $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Archivage impossible pour le moment.')),
+      );
     } else {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Classe archivée.')));
@@ -1145,8 +1150,11 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
         .reactivateProfile(p.id);
     if (!mounted) return;
     if (error != null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Erreur : $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Réactivation impossible pour le moment.'),
+        ),
+      );
     } else {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Classe réactivée.')));

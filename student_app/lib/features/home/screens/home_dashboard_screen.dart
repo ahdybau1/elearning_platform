@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../../core/theme/student_theme.dart';
 import '../../../core/theme/subject_visuals.dart';
 import '../../../core/models/student_models.dart';
@@ -100,13 +101,15 @@ class HomeDashboardScreen extends ConsumerWidget {
 
             // Subjects Grid & Quick Resume
             subjectsAsync.when(
-              loading: () => const Center(child: Padding(
-                padding: EdgeInsets.all(32.0),
-                child: CircularProgressIndicator(),
-              )),
-              error: (err, _) => Text(
-                'Erreur: $err',
-                style: const TextStyle(color: Colors.red),
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+              error: (_, _) => Text(
+                'Programme momentanément indisponible.',
+                style: TextStyle(color: context.colors.textSecondary),
               ),
               data: (subjects) {
                 if (subjects.isEmpty) {
@@ -142,9 +145,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                 final screenWidth = MediaQuery.of(context).size.width;
                 final columns = screenWidth < 360
                     ? 1
-                    : (screenWidth < 700
-                        ? 2
-                        : (screenWidth < 1024 ? 3 : 4));
+                    : (screenWidth < 700 ? 2 : (screenWidth < 1024 ? 3 : 4));
                 final childRatio = columns == 1 ? 2.3 : 1.25;
 
                 return Column(
@@ -596,9 +597,14 @@ class HomeDashboardScreen extends ConsumerWidget {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
-                          color: context.colors.accentPrimary.withValues(alpha: 0.15),
+                          color: context.colors.accentPrimary.withValues(
+                            alpha: 0.15,
+                          ),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -613,7 +619,9 @@ class HomeDashboardScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        subject.chaptersCount > 0 ? '${subject.chaptersCount} chapitres' : 'Au programme',
+                        subject.chaptersCount > 0
+                            ? '${subject.chaptersCount} chapitres'
+                            : 'Au programme',
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           color: context.colors.textMuted,

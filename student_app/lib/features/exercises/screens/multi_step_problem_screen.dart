@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../design_system/tokens/app_colors.dart';
 import '../../../design_system/tokens/app_radius.dart';
 import '../../pedagogy/widgets/photo_transcription_modal.dart';
@@ -27,26 +28,37 @@ class _MultiStepProblemScreenState extends State<MultiStepProblemScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
-        title: const Text('Formulaire de dérivation',
-            style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Formulaire de dérivation',
+          style: TextStyle(color: Colors.white),
+        ),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('(xⁿ)\' = n·xⁿ⁻¹',
-                style: TextStyle(color: Color(0xFF38BDF8), fontSize: 14)),
+            Text(
+              '(xⁿ)\' = n·xⁿ⁻¹',
+              style: TextStyle(color: Color(0xFF38BDF8), fontSize: 14),
+            ),
             SizedBox(height: 6),
-            Text('(u + v)\' = u\' + v\'',
-                style: TextStyle(color: Color(0xFF38BDF8), fontSize: 14)),
+            Text(
+              '(u + v)\' = u\' + v\'',
+              style: TextStyle(color: Color(0xFF38BDF8), fontSize: 14),
+            ),
             SizedBox(height: 6),
-            Text('(k·u)\' = k·u\'',
-                style: TextStyle(color: Color(0xFF38BDF8), fontSize: 14)),
+            Text(
+              '(k·u)\' = k·u\'',
+              style: TextStyle(color: Color(0xFF38BDF8), fontSize: 14),
+            ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Fermer', style: TextStyle(color: AppColors.tealSuccess)),
+            child: const Text(
+              'Fermer',
+              style: TextStyle(color: AppColors.tealSuccess),
+            ),
           ),
         ],
       ),
@@ -80,7 +92,10 @@ class _MultiStepProblemScreenState extends State<MultiStepProblemScreen> {
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 6,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -90,12 +105,15 @@ class _MultiStepProblemScreenState extends State<MultiStepProblemScreen> {
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFF0F766E).withAlpha(140),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                                color: const Color(0xFF14B8A6).withAlpha(120)),
+                              color: const Color(0xFF14B8A6).withAlpha(120),
+                            ),
                           ),
                           child: const Text(
                             'NIVEAU 5 • APPROFONDISSEMENT',
@@ -109,23 +127,31 @@ class _MultiStepProblemScreenState extends State<MultiStepProblemScreen> {
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFF1E293B),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                                color: Colors.white.withAlpha(20)),
+                              color: Colors.white.withAlpha(20),
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: const [
-                              Icon(Icons.timer_off_outlined,
-                                  color: Color(0xFF94A3B8), size: 14),
+                              Icon(
+                                Icons.timer_off_outlined,
+                                color: Color(0xFF94A3B8),
+                                size: 14,
+                              ),
                               SizedBox(width: 4),
                               Text(
                                 'Chronomètre désactivé',
                                 style: TextStyle(
-                                    color: Color(0xFF94A3B8), fontSize: 10),
+                                  color: Color(0xFF94A3B8),
+                                  fontSize: 10,
+                                ),
                               ),
                             ],
                           ),
@@ -153,7 +179,8 @@ class _MultiStepProblemScreenState extends State<MultiStepProblemScreen> {
                         color: const Color(0xFF1E293B).withAlpha(220),
                         borderRadius: BorderRadius.circular(AppRadius.card),
                         border: Border.all(
-                            color: const Color(0xFFF97316).withAlpha(100)),
+                          color: const Color(0xFFF97316).withAlpha(100),
+                        ),
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: Column(
@@ -172,11 +199,17 @@ class _MultiStepProblemScreenState extends State<MultiStepProblemScreen> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: const [
-                                  Icon(Icons.factory_rounded,
-                                      color: Color(0xFFFBBF24), size: 36),
+                                  Icon(
+                                    Icons.factory_rounded,
+                                    color: Color(0xFFFBBF24),
+                                    size: 36,
+                                  ),
                                   SizedBox(width: 14),
-                                  Icon(Icons.precision_manufacturing_rounded,
-                                      color: Color(0xFF38BDF8), size: 36),
+                                  Icon(
+                                    Icons.precision_manufacturing_rounded,
+                                    color: Color(0xFF38BDF8),
+                                    size: 36,
+                                  ),
                                 ],
                               ),
                             ),
@@ -197,7 +230,9 @@ class _MultiStepProblemScreenState extends State<MultiStepProblemScreen> {
                                 const SizedBox(height: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 6),
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFF0F172A),
                                     borderRadius: BorderRadius.circular(6),
@@ -215,7 +250,9 @@ class _MultiStepProblemScreenState extends State<MultiStepProblemScreen> {
                                 const SizedBox(height: 6),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFF0F172A),
                                     borderRadius: BorderRadius.circular(6),
@@ -331,7 +368,9 @@ class _MultiStepProblemScreenState extends State<MultiStepProblemScreen> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF7E22CE), // Violet maquette
+                        backgroundColor: const Color(
+                          0xFF7E22CE,
+                        ), // Violet maquette
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
@@ -392,7 +431,9 @@ class _MultiStepProblemScreenState extends State<MultiStepProblemScreen> {
           decoration: BoxDecoration(
             color: isCompleted
                 ? AppColors.tealSuccess
-                : (isActive ? const Color(0xFF7E22CE) : const Color(0xFF1E293B)),
+                : (isActive
+                      ? const Color(0xFF7E22CE)
+                      : const Color(0xFF1E293B)),
             shape: BoxShape.circle,
             border: Border.all(color: color, width: 2),
           ),
@@ -415,7 +456,9 @@ class _MultiStepProblemScreenState extends State<MultiStepProblemScreen> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 9.5,
-              color: isActive ? const Color(0xFFE9D5FF) : const Color(0xFF94A3B8),
+              color: isActive
+                  ? const Color(0xFFE9D5FF)
+                  : const Color(0xFF94A3B8),
               fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
             ),
           ),
@@ -458,8 +501,11 @@ class _MultiStepProblemScreenState extends State<MultiStepProblemScreen> {
               letterSpacing: 1.0,
             ),
           ),
-          const Icon(Icons.expand_more_rounded,
-              color: Color(0xFF2DD4BF), size: 20),
+          const Icon(
+            Icons.expand_more_rounded,
+            color: Color(0xFF2DD4BF),
+            size: 20,
+          ),
         ],
       ),
     );
@@ -544,16 +590,20 @@ class _MultiStepProblemScreenState extends State<MultiStepProblemScreen> {
                           filled: true,
                           fillColor: const Color(0xFF0F172A),
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide:
-                                const BorderSide(color: Color(0xFF7E22CE)),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF7E22CE),
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide:
-                                const BorderSide(color: Color(0xFF7E22CE)),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF7E22CE),
+                            ),
                           ),
                         ),
                       ),
@@ -564,11 +614,14 @@ class _MultiStepProblemScreenState extends State<MultiStepProblemScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.edit_note_rounded,
-                        color: Color(0xFFC084FC), size: 16),
+                    onPressed: null,
+                    icon: const Icon(
+                      Icons.edit_note_rounded,
+                      color: Color(0xFFC084FC),
+                      size: 16,
+                    ),
                     label: const Text(
-                      'JUSTIFIER MON RAISONNEMENT',
+                      'JUSTIFICATION À VENIR',
                       style: TextStyle(
                         color: Color(0xFFC084FC),
                         fontSize: 11,

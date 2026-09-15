@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/parent_auth_provider.dart';
 import '../../../core/models/student_models.dart';
@@ -271,7 +272,8 @@ class ParentDashboardScreen extends ConsumerWidget {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         child.displayName,
@@ -330,8 +332,13 @@ class ParentDashboardScreen extends ConsumerWidget {
                           const SizedBox(width: 8),
                           IconButton(
                             tooltip: 'Délier cet enfant',
-                            icon: Icon(Icons.link_off_rounded, size: 18, color: context.colors.textMuted),
-                            onPressed: () => _confirmUnlinkChild(context, ref, child),
+                            icon: Icon(
+                              Icons.link_off_rounded,
+                              size: 18,
+                              color: context.colors.textMuted,
+                            ),
+                            onPressed: () =>
+                                _confirmUnlinkChild(context, ref, child),
                           ),
                         ],
                       ),
@@ -369,8 +376,8 @@ class ParentDashboardScreen extends ConsumerWidget {
                   padding: EdgeInsets.all(8),
                   child: Center(child: CircularProgressIndicator()),
                 ),
-                error: (err, _) => Text(
-                  'Erreur : $err',
+                error: (_, _) => Text(
+                  'Historique momentanément indisponible.',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: context.colors.accentRose,
@@ -574,7 +581,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                           SnackBar(
                             content: Text(
                               error != null
-                                  ? 'Erreur : $error'
+                                  ? 'Envoi impossible pour le moment. Réessayez.'
                                   : 'Ticket envoyé — l\'administration vous répondra.',
                             ),
                           ),
@@ -598,25 +605,42 @@ class ParentDashboardScreen extends ConsumerWidget {
   /// Sens inverse de « Lier un enfant » (code enfant → parent) : ce parent génère son PROPRE code
   /// (migration 49) à donner à un enfant, qui le saisit depuis Mon Profil pour se lier lui-même.
   void _showMyInviteCodeDialog(BuildContext context, WidgetRef ref) async {
-    final code = await ref.read(parentAuthProvider.notifier).getOrCreateInviteCode();
+    final code = await ref
+        .read(parentAuthProvider.notifier)
+        .getOrCreateInviteCode();
     if (!context.mounted) return;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: context.colors.card,
-        title: Text('Mon code d\'invitation', style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
+        title: Text(
+          'Mon code d\'invitation',
+          style: TextStyle(
+            color: context.colors.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         content: code == null
-            ? Text('Impossible de générer un code pour l\'instant.', style: TextStyle(color: context.colors.textSecondary))
+            ? Text(
+                'Impossible de générer un code pour l\'instant.',
+                style: TextStyle(color: context.colors.textSecondary),
+              )
             : Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'Donnez ce code à votre enfant — il le saisira depuis Mon Profil pour se lier à vous (valable 24h, pour tous vos enfants).',
-                    style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: context.colors.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 14),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                     decoration: BoxDecoration(
                       color: context.colors.accentAmber.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
@@ -624,7 +648,12 @@ class ParentDashboardScreen extends ConsumerWidget {
                     child: Text(
                       code,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.firaCode(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 4, color: context.colors.accentAmber),
+                      style: GoogleFonts.firaCode(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 4,
+                        color: context.colors.accentAmber,
+                      ),
                     ),
                   ),
                 ],
@@ -632,7 +661,10 @@ class ParentDashboardScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Fermer', style: TextStyle(color: context.colors.accentPrimary)),
+            child: Text(
+              'Fermer',
+              style: TextStyle(color: context.colors.accentPrimary),
+            ),
           ),
         ],
       ),
@@ -640,12 +672,22 @@ class ParentDashboardScreen extends ConsumerWidget {
   }
 
   /// §17 : un parent peut délier un enfant — aucune action équivalente n'existe côté élève.
-  void _confirmUnlinkChild(BuildContext context, WidgetRef ref, LinkedChildProfile child) {
+  void _confirmUnlinkChild(
+    BuildContext context,
+    WidgetRef ref,
+    LinkedChildProfile child,
+  ) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: context.colors.card,
-        title: Text('Délier ${child.displayName} ?', style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
+        title: Text(
+          'Délier ${child.displayName} ?',
+          style: TextStyle(
+            color: context.colors.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         content: Text(
           'Vous ne pourrez plus suivre la scolarité de cet enfant tant qu\'il ne vous relie pas à nouveau.',
           style: TextStyle(color: context.colors.textSecondary),
@@ -653,20 +695,35 @@ class ParentDashboardScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
+            child: Text(
+              'Annuler',
+              style: TextStyle(color: context.colors.textSecondary),
+            ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentRose),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: context.colors.accentRose,
+            ),
             onPressed: () async {
               Navigator.pop(ctx);
-              final error = await ref.read(parentAuthProvider.notifier).unlinkChild(child.profileId);
+              final error = await ref
+                  .read(parentAuthProvider.notifier)
+                  .unlinkChild(child.profileId);
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(error ?? '${child.displayName} délié.')),
+                  SnackBar(
+                    content: Text(error ?? '${child.displayName} délié.'),
+                  ),
                 );
               }
             },
-            child: const Text('Délier', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Délier',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -857,9 +914,9 @@ class ParentDashboardScreen extends ConsumerWidget {
                 ],
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Text(
-                'Erreur: $err',
-                style: GoogleFonts.inter(color: Colors.redAccent),
+              error: (_, _) => Text(
+                'Informations momentanément indisponibles.',
+                style: GoogleFonts.inter(color: context.colors.textSecondary),
               ),
             ),
           );

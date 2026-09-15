@@ -541,10 +541,10 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                                   ),
                                 ),
                               ),
-                              error: (err, _) => Text(
-                                'Erreur: $err',
-                                style: const TextStyle(
-                                  color: Colors.red,
+                              error: (_, _) => Text(
+                                'Leçons momentanément indisponibles.',
+                                style: TextStyle(
+                                  color: context.colors.textSecondary,
                                   fontSize: 12,
                                 ),
                               ),

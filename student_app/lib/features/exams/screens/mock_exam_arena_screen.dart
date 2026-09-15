@@ -467,7 +467,7 @@ class _EventCard extends ConsumerWidget {
                             content: Text(
                               error == null
                                   ? 'Demande de réclamation enregistrée.'
-                                  : 'Erreur : $error',
+                                  : 'Envoi impossible pour le moment. Réessayez.',
                             ),
                           ),
                         );
