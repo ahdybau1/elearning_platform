@@ -1,9 +1,11 @@
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/models/student_models.dart';
@@ -38,16 +40,19 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
     final code = _parentCodeCtrl.text.trim();
     if (code.isEmpty) return;
     setState(() => _isRedeemingParentCode = true);
-    final error = await ref.read(studentSupabaseServiceProvider).redeemParentInviteCode(code);
+    final error = await ref
+        .read(studentSupabaseServiceProvider)
+        .redeemParentInviteCode(code);
     if (!mounted) return;
     setState(() => _isRedeemingParentCode = false);
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur : $error')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Erreur : $error')));
     } else {
       _parentCodeCtrl.clear();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Parent lié avec succès.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Parent lié avec succès.')));
     }
   }
 
@@ -84,9 +89,8 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
           .read(studentAuthProvider.notifier)
           .updatePhotoUrl(publicUrl);
       if (mounted && error != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Erreur : $error')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Erreur : $error')));
       }
     } catch (e) {
       if (mounted) {
@@ -123,68 +127,72 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
               ),
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: account == null || _isUploadingPhoto
-                        ? null
-                        : () => _pickAndUploadPhoto(account.id),
-                    child: Stack(
-                      children: [
-                        Container(
-                          width: 68,
-                          height: 68,
-                          clipBehavior: Clip.antiAlias,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: StudentTheme.primaryGradient,
-                          ),
-                          child: _isUploadingPhoto
-                              ? const Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : (account?.photoUrl?.isNotEmpty == true)
-                              ? Image.network(
-                                  account!.photoUrl!,
-                                  fit: BoxFit.cover,
-                                  width: 68,
-                                  height: 68,
-                                )
-                              : Center(
-                                  child: Text(
-                                    (account?.firstName.isNotEmpty == true)
-                                        ? account!.firstName[0].toUpperCase()
-                                        : 'É',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 26,
-                                      fontWeight: FontWeight.bold,
+                  Semantics(
+                    button: true,
+                    label: 'Modifier la photo de profil',
+                    child: GestureDetector(
+                      onTap: account == null || _isUploadingPhoto
+                          ? null
+                          : () => _pickAndUploadPhoto(account.id),
+                      child: Stack(
+                        children: [
+                          Container(
+                            width: 68,
+                            height: 68,
+                            clipBehavior: Clip.antiAlias,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: StudentTheme.primaryGradient,
+                            ),
+                            child: _isUploadingPhoto
+                                ? const Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
                                       color: Colors.white,
                                     ),
+                                  )
+                                : (account?.photoUrl?.isNotEmpty == true)
+                                ? Image.network(
+                                    account!.photoUrl!,
+                                    fit: BoxFit.cover,
+                                    width: 68,
+                                    height: 68,
+                                  )
+                                : Center(
+                                    child: Text(
+                                      (account?.firstName.isNotEmpty == true)
+                                          ? account!.firstName[0].toUpperCase()
+                                          : 'É',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 26,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                                   ),
+                          ),
+                          Positioned(
+                            right: -2,
+                            bottom: -2,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: context.colors.accentPrimary,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: context.colors.card,
+                                  width: 2,
                                 ),
-                        ),
-                        Positioned(
-                          right: -2,
-                          bottom: -2,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: context.colors.accentPrimary,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: context.colors.card,
-                                width: 2,
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt_rounded,
+                                size: 12,
+                                color: Colors.black,
                               ),
                             ),
-                            child: const Icon(
-                              Icons.camera_alt_rounded,
-                              size: 12,
-                              color: Colors.black,
-                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(width: 18),
@@ -248,7 +256,9 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                       Icons.edit_outlined,
                       color: context.colors.textMuted,
                     ),
-                    onPressed: account == null ? null : () => _showEditProfileDialog(account),
+                    onPressed: account == null
+                        ? null
+                        : () => _showEditProfileDialog(account),
                   ),
                 ],
               ),
@@ -346,7 +356,9 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: context.colors.accentAmber.withValues(alpha: 0.15),
+                          color: context.colors.accentAmber.withValues(
+                            alpha: 0.15,
+                          ),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -379,9 +391,14 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: context.colors.accentEmerald.withValues(alpha: 0.15),
+                          color: context.colors.accentEmerald.withValues(
+                            alpha: 0.15,
+                          ),
                           borderRadius: AppRadius.radiusFull,
                         ),
                         child: Text(
@@ -401,7 +418,9 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: context.colors.accentPrimary.withValues(alpha: 0.15),
+                          color: context.colors.accentPrimary.withValues(
+                            alpha: 0.15,
+                          ),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -434,7 +453,10 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: context.colors.surface,
                           borderRadius: AppRadius.radiusFull,
@@ -476,7 +498,11 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.family_restroom_rounded, color: context.colors.accentAmber, size: 22),
+              Icon(
+                Icons.family_restroom_rounded,
+                color: context.colors.accentAmber,
+                size: 22,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -484,29 +510,51 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                   children: [
                     Text(
                       'Inviter un parent',
-                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: context.colors.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       'Donnez ce code à votre parent — il l\'utilisera en s\'inscrivant à son propre compte pour suivre votre scolarité (valable 24h).',
-                      style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary),
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: context.colors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 12),
               codeAsync.when(
-                loading: () => const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                error: (err, _) => Icon(Icons.error_outline_rounded, color: context.colors.accentRose),
+                loading: () => const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                error: (err, _) => Icon(
+                  Icons.error_outline_rounded,
+                  color: context.colors.accentRose,
+                ),
                 data: (code) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: context.colors.accentAmber.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
                     code,
-                    style: GoogleFonts.firaCode(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 2, color: context.colors.accentAmber),
+                    style: GoogleFonts.firaCode(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                      color: context.colors.accentAmber,
+                    ),
                   ),
                 ),
               ),
@@ -517,7 +565,11 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
           const SizedBox(height: 16),
           Text(
             'Votre parent a déjà son propre code ?',
-            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: context.colors.textPrimary,
+            ),
           ),
           const SizedBox(height: 8),
           Row(
@@ -526,25 +578,53 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                 child: TextField(
                   controller: _parentCodeCtrl,
                   textCapitalization: TextCapitalization.characters,
-                  style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
+                    fontSize: 13,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Code donné par votre parent',
-                    hintStyle: TextStyle(color: context.colors.textMuted, fontSize: 12),
+                    hintStyle: TextStyle(
+                      color: context.colors.textMuted,
+                      fontSize: 12,
+                    ),
                     filled: true,
                     fillColor: context.colors.surface,
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 10),
               ElevatedButton(
-                onPressed: _isRedeemingParentCode ? null : _redeemParentInviteCode,
-                style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentAmber),
+                onPressed: _isRedeemingParentCode
+                    ? null
+                    : _redeemParentInviteCode,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.colors.accentAmber,
+                ),
                 child: _isRedeemingParentCode
-                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                    : const Text('Lier', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.black,
+                        ),
+                      )
+                    : const Text(
+                        'Lier',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ],
           ),
@@ -574,7 +654,11 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.pin_outlined, color: context.colors.accentIndigo, size: 22),
+              Icon(
+                Icons.pin_outlined,
+                color: context.colors.accentIndigo,
+                size: 22,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -582,12 +666,19 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                   children: [
                     Text(
                       'Sécurité — Mon code',
-                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: context.colors.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       'Code personnel (lettres, chiffres, caractères) pour vous reconnecter rapidement sur cet appareil.',
-                      style: GoogleFonts.inter(fontSize: 11, color: context.colors.textSecondary),
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: context.colors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -623,20 +714,31 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
   }
 
   Future<void> _showMyLoginCodeDialog() async {
-    final code = await ref.read(studentAuthProvider.notifier).fetchMyLoginCode();
+    final code = await ref
+        .read(studentAuthProvider.notifier)
+        .fetchMyLoginCode();
     if (!mounted) return;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: context.colors.card,
-        title: Text('Mon code personnel', style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
+        title: Text(
+          'Mon code personnel',
+          style: TextStyle(
+            color: context.colors.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         content: code == null
             ? Text(
                 'Aucun code défini pour l\'instant.',
                 style: TextStyle(color: context.colors.textSecondary),
               )
             : Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   color: context.colors.surface,
                   borderRadius: BorderRadius.circular(10),
@@ -656,7 +758,10 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Fermer', style: TextStyle(color: context.colors.accentPrimary)),
+            child: Text(
+              'Fermer',
+              style: TextStyle(color: context.colors.accentPrimary),
+            ),
           ),
         ],
       ),
@@ -676,7 +781,10 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
           backgroundColor: context.colors.card,
           title: Text(
             'Définir mon code personnel',
-            style: GoogleFonts.outfit(color: context.colors.textPrimary, fontWeight: FontWeight.bold),
+            style: GoogleFonts.outfit(
+              color: context.colors.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -684,7 +792,10 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
             children: [
               Text(
                 'Ce code vous appartient exclusivement — ne le partagez jamais.',
-                style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: context.colors.textSecondary,
+                ),
               ),
               const SizedBox(height: 14),
               TextField(
@@ -697,7 +808,9 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                   labelStyle: TextStyle(color: context.colors.textSecondary),
                   filled: true,
                   fillColor: context.colors.surface,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
               TextField(
@@ -710,32 +823,50 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                   labelStyle: TextStyle(color: context.colors.textSecondary),
                   filled: true,
                   fillColor: context.colors.surface,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
               if (errorMessage != null) ...[
                 const SizedBox(height: 6),
-                Text(errorMessage!, style: TextStyle(color: context.colors.accentRose, fontSize: 12)),
+                Text(
+                  errorMessage!,
+                  style: TextStyle(
+                    color: context.colors.accentRose,
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ],
           ),
           actions: [
             TextButton(
               onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
-              child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
+              child: Text(
+                'Annuler',
+                style: TextStyle(color: context.colors.textSecondary),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentIndigo),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.colors.accentIndigo,
+              ),
               onPressed: isSubmitting
                   ? null
                   : () async {
                       final code = codeCtrl.text.trim();
                       if (code.length < 4 || code.length > 40) {
-                        setDialogState(() => errorMessage = 'Le code doit comporter entre 4 et 40 caractères.');
+                        setDialogState(
+                          () => errorMessage = 'Le code doit comporter entre 4 et 40 caractères.',
+                        );
                         return;
                       }
                       if (code != confirmCtrl.text.trim()) {
-                        setDialogState(() => errorMessage = 'Les deux codes ne correspondent pas.');
+                        setDialogState(
+                          () => errorMessage =
+                              'Les deux codes ne correspondent pas.',
+                        );
                         return;
                       }
                       setDialogState(() {
@@ -743,7 +874,9 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                         errorMessage = null;
                       });
                       final messenger = ScaffoldMessenger.of(context);
-                      final error = await ref.read(studentAuthProvider.notifier).setLoginCode(code);
+                      final error = await ref
+                          .read(studentAuthProvider.notifier)
+                          .setLoginCode(code);
                       if (error != null) {
                         setDialogState(() {
                           isSubmitting = false;
@@ -754,13 +887,28 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                       if (ctx.mounted) Navigator.pop(ctx);
                       if (mounted) {
                         messenger.showSnackBar(
-                          const SnackBar(content: Text('Code personnel enregistré.')),
+                          const SnackBar(
+                            content: Text('Code personnel enregistré.'),
+                          ),
                         );
                       }
                     },
               child: isSubmitting
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Enregistrer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      'Enregistrer',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ],
         ),
@@ -780,7 +928,9 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: context.colors.card,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Text(
             'Modifier mes informations',
             style: GoogleFonts.outfit(
@@ -796,37 +946,52 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
               children: [
                 TextField(
                   controller: firstNameCtrl,
-                  style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
+                    fontSize: 13,
+                  ),
                   decoration: InputDecoration(
                     labelText: 'Prénom *',
                     labelStyle: TextStyle(color: context.colors.textSecondary),
                     filled: true,
                     fillColor: context.colors.surface,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: lastNameCtrl,
-                  style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
+                    fontSize: 13,
+                  ),
                   decoration: InputDecoration(
                     labelText: 'Nom *',
                     labelStyle: TextStyle(color: context.colors.textSecondary),
                     filled: true,
                     fillColor: context.colors.surface,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: schoolCtrl,
-                  style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
+                    fontSize: 13,
+                  ),
                   decoration: InputDecoration(
                     labelText: 'Établissement scolaire (optionnel)',
                     labelStyle: TextStyle(color: context.colors.textSecondary),
                     filled: true,
                     fillColor: context.colors.surface,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -836,9 +1001,16 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                     birthDate != null
                         ? 'Date de naissance : ${birthDate!.day.toString().padLeft(2, '0')}/${birthDate!.month.toString().padLeft(2, '0')}/${birthDate!.year}'
                         : 'Date de naissance (optionnelle)',
-                    style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
+                    style: TextStyle(
+                      color: context.colors.textPrimary,
+                      fontSize: 13,
+                    ),
                   ),
-                  trailing: Icon(Icons.calendar_today_rounded, color: context.colors.accentPrimary, size: 18),
+                  trailing: Icon(
+                    Icons.calendar_today_rounded,
+                    color: context.colors.accentPrimary,
+                    size: 18,
+                  ),
                   onTap: () async {
                     final picked = await showDatePicker(
                       context: ctx,
@@ -857,17 +1029,26 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
           actions: [
             TextButton(
               onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
-              child: Text('Annuler', style: TextStyle(color: context.colors.textSecondary)),
+              child: Text(
+                'Annuler',
+                style: TextStyle(color: context.colors.textSecondary),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: context.colors.accentPrimary),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.colors.accentPrimary,
+              ),
               onPressed: isSubmitting
                   ? null
                   : () async {
-                      if (firstNameCtrl.text.trim().isEmpty || lastNameCtrl.text.trim().isEmpty) return;
+                      if (firstNameCtrl.text.trim().isEmpty ||
+                          lastNameCtrl.text.trim().isEmpty)
+                        return;
                       setDialogState(() => isSubmitting = true);
                       final messenger = ScaffoldMessenger.of(context);
-                      final error = await ref.read(studentAuthProvider.notifier).updateProfileInfo(
+                      final error = await ref
+                          .read(studentAuthProvider.notifier)
+                          .updateProfileInfo(
                             firstName: firstNameCtrl.text.trim(),
                             lastName: lastNameCtrl.text.trim(),
                             schoolName: schoolCtrl.text,
@@ -875,12 +1056,27 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                           );
                       if (ctx.mounted) Navigator.pop(ctx);
                       if (mounted && error != null) {
-                        messenger.showSnackBar(SnackBar(content: Text('Erreur : $error')));
+                        messenger.showSnackBar(
+                          SnackBar(content: Text('Erreur : $error')),
+                        );
                       }
                     },
               child: isSubmitting
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                  : const Text('Enregistrer', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.black,
+                      ),
+                    )
+                  : const Text(
+                      'Enregistrer',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ],
         ),
@@ -935,13 +1131,11 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
         .archiveProfile(p.id);
     if (!mounted) return;
     if (error != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erreur : $error')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Erreur : $error')));
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Classe archivée.')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Classe archivée.')));
     }
   }
 
@@ -951,13 +1145,11 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
         .reactivateProfile(p.id);
     if (!mounted) return;
     if (error != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erreur : $error')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Erreur : $error')));
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Classe réactivée.')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Classe réactivée.')));
       ref.invalidate(archivedProfilesProvider);
     }
   }

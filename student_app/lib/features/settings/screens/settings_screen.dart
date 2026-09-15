@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../../core/theme/student_theme.dart';
 import '../../../core/models/student_models.dart';
 import '../../../core/auth/student_auth_provider.dart';
@@ -34,9 +35,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           .read(studentAuthProvider.notifier)
           .updateSettings(partial);
       if (error != null && context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Erreur : $error')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Erreur : $error')));
       }
     }
 
@@ -220,11 +220,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               (v) => update({'high_contrast': v}),
             ),
             Divider(color: context.colors.border, height: 24),
-            _switchRow(
+            _comingSoonRow(
               'Sous-titres vidéo',
-              'Sur tout contenu vidéo de cours (arrive avec le lecteur vidéo)',
-              settings.subtitlesEnabled,
-              (v) => update({'subtitles_enabled': v}),
+              'Disponible lors de l’intégration du lecteur vidéo',
             ),
           ]),
 
@@ -399,6 +397,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  Widget _comingSoonRow(String title, String subtitle) {
+    return Semantics(
+      label: '$title. $subtitle. À venir.',
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: context.colors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: context.colors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Chip(
+            label: const Text('À venir'),
+            visualDensity: VisualDensity.compact,
+            backgroundColor: context.colors.surface,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _actionRow({
     required IconData icon,
     required String label,
@@ -439,9 +476,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required VoidCallback onSelected,
   }) {
     return ChoiceChip(
-      shape: RoundedRectangleBorder(
-        borderRadius: AppRadius.radiusFull,
-      ),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusFull),
       label: Text(comingSoon ? '$label (bientôt)' : label),
       selected: selected,
       onSelected: comingSoon ? null : (_) => onSelected(),
@@ -606,9 +641,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       } on AuthException catch (e) {
                         setDialogState(() => isSubmitting = false);
                         if (context.mounted) {
-                          ScaffoldMessenger.of(
-                            context,
-                          ).showSnackBar(SnackBar(content: Text(e.message)));
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(SnackBar(content: Text(e.message)));
                         }
                       }
                     },

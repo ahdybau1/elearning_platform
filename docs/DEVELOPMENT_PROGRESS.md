@@ -600,4 +600,8 @@ Références : CDC Master §11, audit `STUDENT_APP_CURRENT_STATE.md`, demande de
   - épreuves d'établissement : récupération séparée du catalogue d'établissements et des sujets filtrés sans exposer les erreurs techniques ;
   - examens blancs et olympiades : état de panne avec relance du flux de la classe et message neutre si le classement est temporairement indisponible ;
   - conservation stricte du cloisonnement par profil/classe, des documents externes, questions publiées, résultats, classements et demandes de deuxième correction.
+- **Lot 7 — profil et paramètres honnêtes** :
+  - ajout d'une sémantique de bouton à la modification de la photo de profil ;
+  - remplacement du commutateur actif « Sous-titres vidéo », sans effet tant qu'aucun lecteur vidéo n'existe, par une information non interactive « À venir » ;
+  - conservation des réglages réellement persistés dans `account_settings` : notifications, thème, taille du texte, contraste et visibilité du profil.
 - **Limite de validation de l'environnement Codex** : formatage Dart et `git diff --check` réussis. L'exécution Flutter locale reste à effectuer sous VS Code, le SDK de cet environnement étant bloqué pendant sa résolution réseau ; ce lot n'est pas déclaré entièrement validé avant `flutter analyze` et `flutter test`.
