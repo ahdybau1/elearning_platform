@@ -584,5 +584,9 @@ Références : CDC Master §11, audit `STUDENT_APP_CURRENT_STATE.md`, demande de
   - ajout d'une description sémantique par chapitre pour les technologies d'assistance ;
   - amélioration du contraste du bouton principal et remplacement de l'erreur technique brute par un état utilisateur avec relance ;
   - conservation du déblocage trimestriel, du chargement réel des leçons, des fiches de synthèse et du parcours adaptatif existants.
+- **Lot 4 — lecteur de leçon mobile** :
+  - suppression du bouton hors-ligne non implémenté, conformément à la règle « aucun faux bouton » ;
+  - AppBar désencombrée : accès direct aux exercices et regroupement des outils réels dans un menu nommé (fiche mémo, laboratoire, outils scientifiques) ;
+  - remplacement de l'erreur technique brute par un état explicite avec relance du provider ;
+  - conservation intégrale du `BlockRendererRegistry`, du tatouage, du paywall, du tuteur contextuel et de la navigation multi-leçons.
 - **Limite de validation de l'environnement Codex** : formatage Dart et `git diff --check` réussis. L'exécution Flutter locale reste à effectuer sous VS Code, le SDK de cet environnement étant bloqué pendant sa résolution réseau ; ce lot n'est pas déclaré entièrement validé avant `flutter analyze` et `flutter test`.
-

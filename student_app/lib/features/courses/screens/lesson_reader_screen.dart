@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/models/student_models.dart';
@@ -18,6 +19,8 @@ import '../../../core/models/summary_sheet_registry.dart';
 import '../widgets/summary_sheet_viewer_modal.dart';
 import '../../ai_tutor/widgets/contextual_ai_agent_sheet.dart';
 import '../../pedagogy/widgets/scientific_tools_modal.dart';
+
+enum _LessonTool { summary, lab, calculator }
 
 /// Lecteur pédagogique multi-leçons avec structuration de contenu en blocs typés (CF-001)
 /// et navigation séquentielle entre les leçons d'un même chapitre.
@@ -61,6 +64,21 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
     }
   }
 
+  void _openTool(_LessonTool tool, SummarySheet? summarySheet) {
+    switch (tool) {
+      case _LessonTool.summary:
+        if (summarySheet != null) {
+          SummarySheetViewerModal.show(context, summarySheet);
+        }
+      case _LessonTool.lab:
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const DerivativeLabScreen()));
+      case _LessonTool.calculator:
+        ScientificToolsModal.show(context, initialQuery: widget.chapterTitle);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(studentAuthProvider);
@@ -81,54 +99,7 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
         ),
         actions: [
           IconButton(
-            icon: Icon(
-              Icons.download_for_offline_rounded,
-              color: context.colors.textMuted,
-            ),
-            tooltip: 'Mode Hors-Ligne — pas encore disponible',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  backgroundColor: context.colors.accentAmber,
-                  content: const Text(
-                    'Mode Hors-Ligne pas encore disponible — fonctionnalité à venir.',
-                  ),
-                ),
-              );
-            },
-          ),
-          if (summarySheet != null)
-            IconButton(
-              icon: const Icon(
-                Icons.auto_stories_rounded,
-                color: AppColors.primaryCyan,
-              ),
-              tooltip: 'Fiche Mémo Synthèse HD (Zoom & Formules)',
-              onPressed: () {
-                SummarySheetViewerModal.show(context, summarySheet);
-              },
-            ),
-          IconButton(
-            icon: const Icon(Icons.science_outlined, color: Color(0xFF38BDF8)),
-            tooltip: 'Laboratoire interactif de la dérivée',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const DerivativeLabScreen()),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.calculate_rounded, color: Color(0xFF10B981)),
-            tooltip: 'Calculateur SymPy & Outils Scientifiques',
-            onPressed: () {
-              ScientificToolsModal.show(
-                context,
-                initialQuery: widget.chapterTitle,
-              );
-            },
-          ),
-          IconButton(
-            icon: Icon(Icons.quiz_rounded, color: context.colors.accentPrimary),
+            icon: const Icon(Icons.quiz_rounded),
             tooltip: 'Passer aux exercices',
             onPressed: () {
               Navigator.pushNamed(
@@ -141,15 +112,69 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
               );
             },
           ),
+          PopupMenuButton<_LessonTool>(
+            tooltip: 'Outils de la leçon',
+            onSelected: (tool) => _openTool(tool, summarySheet),
+            itemBuilder: (context) => [
+              if (summarySheet != null)
+                const PopupMenuItem(
+                  value: _LessonTool.summary,
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.auto_stories_rounded),
+                    title: Text('Fiche mémo'),
+                  ),
+                ),
+              const PopupMenuItem(
+                value: _LessonTool.lab,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.science_outlined),
+                  title: Text('Laboratoire interactif'),
+                ),
+              ),
+              const PopupMenuItem(
+                value: _LessonTool.calculator,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.calculate_rounded),
+                  title: Text('Outils scientifiques'),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       body: StudentPageContent(
         child: lessonsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(
-            child: Text(
-              'Erreur: $err',
-              style: const TextStyle(color: Colors.red),
+          error: (_, __) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.cloud_off_rounded,
+                    size: 44,
+                    color: context.colors.textSecondary,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Impossible de charger les leçons',
+                    style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: () => ref.invalidate(
+                      studentLessonsProvider(widget.chapterId),
+                    ),
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Réessayer'),
+                  ),
+                ],
+              ),
             ),
           ),
           data: (lessons) {
@@ -157,8 +182,7 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
               return EmptyStateView(
                 icon: Icons.menu_book_outlined,
                 title: 'Aucune leçon publiée pour ce chapitre',
-                description:
-                    'Revenez bientôt : l\'enseignant est en train de préparer ce cours pour votre programme.',
+                description: 'Revenez bientôt : l\'enseignant est en train de préparer ce cours pour votre programme.',
               );
             }
 
