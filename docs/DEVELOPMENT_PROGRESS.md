@@ -564,5 +564,21 @@ Références : Demande d'aération complète de l'interface des exercices ("chaq
   - `admin_app` : `flutter analyze` : **0 erreur, 0 avertissement, 0 info**.
   - `admin_app` : `flutter test` : **75/75 tests passés (100%)** incluant `exercises_manager_ergonomics_test.dart` (7/7 tests passés), `exercise_studio_test.dart` et `lessons_manager_ergonomics_test.dart`.
 
+## 15 septembre 2026 — Refonte Front-end Élève v2 (lots 1 et 2)
+
+Références : CDC Master §11, audit `STUDENT_APP_CURRENT_STATE.md`, demande de refonte mobile-first de **pq learn** sans régression du continuum Admin → Supabase → Élève.
+
+- **Lot 1 — socle de navigation et accueil pédagogique** :
+  - nouvel accueil centré sur la prochaine action d'apprentissage, alimenté uniquement par le profil, les matières et le trimestre réels ;
+  - ajout d'une vue Progression honnête, sans XP, maîtrise ou temps d'étude fictifs ;
+  - navigation mobile prioritaire réorganisée en Accueil, Cours, Exercices, Progression et Profil ; Tuteur, examens, communauté et services restent accessibles dans le menu complet ;
+  - harmonisation de la barre mobile avec la couleur d'accent du thème.
+- **Lot 2 — catalogue de cours responsive** :
+  - remplacement de la liste compacte par un catalogue adaptatif 1/2/3 colonnes ;
+  - recherche locale réelle par nom ou code matière, effacement accessible et navigation clavier ;
+  - rafraîchissement par geste, états chargement/erreur/vide/recherche sans résultat ;
+  - conservation stricte de `studentSubjectsProvider` et du contrat de navigation `/chapters`.
+- **Tests ajoutés** : `subjects_filter_test.dart` couvre recherche insensible à la casse, recherche par code et requête vide.
+- **Limite de validation de l'environnement Codex** : formatage Dart et `git diff --check` réussis. L'exécution Flutter locale reste à effectuer sous VS Code, le SDK de cet environnement étant bloqué pendant sa résolution réseau ; ce lot n'est pas déclaré entièrement validé avant `flutter analyze` et `flutter test`.
 
 
