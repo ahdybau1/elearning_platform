@@ -564,7 +564,7 @@ Références : Demande d'aération complète de l'interface des exercices ("chaq
   - `admin_app` : `flutter analyze` : **0 erreur, 0 avertissement, 0 info**.
   - `admin_app` : `flutter test` : **75/75 tests passés (100%)** incluant `exercises_manager_ergonomics_test.dart` (7/7 tests passés), `exercise_studio_test.dart` et `lessons_manager_ergonomics_test.dart`.
 
-## 15 septembre 2026 — Refonte Front-end Élève v2 (lots 1 et 2)
+## 15 septembre 2026 — Refonte Front-end Élève v2 (lots 1 à 10)
 
 Références : CDC Master §11, audit `STUDENT_APP_CURRENT_STATE.md`, demande de refonte mobile-first de **pq learn** sans régression du continuum Admin → Supabase → Élève.
 
@@ -619,3 +619,30 @@ Références : CDC Master §11, audit `STUDENT_APP_CURRENT_STATE.md`, demande de
   - retrait des détails d'erreur backend encore exposés dans l'onboarding, le profil, les paramètres, le portail parent, l'ancien tableau de bord, les chapitres et la réclamation d'examen ;
   - aucune mutation de schéma, RLS, contenu ou contrat Admin → Supabase → Élève.
 - **Limite de validation de l'environnement Codex** : formatage Dart et `git diff --check` réussis. L'exécution Flutter locale reste à effectuer sous VS Code, le SDK de cet environnement étant bloqué pendant sa résolution réseau ; ce lot n'est pas déclaré entièrement validé avant `flutter analyze` et `flutter test`.
+
+### Vérification Flutter réelle (lots 1 à 10) — complète la limite ci-dessus
+
+`flutter analyze` et `flutter test` n'avaient jamais réellement tourné sur les lots 1 à 10 (environnement
+Codex bloqué). Exécutés ici en environnement Flutter réel (Windows/VS Code) :
+
+- `flutter analyze` : **0 erreur** (17 infos de style pré-existantes, aucune liée aux lots 1-10 :
+  `unnecessary_underscores`, 1 `curly_braces_in_flow_control_structures`).
+- `flutter test` (avant correction) : **52 tests passés / 5 échecs réels**, tous dans
+  `test/summary_sheet_access_test.dart` — cassés par des sélecteurs de test devenus obsolètes après la
+  refonte, pas des régressions fonctionnelles :
+  - « Laboratoire interactif » n'est plus une icône directe avec info-bulle mais un item du menu
+    « Outils de la leçon » (Lot 4, barre d'action allégée) → test mis à jour sur le vrai parcours en 2 temps ;
+  - l'accès à la fiche mémo (`LessonReaderScreen` + `ChaptersListScreen`) n'a plus d'info-bulle dédiée :
+    bannière avec bouton « Ouvrir » / bouton texte « Fiche mémo » → tests mis à jour sur les sélecteurs réels ;
+  - le bouton « enregistrement hors ligne — à venir » ciblé par 3 tests a été supprimé intentionnellement
+    par le Lot 10 (règle « aucun faux bouton ») → tests supprimés, pas réécrits : le contrôle qu'ils
+    vérifiaient n'existe plus par design.
+- `flutter test` (après correction) : **tous verts**.
+- `flutter build web` : **OK**.
+- Nettoyage additionnel sans lien avec les lots 1-10 : `student_app/.metadata` avait perdu ses entrées
+  `android`/`ios`/`web` (remplacées au lieu d'être complétées par un `flutter create --platforms=windows`
+  local) — restauré en fusion ; `student_app/windows/` ajouté au suivi git (cohérent avec `admin_app` qui
+  le suit déjà) ; fichier `.patch` résiduel à la racine supprimé (déjà appliqué en `af5039d`).
+
+**Conclusion** : les lots 1 à 10 de la refonte front-end élève v2 sont maintenant validés par une
+exécution Flutter réelle, pas seulement par le formatage/lint de l'environnement Codex.
