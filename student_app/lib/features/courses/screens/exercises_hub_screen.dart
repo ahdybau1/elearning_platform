@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/theme/student_theme.dart';
 import '../../../core/theme/subject_visuals.dart';
 import '../../../core/auth/student_auth_provider.dart';
@@ -36,19 +37,30 @@ class ExercisesHubScreen extends ConsumerWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
-            child: StudentScreenHeader(title: 'Exercices (${profile?.className ?? ''})'),
+            child: StudentScreenHeader(
+              title: 'Exercices',
+              subtitle: profile == null
+                  ? 'Choisis une matière pour commencer.'
+                  : '${profile.className} • Choisis une matière pour commencer.',
+            ),
           ),
           _buildInteractivePracticeBanner(context),
           Expanded(
             child: exercisesAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(
-                child: Text('Erreur : $err', style: TextStyle(color: context.colors.accentRose)),
+              error: (_, __) => _ExercisesLoadError(
+                onRetry: profile == null
+                    ? null
+                    : () => ref.invalidate(
+                        classExercisesProvider(profile.classNodeId),
+                      ),
               ),
               data: (exercises) {
                 if (exercises.isEmpty) return _emptyState(context);
 
-                final independent = exercises.where((e) => e.isIndependent).toList();
+                final independent = exercises
+                    .where((e) => e.isIndependent)
+                    .toList();
                 final bySubject = <String, List<Exercise>>{};
                 for (final ex in exercises.where((e) => !e.isIndependent)) {
                   final subject = ex.subjectName ?? 'Autre';
@@ -56,23 +68,38 @@ class ExercisesHubScreen extends ConsumerWidget {
                 }
                 final subjectNames = bySubject.keys.toList()..sort();
 
-                return ListView.separated(
+                final width = MediaQuery.sizeOf(context).width;
+                final columns = width >= 1100 ? 3 : (width >= 680 ? 2 : 1);
+                return GridView.builder(
                   padding: const EdgeInsets.all(20),
-                  itemCount: subjectNames.length + (independent.isEmpty ? 0 : 1),
-                  separatorBuilder: (_, _) => const SizedBox(height: 14),
+                  itemCount:
+                      subjectNames.length + (independent.isEmpty ? 0 : 1),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 14,
+                    childAspectRatio: columns == 1 ? 3.35 : 2.15,
+                  ),
                   itemBuilder: (context, index) {
                     if (index < subjectNames.length) {
                       final subject = subjectNames[index];
                       final items = bySubject[subject]!;
-                      final chapterCount = items.map((e) => e.chapterTitle ?? e.chapterId).toSet().length;
+                      final chapterCount = items
+                          .map((e) => e.chapterTitle ?? e.chapterId)
+                          .toSet()
+                          .length;
                       return _FolderCard(
                         visual: SubjectVisuals.forSubject(name: subject),
                         title: subject,
-                        subtitle: '$chapterCount chapitre${chapterCount > 1 ? 's' : ''} • ${items.length} exercice${items.length > 1 ? 's' : ''}',
+                        subtitle:
+                            '$chapterCount chapitre${chapterCount > 1 ? 's' : ''} • ${items.length} exercice${items.length > 1 ? 's' : ''}',
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => ExerciseChapterFoldersScreen(subjectName: subject, exercises: items),
+                            builder: (_) => ExerciseChapterFoldersScreen(
+                              subjectName: subject,
+                              exercises: items,
+                            ),
                           ),
                         ),
                       );
@@ -81,9 +108,13 @@ class ExercisesHubScreen extends ConsumerWidget {
                     // il ouvre directement le contenu (voir la même logique en bout de chaîne côté
                     // ExerciseChapterFoldersScreen).
                     return _FolderCard(
-                      visual: SubjectVisual(icon: Icons.shuffle_rounded, gradient: const [Color(0xFFB45309), Color(0xFFD97706)]),
+                      visual: SubjectVisual(
+                        icon: Icons.shuffle_rounded,
+                        gradient: const [Color(0xFFB45309), Color(0xFFD97706)],
+                      ),
                       title: 'Exercices transversaux',
-                      subtitle: '${independent.length} exercice${independent.length > 1 ? 's' : ''} • plusieurs chapitres',
+                      subtitle:
+                          '${independent.length} exercice${independent.length > 1 ? 's' : ''} • plusieurs chapitres',
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -144,7 +175,11 @@ class ExercisesHubScreen extends ConsumerWidget {
                   color: const Color(0xFF38BDF8).withAlpha(35),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.auto_awesome, color: Color(0xFF38BDF8), size: 20),
+                child: const Icon(
+                  Icons.auto_awesome,
+                  color: Color(0xFF38BDF8),
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -152,7 +187,7 @@ class ExercisesHubScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'PARCOURS & EXERCICES INTERACTIFS',
+                      'LABORATOIRES D’ENTRAÎNEMENT',
                       style: TextStyle(
                         color: Color(0xFF38BDF8),
                         fontWeight: FontWeight.bold,
@@ -161,7 +196,7 @@ class ExercisesHubScreen extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      'Entraînement adaptatif 6 niveaux & Tableaux',
+                      'Parcours guidé et tableau de variations',
                       style: GoogleFonts.outfit(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -182,33 +217,53 @@ class ExercisesHubScreen extends ConsumerWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0284C7),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusSmall),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppRadius.radiusSmall,
+                  ),
                 ),
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const ExercisePathScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const ExercisePathScreen(),
+                    ),
                   );
                 },
                 icon: const Icon(Icons.alt_route_rounded, size: 16),
-                label: const Text('Parcours 6 Niveaux', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                label: const Text(
+                  'Parcours guidé',
+                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                ),
               ),
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFF10B981),
                   side: const BorderSide(color: Color(0xFF10B981)),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusSmall),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppRadius.radiusSmall,
+                  ),
                 ),
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const VariationTableExerciseScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const VariationTableExerciseScreen(),
+                    ),
                   );
                 },
                 icon: const Icon(Icons.table_chart_outlined, size: 16),
-                label: const Text('Tableau de variations', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                label: const Text(
+                  'Tableau de variations',
+                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),
@@ -226,55 +281,152 @@ class _FolderCard extends StatelessWidget {
   final String subtitle;
   final VoidCallback onTap;
 
-  const _FolderCard({required this.visual, required this.title, required this.subtitle, required this.onTap});
+  const _FolderCard({
+    required this.visual,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: AppRadius.radiusLarge,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: context.colors.card,
+    return Semantics(
+      button: true,
+      label: 'Ouvrir $title. $subtitle',
+      child: Material(
+        color: context.colors.card,
+        borderRadius: AppRadius.radiusLarge,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: AppRadius.radiusLarge,
-          border: Border.all(color: context.colors.border),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: context.colors.card,
+              borderRadius: AppRadius.radiusLarge,
+              border: Border.all(color: context.colors.border),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: visual.gradient,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: AppRadius.radiusMedium,
+                    boxShadow: [
+                      BoxShadow(
+                        color: visual.gradient.last.withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        right: -8,
+                        bottom: -8,
+                        child: SubjectMotif(
+                          icon: visual.icon,
+                          size: 42,
+                          opacity: 0.22,
+                        ),
+                      ),
+                      Center(
+                        child: Icon(visual.icon, color: Colors.white, size: 24),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: context.colors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: context.colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: context.colors.surface,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: context.colors.textSecondary,
+                    size: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-        child: Row(
+      ),
+    );
+  }
+}
+
+class _ExercisesLoadError extends StatelessWidget {
+  const _ExercisesLoadError({required this.onRetry});
+
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 56,
-              height: 56,
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: visual.gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
-                borderRadius: AppRadius.radiusMedium,
-                boxShadow: [BoxShadow(color: visual.gradient.last.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 3))],
-              ),
-              child: Stack(
-                children: [
-                  Positioned(right: -8, bottom: -8, child: SubjectMotif(icon: visual.icon, size: 42, opacity: 0.22)),
-                  Center(child: Icon(visual.icon, color: Colors.white, size: 24)),
-                ],
-              ),
+            Icon(
+              Icons.cloud_off_rounded,
+              size: 44,
+              color: context.colors.textSecondary,
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
-                  const SizedBox(height: 4),
-                  Text(subtitle, style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary)),
-                ],
+            const SizedBox(height: 12),
+            Text(
+              'Impossible de charger les exercices',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Vérifie ta connexion puis réessaie.',
+              style: TextStyle(color: context.colors.textSecondary),
+            ),
+            if (onRetry != null) ...[
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Réessayer'),
               ),
-            ),
-            const SizedBox(width: 14),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: context.colors.surface, shape: BoxShape.circle),
-              child: Icon(Icons.arrow_forward_ios_rounded, color: context.colors.textSecondary, size: 14),
-            ),
+            ],
           ],
         ),
       ),

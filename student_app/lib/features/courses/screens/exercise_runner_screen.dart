@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/student_providers.dart';
@@ -15,9 +16,19 @@ import '../../pedagogy/widgets/scientific_tools_modal.dart';
 import '../../pedagogy/widgets/photo_transcription_modal.dart';
 import '../../pedagogy/widgets/interactive_function_graph.dart';
 
+@visibleForTesting
+int confirmedPointsForAnswer({
+  required String format,
+  required int points,
+  required bool isQcmCorrect,
+}) {
+  return format == 'qcm' && isQcmCorrect ? points : 0;
+}
+
 class ExerciseRunnerScreen extends ConsumerStatefulWidget {
   final String chapterId;
   final String chapterTitle;
+
   /// Quand fourni (ex. depuis le hub « Exercices » — voir exercises_hub_screen.dart), court-circuite
   /// la récupération par `chapterId` : nécessaire pour les exercices liés à une leçon ou indépendants,
   /// qui n'ont justement pas de `chapterId` unique à interroger.
@@ -45,8 +56,10 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
   bool _isRevealed = false;
   int _totalScore = 0;
   final TextEditingController _freeTextCtrl = TextEditingController();
+
   /// Transcription OCR issue du scan de manuscrit de l'élève
   String? _scannedTranscription;
+
   /// Nombre d'indices déjà révélés pour l'exercice courant (CF-003 enrichissement) — remis à zéro à
   /// chaque changement d'exercice, jamais partagé entre deux exercices différents.
   int _hintsShown = 0;
@@ -108,7 +121,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
       backgroundColor: context.colors.background,
       appBar: AppBar(
         title: Text(
-          'Quiz — ${widget.chapterTitle}',
+          'Exercices — ${widget.chapterTitle}',
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             color: context.colors.textPrimary,
@@ -131,10 +144,35 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
       body: StudentPageContent(
         child: exercisesAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(
-            child: Text(
-              'Erreur: $err',
-              style: const TextStyle(color: Colors.red),
+          error: (_, __) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.cloud_off_rounded,
+                    size: 44,
+                    color: context.colors.textSecondary,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Impossible de charger les exercices',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  if (widget.preloadedExercises == null) ...[
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: () => ref.invalidate(
+                        studentExercisesProvider(widget.chapterId),
+                      ),
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Réessayer'),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
           data: (exercises) {
@@ -142,7 +180,8 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
               return EmptyStateView(
                 icon: Icons.edit_note_rounded,
                 title: 'Aucun exercice publié pour ce chapitre',
-                description: 'Revenez bientôt : l\'enseignant prépare encore ce quiz.',
+                description:
+                    'Revenez bientôt : l\'enseignant prépare encore ce quiz.',
               );
             }
 
@@ -189,7 +228,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '+${currentEx.points} XP',
+                              '${currentEx.points} points',
                               style: GoogleFonts.inter(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -254,7 +293,9 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.primaryCyan.withAlpha(25),
                   borderRadius: AppRadius.radiusSmall,
-                  border: Border.all(color: AppColors.primaryCyan.withAlpha(80)),
+                  border: Border.all(
+                    color: AppColors.primaryCyan.withAlpha(80),
+                  ),
                 ),
                 child: Text(
                   'ÉNONCÉ OFFICIEL',
@@ -281,11 +322,18 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                     },
                     borderRadius: AppRadius.radiusSmall,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.calculate_rounded, size: 14, color: Color(0xFF10B981)),
+                          const Icon(
+                            Icons.calculate_rounded,
+                            size: 14,
+                            color: Color(0xFF10B981),
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             'SymPy / Grapheur',
@@ -311,11 +359,18 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                     },
                     borderRadius: AppRadius.radiusSmall,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.auto_awesome_rounded, size: 14, color: AppColors.primaryCyan),
+                          const Icon(
+                            Icons.auto_awesome_rounded,
+                            size: 14,
+                            color: AppColors.primaryCyan,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             'Tuteur Socratique',
@@ -367,17 +422,27 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
               decoration: BoxDecoration(
                 color: context.colors.accentAmber.withValues(alpha: 0.1),
                 borderRadius: AppRadius.radiusSmall,
-                border: Border.all(color: context.colors.accentAmber.withValues(alpha: 0.4)),
+                border: Border.all(
+                  color: context.colors.accentAmber.withValues(alpha: 0.4),
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.lightbulb_outline_rounded, size: 16, color: context.colors.accentAmber),
+                  Icon(
+                    Icons.lightbulb_outline_rounded,
+                    size: 16,
+                    color: context.colors.accentAmber,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: InlineLatexText(
                       ex.hints[i],
-                      style: GoogleFonts.inter(fontSize: 12.5, color: context.colors.textPrimary, height: 1.4),
+                      style: GoogleFonts.inter(
+                        fontSize: 12.5,
+                        color: context.colors.textPrimary,
+                        height: 1.4,
+                      ),
                     ),
                   ),
                 ],
@@ -387,11 +452,15 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 foregroundColor: context.colors.accentAmber,
-                shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusSmall),
+                shape: RoundedRectangleBorder(
+                  borderRadius: AppRadius.radiusSmall,
+                ),
               ),
               onPressed: () => setState(() => _hintsShown++),
               icon: const Icon(Icons.lightbulb_outline_rounded, size: 16),
-              label: Text(_hintsShown == 0 ? 'Voir un indice' : 'Indice suivant'),
+              label: Text(
+                _hintsShown == 0 ? 'Voir un indice' : 'Indice suivant',
+              ),
             ),
         ],
       ),
@@ -401,7 +470,9 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
   Widget _correctionCard(BuildContext context, Exercise ex, {bool? isCorrect}) {
     final color = isCorrect == null
         ? context.colors.accentIndigo
-        : (isCorrect ? context.colors.accentEmerald : context.colors.accentRose);
+        : (isCorrect
+              ? context.colors.accentEmerald
+              : context.colors.accentRose);
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(top: 16),
@@ -419,7 +490,9 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
               Icon(
                 isCorrect == null
                     ? Icons.lightbulb_outline_rounded
-                    : (isCorrect ? Icons.check_circle_rounded : Icons.cancel_rounded),
+                    : (isCorrect
+                          ? Icons.check_circle_rounded
+                          : Icons.cancel_rounded),
                 color: color,
                 size: 20,
               ),
@@ -427,15 +500,27 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
               Text(
                 isCorrect == null
                     ? 'Corrigé'
-                    : (isCorrect ? 'Excellente Réponse !' : 'Réponse Incorrecte'),
-                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: context.colors.textPrimary),
+                    : (isCorrect
+                          ? 'Excellente Réponse !'
+                          : 'Réponse Incorrecte'),
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: context.colors.textPrimary,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 10),
           InlineLatexText(
-            ex.explanation.isNotEmpty ? ex.explanation : 'Aucun corrigé fourni pour cet exercice.',
-            style: GoogleFonts.inter(fontSize: 13.5, color: context.colors.textSecondary, height: 1.45),
+            ex.explanation.isNotEmpty
+                ? ex.explanation
+                : 'Aucun corrigé fourni pour cet exercice.',
+            style: GoogleFonts.inter(
+              fontSize: 13.5,
+              color: context.colors.textSecondary,
+              height: 1.45,
+            ),
           ),
           // Proposition de remédiation par le DiagnosticAgent / MisconceptionAgent si la réponse est incorrecte
           if (isCorrect == false) ...[
@@ -447,8 +532,13 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                   backgroundColor: AppColors.primaryCyan,
                   foregroundColor: const Color(0xFF0F172A),
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusSmall),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppRadius.radiusSmall,
+                  ),
                 ),
                 icon: const Icon(Icons.psychology_alt_rounded, size: 18),
                 label: const Text(
@@ -456,14 +546,17 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                 ),
                 onPressed: () {
-                  final selectedText = (_selectedOptionIndex != null && _selectedOptionIndex! < ex.options.length)
+                  final selectedText =
+                      (_selectedOptionIndex != null &&
+                          _selectedOptionIndex! < ex.options.length)
                       ? ex.options[_selectedOptionIndex!]
                       : 'Réponse incorrecte';
                   ContextualAiAgentSheet.show(
                     context,
                     topicTitle: widget.chapterTitle,
                     subject: 'Mathématiques',
-                    formulaLatex: 'Question: ${ex.questionText}\nChoix de l\'élève: $selectedText\nCorrigé: ${ex.explanation}',
+                    formulaLatex:
+                        'Question: ${ex.questionText}\nChoix de l\'élève: $selectedText\nCorrigé: ${ex.explanation}',
                     initialMode: 'diagnostic',
                   );
                 },
@@ -520,15 +613,23 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: InkWell(
-              onTap: _isRevealed ? null : () => setState(() => _selectedOptionIndex = optIdx),
+              onTap: _isRevealed
+                  ? null
+                  : () => setState(() => _selectedOptionIndex = optIdx),
               borderRadius: AppRadius.radiusMedium,
               child: Container(
                 constraints: const BoxConstraints(minHeight: 48),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   color: bgColor,
                   borderRadius: AppRadius.radiusMedium,
-                  border: Border.all(color: borderColor, width: isSelected ? 2 : 1),
+                  border: Border.all(
+                    color: borderColor,
+                    width: isSelected ? 2 : 1,
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -537,14 +638,18 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                       height: 28,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isSelected ? context.colors.accentPrimary : context.colors.surface,
+                        color: isSelected
+                            ? context.colors.accentPrimary
+                            : context.colors.surface,
                       ),
                       child: Center(
                         child: Text(
                           String.fromCharCode(65 + optIdx),
                           style: GoogleFonts.inter(
                             fontWeight: FontWeight.bold,
-                            color: isSelected ? Colors.black : context.colors.textPrimary,
+                            color: isSelected
+                                ? Colors.black
+                                : context.colors.textPrimary,
                           ),
                         ),
                       ),
@@ -553,7 +658,10 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                     Expanded(
                       child: InlineLatexText(
                         option,
-                        style: GoogleFonts.inter(fontSize: 15, color: context.colors.textPrimary),
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          color: context.colors.textPrimary,
+                        ),
                       ),
                     ),
                   ],
@@ -562,7 +670,12 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
             ),
           );
         }),
-        if (_isRevealed) _correctionCard(context, ex, isCorrect: _selectedOptionIndex == ex.correctIndex),
+        if (_isRevealed)
+          _correctionCard(
+            context,
+            ex,
+            isCorrect: _selectedOptionIndex == ex.correctIndex,
+          ),
       ],
     );
   }
@@ -577,7 +690,11 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
         const SizedBox(height: 20),
         Text(
           isRedaction ? 'Votre rédaction' : 'Votre réponse',
-          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: context.colors.textSecondary),
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: context.colors.textSecondary,
+          ),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -586,7 +703,9 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
           maxLines: isRedaction ? 10 : 3,
           style: TextStyle(color: context.colors.textPrimary),
           decoration: InputDecoration(
-            hintText: isRedaction ? 'Rédigez votre réponse ici...' : 'Répondez en quelques mots...',
+            hintText: isRedaction
+                ? 'Rédigez votre réponse ici...'
+                : 'Répondez en quelques mots...',
             hintStyle: TextStyle(color: context.colors.textMuted),
             filled: true,
             fillColor: context.colors.card,
@@ -598,7 +717,11 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
           const SizedBox(height: 8),
           Text(
             'Comparez votre réponse au corrigé ci-dessus — aucune notation automatique pour ce format.',
-            style: GoogleFonts.inter(fontSize: 11, color: context.colors.textMuted, fontStyle: FontStyle.italic),
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              color: context.colors.textMuted,
+              fontStyle: FontStyle.italic,
+            ),
           ),
         ],
       ],
@@ -613,15 +736,24 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
         constraints: const BoxConstraints(minHeight: 220),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: _isRevealed ? context.colors.accentIndigo.withValues(alpha: 0.12) : context.colors.card,
+          color: _isRevealed
+              ? context.colors.accentIndigo.withValues(alpha: 0.12)
+              : context.colors.card,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _isRevealed ? context.colors.accentIndigo : context.colors.border, width: 1.5),
+          border: Border.all(
+            color: _isRevealed
+                ? context.colors.accentIndigo
+                : context.colors.border,
+            width: 1.5,
+          ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              _isRevealed ? Icons.check_circle_outline_rounded : Icons.touch_app_outlined,
+              _isRevealed
+                  ? Icons.check_circle_outline_rounded
+                  : Icons.touch_app_outlined,
               color: context.colors.accentIndigo,
               size: 26,
             ),
@@ -638,8 +770,13 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              _isRevealed ? 'Réponse — touchez pour revenir' : 'Touchez la carte pour retourner',
-              style: GoogleFonts.inter(fontSize: 11, color: context.colors.textMuted),
+              _isRevealed
+                  ? 'Réponse — touchez pour revenir'
+                  : 'Touchez la carte pour retourner',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                color: context.colors.textMuted,
+              ),
             ),
           ],
         ),
@@ -672,7 +809,11 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                       color: AppColors.cyanAccent.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.document_scanner_rounded, color: AppColors.cyanAccent, size: 20),
+                    child: const Icon(
+                      Icons.document_scanner_rounded,
+                      color: AppColors.cyanAccent,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -681,12 +822,19 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                       children: [
                         Text(
                           'Correction par scan manuscrit & OCR',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: context.colors.textPrimary),
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: context.colors.textPrimary,
+                          ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'Rédige ta solution sur papier, puis scanne-la pour vérifier tes calculs sans code technique.',
-                          style: GoogleFonts.inter(fontSize: 11.5, color: context.colors.textSecondary),
+                          style: GoogleFonts.inter(
+                            fontSize: 11.5,
+                            color: context.colors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -702,12 +850,17 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                         backgroundColor: AppColors.cyanAccent,
                         foregroundColor: Colors.black,
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                       icon: const Icon(Icons.camera_alt_rounded, size: 18),
                       label: const Text(
                         'Photographier ma feuille',
-                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       onPressed: () {
                         PhotoTranscriptionModal.show(
@@ -724,9 +877,13 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                   const SizedBox(width: 10),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.15),
+                      backgroundColor: const Color(0xFF10B981)
+                          .withValues(alpha: 0.15),
                       foregroundColor: const Color(0xFF10B981),
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 12,
+                      ),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -734,7 +891,13 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                       ),
                     ),
                     icon: const Icon(Icons.show_chart_rounded, size: 18),
-                    label: const Text('Tracé', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    label: const Text(
+                      'Tracé',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     onPressed: () {
                       InteractiveFunctionGraph.showModal(
                         context,
@@ -752,25 +915,38 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF10B981).withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 16),
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            color: Color(0xFF10B981),
+                            size: 16,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             'Solution manuscrite transcrite :',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12, color: const Color(0xFF10B981)),
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: const Color(0xFF10B981),
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 6),
                       InlineLatexText(
                         _scannedTranscription!,
-                        style: GoogleFonts.inter(fontSize: 13, color: context.colors.textPrimary),
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: context.colors.textPrimary,
+                        ),
                       ),
                     ],
                   ),
@@ -784,7 +960,11 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
     );
   }
 
-  Widget _buildActionButton(BuildContext context, List<Exercise> exercises, Exercise currentEx) {
+  Widget _buildActionButton(
+    BuildContext context,
+    List<Exercise> exercises,
+    Exercise currentEx,
+  ) {
     final isLast = _currentIndex == exercises.length - 1;
     final bool canPrimaryAct = switch (currentEx.format) {
       'qcm' => _selectedOptionIndex != null,
@@ -808,29 +988,36 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: context.colors.accentPrimary,
-          foregroundColor: Colors.black,
+          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
         onPressed: !canPrimaryAct
             ? null
             : () {
                 if (!_isRevealed) {
-                  final isQcmCorrect = currentEx.format == 'qcm' && _selectedOptionIndex == currentEx.correctIndex;
+                  final isQcmCorrect =
+                      currentEx.format == 'qcm' &&
+                      _selectedOptionIndex == currentEx.correctIndex;
                   setState(() {
                     _isRevealed = true;
-                    if (currentEx.format == 'qcm' && isQcmCorrect) {
-                      _totalScore += currentEx.points;
-                    } else if (currentEx.format != 'qcm') {
-                      _totalScore += currentEx.points;
-                    }
+                    _totalScore += confirmedPointsForAnswer(
+                      format: currentEx.format,
+                      points: currentEx.points,
+                      isQcmCorrect: isQcmCorrect,
+                    );
                   });
                   _recordAttempt(currentEx, isQcmCorrect);
                 } else {
                   _goToNext(exercises);
                 }
               },
-        child: Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15)),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
+        ),
       ),
     );
   }
@@ -859,7 +1046,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
             ),
             const SizedBox(height: 18),
             Text(
-              'Quiz Terminé avec Succès !',
+              'Série terminée',
               style: GoogleFonts.outfit(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -869,7 +1056,9 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Vous avez gagné +$_totalScore XP sur ce chapitre.',
+              _totalScore == 0
+                  ? 'Tes réponses ont été enregistrées. Les réponses libres ne sont pas notées automatiquement.'
+                  : '$_totalScore points ont été validés automatiquement sur les QCM.',
               style: GoogleFonts.inter(
                 fontSize: 14,
                 color: context.colors.textSecondary,
@@ -880,7 +1069,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: context.colors.accentPrimary,
-                foregroundColor: Colors.black,
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
                   vertical: 12,
