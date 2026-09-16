@@ -56,6 +56,123 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
     }
   }
 
+  /// Aucun parcours de récupération n'existait avant : un élève ayant oublié son mot de passe
+  /// n'avait strictement aucun recours. Utilise l'API standard GoTrue — jamais de simulation, et
+  /// le message reste générique pour ne jamais confirmer/infirmer l'existence d'un compte.
+  Future<void> _showForgotPasswordDialog() async {
+    final emailCtrl = TextEditingController(text: _emailCtrl.text.trim());
+    var isSending = false;
+    String? errorMessage;
+    var sent = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          backgroundColor: context.colors.card,
+          title: Text(
+            'Mot de passe oublié',
+            style: TextStyle(color: context.colors.textPrimary),
+          ),
+          content: sent
+              ? Text(
+                  'Si un compte existe avec cette adresse, un email de réinitialisation vient de lui être envoyé. Vérifiez aussi vos spams.',
+                  style: TextStyle(color: context.colors.textSecondary),
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Saisissez votre adresse email : un lien de réinitialisation vous sera envoyé.',
+                      style: TextStyle(
+                        color: context.colors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: emailCtrl,
+                      autofocus: true,
+                      keyboardType: TextInputType.emailAddress,
+                      style: TextStyle(color: context.colors.textPrimary),
+                      decoration: InputDecoration(
+                        labelText: 'Adresse email',
+                        labelStyle: TextStyle(color: context.colors.textSecondary),
+                        filled: true,
+                        fillColor: context.colors.surface,
+                        border: OutlineInputBorder(
+                          borderRadius: AppRadius.radiusMedium,
+                        ),
+                      ),
+                    ),
+                    if (errorMessage != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        errorMessage!,
+                        style: TextStyle(color: context.colors.accentRose, fontSize: 12),
+                      ),
+                    ],
+                  ],
+                ),
+          actions: [
+            if (sent)
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Fermer'),
+              )
+            else ...[
+              TextButton(
+                onPressed: isSending ? null : () => Navigator.pop(dialogContext),
+                child: Text(
+                  'Annuler',
+                  style: TextStyle(color: context.colors.textSecondary),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.colors.accentPrimary,
+                  foregroundColor: Colors.black,
+                ),
+                onPressed: isSending
+                    ? null
+                    : () async {
+                        final email = emailCtrl.text.trim();
+                        if (!email.contains('@')) {
+                          setDialogState(() => errorMessage = 'Adresse email invalide.');
+                          return;
+                        }
+                        setDialogState(() {
+                          isSending = true;
+                          errorMessage = null;
+                        });
+                        final error = await ref
+                            .read(studentAuthProvider.notifier)
+                            .requestPasswordReset(email);
+                        setDialogState(() {
+                          isSending = false;
+                          if (error != null) {
+                            errorMessage = error;
+                          } else {
+                            sent = true;
+                          }
+                        });
+                      },
+                child: isSending
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                      )
+                    : const Text('Envoyer'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+    emailCtrl.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     // Deux cas bien distincts : empilé par-dessus le déverrouillage par code (« Code oublié ? »,
@@ -167,6 +284,20 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                               : null,
                           onFieldSubmitted: (_) => _submit(),
                         ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: _isSubmitting ? null : _showForgotPasswordDialog,
+                            child: Text(
+                              'Mot de passe oublié ?',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: context.colors.accentPrimary,
+                              ),
+                            ),
+                          ),
+                        ),
                         if (_errorMessage != null) ...[
                           const SizedBox(height: 14),
                           Container(
@@ -236,8 +367,12 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                   ),
 
                   const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  // `Wrap` plutôt que `Row` : débordait de 170px sur un téléphone étroit (jamais
+                  // testé avant l'ajout du lien « Mot de passe oublié ? » ci-dessus, qui a réduit
+                  // l'espace vertical disponible et révélé ce défaut déjà présent horizontalement).
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Text(
                         'Pas encore de compte ?',

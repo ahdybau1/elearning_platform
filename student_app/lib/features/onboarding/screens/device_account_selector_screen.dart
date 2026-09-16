@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/device_accounts_service.dart';
 import '../../../core/providers/app_root_providers.dart';
+import '../../../design_system/components/empty_state_view.dart';
 import 'login_code_entry_screen.dart';
 import 'student_login_screen.dart';
 
@@ -24,11 +27,31 @@ class _DeviceAccountSelectorScreenState extends ConsumerState<DeviceAccountSelec
   @override
   void initState() {
     super.initState();
-    _knownFuture = deviceAccountsService.listKnown();
+    _knownFuture = _loadKnown();
   }
 
   void _refresh() {
-    setState(() => _knownFuture = deviceAccountsService.listKnown());
+    // Corps bloc requis : un corps flèche (`=> _knownFuture = ...`) renvoie la VALEUR de
+    // l'affectation, c'est-à-dire le Future lui-même — `setState` lève alors « callback argument
+    // returned a Future », et pire, le nouveau Future assigné n'est jamais reconstruit dans l'arbre
+    // (le `markNeedsBuild` n'est jamais atteint), donc son rejet devient une exception non
+    // observée. Jamais exercé avant : ce bouton de nouvelle tentative n'existait pas.
+    setState(() {
+      _knownFuture = _loadKnown();
+    });
+  }
+
+  /// `deviceAccountsService.listKnown()` directement, plus un observateur d'erreur silencieux posé
+  /// IMMÉDIATEMENT sur ce même Future (`.catchError` ci-dessous) — sans lien avec la vraie
+  /// consommation par `FutureBuilder` juste en dessous (les Future Dart supportent plusieurs
+  /// auditeurs indépendants). Sans lui, un rejet qui survient avant que `FutureBuilder` ne se
+  /// réabonne (ex. juste après `setState`, avant le prochain frame) peut être signalé comme une
+  /// exception « non observée » par la zone de test, alors que l'UI affiche déjà correctement
+  /// l'état d'erreur — repéré uniquement en testant réellement le bouton « Réessayer ».
+  Future<List<DeviceKnownAccount>> _loadKnown() {
+    final future = deviceAccountsService.listKnown();
+    unawaited(future.catchError((_) => const <DeviceKnownAccount>[]));
+    return future;
   }
 
   @override
@@ -74,6 +97,29 @@ class _DeviceAccountSelectorScreenState extends ConsumerState<DeviceAccountSelec
                 FutureBuilder<List<DeviceKnownAccount>>(
                   future: _knownFuture,
                   builder: (context, snapshot) {
+                    // Une lecture locale échouée (stockage sécurisé indisponible, ex. profil
+                    // système corrompu) ne doit jamais s'afficher comme « aucun compte connu » —
+                    // ça inviterait l'élève à ressaisir un mot de passe alors que son compte est
+                    // bien enregistré sur l'appareil.
+                    if (snapshot.hasError) {
+                      return EmptyStateView(
+                        icon: Icons.error_outline_rounded,
+                        iconColor: context.colors.accentRose,
+                        title: 'Comptes enregistrés indisponibles',
+                        description:
+                            'Impossible de lire les comptes enregistrés sur cet appareil. Réessayez, ou connectez-vous avec votre email.',
+                        actionLabel: 'Réessayer',
+                        onAction: _refresh,
+                      );
+                    }
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 40),
+                        child: CircularProgressIndicator(
+                          color: context.colors.accentPrimary,
+                        ),
+                      );
+                    }
                     final known = snapshot.data ?? const <DeviceKnownAccount>[];
                     return Wrap(
                       spacing: 24,
@@ -166,7 +212,10 @@ class _AccountTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        InkWell(
       onTap: onTap,
       onLongPress: () => _confirmForget(context),
       borderRadius: BorderRadius.circular(20),
@@ -219,6 +268,34 @@ class _AccountTile extends StatelessWidget {
           ],
         ),
       ),
+        ),
+        // Affordance visible d'« oublier ce compte » — l'appui long seul (ci-dessus) n'était
+        // jamais découvert par un élève qui n'en connaît pas déjà l'existence.
+        Positioned(
+          top: -6,
+          right: -6,
+          child: Tooltip(
+            message: 'Oublier ce compte',
+            child: InkWell(
+              onTap: () => _confirmForget(context),
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: context.colors.background,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: context.colors.border),
+                ),
+                child: Icon(
+                  Icons.close_rounded,
+                  size: 14,
+                  color: context.colors.textSecondary,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

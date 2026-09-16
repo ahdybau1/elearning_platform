@@ -8,6 +8,15 @@ import '../../../design_system/tokens/app_radius.dart';
 class ProfileSwitcherScreen extends ConsumerWidget {
   const ProfileSwitcherScreen({super.key});
 
+  static String _tierLabel(String tier) => switch (tier) {
+    'gratuit' => 'Gratuit',
+    'journalier' => 'Journalier',
+    'hebdomadaire' => 'Hebdomadaire',
+    'mensuel' => 'Mensuel',
+    'annuel' => 'Annuel',
+    _ => tier,
+  };
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(studentAuthProvider);
@@ -171,6 +180,46 @@ class ProfileSwitcherScreen extends ConsumerWidget {
                                       fontSize: 11,
                                       color: context.colors.accentPrimary,
                                       fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                if (profile.schoolYear.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Année ${profile.schoolYear}',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      color: context.colors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 4),
+                                // Statut d'abonnement réel du profil — la maquette d'origine
+                                // demandait un « streak » par profil, mais aucune activité
+                                // quotidienne n'est suivie côté backend pour l'instant (voir
+                                // STUDENT_APP_CURRENT_STATE.md, ligne Gamification) : afficher un
+                                // chiffre inventé serait un faux succès. Le palier d'abonnement,
+                                // lui, est une donnée réelle et utile pour choisir la bonne classe.
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: (profile.hasActiveSubscription
+                                            ? context.colors.accentAmber
+                                            : context.colors.textMuted)
+                                        .withValues(alpha: 0.15),
+                                    borderRadius: AppRadius.radiusSmall,
+                                  ),
+                                  child: Text(
+                                    _tierLabel(profile.subscriptionTier),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w600,
+                                      color: profile.hasActiveSubscription
+                                          ? context.colors.accentAmber
+                                          : context.colors.textMuted,
                                     ),
                                   ),
                                 ),

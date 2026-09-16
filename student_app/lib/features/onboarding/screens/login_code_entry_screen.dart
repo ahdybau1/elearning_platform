@@ -121,7 +121,10 @@ class _LoginCodeEntryScreenState extends ConsumerState<LoginCodeEntryScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Saisissez votre code personnel à 6 chiffres.',
+                    // Le code personnel accepte 4 à 40 caractères (voir StudentProfileScreen,
+                    // `setLoginCode` / migration 45) — annoncer « 6 chiffres » induisait en erreur
+                    // tout élève ayant choisi un code plus long ou non numérique.
+                    'Saisissez votre code personnel.',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(fontSize: 13, color: context.colors.textSecondary),
                   ),
@@ -193,8 +196,12 @@ class _LoginCodeEntryScreenState extends ConsumerState<LoginCodeEntryScreen> {
                           ),
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  // `Wrap` plutôt que `Row` : les deux boutons + le séparateur débordaient de 61 à
+                  // 99px sur un téléphone étroit (jamais testé avant — aucun test n'existait sur cet
+                  // écran). `Wrap` passe proprement à la ligne au lieu de déborder hors écran.
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       TextButton(
                         onPressed: () => Navigator.pop(context, false),

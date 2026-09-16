@@ -280,8 +280,9 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
     }
   }
 
-  /// §7.3/§7.4 : définit/change le code personnel à 6 chiffres (Profil → Sécurité → Mon code) — le
-  /// hash est calculé côté serveur (`set_login_code`, migration 45), jamais en clair côté client.
+  /// §7.3/§7.4 : définit/change le code personnel (4 à 40 caractères, voir la validation dans
+  /// `StudentProfileScreen`) (Profil → Sécurité → Mon code) — le hash est calculé côté serveur
+  /// (`set_login_code`, migration 45), jamais en clair côté client.
   Future<String?> setLoginCode(String code) async {
     if (state.account == null) return 'Aucun compte connecté.';
     try {
@@ -358,6 +359,23 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
       return e.message;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      return e.toString();
+    }
+  }
+
+  /// Envoie un email de réinitialisation de mot de passe (`StudentLoginScreen`, « Mot de passe
+  /// oublié ? » — aucun parcours de récupération n'existait avant, un élève ayant oublié son mot de
+  /// passe restait bloqué sans recours). Retourne un message d'erreur lisible en cas d'échec
+  /// réseau/serveur, ou `null` si la demande a bien été transmise à Supabase. Ne révèle jamais si
+  /// l'adresse correspond réellement à un compte existant (comportement standard GoTrue) : le
+  /// message de succès affiché à l'élève doit rester générique côté UI.
+  Future<String?> requestPasswordReset(String email) async {
+    try {
+      await _client.auth.resetPasswordForEmail(email);
+      return null;
+    } on AuthException catch (e) {
+      return e.message;
+    } catch (e) {
       return e.toString();
     }
   }
