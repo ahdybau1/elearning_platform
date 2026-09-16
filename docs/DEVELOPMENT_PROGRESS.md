@@ -646,3 +646,35 @@ Codex bloqué). Exécutés ici en environnement Flutter réel (Windows/VS Code) 
 
 **Conclusion** : les lots 1 à 10 de la refonte front-end élève v2 sont maintenant validés par une
 exécution Flutter réelle, pas seulement par le formatage/lint de l'environnement Codex.
+
+## 16 septembre 2026 — Refonte Front-end Élève v2 (lot 11 — Onboarding/Auth/Profil)
+
+Référence : `docs/UI_REDESIGN_PLAN.md` Vague 3. Les 5 écrans d'entrée (RoleSelection,
+DeviceAccountSelector, LoginCodeEntry, StudentLogin, ProfileSwitcher) n'avaient été touchés par
+aucun des lots 1-10 et n'avaient aucun test — première passe réelle sur ce parcours.
+
+- **LoginCodeEntryScreen** : le texte annonçait « code à 6 chiffres » alors que le format réel
+  (`StudentProfileScreen`, `set_login_code`) accepte 4 à 40 caractères quelconques — corrigé
+  (texte + doc obsolète dans `student_auth_provider.dart`).
+- **StudentLoginScreen** : aucun parcours de récupération de mot de passe n'existait — ajout de
+  `requestPasswordReset` (API standard `resetPasswordForEmail`) + dialogue dédié, message toujours
+  générique pour ne jamais confirmer/infirmer l'existence d'un compte.
+- **DeviceAccountSelectorScreen** : une erreur de lecture locale réelle (stockage corrompu) était
+  confondue avec « aucun compte connu » — ajout d'un état d'erreur avec relance, et d'une icône
+  « oublier ce compte » visible (l'appui long seul n'était jamais découvert). Bug réel trouvé en
+  testant ce nouveau bouton : `setState(() => _knownFuture = ...)` (corps flèche) renvoyait le
+  Future lui-même au lieu de void, provoquant une exception jamais observée avant — jamais exercé
+  avant l'ajout d'un test sur ce bouton.
+- **ProfileSwitcherScreen** : ajout de l'année scolaire et du palier d'abonnement réels par profil,
+  jamais un « streak » fabriqué (aucune activité quotidienne n'est suivie côté backend — voir
+  `STUDENT_APP_CURRENT_STATE.md`, ligne Gamification).
+- Corrections de débordement horizontal (`Row` → `Wrap`) sur `LoginCodeEntryScreen` et
+  `StudentLoginScreen` à largeur téléphone étroite, jamais détectées faute de test sur ces écrans.
+
+`test/onboarding_auth_screens_test.dart` : 6 nouveaux tests. Vérification : `flutter analyze`
+0 erreur (17 infos de style pré-existantes sans rapport), `flutter test` tous verts,
+`flutter build web` OK.
+
+**Reste dans la Vague 3** : `RoleSelectionScreen` (cosmétique seulement, non prioritaire) ;
+`StudentProfileScreen` (1373 lignes — le plan demande un découpage en sous-composants, pas encore
+fait) ; `SettingsScreen` (organisation par onglets thématiques demandée par le plan, pas vérifiée).
