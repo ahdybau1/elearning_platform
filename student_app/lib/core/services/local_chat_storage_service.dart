@@ -72,6 +72,7 @@ class ChatMessage {
   final DateTime timestamp;
   final List<ChatAttachment> attachments;
   final List<Map<String, dynamic>> citations;
+  final bool isError;
 
   const ChatMessage({
     required this.id,
@@ -80,6 +81,7 @@ class ChatMessage {
     required this.timestamp,
     this.attachments = const [],
     this.citations = const [],
+    this.isError = false,
   });
 
   bool get isAi => sender == 'ai';
@@ -92,6 +94,7 @@ class ChatMessage {
         'timestamp': timestamp.toIso8601String(),
         'attachments': attachments.map((a) => a.toJson()).toList(),
         'citations': citations,
+        'isError': isError,
       };
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
@@ -110,6 +113,7 @@ class ChatMessage {
               ?.map((c) => Map<String, dynamic>.from(c as Map))
               .toList() ??
           const [],
+      isError: json['isError'] as bool? ?? false,
     );
   }
 }

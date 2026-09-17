@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -295,12 +296,34 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
     } catch (e) {
       if (!mounted) return;
 
+      String errorText;
+      if (e is TimeoutException) {
+        errorText = 'Le calcul ou l\'analyse prend plus de temps que prévu (délai d\'attente dépassé). '
+            'Ta question et tes pièces jointes sont bien conservées. Clique sur Réessayer ci-dessous.';
+      } else {
+        final errStr = e.toString().toLowerCase();
+        if (errStr.contains('503') || errStr.contains('unavailable') || errStr.contains('surchargé')) {
+          errorText = 'Le serveur de calcul IA est momentanément très sollicité. '
+              'Tes documents sont conservés intacts. Clique sur Réessayer ci-dessous pour relancer.';
+        } else if (errStr.contains('network') ||
+            errStr.contains('socket') ||
+            errStr.contains('connexion') ||
+            errStr.contains('failed to fetch') ||
+            errStr.contains('clientexception')) {
+          errorText = 'Connexion réseau instable ou interrompue. '
+              'Ta question et tes pièces jointes sont sauvegardées sur ton appareil. Clique sur Réessayer dès que le réseau revient.';
+        } else {
+          errorText = 'Le service du Tuteur pq learn a rencontré une courte interruption temporaire. '
+              'Ta question et tes pièces jointes sont conservées. Clique sur Réessayer pour continuer.';
+        }
+      }
+
       final errorMsg = ChatMessage(
         id: UniqueKey().toString(),
         sender: 'ai',
-        text: 'Le service du Tuteur pq learn est momentanément indisponible ou en attente réseau. '
-            'Ta question et tes pièces jointes sont conservées.',
+        text: errorText,
         timestamp: DateTime.now(),
+        isError: true,
       );
 
       final finalMessages = List<ChatMessage>.from(_currentSession!.messages)..add(errorMsg);
@@ -322,8 +345,11 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
 
     // Supprimer le message d'erreur si présent en fin de liste
     if (messages.last.isAi &&
-        (messages.last.text.contains('momentanément indisponible') ||
-            messages.last.text.contains('attente réseau'))) {
+        (messages.last.isError ||
+            messages.last.text.contains('momentanément') ||
+            messages.last.text.contains('attente réseau') ||
+            messages.last.text.contains('Réessayer') ||
+            messages.last.text.contains('délai'))) {
       messages.removeLast();
     }
 
@@ -865,8 +891,11 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
 
                     // Bouton de réessai immédiat si le message signale une erreur
                     if (isAi &&
-                        (msg.text.contains('momentanément indisponible') ||
-                            msg.text.contains('attente réseau'))) ...[
+                        (msg.isError ||
+                            msg.text.contains('momentanément') ||
+                            msg.text.contains('attente réseau') ||
+                            msg.text.contains('Réessayer') ||
+                            msg.text.contains('délai'))) ...[
                       const SizedBox(height: 10),
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
