@@ -56,12 +56,19 @@ class ProfileClassTile extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      profile.className,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: context.colors.textPrimary,
+                    // `Flexible` : un nom de classe long + le badge « Actif » + l'icône
+                    // d'archivage + le badge d'abonnement débordaient sur mobile (jamais
+                    // détecté faute de test sur cet écran) — le nom s'ellipse maintenant au
+                    // lieu de pousser le reste de la ligne hors de l'écran.
+                    Flexible(
+                      child: Text(
+                        profile.className,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: context.colors.textPrimary,
+                        ),
                       ),
                     ),
                     if (isActive) ...[
