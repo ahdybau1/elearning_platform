@@ -31,8 +31,16 @@ const corsHeaders = {
 // Les champs fournis par un appelant (Gateway) restent prioritaires : aucune régression.
 // 1.3.0 (2026-09-17) : support multimodal complet (photos/OCR devoirs manuscrits, documents PDF,
 // enregistrements audio/voix) transmis en inline_data à Google Gemini sans stockage BDD.
-const AGENT_VERSION = "1.3.0";
-const MODEL = "gemini-3.6-flash";
+const AGENT_VERSION = "1.3.1";
+// Liste ordonnée de modèles Gemini gratuits avec cascade de secours automatique :
+// Si un modèle subit une saturation de quota (429) ou indisponibilité (503),
+// la requête bascule instantanément sur le modèle suivant de la chaîne.
+const CANDIDATE_MODELS = [
+  "gemini-flash-latest",
+  "gemini-3.5-flash",
+  "gemini-3.7-flash",
+  "gemini-3.8-flash",
+];
 const RAG_TOP_K = 3;
 
 async function sha256Hex(input: string): Promise<string> {
@@ -404,46 +412,65 @@ Support multimodal :
     };
 
     let geminiRes: Response | null = null;
-    const retryDelays = [0, 1000, 2500];
+    let selectedModel = CANDIDATE_MODELS[0];
+    let lastErrorText = "";
 
-    for (let attempt = 0; attempt < retryDelays.length; attempt++) {
-      if (attempt > 0) {
-        console.warn(`Tentative Gemini ${attempt + 1}/${retryDelays.length} après pause de ${retryDelays[attempt]}ms...`);
-        await new Promise((r) => setTimeout(r, retryDelays[attempt]));
+    // Multi-modèles avec cascade de secours automatique :
+    // Si un modèle subit une saturation de quota (429) ou indisponibilité (503/404),
+    // la requête bascule instantanément sur le modèle suivant de la chaîne sans interruption !
+    for (const modelCandidate of CANDIDATE_MODELS) {
+      selectedModel = modelCandidate;
+      let modelSucceeded = false;
+
+      const retryDelays = [0, 800];
+      for (let attempt = 0; attempt < retryDelays.length; attempt++) {
+        if (attempt > 0) {
+          await new Promise((r) => setTimeout(r, retryDelays[attempt]));
+        }
+
+        try {
+          geminiRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${modelCandidate}:generateContent?key=${GEMINI_API_KEY}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(geminiPayload),
+            },
+          );
+
+          if (geminiRes.ok) {
+            modelSucceeded = true;
+            break;
+          }
+
+          lastErrorText = await geminiRes.text();
+          console.warn(`Modèle ${modelCandidate} (${geminiRes.status}):`, lastErrorText.substring(0, 120));
+
+          // Si quota atteint (429) ou modèle déprécié (404), basculer immédiatement vers le modèle suivant
+          if (geminiRes.status === 429 || geminiRes.status === 404) {
+            break;
+          }
+        } catch (networkErr) {
+          console.warn(`Erreur réseau sur ${modelCandidate}:`, networkErr);
+        }
       }
 
-      try {
-        geminiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(geminiPayload),
-          },
-        );
-
-        if (geminiRes.ok) {
-          break;
-        }
-
-        // Réessayer uniquement si c'est un problème temporaire côté Google (503, 429, 500)
-        if (geminiRes.status !== 503 && geminiRes.status !== 429 && geminiRes.status !== 500) {
-          break;
-        }
-      } catch (networkErr) {
-        console.warn("Erreur réseau appel Gemini:", networkErr);
-        if (attempt === retryDelays.length - 1) throw networkErr;
+      if (modelSucceeded && geminiRes && geminiRes.ok) {
+        break;
       }
     }
 
     if (!geminiRes || !geminiRes.ok) {
-      const errText = geminiRes ? await geminiRes.text() : "No response";
-      console.error("Gemini API error:", geminiRes?.status, errText);
+      console.error("Tous les modèles candidats ont échoué. Dernier état:", geminiRes?.status, lastErrorText);
       const errorMessage =
-        "Le Tuteur Numérique est momentanément indisponible (quota atteint ou erreur du fournisseur).";
+        "Le Tuteur Numérique est momentanément indisponible (erreur du fournisseur IA).";
       await logFailure(errorMessage);
       return new Response(
-        JSON.stringify({ error: errorMessage, _request_id: requestId }),
+        JSON.stringify({
+          error: errorMessage,
+          _request_id: requestId,
+          _gemini_status: geminiRes?.status,
+        }),
         {
           status: 502,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -497,7 +524,7 @@ Support multimodal :
         request_id: requestId,
         agent_type: "student_tutor_chat",
         provider: "gemini",
-        model: MODEL,
+        model: selectedModel,
         tokens_used: tokensUsed,
         cost_estimate: 0,
         duration_ms: durationMs,
@@ -515,7 +542,7 @@ Support multimodal :
         citations,
         _request_id: requestId,
         _agent_version: AGENT_VERSION,
-        _model: MODEL,
+        _model: selectedModel,
         _route: "server",
         _duration_ms: durationMs,
       }),
