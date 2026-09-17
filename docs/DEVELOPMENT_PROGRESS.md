@@ -710,3 +710,12 @@ Vérification **au moment du commit** : `flutter analyze` 0 erreur (16 infos de 
 pré-existantes, une de moins qu'avant grâce à une accolade ajoutée en déplaçant le code),
 `flutter build web` OK. **`flutter test` non exécuté pour ce lot** (blocage ci-dessus) — à
 confirmer vert dès que possible, sans quoi les 18 nouveaux tests restent non prouvés.
+
+**Résolution (18/09)** : Smart App Control désactivé + machine redémarrée par le porteur de
+projet — confirmé côté registre (`VerifiedAndReputablePolicyState` 1 → 0). `flutter test` relancé
+sur toute la suite : les 18 nouveaux tests de `profile_widgets_test.dart` ont immédiatement révélé
+un vrai bug pré-existant, jamais détectable avant faute de test sur cet écran — `ProfileClassTile`
+(nom de classe + badge « Actif » + puce d'abonnement + icône d'archivage dans une seule `Row`)
+débordait de 59px sur mobile dès qu'une classe active avait un nom un peu long. Corrigé (nom de
+classe dans un `Flexible` avec ellipsis). Suite complète : **81/81 tests verts**, `flutter analyze`
+0 erreur, `flutter build web` OK. Le lot 12 est donc maintenant intégralement vérifié.
