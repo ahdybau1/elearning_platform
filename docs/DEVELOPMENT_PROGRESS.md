@@ -678,3 +678,35 @@ aucun des lots 1-10 et n'avaient aucun test — première passe réelle sur ce p
 **Reste dans la Vague 3** : `RoleSelectionScreen` (cosmétique seulement, non prioritaire) ;
 `StudentProfileScreen` (1373 lignes — le plan demande un découpage en sous-composants, pas encore
 fait) ; `SettingsScreen` (organisation par onglets thématiques demandée par le plan, pas vérifiée).
+
+## 17 septembre 2026 — Refonte Front-end Élève v2 (lot 12 — découpage StudentProfileScreen)
+
+Référence : `docs/UI_REDESIGN_PLAN.md` Vague 3, dernier point ouvert du lot précédent.
+
+- `StudentProfileScreen` (1373 lignes) découpé en 12 fichiers sous
+  `lib/features/profile/widgets/` : `ProfileIdentityCard`, `ProfileAvatarUploader`,
+  `ProfileAchievementsSection`, `ProfileClassTile`, `FollowedClassesSection`,
+  `ArchivedClassesSection`, `ArchiveClassDialog`, `LoginCodeCard`, `MyLoginCodeDialog`,
+  `SetLoginCodeDialog`, `EditProfileDialog`, `ParentInviteCard`. L'écran devient un orchestrateur
+  `ConsumerWidget` de ~65 lignes — critère d'acceptation n°9 du plan (fichiers < ~350 lignes)
+  atteint pour ce module. Refactor planifié par l'agent ECC `planner` (cartographie précise du
+  fichier + conventions réelles du dépôt), exécuté puis revu ligne par ligne contre l'historique
+  git par l'agent ECC `flutter-reviewer` : aucune anomalie critique, portée de reconstruction des
+  providers affinée (amélioration, pas une régression).
+- `test/profile_widgets_test.dart` : 18 nouveaux tests (édition profil, code personnel,
+  invitation/liaison parent, archivage/réactivation), y compris les échecs serveur honnêtes.
+
+**Incident d'environnement (18h26 le 17/09)** : Windows Smart App Control (Contrôle des
+applications basé sur la réputation) a commencé à bloquer `flutter_tester.exe` au niveau Code
+Integrity du noyau (journal `Microsoft-Windows-CodeIntegrity/Operational`, évènements 3077/3118) —
+un blocage système, pas un défaut de code. Conséquence : `flutter test` ne pouvait plus s'exécuter
+DU TOUT, y compris sur des fichiers qui passaient la veille. `flutter analyze` et
+`flutter build web` restaient fonctionnels et ont servi de seul filet de sécurité pour ce commit.
+Le porteur de projet a choisi de désactiver Smart App Control lui-même (Windows Security →
+Contrôle des applications et du navigateur) ; `flutter test` sera relancé sur l'ensemble de la
+suite dès confirmation.
+
+Vérification **au moment du commit** : `flutter analyze` 0 erreur (16 infos de style
+pré-existantes, une de moins qu'avant grâce à une accolade ajoutée en déplaçant le code),
+`flutter build web` OK. **`flutter test` non exécuté pour ce lot** (blocage ci-dessus) — à
+confirmer vert dès que possible, sans quoi les 18 nouveaux tests restent non prouvés.
