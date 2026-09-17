@@ -274,10 +274,34 @@ Deno.serve(async (req: Request) => {
     const isGreeting = /^(bonjour|bonsoir|salut|coucou|hello|hi|hey|yo|bonne\s+journée|bon\s+après[- ]midi)$/i.test(cleanMsg) ||
       (/^(bonjour|bonsoir|salut|coucou|hello|hi|hey)\s+(à tous|tout le monde|tuteur|prof|pq learn|tuteur pq learn)?$/i.test(cleanMsg));
 
-    // Cache (ai_tutor_cache) — UNIQUEMENT pour une réponse textuelle non personnalisée et non salutation. Dès qu'une
-    // personnalisation (Student Model), des pièces jointes ou une simple salutation sont injectées, la réponse n'est
-    // ni lue ni écrite dans le cache.
     const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
+
+    // ── Niveau 1 : Salutations (§1 CDC : déterministe immédiat sans latence ni dépendance LLM) ──
+    if (isGreeting && !hasAttachments) {
+      const greetings = [
+        "Bonjour ! 😊 Je suis ton Tuteur pq learn. Sur quelle matière, quel chapitre ou quel exercice aimerais-tu qu'on avance ensemble aujourd'hui ?",
+        "Salut ! 🚀 Prêt(e) pour réviser ? Dis-moi sur quelle notion ou quel devoir tu souhaites que je t'accompagne.",
+        "Bonjour ! ✨ C'est un plaisir de t'aider. Pose-moi ta question ou montre-moi ton exercice, et on va le comprendre pas à pas !",
+        "Hello ! 🎯 Bienvenue sur ton espace de travail. Qu'aimerais-tu comprendre ou réviser aujourd'hui ?",
+        "Bonjour ! 📚 Ton Tuteur pq learn est à ton écoute. Sur quel point de cours as-tu besoin d'un coup de pouce ?",
+      ];
+      const chosen = greetings[Math.floor(Math.random() * greetings.length)];
+      return new Response(
+        JSON.stringify({
+          reply: chosen,
+          citations: [],
+          _request_id: requestId,
+          _agent_version: AGENT_VERSION,
+          _model: "deterministic_greeting",
+          _route: "deterministic",
+          _duration_ms: Date.now() - startTime,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
     const cacheable = effectiveMastery === null && !hasAttachments && !isGreeting;
     const cacheKey = await sha256Hex(
       `${message.trim().toLowerCase()}|${subject_id ?? ""}|${lesson_id ?? ""}`,
@@ -461,18 +485,60 @@ Support multimodal :
     }
 
     if (!geminiRes || !geminiRes.ok) {
-      console.error("Tous les modèles candidats ont échoué. Dernier état:", geminiRes?.status, lastErrorText);
-      const errorMessage =
-        "Le Tuteur Numérique est momentanément indisponible (erreur du fournisseur IA).";
-      await logFailure(errorMessage);
+      console.warn("Tous les modèles LLM distants sont indisponibles. Activation du Mode Dégradé Pédagogique Prévalidé (§Module 4 CDC)...");
+      
+      let fallbackReply = "";
+      if (effectiveRagContext && citations.length > 0) {
+        fallbackReply = `### 📚 Fiche Méthode & Notions Clés (Programme Officiel)\n\n` +
+          `Voici les éléments officiels de ton programme pour progresser sur ce point :\n\n` +
+          effectiveRagContext +
+          `\n\n> 💡 **Conseil méthodologique** : Repère bien les hypothèses de ton énoncé et applique la méthode ci-dessus étape par étape. Si tu as un doute sur un calcul, précise-le moi !`;
+      } else {
+        const lowerMsg = message.toLowerCase();
+        if (lowerMsg.includes("suite") || lowerMsg.includes("arithmétique") || lowerMsg.includes("géométrique")) {
+          fallbackReply = `### 📐 Rappel de Cours : Les Suites Numériques\n\n` +
+            `Pour une **suite arithmétique** de premier terme $u_0$ et de raison $r$ :\n` +
+            `- **Relation de récurrence** : $u_{n+1} = u_n + r$\n` +
+            `- **Terme général** : $u_n = u_0 + n \\cdot r$ (ou $u_n = u_p + (n-p)r$)\n` +
+            `- **Somme des termes consécutifs** : $S_n = \\frac{\\text{nombre de termes} \\times (\\text{premier terme} + \\text{dernier terme})}{2}$\n\n` +
+            `Pour une **suite géométrique** de raison $q \\neq 1$ :\n` +
+            `- $u_n = u_0 \\cdot q^n$ et $S_n = u_0 \\cdot \\frac{1 - q^n}{1 - q}$\n\n` +
+            `> 💡 **Conseil** : Quelle est la question exacte de ton exercice ? Donne-moi les valeurs de $u_0$ et de la raison pour qu'on avance ensemble !`;
+        } else if (lowerMsg.includes("dériv") || lowerMsg.includes("fonction") || lowerMsg.includes("tangente")) {
+          fallbackReply = `### 📈 Rappel de Cours : Dérivation et Étude de Fonctions\n\n` +
+            `- **Dérivées usuelles** : $(x^n)' = n x^{n-1}$, $(uv)' = u'v + uv'$, $\\left(\\frac{u}{v}\\right)' = \\frac{u'v - uv'}{v^2}$\n` +
+            `- **Équation de la tangente** en $a$ : $y = f'(a)(x - a) + f(a)$\n` +
+            `- **Signe de la dérivée** : si $f'(x) > 0$, $f$ est strictement croissante ; si $f'(x) < 0$, $f$ est strictement décroissante.\n\n` +
+            `> 💡 **Conseil** : Quelle fonction souhaites-tu dériver ou étudier ? Partage son expression pour qu'on regarde la méthode !`;
+        } else if (lowerMsg.includes("pythagore") || lowerMsg.includes("thalès") || lowerMsg.includes("triangle")) {
+          fallbackReply = `### 📐 Rappel de Géométrie : Théorèmes Fondamentaux\n\n` +
+            `- **Théorème de Pythagore** : Dans un triangle $ABC$ rectangle en $A$ : $BC^2 = AB^2 + AC^2$\n` +
+            `- **Théorème de Thalès** : Dans un triangle $ABC$ avec $(MN) // (BC)$ : $\\frac{AM}{AB} = \\frac{AN}{AC} = \\frac{MN}{BC}$\n\n` +
+            `> 💡 **Conseil** : As-tu identifié les longueurs connues dans ton énoncé ?`;
+        } else {
+          fallbackReply = `### 📖 Guide Méthodologique de Résolution\n\n` +
+            `Pour avancer efficacement sur cette notion :\n` +
+            `1. **Définir la notion** : Identifie le chapitre et la formule centrale du cours concerné.\n` +
+            `2. **Lister les données** : Quelles sont les données fournies par ton énoncé ?\n` +
+            `3. **Démarche pas à pas** : Écris chaque étape de raisonnement sans sauter de calcul.\n\n` +
+            `> 💡 **Aide interactive** : Précise-moi ton calcul ou partage la photo de ton énoncé pour qu'on détaille la solution pas à pas !`;
+        }
+      }
+
+      await logFailure("Fallback prévalidé servi (indisponibilité LLM distant absorbée)");
+
       return new Response(
         JSON.stringify({
-          error: errorMessage,
+          reply: fallbackReply,
+          citations,
           _request_id: requestId,
-          _gemini_status: geminiRes?.status,
+          _agent_version: AGENT_VERSION,
+          _model: "curriculum_prevalidated_engine",
+          _route: "deterministic_fallback",
+          _duration_ms: Date.now() - startTime,
         }),
         {
-          status: 502,
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
@@ -490,16 +556,7 @@ Support multimodal :
     const tokensUsed = geminiData.usageMetadata?.totalTokenCount ?? 0;
 
     if (!reply) {
-      const errorMessage =
-        "Le Tuteur Numérique n'a pas pu générer de réponse. Réessayez avec une question différente.";
-      await logFailure(errorMessage);
-      return new Response(
-        JSON.stringify({ error: errorMessage, _request_id: requestId }),
-        {
-          status: 502,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      reply = "### 💡 Indice Pédagogique\n\nReprends les définitions fondamentales de ton cours sur ce point pour vérifier la première étape de ton calcul.";
     }
 
     const durationMs = Date.now() - startTime;
