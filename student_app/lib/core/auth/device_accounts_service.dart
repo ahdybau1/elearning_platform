@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
@@ -48,8 +49,24 @@ class DeviceKnownAccount {
 class DeviceAccountsService {
   static const _registryKey = 'student_device_accounts_v1';
   static const _sessionKeyPrefix = 'student_device_session_';
+  static const _fingerprintKey = 'student_device_fingerprint_v1';
 
   Future<SharedPreferences> get _prefs => SharedPreferences.getInstance();
+
+  /// §7.4 du cahier des charges : identifiant opaque et stable de CET appareil (persisté
+  /// localement, jamais transmis ailleurs qu'à `sessions.device_fingerprint`), généré une seule
+  /// fois. N'a pas besoin d'être un UUID conforme RFC4122 — le serveur ne fait que le comparer par
+  /// égalité, jamais n'en valide le format — donc pas de dépendance `uuid` supplémentaire pour ça.
+  Future<String> deviceFingerprint() async {
+    final prefs = await _prefs;
+    final existing = prefs.getString(_fingerprintKey);
+    if (existing != null && existing.isNotEmpty) return existing;
+    final random = Random.secure();
+    final generated =
+        '${DateTime.now().microsecondsSinceEpoch}-${List.generate(16, (_) => random.nextInt(16).toRadixString(16)).join()}';
+    await prefs.setString(_fingerprintKey, generated);
+    return generated;
+  }
 
   Future<List<DeviceKnownAccount>> listKnown() async {
     final prefs = await _prefs;

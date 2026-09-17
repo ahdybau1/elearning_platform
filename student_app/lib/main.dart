@@ -9,9 +9,11 @@ import 'core/widgets/maintenance_gate.dart';
 import 'core/auth/student_auth_provider.dart';
 import 'core/auth/parent_auth_provider.dart';
 import 'core/auth/device_accounts_service.dart';
+import 'core/auth/session_guard_provider.dart';
 import 'core/providers/app_root_providers.dart';
 import 'features/onboarding/screens/onboarding_wizard_screen.dart';
 import 'features/onboarding/screens/profile_switcher_screen.dart';
+import 'features/onboarding/screens/session_evicted_screen.dart';
 import 'features/onboarding/screens/student_login_screen.dart';
 import 'features/onboarding/screens/device_account_selector_screen.dart';
 import 'features/onboarding/screens/role_selection_screen.dart';
@@ -71,6 +73,13 @@ class StudentAuthGate extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(studentAuthProvider);
+
+    // §7.4 : priorité absolue sur tout le reste — une session évincée par une connexion sur un
+    // autre appareil doit s'afficher immédiatement, même si cette ouverture avait déjà déverrouillé
+    // l'app (l'éviction peut survenir à tout moment pendant l'utilisation, pas seulement au démarrage).
+    if (ref.watch(sessionGuardProvider).isEvicted) {
+      return const SessionEvictedScreen();
+    }
 
     if (!authState.hasUnlockedThisBoot) {
       // §7.3/§7.4 : cette porte doit s'afficher à CHAQUE ouverture de l'app tant que l'utilisateur
