@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/student_supabase_service.dart';
+import '../models/gamification_models.dart';
 import '../models/student_models.dart';
 import '../models/published_exam_question.dart';
 
@@ -33,6 +34,19 @@ final unreadNotificationCountProvider = Provider.family<int, String>((ref, profi
         data: (items) => items.where((n) => n.isUnread).length,
         orElse: () => 0,
       );
+});
+
+// §14 du cahier des charges : gamification calculée côté serveur, jamais un chiffre inventé.
+final gamificationSummaryProvider =
+    FutureProvider.family<GamificationSummary, String>((ref, profileId) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchGamificationSummary(profileId);
+});
+
+final profileBadgesProvider =
+    FutureProvider.family<List<BadgeProgress>, String>((ref, profileId) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchBadges(profileId);
 });
 
 final studentSubjectsProvider =

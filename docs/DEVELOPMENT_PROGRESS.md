@@ -1,5 +1,188 @@
 # Progression EDLEARN
 
+## 2026-09-18 — Salutations Courtes, Allongement Timeout, Caméra Directe, Synchronisation BDD (Migration 88) & Éviction 5s — LIVRÉ
+
+Résolution intégrale des 5 problématiques signalées par l'utilisateur pour le Tuteur Numérique et la gestion des sessions multi-appareils :
+
+- **Salutations Naturelles et Brèves ("Bonjour")** :
+  - Détection automatique de toute salutation (`isGreeting`) dans l'Edge Function `ai-tutor-chat`.
+  - Contournement strict du cache SQL pour les salutations (`cacheable = false`), empêchant le monologue récurrent sur les suites arithmétiques.
+  - Consigne système imposant une salutation chaleureuse, naturelle et brève (1 à 2 phrases courtes), présentant le "Tuteur pq learn" et demandant sur quelle matière/notion l'élève souhaite travailler.
+  - Purge des caches de salutation pollués dans la base de données distante.
+  - Réponse vérifiée en direct via API : `Bonjour ! 😊 Ravi de te retrouver. Quel sujet, chapitre ou exercice aimerais-tu qu'on explore ensemble aujourd'hui ? 🚀` en ~2s.
+
+- **Disponibilité du Tuteur & Allongement du Timeout Client (60s + Bouton "Réessayer")** :
+  - Timeout client de l'application élève porté de 15s à **60s** dans `ai_tutor_chat_screen.dart` pour encaisser les pics de latence des modèles multimodaux sans afficher de fausse panne réseau.
+  - Mécanisme de retry exponentiel (2 tentatives à 1s et 2.5s) intégré côté Edge Function en cas de pic de charge Gemini (503/429/500).
+  - Bouton interactif **[Réessayer]** ajouté directement dans la bulle d'erreur en cas de coupure réseau inattendue, permettant de relancer la question en un tap sans rien retaper.
+
+- **Prise de Photo Directe & Viseur Caméra Live** :
+  - Résolution du problème d'explorateur de fichiers sur navigateur : création de `WebcamCaptureDialog` via HTML5 WebRTC `getUserMedia` (`camera_helper_web.dart`).
+  - Viseur vidéo interactif en direct avec autorisation caméra et déclencheur circulaire (`Icons.camera_rounded`) capturant instantanément la photo sans passer par le sélecteur de fichiers.
+  - Façade conditionnelle `camera_helper.dart` ciblant la caméra arrière native sur mobile (`CameraDevice.rear`).
+
+- **Synchronisation BDD des Conversations Multi-Appareils (Migration 88)** :
+  - **Migration 88** (`88_student_chat_sessions.sql`) appliquée sur Supabase :
+    - Table `student_chat_sessions` (`id`, `profile_id`, `title`, `messages jsonb`, `created_at`, `updated_at`).
+    - RLS par compte propriétaire (`owns_profile(profile_id)`).
+    - Trigger serveur `trg_enforce_student_chat_sessions_limit` garantissant la limite stricte de **10 conversations par profil** (suppression automatique des plus anciennes).
+  - Évolution de `LocalChatStorageService` en mode hybride local-first : affichage instantané (0ms) depuis `SharedPreferences` + synchronisation automatique avec la table Supabase `student_chat_sessions` pour que l'élève retrouve ses conversations quel que soit le smartphone ou l'ordinateur utilisé.
+
+- **Session Unique Stricte & Éviction Concurrente Immédiate (Heartbeat 5s)** :
+  - Ajout d'un battement de cœur actif toutes les 5 secondes (`_heartbeatTimer`) dans `SessionGuardNotifier`.
+  - Si un compte s'ouvre sur un second appareil, la base de données désactive immédiatement la session du premier appareil (`enforce_single_session`).
+  - Le premier appareil détecte la désactivation en moins de 5 secondes et affiche l'écran de verrouillage `SessionEvictedScreen` sans nécessiter de rafraîchissement ni de manipulation.
+
+- **Tests & Validation** :
+  - **104/104 tests passés avec succès** (`flutter test`).
+  - `flutter analyze` : 0 erreur, 0 warning.
+  - Déploiement Supabase validé (`supabase db push` + `supabase functions deploy ai-tutor-chat --no-verify-jwt`).
+  - Build Web de production compilé (`flutter build web --release`).
+
+## 2026-09-18 — Rendu Markdown Riche, Formules LaTeX, Visualiseur de Fréquences Vocales & Schémas Éducatifs — LIVRÉ
+
+Mise à niveau complète du Tuteur Numérique (`Tuteur pq learn`) et de ses bulles de discussion répondant point par point aux retours d'ergonomie :
+
+- **Visualiseur Dynamique d'Ondes de Fréquences & Enregistrement Vocal Continu** :
+  - Correction de l'interruption à la 2e seconde : enregistrement vocal désormais continu avec chronomètre en temps réel (`Timer.periodic`).
+  - **Visualiseur d'ondes sonores (18 barres verticales animées)** avec gradient cyan pulsant et dynamique fluide.
+  - Boutons séparés « Annuler » et « Terminer » avec retour haptique.
+  - Cycle de vie éco-responsable : l'animation de waveform s'arrête immédiatement hors enregistrement pour économiser la batterie du smartphone.
+
+- **Moteur de Rendu Markdown Riche, LaTeX & Émojis (Zéro Astérisque Brut)** :
+  - Intégration de `parseMarkdownSpans` dans `InlineLatexText` :
+    - Rendu du **gras** (`**texte**`, `__texte__`) en `FontWeight.w700` sans laisser fuiter de caractères `**`.
+    - Rendu de l'*italique* (`*texte*`, `_texte_`) en `FontStyle.italic`.
+    - Rendu du ***gras-italique*** (`***texte***`).
+    - Rendu du code en ligne (`` `code` ``) avec pastille monospace foncée.
+    - Rendu du texte barré (`~~texte~~`).
+    - Préservation et intégration fluide de tous les émojis pédagogiques (🎯, 💡, 📐, 🔬, 🚀, 📚, ✨, ⚠️, 🔍).
+  - Gestion des blocs structurés dans `AiMessageBubbleRenderer` :
+    - Titres hiérarchiques (`#`, `##`, `###`) avec police Outfit.
+    - Listes numérotées (`1. `, `2. `) avec pastilles circulaires cyan stylisées.
+    - Listes à puces (`- `, `* `) avec puces lumineuses cyan.
+    - Citations et conseils (`> `) avec bordure gauche cyan et fond glassmorphique sombre.
+    - Blocs de code (```lang ... ```) avec en-tête et bouton copier.
+
+- **Schémas et Figures Pédagogiques (100% Gratuit)** :
+  - Prise en charge de la syntaxe markdown image dans le fil de discussion.
+  - Intégration de schémas géométriques et scientifiques gratuits (Pollinations.ai) dans le prompt de l'Edge Function `ai-tutor-chat`.
+  - Carte d'illustration arrondie avec bordure cyan néon, chargement fluide et gestion d'erreur hors-ligne.
+  - **Modal plein écran avec zoom interactif tactile (`InteractiveViewer`)**.
+
+- **Harmonisation des Titres & Noms** :
+  - Nom du tuteur mis à jour : **Tuteur pq learn** (titre d'écran conservé : *Tuteur Numérique*).
+  - Tiroir d'historique : **Conversations** (retrait de la mention « IA »).
+
+- **Tests & Validation** :
+  - **104/104 tests passés avec succès** (`flutter test`).
+  - Suite dédiée `ai_message_markdown_test.dart` validant le rendu markdown, listes, images et détection de fonctions.
+  - Redéploiement de l'Edge Function `ai-tutor-chat` sur le projet Supabase distant (`kdprnavvgzhnygovfyuw`).
+
+## 2026-09-18 — Déploiement Intégral Supabase (Toutes Fonctions & Synchronisation Migrations 01-87) — LIVRÉ
+
+Déploiement complet en production sur le projet Supabase distant (`kdprnavvgzhnygovfyuw`) avec le Personal Access Token fourni par l'utilisateur, synchronisation exhaustive de l'état des migrations et mise à niveau en direct de toutes les Edge Functions.
+
+- **Synchronisation Complète des Migrations (01 à 87)** :
+  - Inspection de la base de données distante : toutes les tables du schéma de données (jusqu'à `87_gamification.sql` avec `badge_definitions`, `gamification_rules`, `profile_badges`, `lesson_completions`) sont déjà présentes et intègres.
+  - Réparation et enregistrement officiel des 86 versions de migration (01 à 87) dans la table de registre distante `supabase_migrations.schema_migrations` via `supabase migration repair --status applied`.
+  - Vérification par `supabase db push --dry-run` : **`Remote database is up to date`** (0 migration en retard, 0 conflit, intégrité totale garantie sans aucune perte de données).
+
+- **Déploiement Intégral des 31 Edge Functions** :
+  - `ai-tutor-chat` (v1.3.0) : déployée avec `--no-verify-jwt` et logique de repli automatique (retry 1.2s en cas de pic 503/429 sur le palier gratuit Gemini). Test d'invocation en direct validé avec succès (réponse maïeutique socratique en français, reconnaissance multimodale d'images/OCR fonctionnelle).
+  - 5 autres fonctions publiques déployées sans vérification JWT : `payment-webhook`, `cron-subscription-reminders`, `ai-moderation`, `admin-create-teacher-account`, `admin-create-admin-account`.
+  - 25 fonctions protégées déployées avec JWT : `ai-exercise-generation`, `ai-course-structuring`, `admin-create-parent-account`, `admin-create-student-account`, `ai-catalog-types-generation`, `ai-embeddings-generate`, `ai-document-structuring`, `ai-exam-paper-processing`, `ai-correction`, `ai-admin-assistant`, `ai-support-triage`, `ai-fraud-risk`, `ai-curriculum-mapping`, `ai-pedagogical-validation`, `ai-agent-invoke`, `ai-workflow-run`, `ingestion-worker`, `integration-healthcheck`, `curriculum-collect`, `curriculum-apply`, `curriculum-cancel`, `curriculum-scrape-start`, `curriculum-crawl-worker`, `curriculum-scrape-extract`, `ai-generate-text`.
+  - Statut vérifié via `supabase functions list` : **31/31 fonctions au statut ACTIVE**.
+
+- **Contrôle Qualité & Non-Régression** :
+  - **97/97 tests automatisés validés avec succès** sur l'application Flutter.
+  - Tests en direct du point de terminaison Edge Function validant l'absence d'erreurs CORS, de blocage d'authentification ou d'incompatibilité de schéma.
+
+## 2026-09-17 — Assistant Numérique IA : Expérience ChatGPT / Gemini, Multimodalité & Stockage Local (Student App & Edge Function) — LIVRÉ
+
+Refonte majeure de l'Assistant Numérique (`AiTutorChatScreen` et Edge Function `ai-tutor-chat`) calquée sur l'ergonomie et l'expérience de **ChatGPT** et **Google Gemini**, avec prise en charge multimodale réelle (photos/OCR devoirs manuscrits, documents PDF, audios/voix) et **stockage local exclusif sur le smartphone de l'élève avec quota strict de 10 conversations** pour préserver la base de données Supabase de toute surcharge.
+
+- **Expérience Utilisateur & Design ChatGPT / Gemini (`student_app/lib/features/ai_tutor`)** :
+  - **Tiroir d'Historique des Discussions (`ChatHistoryDrawer`)** :
+    - Bouton épuré `+ Nouvelle discussion`.
+    - Jauge visuelle de stockage local (`X / 10 chats`) et avertissement automatique dès que le quota de 10 conversations est atteint avec proposition de faire le ménage.
+    - Regroupement chronologique automatique : *Aujourd'hui*, *7 derniers jours*, *Plus ancien*.
+    - Menu contextuel unitaire par discussion (Renommer, Supprimer avec dialogue de confirmation).
+    - Bouton global `Effacer tout l'historique` avec dialogue de confirmation sécurisé.
+    - Pastille de transparence : *Stocké localement (zéro charge BDD)*.
+  - **Dock de Saisie Multimodal Flottant (`ChatMultimodalDock`)** :
+    - Bouton `+` ouvrant la feuille d'ajout : Prendre une photo (Caméra `ImagePicker`), Galerie d'images (`ImagePicker`), Document PDF (`FilePicker`), et Fichier audio (`FilePicker`).
+    - Ruban horizontal de prévisualisation des pièces jointes en attente (`ChatAttachmentPill`) avec vignette et croix de retrait.
+    - Champ de texte auto-extensible (1 à 5 lignes) avec placeholder invitant.
+    - Bouton d'enregistrement vocal interactif avec chronomètre et pastille d'enregistrement rouge pulsante.
+    - Bouton d'envoi circulaire réactif avec retour haptique, actif dès qu'un texte ou une pièce jointe est présente.
+  - **Écran de Chat Réinventé (`AiTutorChatScreen`)** :
+    - Barre supérieure minimale avec accès au tiroir par menu burger, pastille centrale de statut (« Tuteur Socratique IA • Multimodal » avec puce verte de présence), et bouton rapide d'édition.
+    - Bannière de quota si 10 conversations sont atteintes.
+    - État d'accueil chaleureux avec grand orbe lumineux animé et 4 cartes de démarrage socratique (Polynômes/courbes, Théorèmes, Analyse d'exercices en photo avec OCR, Méthodes de dérivées).
+    - Affichage riche des pièces jointes dans le fil de discussion (vignettes d'images avec zoom plein écran interactif `InteractiveViewer`, capsules PDF, notes vocales).
+    - Moteur mathématique LaTeX (`MathFormulaView`), détection de polynômes (`InteractiveFunctionGraph`) et citations de sources préservés sans régression.
+
+- **Service de Stockage Local sur Smartphone (`LocalChatStorageService`)** :
+  - Sauvegarde locale intégrale dans `SharedPreferences` sérialisée en JSON (`student_app/lib/core/services/local_chat_storage_service.dart`).
+  - Cloisonnement strict par identifiant de profil élève (`student_chat_sessions_${profileId}`).
+  - Gestion automatique des titres de discussions d'après la première question de l'élève.
+  - Quota matériel plafonné à 10 sessions : méthodes d'inspection `canCreateNewSession()` et `getRemainingQuota()`.
+
+- **Backend Multimodal Supabase Edge Function (`ai-tutor-chat` v1.3.0)** :
+  - Mise à niveau de `supabase/functions/ai-tutor-chat/index.ts` vers la version `1.3.0`.
+  - Acceptation du paramètre `attachments: Array<{ name, mime_type, data }>` (base64).
+  - Validation des types MIME (`image/*`, `application/pdf`, `audio/*`) et injection en objets `inline_data` dans la charge utile de Google Gemini (`gemini-3.6-flash`).
+  - Consignes maïeutiques adaptées pour l'OCR de copies manuscrites, la synthèse de PDF et l'écoute de questions vocales.
+  - Contournement sécurisé du cache `ai_tutor_cache` en présence de médias binaires pour éviter d'encombrer la base de données.
+
+- **Validation & Non-Régression Totale** :
+  - **97/97 tests automatisés réussis** sur `student_app` (87 tests existants + 10 nouveaux tests unitaires et widgets).
+  - `test/local_chat_storage_test.dart` : 6/6 tests passants (CRUD, sérialisation des pièces jointes, isolation de profils, saturation de quota à 10, suppression unitaire et totale).
+  - `test/ai_tutor_multimodal_test.dart` : 4/4 tests passants (vignettes PDF/audio, tiroir avec quota, dock de saisie, écran complet).
+  - `flutter analyze` : 0 erreur de compilation sur l'ensemble du projet.
+  - `deno check supabase/functions/ai-tutor-chat/index.ts` : 100% vert.
+
+
+Refonte globale de l'expérience d'apprentissage de `student_app` pour passer d'une interface utilitaire/rigide à un univers stimulant, moderne, immersif et gamifié (gradients soignés, halos lumineux, animations fluides, typographies Outfit/Inter et hiérarchies visuelles claires).
+
+- **Composants du Design System (`student_app/lib/design_system`)** :
+  - `PedagogicalCard` : Conteneur universel surélevé avec bordures subtiles, halo thématique optionnel (`glowColor`), en-tête avec trailing et support des interactions directes.
+  - `GamifiedProgressBar` : Barre de progression animée fluide (`TweenAnimationBuilder`) avec gradients dynamiques et halo lumineux.
+  - `CelebrationBanner` (`ExerciseFeedbackBanner`) : Bannière didactique avec gain d'XP en direct, explications socratiques pas-à-pas et proposition de passer le relais au Tuteur IA.
+  - `AppColors` : Ajout des palettes de dégradés `aiCompanionGradient`, `roseGradient` et de l'utilitaire `glowEffect`.
+
+- **Refonte 1 : Assistant Numérique IA (`AiTutorChatScreen` & `ContextualAiAgentSheet`)** :
+  - Orbe IA animé avec double halo lumineux (`aiCompanionGradient`), badge d'état « En ligne », indicateur de niveau scolaire et bouton de réinitialisation contextuel.
+  - Cartes d'invitation à la conversation (« Suggestions pour démarrer ») en grille dynamique avec icônes colorées et labels accrocheurs.
+  - Bulles de messages modernisées : style dégradé glassmorphique pour l'élève, conteneurs structurés pour l'assistant avec avatars thématiques, rendu LaTeX intégré (`MathFormulaView`) et barre d'actions (copier, réécouter).
+  - Dock de saisie flottant en pilule (`BorderRadius.circular(28)`) avec bouton d'envoi à gradient néon et retour haptique doux.
+  - Onglets segmentés de `ContextualAiAgentSheet` modernisés en pilules à dégradé animé.
+
+- **Refonte 2 : Interface des Exercices (`ExerciseRunnerScreen`)** :
+  - Remplacement de la barre linéaire basique par `GamifiedProgressBar` et badges pilules pour le numéro de question et la récompense d'XP (`+20 XP`).
+  - Carte d'énoncé scénarisée avec badge « Défi Interactif », ombre portée douce et accès direct aux outils scientifiques (SymPy) et au Tuteur IA contextuel.
+  - Options QCM modernisées : pastilles alphabétiques circulaires (A, B, C, D) réactives, transitions de sélection fluides, feedback visuel instantané (émeraude / rose) avec icônes de validation explicites.
+  - Écran de félicitations / résultat (`_showCompletionDialog`) repensé avec trophée doré sur halo solaire, jauge d'XP gamifiée et bouton de reprise à gradient.
+
+- **Refonte 3 : Lecteur de Leçon (`LessonReaderScreen`)** :
+  - Barre d'onglets de navigation de cours restructurée en pilules animées et dégradés thématiques selon la matière.
+  - Cartes d'aide du Tuteur IA intégrées avec orbe lumineux, message d'accueil proactif et pilules d'action rapide.
+  - Bloc de lancement du quiz d'entraînement avec pastille d'illustration à dégradé et bouton d'action primaire attrayant.
+
+- **Refonte 4 : Liste & Cartes des Chapitres (`ChaptersListScreen`)** :
+  - Élimination de la surcharge de boutons en `Wrap` désordonné au profit d'une hiérarchie claire en 3 niveaux :
+    1. Capsules de métadonnées épurées (`${chapter.lessonsCount} leçons`, `${chapter.exercisesCount} exercices`) avec micro-icônes disciplinaires.
+    2. Boutons d'actions secondaires en pilules horizontales compactes (`Introduction`, `Exercices`, `Fiche mémo`, `Leçons`).
+    3. Bouton principal pleine largeur ("Ouvrir le cours") avec dégradé thématique de la matière et flèche d'engagement.
+  - Cartes de chapitres avec ombre douce et liseré de couleur adaptatif.
+
+- **Validation & Non-Régression** :
+  - Intégrité Supabase préservée (aucun mock injecté, requêtes réelles et providers conservés).
+  - 87/87 tests passés avec succès (`flutter test`) sans aucune régression.
+  - `flutter analyze` : 0 erreur de compilation, respect strict des lints.
+
+
 ## 2026-09-11 — Ergonomie & Modernisation : Arbre Académique & Gestion des Leçons et Cours
 
 - **Étape 1 : Page Arbre Académique (`AcademicTreeScreen`) — LIVRÉ** :

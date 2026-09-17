@@ -94,7 +94,7 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
       _chatHistory.add({
         'sender': 'agent',
         'text':
-            'Bonjour ! Je suis le Tuteur Socratique IA pour "${widget.topicTitle}".\n'
+            'Bonjour ! Je suis ton Tuteur pq learn pour "${widget.topicTitle}".\n'
             'Je suis là pour t\'aider à comprendre la notion en profondeur. Quelle question te poses-tu ?',
       });
     }
@@ -273,7 +273,7 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
                     children: [
                       _buildModeTab(
                         'tutor',
-                        'Tuteur Socratique',
+                        'Tuteur pq learn',
                         Icons.psychology_rounded,
                       ),
                       _buildModeTab(
@@ -311,13 +311,22 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
             _initializeMode();
           });
         },
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primaryCyan : Colors.transparent,
-            borderRadius: BorderRadius.circular(
-              AppRadius.radiusSmall.topLeft.x,
-            ),
+            gradient: isSelected ? AppColors.aiCompanionGradient : null,
+            color: isSelected ? null : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadius.button),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: AppColors.cyanAccent.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -325,7 +334,7 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
               Icon(
                 icon,
                 size: 15,
-                color: isSelected ? const Color(0xFF0F172A) : Colors.white70,
+                color: isSelected ? Colors.white : Colors.white70,
               ),
               const SizedBox(width: 6),
               Flexible(
@@ -334,9 +343,7 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                    color: isSelected
-                        ? const Color(0xFF0F172A)
-                        : Colors.white70,
+                    color: isSelected ? Colors.white : Colors.white70,
                   ),
                 ),
               ),
@@ -541,7 +548,7 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
                 ),
                 SizedBox(width: 8),
                 Text(
-                  'Le Tuteur Socratique réfléchit...',
+                  'Le Tuteur pq learn réfléchit...',
                   style: TextStyle(color: Colors.white70, fontSize: 11),
                 ),
               ],

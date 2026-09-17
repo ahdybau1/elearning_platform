@@ -45,6 +45,7 @@ class SessionGuardNotifier extends StateNotifier<SessionGuardState> {
   String? _registeredForAccountId;
   StreamSubscription<bool>? _realtimeSubscription;
   AppLifecycleListener? _lifecycleListener;
+  Timer? _heartbeatTimer;
 
   void _onAuthStateChanged(StudentAuthState? previous, StudentAuthState next) {
     final accountId = next.account?.id;
@@ -66,7 +67,23 @@ class SessionGuardNotifier extends StateNotifier<SessionGuardState> {
     state = SessionGuardState(sessionId: sessionId, isEvicted: false);
     unawaited(_realtimeSubscription?.cancel());
     _realtimeSubscription = sessionGuardService.watchSession(sessionId).listen((isActive) {
-      if (!isActive) state = state.copyWith(isEvicted: true);
+      if (!isActive) {
+        state = state.copyWith(isEvicted: true);
+        _heartbeatTimer?.cancel();
+      }
+    });
+
+    // Battement de cœur actif (toutes les 5 secondes) pour garantir l'éviction
+    // même si Realtime est suspendu ou retardé sur le navigateur / mobile.
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      final currentSessionId = state.sessionId;
+      if (currentSessionId == null || state.isEvicted) return;
+      final stillActive = await sessionGuardService.isStillActive(currentSessionId);
+      if (!stillActive) {
+        state = state.copyWith(isEvicted: true);
+        _heartbeatTimer?.cancel();
+      }
     });
   }
 
@@ -74,13 +91,18 @@ class SessionGuardNotifier extends StateNotifier<SessionGuardState> {
     final sessionId = state.sessionId;
     if (sessionId == null || state.isEvicted) return;
     final stillActive = await sessionGuardService.isStillActive(sessionId);
-    if (!stillActive) state = state.copyWith(isEvicted: true);
+    if (!stillActive) {
+      state = state.copyWith(isEvicted: true);
+      _heartbeatTimer?.cancel();
+    }
   }
 
   void _reset() {
     _registeredForAccountId = null;
     unawaited(_realtimeSubscription?.cancel());
     _realtimeSubscription = null;
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
     state = const SessionGuardState();
   }
 
@@ -88,6 +110,8 @@ class SessionGuardNotifier extends StateNotifier<SessionGuardState> {
   void dispose() {
     unawaited(_realtimeSubscription?.cancel());
     _lifecycleListener?.dispose();
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
     super.dispose();
   }
 }

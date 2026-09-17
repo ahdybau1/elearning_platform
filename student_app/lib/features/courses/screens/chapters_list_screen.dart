@@ -241,6 +241,15 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
               ? context.colors.border
               : context.colors.border.withValues(alpha: 0.4),
         ),
+        boxShadow: isUnlocked
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
       ),
       child: Semantics(
         container: true,
@@ -361,23 +370,113 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            '${chapter.lessonsCount} leçons • ${chapter.exercisesCount} exercices',
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: context.colors.textMuted,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
+                          // Stat capsules
                           Wrap(
-                            spacing: 4,
-                            runSpacing: 8,
-                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 8,
+                            runSpacing: 6,
                             children: [
-                              if (isUnlocked) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 9,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: context.colors.surface.withValues(
+                                    alpha: 0.7,
+                                  ),
+                                  borderRadius: AppRadius.radiusSmall,
+                                  border: Border.all(
+                                    color: context.colors.border.withValues(
+                                      alpha: 0.5,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.menu_book_rounded,
+                                      size: 13,
+                                      color: widget.visual.gradient.first,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      '${chapter.lessonsCount} leçons',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: context.colors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 9,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: context.colors.surface.withValues(
+                                    alpha: 0.7,
+                                  ),
+                                  borderRadius: AppRadius.radiusSmall,
+                                  border: Border.all(
+                                    color: context.colors.border.withValues(
+                                      alpha: 0.5,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.quiz_rounded,
+                                      size: 13,
+                                      color: context.colors.accentEmerald,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      '${chapter.exercisesCount} exercices',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: context.colors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          if (isUnlocked) ...[
+                            // Secondary pill actions
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 8,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
                                 OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor:
+                                        context.colors.textSecondary,
+                                    backgroundColor: context.colors.surface
+                                        .withValues(alpha: 0.5),
+                                    side: BorderSide(
+                                      color: context.colors.border,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
                                   onPressed: () {
                                     Navigator.push(
                                       context,
@@ -396,11 +495,33 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                                   },
                                   icon: const Icon(
                                     Icons.history_edu_rounded,
-                                    size: 18,
+                                    size: 15,
                                   ),
-                                  label: const Text('Introduction'),
+                                  label: const Text(
+                                    'Introduction',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
                                 ),
                                 OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor:
+                                        context.colors.textSecondary,
+                                    backgroundColor: context.colors.surface
+                                        .withValues(alpha: 0.5),
+                                    side: BorderSide(
+                                      color: context.colors.border,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
                                   onPressed: () {
                                     Navigator.push(
                                       context,
@@ -416,12 +537,36 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                                   },
                                   icon: const Icon(
                                     Icons.alt_route_rounded,
-                                    size: 18,
+                                    size: 15,
                                   ),
-                                  label: const Text('Exercices'),
+                                  label: const Text(
+                                    'Exercices',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
                                 ),
                                 if (summarySheet != null)
                                   OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor:
+                                          widget.visual.gradient.first,
+                                      backgroundColor: widget
+                                          .visual.gradient.first
+                                          .withValues(alpha: 0.1),
+                                      side: BorderSide(
+                                        color: widget.visual.gradient.first
+                                            .withValues(alpha: 0.35),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      minimumSize: Size.zero,
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
                                     onPressed: () {
                                       SummarySheetViewerModal.show(
                                         context,
@@ -430,39 +575,78 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                                     },
                                     icon: const Icon(
                                       Icons.auto_stories_rounded,
-                                      size: 18,
+                                      size: 15,
                                     ),
-                                    label: const Text('Fiche mémo'),
+                                    label: const Text(
+                                      'Fiche mémo',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                                   ),
                                 if (chapter.lessonsCount > 1)
                                   OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor:
+                                          context.colors.textSecondary,
+                                      backgroundColor: context.colors.surface
+                                          .withValues(alpha: 0.5),
+                                      side: BorderSide(
+                                        color: context.colors.border,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      minimumSize: Size.zero,
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
                                     icon: Icon(
                                       _isExpanded
                                           ? Icons.keyboard_arrow_up_rounded
                                           : Icons.keyboard_arrow_down_rounded,
                                       color: context.colors.textSecondary,
+                                      size: 16,
                                     ),
                                     onPressed: () => setState(
                                       () => _isExpanded = !_isExpanded,
                                     ),
                                     label: Text(
                                       _isExpanded ? 'Masquer' : 'Leçons',
+                                      style: const TextStyle(fontSize: 12),
                                     ),
                                   ),
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        widget.visual.gradient.first,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 8,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: AppRadius.radiusSmall,
-                                    ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            // Primary hero CTA button
+                            Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: widget.visual.gradient,
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: widget.visual.gradient.first
+                                        .withValues(alpha: 0.28),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
                                   ),
-                                  onPressed: () {
+                                ],
+                              ),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
                                     Navigator.pushNamed(
                                       context,
                                       '/lesson-reader',
@@ -472,53 +656,84 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                                       },
                                     );
                                   },
-                                  icon: const Icon(
-                                    Icons.play_arrow_rounded,
-                                    size: 16,
-                                  ),
-                                  label: const Text(
-                                    'Ouvrir le cours',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ] else
-                                OutlinedButton.icon(
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor:
-                                        context.colors.textSecondary,
-                                    side: BorderSide(
-                                      color: context.colors.border,
-                                    ),
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Padding(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
+                                      vertical: 11,
+                                      horizontal: 16,
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(
+                                          Icons.play_arrow_rounded,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Ouvrir le cours',
+                                          style: GoogleFonts.outfit(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            letterSpacing: 0.2,
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        const Icon(
+                                          Icons.arrow_forward_rounded,
+                                          color: Colors.white70,
+                                          size: 16,
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          chapter.termName != null
-                                              ? 'Ce chapitre sera débloqué automatiquement au ${chapter.termName}.'
-                                              : 'Ce chapitre sera débloqué automatiquement à la date prévue.',
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(
-                                    Icons.lock_outline_rounded,
-                                    size: 14,
-                                  ),
-                                  label: const Text(
-                                    'Bientôt débloqué',
-                                    style: TextStyle(fontSize: 11),
+                                ),
+                              ),
+                            ),
+                          ] else
+                            Container(
+                              margin: const EdgeInsets.only(top: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: context.colors.surface.withValues(
+                                  alpha: 0.6,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: context.colors.border.withValues(
+                                    alpha: 0.5,
                                   ),
                                 ),
-                            ],
-                          ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.lock_outline_rounded,
+                                    size: 16,
+                                    color: context.colors.textMuted,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      chapter.termName != null
+                                          ? 'Débloqué au ${chapter.termName}'
+                                          : 'Bientôt disponible dans votre parcours',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: context.colors.textMuted,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
 

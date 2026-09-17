@@ -43,6 +43,7 @@ dependencies:
   url_launcher: ^6.3.1
   flutter_math_fork: ^0.7.2
   http: ^1.2.0
+  file_picker: ^10.3.7
 
 dev_dependencies:
   flutter_test:

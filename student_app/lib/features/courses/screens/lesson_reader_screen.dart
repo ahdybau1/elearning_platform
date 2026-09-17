@@ -350,7 +350,7 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
   /// Sélecteur horizontal pour naviguer entre les différentes leçons du chapitre
   Widget _buildLessonTabs(List<Lesson> lessons, bool isSubscriber) {
     return SizedBox(
-      height: 40,
+      height: 42,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: lessons.length,
@@ -362,20 +362,28 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
 
           return InkWell(
             onTap: () => _switchLesson(index),
-            borderRadius: AppRadius.radiusSmall,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            borderRadius: AppRadius.radiusFull,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? context.colors.accentPrimary.withValues(alpha: 0.18)
-                    : context.colors.surface,
-                borderRadius: AppRadius.radiusSmall,
+                gradient: isSelected ? AppColors.primaryGradient : null,
+                color: isSelected ? null : context.colors.card,
+                borderRadius: AppRadius.radiusFull,
                 border: Border.all(
                   color: isSelected
-                      ? context.colors.accentPrimary
-                      : context.colors.border,
-                  width: isSelected ? 1.5 : 1,
+                      ? Colors.transparent
+                      : context.colors.border.withValues(alpha: 0.8),
                 ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: AppColors.cyanPrimary.withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -384,9 +392,7 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
                     Icon(
                       Icons.lock_rounded,
                       size: 13,
-                      color: isSelected
-                          ? context.colors.accentPrimary
-                          : context.colors.textMuted,
+                      color: isSelected ? Colors.white : AppColors.goldPremium,
                     ),
                     const SizedBox(width: 6),
                   ],
@@ -396,11 +402,9 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.w500,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                       color: isSelected
-                          ? context.colors.accentPrimary
+                          ? Colors.white
                           : context.colors.textSecondary,
                     ),
                   ),
@@ -496,48 +500,65 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
   /// Carte d'aide contextuelle par le Tuteur IA
   Widget _buildAiTutorHelpCard(BuildContext context, Lesson lesson) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: context.colors.card,
         borderRadius: AppRadius.radiusLarge,
         border: Border.all(
-          color: AppColors.cyanAccent.withValues(alpha: 0.4),
+          color: AppColors.cyanAccent.withValues(alpha: 0.35),
           width: 1.2,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.cyanAccent.withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
-                  color: AppColors.cyanAccent.withValues(alpha: 0.15),
-                  borderRadius: AppRadius.radiusMedium,
+                  gradient: AppColors.aiCompanionGradient,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.cyanAccent.withValues(alpha: 0.35),
+                      blurRadius: 10,
+                    ),
+                  ],
                 ),
-                child: const Icon(
-                  Icons.auto_awesome_rounded,
-                  color: AppColors.cyanAccent,
-                  size: 22,
+                child: const Center(
+                  child: Icon(
+                    Icons.auto_awesome_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Agents Pédagogiques IA EDLEARN',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
+                      'Tuteur & Diagnostic IA EDLEARN',
+                      style: GoogleFonts.outfit(
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: context.colors.textPrimary,
                       ),
                     ),
+                    const SizedBox(height: 2),
                     Text(
-                      'Dialogue socratique, détection de pièges et exercices ciblés.',
+                      'Explication socratique, analyse de pièges et entraînement ciblé.',
                       style: GoogleFonts.inter(
-                        fontSize: 11,
+                        fontSize: 11.5,
                         color: context.colors.textSecondary,
                       ),
                     ),
@@ -546,15 +567,17 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.cyanAccent,
-                    side: const BorderSide(color: AppColors.cyanAccent),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    side: BorderSide(
+                      color: AppColors.cyanAccent.withValues(alpha: 0.6),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.button),
                     ),
@@ -567,9 +590,9 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
                       initialMode: 'tutor',
                     );
                   },
-                  icon: const Icon(Icons.psychology_rounded, size: 15),
+                  icon: const Icon(Icons.psychology_rounded, size: 16),
                   label: const Text(
-                    'Tuteur Socratique',
+                    'Tuteur IA',
                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -579,8 +602,10 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.amberHighlight,
-                    side: const BorderSide(color: AppColors.amberHighlight),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    side: BorderSide(
+                      color: AppColors.amberHighlight.withValues(alpha: 0.6),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.button),
                     ),
@@ -593,9 +618,9 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
                       initialMode: 'diagnostic',
                     );
                   },
-                  icon: const Icon(Icons.rule_rounded, size: 15),
+                  icon: const Icon(Icons.rule_rounded, size: 16),
                   label: const Text(
-                    'Pièges du Bac',
+                    'Pièges d\'Examen',
                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -607,7 +632,7 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
                     backgroundColor: AppColors.tealSuccess,
                     foregroundColor: const Color(0xFF0A0E1A),
                     elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.button),
                     ),
@@ -638,7 +663,7 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
                 side: BorderSide(
                   color: const Color(0xFF10B981).withValues(alpha: 0.5),
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.button),
                 ),
@@ -649,7 +674,7 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
               icon: const Icon(Icons.calculate_rounded, size: 16),
               label: const Text(
                 'Calculateur SymPy, Grapheur & Labos Virtuels',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -662,16 +687,38 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
   Widget _buildLaunchQuizCard(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: context.colors.card,
         borderRadius: AppRadius.radiusLarge,
-        border: Border.all(color: context.colors.border),
+        border: Border.all(
+          color: context.colors.accentPrimary.withValues(alpha: 0.3),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: context.colors.accentPrimary.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: AppColors.primaryGradient,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.quiz_rounded,
+              color: Colors.white,
+              size: 26,
+            ),
+          ),
+          const SizedBox(height: 12),
           Text(
-            'Validez vos connaissances',
+            'Valide tes connaissances',
             style: GoogleFonts.outfit(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -680,45 +727,59 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Testez votre compréhension avec le quiz interactif de ce chapitre.',
+            'Mets en pratique ce cours avec la série d\'exercices et quiz du chapitre.',
             style: GoogleFonts.inter(
               fontSize: 13,
               color: context.colors.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           Wrap(
             alignment: WrapAlignment.center,
             spacing: 12,
             runSpacing: 10,
             children: [
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: context.colors.accentPrimary,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppRadius.radiusMedium,
-                  ),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: AppRadius.radiusMedium,
+                  boxShadow: [
+                    BoxShadow(
+                      color: context.colors.accentPrimary.withValues(alpha: 0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-                onPressed: () {
-                  Navigator.pushNamed(
-                    context,
-                    '/exercises',
-                    arguments: {
-                      'chapterId': widget.chapterId,
-                      'chapterTitle': widget.chapterTitle,
-                    },
-                  );
-                },
-                icon: const Icon(Icons.quiz_rounded, size: 18),
-                label: const Text(
-                  'Démarrer les Exercices',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 22,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppRadius.radiusMedium,
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/exercises',
+                      arguments: {
+                        'chapterId': widget.chapterId,
+                        'chapterTitle': widget.chapterTitle,
+                      },
+                    );
+                  },
+                  icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                  label: Text(
+                    'Démarrer les Exercices',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13.5),
+                  ),
                 ),
               ),
               OutlinedButton.icon(

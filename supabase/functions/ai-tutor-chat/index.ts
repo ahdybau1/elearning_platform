@@ -29,7 +29,9 @@ const corsHeaders = {
 // citations, personnalisation) était de fait invisible pour les élèves. Porter l'enrichissement ici
 // le rend réellement atteignable sans déployer d'infra payante (contrainte "zéro dépense" du projet).
 // Les champs fournis par un appelant (Gateway) restent prioritaires : aucune régression.
-const AGENT_VERSION = "1.2.0";
+// 1.3.0 (2026-09-17) : support multimodal complet (photos/OCR devoirs manuscrits, documents PDF,
+// enregistrements audio/voix) transmis en inline_data à Google Gemini sans stockage BDD.
+const AGENT_VERSION = "1.3.0";
 const MODEL = "gemini-3.6-flash";
 const RAG_TOP_K = 3;
 
@@ -197,6 +199,7 @@ Deno.serve(async (req: Request) => {
       subject_id,
       class_node_id,
       lesson_id,
+      attachments,
     } = await req.json();
 
     if (
@@ -258,12 +261,16 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Cache (ai_tutor_cache) — UNIQUEMENT pour une réponse non personnalisée. La version Python
-    // (gateway/app/agents/tutor_agent.py) met en cache sur message|subject|lesson SANS profile_id
-    // alors que le prompt contient le Student Model de l'élève : la réponse d'un élève peut donc
-    // être resservie à un autre. Ce portage ne reproduit pas ce défaut — dès qu'une personnalisation
-    // est injectée, la réponse n'est ni lue ni écrite dans le cache.
-    const cacheable = effectiveMastery === null;
+    // Détection des salutations pures (bonjour, salut, coucou, bonsoir...)
+    const cleanMsg = message.trim().toLowerCase().replace(/[!?,.;:]+$/, "").trim();
+    const isGreeting = /^(bonjour|bonsoir|salut|coucou|hello|hi|hey|yo|bonne\s+journée|bon\s+après[- ]midi)$/i.test(cleanMsg) ||
+      (/^(bonjour|bonsoir|salut|coucou|hello|hi|hey)\s+(à tous|tout le monde|tuteur|prof|pq learn|tuteur pq learn)?$/i.test(cleanMsg));
+
+    // Cache (ai_tutor_cache) — UNIQUEMENT pour une réponse textuelle non personnalisée et non salutation. Dès qu'une
+    // personnalisation (Student Model), des pièces jointes ou une simple salutation sont injectées, la réponse n'est
+    // ni lue ni écrite dans le cache.
+    const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
+    const cacheable = effectiveMastery === null && !hasAttachments && !isGreeting;
     const cacheKey = await sha256Hex(
       `${message.trim().toLowerCase()}|${subject_id ?? ""}|${lesson_id ?? ""}`,
     );
@@ -304,26 +311,48 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    const greetingRule = isGreeting
+      ? `\n\n⚡ RÈGLE SPÉCIALE SALUTATION : L'élève te salue simplement.
+- Réponds de façon très brève, naturelle, chaleureuse et motivante (1 à 2 phrases courtes maximum).
+- Salue l'élève avec enthousiasme (par ex: "Bonjour ! 😊 Je suis ton Tuteur pq learn. Sur quel sujet, chapitre ou exercice aimerais-tu qu'on avance ensemble aujourd'hui ?").
+- Varie tes formulations à chaque fois.
+- Ne donne JAMAIS de cours, de formule, d'explication de maths ou de monologue non sollicité lorsqu'on te salue simplement.`
+      : "";
+
     const systemPrompt =
-      `Tu es un tuteur pédagogique bienveillant pour un(e) élève de ${
+      `Tu es le Tuteur pq learn, tuteur pédagogique numérique bienveillant pour un(e) élève de ${
         class_name ?? "l'enseignement secondaire"
       }, en ${subject_name ?? "toutes matières"}.
-Règles strictes :
-- Maïeutique uniquement : guide l'élève pas à pas vers la réponse, ne donne JAMAIS directement la solution finale d'un exercice.
-- Reste toujours dans le programme officiel de sa classe, sans bloquer totalement le hors-programme si l'élève insiste.
-- Explique les erreurs (le "pourquoi"), jamais un simple "faux".
-- Public mineur : langage toujours approprié, aucun sujet inapproprié, refuse poliment et détourne vers l'aide scolaire si l'élève dévie du cadre pédagogique.
-- Réponses courtes et claires, en français, formules mathématiques entre $...$ si besoin.
-- Tu es un outil d'aide, jamais une autorité absolue : encourage à vérifier avec son professeur en cas de doute.`;
+Règles pédagogiques et éthiques :
+- Démarche maïeutique et socratique : guide l'élève pas à pas vers la compréhension par des questions stimulantes et des indices progressifs. Ne donne JAMAIS directement la solution finale d'un exercice.
+- Reste toujours dans le programme officiel de sa classe, sans bloquer le hors-programme si l'élève insiste.
+- Explique toujours les erreurs (le "pourquoi" et la méthode), jamais un simple "faux".
+- Public mineur : langage toujours respectueux, empathique et encourageant. Refuse poliment tout contenu hors cadre scolaire.
+- Tu es un outil d'aide : encourage à vérifier avec son professeur en cas de doute.${greetingRule}
+
+Mise en forme soignée (Markdown riche, LaTeX & Émojis) :
+- Structure tes réponses avec des sous-titres clairs (###), des listes numérotées (1., 2.) pour les étapes, et des puces (- ) pour les critères.
+- Mets en **gras** les notions clés, les termes essentiels et les étapes.
+- Mets en *italique* les indices subtils et remarques méthodologiques.
+- Encadre les rappels et astuces avec une citation : > 💡 **Conseil** : ...
+- Formules mathématiques : écris TOUJOURS les variables, fractions et formules en notation LaTeX standard entre $...$ pour l'en-ligne (ex: $\\Delta = b^2 - 4ac$, $x = \\frac{-b \\pm \\sqrt{\\Delta}}{2a}$) ou $$...$$ pour une équation officielle centrée.
+- Utilise des émojis pertinents (🎯, 💡, 📐, 🔬, 🚀, 📚, ✨, ⚠️, 🔍) pour rendre l'échange chaleureux et motivant.
+- Schémas & illustrations pédagogiques : si la notion implique une figure géométrique, un repère cartésien, une parabole, une molécule ou un circuit électrique, et qu'une image aide grandement l'élève, tu peux intégrer une illustration visuelle gratuite via markdown :
+  ![Description du schéma](https://image.pollinations.ai/prompt/<prompt_en_anglais_descriptif_diagram>?width=800&height=450&nologo=true)
+  (utilise ce mécanisme gratuit avec parcimonie, uniquement lorsqu'une illustration apporte une réelle plus-value d'apprentissage).
+
+Support multimodal :
+- Analyse minutieusement les photos/images jointes (OCR d'exercice manuscrit, figure, livre), cite les données reconnues et aide l'élève.
+- Écoute ou lis attentivement les mémos vocaux et documents joints pour répondre précisément.`;
 
     // IA-007 : contexte additif — soit fourni par la Gateway, soit calculé ci-dessus (1.2.0).
     const contextSections: string[] = [];
-    if (effectiveRagContext) {
+    if (effectiveRagContext && !isGreeting) {
       contextSections.push(
         `Extraits de cours validés à utiliser en priorité pour les faits pédagogiques (cite la source entre crochets si tu t'en sers) :\n${effectiveRagContext}`,
       );
     }
-    if (effectiveMastery) {
+    if (effectiveMastery && !isGreeting) {
       contextSections.push(effectiveMastery);
     }
     if (typeof tool_context === "string" && tool_context.trim()) {
@@ -336,7 +365,7 @@ Règles strictes :
       : systemPrompt;
 
     const contents = [];
-    if (Array.isArray(history)) {
+    if (Array.isArray(history) && !isGreeting) {
       for (const turn of history.slice(-10)) {
         contents.push({
           role: turn.sender === "ai" ? "model" : "user",
@@ -344,32 +373,72 @@ Règles strictes :
         });
       }
     }
-    contents.push({ role: "user", parts: [{ text: message }] });
 
-    // §8 du CDC : "superpuissant et super gratuit" — modèle Gemini le plus capable du palier
-    // gratuit, et un budget de sortie plus généreux pour des explications complètes plutôt que
-    // tronquées. gemini-2.0-flash a été retiré (confirmé par l'erreur 404 de l'API elle-même, qui
-    // recommandait explicitement gemini-3.6-flash) — vérifier périodiquement que ce nom de modèle
-    // est toujours valide, Google en retire régulièrement.
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: fullSystemPrompt }] },
-          contents,
-          // gemini-3.6-flash consomme des jetons de "réflexion" internes avant la réponse visible
-          // (confirmé en test direct : ~140 jetons de réflexion pour "OK") — budget généreux pour
-          // ne jamais tronquer une explication pédagogique complète derrière ce coût caché.
-          generationConfig: { maxOutputTokens: 4096 },
-        }),
-      },
-    );
+    const userParts: Array<Record<string, unknown>> = [{ text: message }];
+    if (hasAttachments) {
+      for (const att of attachments) {
+        if (att && typeof att.data === "string" && att.data.trim().length > 0) {
+          const rawMime = String(att.mime_type || "image/jpeg").toLowerCase();
+          const mimeType = rawMime.startsWith("image/") ||
+              rawMime === "application/pdf" ||
+              rawMime.startsWith("audio/")
+            ? rawMime
+            : "image/jpeg";
 
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      console.error("Gemini API error:", geminiRes.status, errText);
+          userParts.push({
+            inline_data: {
+              mime_type: mimeType,
+              data: att.data.trim(),
+            },
+          });
+        }
+      }
+    }
+    contents.push({ role: "user", parts: userParts });
+
+    // §8 du CDC : modèle Gemini avec retry exponentiel
+    const geminiPayload = {
+      systemInstruction: { parts: [{ text: fullSystemPrompt }] },
+      contents,
+      generationConfig: { maxOutputTokens: isGreeting ? 2048 : 4096 },
+    };
+
+    let geminiRes: Response | null = null;
+    const retryDelays = [0, 1000, 2500];
+
+    for (let attempt = 0; attempt < retryDelays.length; attempt++) {
+      if (attempt > 0) {
+        console.warn(`Tentative Gemini ${attempt + 1}/${retryDelays.length} après pause de ${retryDelays[attempt]}ms...`);
+        await new Promise((r) => setTimeout(r, retryDelays[attempt]));
+      }
+
+      try {
+        geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(geminiPayload),
+          },
+        );
+
+        if (geminiRes.ok) {
+          break;
+        }
+
+        // Réessayer uniquement si c'est un problème temporaire côté Google (503, 429, 500)
+        if (geminiRes.status !== 503 && geminiRes.status !== 429 && geminiRes.status !== 500) {
+          break;
+        }
+      } catch (networkErr) {
+        console.warn("Erreur réseau appel Gemini:", networkErr);
+        if (attempt === retryDelays.length - 1) throw networkErr;
+      }
+    }
+
+    if (!geminiRes || !geminiRes.ok) {
+      const errText = geminiRes ? await geminiRes.text() : "No response";
+      console.error("Gemini API error:", geminiRes?.status, errText);
       const errorMessage =
         "Le Tuteur Numérique est momentanément indisponible (quota atteint ou erreur du fournisseur).";
       await logFailure(errorMessage);
@@ -383,7 +452,14 @@ Règles strictes :
     }
 
     const geminiData = await geminiRes.json();
-    const reply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    const rawParts = geminiData.candidates?.[0]?.content?.parts ?? [];
+    let reply = "";
+    for (const part of rawParts) {
+      if (part && typeof part.text === "string" && !part.thought) {
+        reply += part.text;
+      }
+    }
+    reply = reply.trim();
     const tokensUsed = geminiData.usageMetadata?.totalTokenCount ?? 0;
 
     if (!reply) {

@@ -55,6 +55,12 @@ class AppColors {
     end: Alignment.bottomRight,
   );
 
+  static const LinearGradient aiCompanionGradient = LinearGradient(
+    colors: [Color(0xFF06B6D4), Color(0xFF3B82F6), Color(0xFF8B5CF6)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
   static const LinearGradient emeraldGradient = LinearGradient(
     colors: [Color(0xFF059669), Color(0xFF10B981)],
     begin: Alignment.topLeft,
@@ -72,4 +78,19 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+
+  static const LinearGradient roseGradient = LinearGradient(
+    colors: [Color(0xFFE11D48), Color(0xFFF43F5E)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  // Ombres et halos lumineux
+  static List<BoxShadow> glowEffect(Color color, {double blur = 16, double spread = 0}) => [
+    BoxShadow(
+      color: color.withValues(alpha: 0.25),
+      blurRadius: blur,
+      spreadRadius: spread,
+    ),
+  ];
 }

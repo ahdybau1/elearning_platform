@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/gamification_models.dart';
 import '../models/student_models.dart';
 import '../models/published_exam_question.dart';
 
@@ -707,5 +708,83 @@ class StudentSupabaseService {
         .update({'opened_at': DateTime.now().toIso8601String()})
         .eq('id', notificationId)
         .isFilter('opened_at', null);
+  }
+
+  // ─── Gamification (§14 du cahier des charges) ────────────────
+
+  /// XP/streak/leçons/exercices — calculé côté serveur (`get_profile_gamification`, migration 87)
+  /// à partir de vraies preuves d'activité, jamais un chiffre inventé côté client.
+  Future<GamificationSummary> fetchGamificationSummary(String profileId) async {
+    final result = await client.rpc(
+      'get_profile_gamification',
+      params: {'p_profile_id': profileId},
+    );
+    return GamificationSummary.fromJson(Map<String, dynamic>.from(result as Map));
+  }
+
+  /// Combine le catalogue de badges (public) avec les badges déjà gagnés par ce profil et la
+  /// progression réelle courante, pour afficher "3/10 leçons" sur un badge non encore débloqué.
+  Future<List<BadgeProgress>> fetchBadges(String profileId) async {
+    final definitions = await client
+        .from('badge_definitions')
+        .select()
+        .eq('is_active', true)
+        .order('display_order')
+        .then((r) => r as List);
+    final earnedRows = await client
+        .from('profile_badges')
+        .select('badge_code, earned_at')
+        .eq('profile_id', profileId)
+        .then((r) => r as List);
+    final earnedByCode = {
+      for (final row in earnedRows) row['badge_code'] as String: row['earned_at'] as String,
+    };
+    final summary = await fetchGamificationSummary(profileId);
+    final currentValueByCriteria = {
+      'lessons_completed': summary.lessonsCompleted,
+      'correct_attempts': summary.correctAttempts,
+      'chapters_completed': summary.chaptersCompleted,
+      'streak_days': summary.streakDays > summary.longestStreak
+          ? summary.streakDays
+          : summary.longestStreak,
+    };
+
+    return definitions.map((row) {
+      final def = Map<String, dynamic>.from(row);
+      final code = def['code'] as String;
+      final earnedAtRaw = earnedByCode[code];
+      return BadgeProgress(
+        code: code,
+        name: def['name'] as String,
+        description: def['description'] as String,
+        iconKey: def['icon_key'] as String,
+        criteriaType: def['criteria_type'] as String,
+        criteriaThreshold: def['criteria_threshold'] as int,
+        currentValue: currentValueByCriteria[def['criteria_type'] as String] ?? 0,
+        earnedAt: earnedAtRaw != null ? DateTime.parse(earnedAtRaw) : null,
+      );
+    }).toList();
+  }
+
+  /// Idempotent côté serveur (UNIQUE(profile_id, lesson_id)) : appeler plusieurs fois sur la même
+  /// leçon ne compte qu'une fois dans les statistiques. Échec silencieux volontaire (même posture
+  /// que `recordExerciseAttempt`) : une leçon déjà lue reste lisible même si cet appel échoue.
+  Future<void> markLessonCompleted(String profileId, String lessonId) async {
+    try {
+      await client.from('lesson_completions').insert({
+        'profile_id': profileId,
+        'lesson_id': lessonId,
+      });
+    } catch (_) {}
+  }
+
+  /// Retourne les codes des badges NOUVELLEMENT gagnés à cet appel précis (pour ne célébrer qu'une
+  /// fois) — `sync_profile_badges`, migration 87.
+  Future<List<String>> syncBadges(String profileId) async {
+    final result = await client.rpc(
+      'sync_profile_badges',
+      params: {'p_profile_id': profileId},
+    );
+    return (result as List).map((r) => r as String).toList();
   }
 }

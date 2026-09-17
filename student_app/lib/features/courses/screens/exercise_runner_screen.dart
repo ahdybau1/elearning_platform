@@ -8,6 +8,7 @@ import '../../../core/providers/student_providers.dart';
 import '../../../core/models/student_models.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../design_system/components/empty_state_view.dart';
+import '../../../design_system/components/gamified_progress_bar.dart';
 import '../../../design_system/tokens/app_radius.dart';
 import '../../../design_system/tokens/app_colors.dart';
 import '../../../core/rendering/math_formula_view.dart';
@@ -193,46 +194,49 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Progress Bar & Question Counter
+                  // Progress Bar & Question Counter Gamifié
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: context.colors.card,
+                          borderRadius: AppRadius.radiusFull,
+                          border: Border.all(color: context.colors.border),
+                        ),
                         child: Text(
-                          'Question ${_currentIndex + 1} sur ${exercises.length}',
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
+                          'Question ${_currentIndex + 1} / ${exercises.length}',
                           style: GoogleFonts.inter(
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: context.colors.accentPrimary,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                         decoration: BoxDecoration(
-                          color: context.colors.surface,
-                          borderRadius: BorderRadius.circular(8),
+                          color: context.colors.card,
+                          borderRadius: AppRadius.radiusFull,
+                          border: Border.all(
+                            color: AppColors.goldPremium.withValues(alpha: 0.5),
+                          ),
                         ),
                         child: Row(
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.stars_rounded,
-                              color: context.colors.accentAmber,
+                              color: AppColors.goldPremium,
                               size: 16,
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '${currentEx.points} points',
+                              '${currentEx.points} XP',
                               style: GoogleFonts.inter(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: context.colors.textPrimary,
+                                color: AppColors.goldPremium,
                               ),
                             ),
                           ],
@@ -240,19 +244,13 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      backgroundColor: context.colors.surface,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        context.colors.accentPrimary,
-                      ),
-                      minHeight: 6,
-                    ),
+                  const SizedBox(height: 12),
+                  GamifiedProgressBar(
+                    progress: progress,
+                    height: 8,
+                    gradient: AppColors.primaryGradient,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
                   Expanded(
                     child: SingleChildScrollView(
@@ -273,11 +271,18 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
   Widget _statementCard(BuildContext context, Exercise ex) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: context.colors.card,
         borderRadius: AppRadius.radiusLarge,
-        border: Border.all(color: context.colors.border),
+        border: Border.all(color: context.colors.border.withValues(alpha: 0.8)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -289,21 +294,18 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
             runSpacing: 8,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryCyan.withAlpha(25),
+                  gradient: AppColors.primaryGradient,
                   borderRadius: AppRadius.radiusSmall,
-                  border: Border.all(
-                    color: AppColors.primaryCyan.withAlpha(80),
-                  ),
                 ),
                 child: Text(
-                  'ÉNONCÉ OFFICIEL',
+                  'ÉNONCÉ • QUESTION ${_currentIndex + 1}',
                   style: GoogleFonts.inter(
-                    fontSize: 9,
+                    fontSize: 9.5,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.primaryCyan,
-                    letterSpacing: 0.5,
+                    color: Colors.white,
+                    letterSpacing: 0.6,
                   ),
                 ),
               ),
@@ -320,19 +322,26 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                         initialQuery: ex.questionText,
                       );
                     },
-                    borderRadius: AppRadius.radiusSmall,
-                    child: Padding(
+                    borderRadius: AppRadius.radiusFull,
+                    child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.emeraldSuccess.withValues(alpha: 0.12),
+                        borderRadius: AppRadius.radiusFull,
+                        border: Border.all(
+                          color: AppColors.emeraldSuccess.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(
                             Icons.calculate_rounded,
-                            size: 14,
-                            color: Color(0xFF10B981),
+                            size: 13,
+                            color: AppColors.emeraldSuccess,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -340,7 +349,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                             style: GoogleFonts.inter(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFF10B981),
+                              color: AppColors.emeraldSuccess,
                             ),
                           ),
                         ],
@@ -357,27 +366,34 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                         initialMode: 'tutor',
                       );
                     },
-                    borderRadius: AppRadius.radiusSmall,
-                    child: Padding(
+                    borderRadius: AppRadius.radiusFull,
+                    child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.cyanAccent.withValues(alpha: 0.12),
+                        borderRadius: AppRadius.radiusFull,
+                        border: Border.all(
+                          color: AppColors.cyanAccent.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(
                             Icons.auto_awesome_rounded,
-                            size: 14,
-                            color: AppColors.primaryCyan,
+                            size: 13,
+                            color: AppColors.cyanAccent,
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            'Tuteur Socratique',
+                            'Tuteur IA',
                             style: GoogleFonts.inter(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.primaryCyan,
+                              color: AppColors.cyanAccent,
                             ),
                           ),
                         ],
@@ -388,7 +404,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           InlineLatexText(
             ex.questionText,
             style: GoogleFonts.inter(
@@ -594,20 +610,20 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
           final option = ex.options[optIdx];
           final isSelected = _selectedOptionIndex == optIdx;
 
-          Color borderColor = context.colors.border;
+          Color borderColor = context.colors.border.withValues(alpha: 0.7);
           Color bgColor = context.colors.card;
 
           if (_isRevealed) {
             if (optIdx == ex.correctIndex) {
-              borderColor = context.colors.accentEmerald;
-              bgColor = context.colors.accentEmerald.withValues(alpha: 0.15);
+              borderColor = AppColors.emeraldSuccess;
+              bgColor = AppColors.emeraldSuccess.withValues(alpha: 0.15);
             } else if (isSelected) {
-              borderColor = context.colors.accentRose;
-              bgColor = context.colors.accentRose.withValues(alpha: 0.15);
+              borderColor = AppColors.roseError;
+              bgColor = AppColors.roseError.withValues(alpha: 0.15);
             }
           } else if (isSelected) {
-            borderColor = context.colors.accentPrimary;
-            bgColor = context.colors.accentPrimary.withValues(alpha: 0.1);
+            borderColor = AppColors.cyanAccent;
+            bgColor = AppColors.cyanAccent.withValues(alpha: 0.1);
           }
 
           return Padding(
@@ -617,8 +633,9 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                   ? null
                   : () => setState(() => _selectedOptionIndex = optIdx),
               borderRadius: AppRadius.radiusMedium,
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 48),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                constraints: const BoxConstraints(minHeight: 52),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 14,
@@ -630,23 +647,38 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                     color: borderColor,
                     width: isSelected ? 2 : 1,
                   ),
+                  boxShadow: isSelected && !_isRevealed
+                      ? [
+                          BoxShadow(
+                            color: AppColors.cyanAccent.withValues(alpha: 0.2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
                 ),
                 child: Row(
                   children: [
                     Container(
-                      width: 28,
-                      height: 28,
+                      width: 32,
+                      height: 32,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: isSelected
-                            ? context.colors.accentPrimary
+                            ? AppColors.cyanAccent
                             : context.colors.surface,
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.cyanAccent
+                              : context.colors.border,
+                        ),
                       ),
                       child: Center(
                         child: Text(
                           String.fromCharCode(65 + optIdx),
                           style: GoogleFonts.inter(
                             fontWeight: FontWeight.bold,
+                            fontSize: 13,
                             color: isSelected
                                 ? Colors.black
                                 : context.colors.textPrimary,
@@ -660,10 +692,26 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                         option,
                         style: GoogleFonts.inter(
                           fontSize: 15,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                           color: context.colors.textPrimary,
                         ),
                       ),
                     ),
+                    if (_isRevealed) ...[
+                      const SizedBox(width: 8),
+                      if (optIdx == ex.correctIndex)
+                        const Icon(
+                          Icons.check_circle_rounded,
+                          color: AppColors.emeraldSuccess,
+                          size: 22,
+                        )
+                      else if (isSelected)
+                        const Icon(
+                          Icons.cancel_rounded,
+                          color: AppColors.roseError,
+                          size: 22,
+                        ),
+                    ],
                   ],
                 ),
               ),
@@ -1028,25 +1076,32 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: context.colors.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLarge),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: context.colors.accentEmerald.withValues(alpha: 0.15),
+                gradient: AppColors.amberGradient,
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.goldPremium.withValues(alpha: 0.4),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.emoji_events_rounded,
-                color: context.colors.accentEmerald,
-                size: 48,
+                color: Colors.white,
+                size: 44,
               ),
             ),
             const SizedBox(height: 18),
             Text(
-              'Série terminée',
+              'Session Validée !',
               style: GoogleFonts.outfit(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -1055,36 +1110,69 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.goldPremium.withValues(alpha: 0.15),
+                borderRadius: AppRadius.radiusFull,
+                border: Border.all(color: AppColors.goldPremium.withValues(alpha: 0.3)),
+              ),
+              child: Text(
+                '$_totalScore XP Gagnés',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.goldPremium,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
             Text(
               _totalScore == 0
-                  ? 'Tes réponses ont été enregistrées. Les réponses libres ne sont pas notées automatiquement.'
-                  : '$_totalScore points ont été validés automatiquement sur les QCM.',
+                  ? 'Tes réponses ont été enregistrées avec succès.'
+                  : 'Félicitations ! Tes réponses ont été validées et enregistrées sur ton profil.',
               style: GoogleFonts.inter(
-                fontSize: 14,
+                fontSize: 13.5,
                 color: context.colors.textSecondary,
+                height: 1.4,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: context.colors.accentPrimary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                borderRadius: AppRadius.radiusMedium,
+                boxShadow: [
+                  BoxShadow(
+                    color: context.colors.accentPrimary.withValues(alpha: 0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-              onPressed: () {
-                Navigator.pop(ctx);
-                Navigator.pop(context);
-              },
-              child: const Text(
-                'Retour au cours',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppRadius.radiusMedium,
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  'Continuer mon apprentissage',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
               ),
             ),
           ],

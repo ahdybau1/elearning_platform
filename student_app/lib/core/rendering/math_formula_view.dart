@@ -313,6 +313,108 @@ class InlineLatexText extends StatelessWidget {
     return processed;
   }
 
+  /// Découpe un fragment de texte brut en spans stylisés selon la syntaxe Markdown
+  /// (**gras**, *italique*, ***gras italique***, `code`, ~~barré~~)
+  static List<InlineSpan> parseMarkdownSpans(String text, TextStyle baseStyle) {
+    if (text.isEmpty) return const [];
+
+    final spans = <InlineSpan>[];
+    final pattern = RegExp(
+      r'(\*\*\*(.*?)\*\*\*)|' // 1: ***bold italic*** (group 2)
+      r'(\*\*(.*?)\*\*)|'     // 3: **bold** (group 4)
+      r'(__([^_]+)__)|'       // 5: __bold__ (group 6)
+      r'(\*(.*?)\*)|'         // 7: *italic* (group 8)
+      r'(_([^_]+)_)|'         // 9: _italic_ (group 10)
+      r'(`([^`]+)`)|'         // 11: `code` (group 12)
+      r'(~~(.*?)~~)',         // 13: ~~strike~~ (group 14)
+      dotAll: true,
+    );
+
+    int lastIndex = 0;
+    for (final match in pattern.allMatches(text)) {
+      if (match.start > lastIndex) {
+        spans.add(TextSpan(
+          text: text.substring(lastIndex, match.start),
+          style: baseStyle,
+        ));
+      }
+
+      final boldItalic = match.group(2);
+      final bold1 = match.group(4);
+      final bold2 = match.group(6);
+      final italic1 = match.group(8);
+      final italic2 = match.group(10);
+      final code = match.group(12);
+      final strike = match.group(14);
+
+      if (boldItalic != null && boldItalic.isNotEmpty) {
+        spans.add(TextSpan(
+          text: boldItalic,
+          style: baseStyle.copyWith(
+            fontWeight: FontWeight.bold,
+            fontStyle: FontStyle.italic,
+          ),
+        ));
+      } else if ((bold1 != null && bold1.isNotEmpty) || (bold2 != null && bold2.isNotEmpty)) {
+        final content = bold1 ?? bold2!;
+        spans.add(TextSpan(
+          text: content,
+          style: baseStyle.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ));
+      } else if ((italic1 != null && italic1.isNotEmpty) || (italic2 != null && italic2.isNotEmpty)) {
+        final content = italic1 ?? italic2!;
+        spans.add(TextSpan(
+          text: content,
+          style: baseStyle.copyWith(
+            fontStyle: FontStyle.italic,
+          ),
+        ));
+      } else if (code != null && code.isNotEmpty) {
+        spans.add(WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+            margin: const EdgeInsets.symmetric(horizontal: 2),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: const Color(0xFF334155), width: 0.8),
+            ),
+            child: Text(
+              code,
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: (baseStyle.fontSize ?? 14) * 0.9,
+                color: const Color(0xFF38BDF8),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ));
+      } else if (strike != null && strike.isNotEmpty) {
+        spans.add(TextSpan(
+          text: strike,
+          style: baseStyle.copyWith(
+            decoration: TextDecoration.lineThrough,
+          ),
+        ));
+      }
+
+      lastIndex = match.end;
+    }
+
+    if (lastIndex < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(lastIndex),
+        style: baseStyle,
+      ));
+    }
+
+    return spans;
+  }
+
   @override
   Widget build(BuildContext context) {
     final effectiveStyle = style ?? DefaultTextStyle.of(context).style;
@@ -327,10 +429,8 @@ class InlineLatexText extends StatelessWidget {
 
       for (final match in _mathPattern.allMatches(normalizedText)) {
         if (match.start > lastEnd) {
-          spans.add(TextSpan(
-            text: normalizedText.substring(lastEnd, match.start),
-            style: effectiveStyle,
-          ));
+          final textChunk = normalizedText.substring(lastEnd, match.start);
+          spans.addAll(parseMarkdownSpans(textChunk, effectiveStyle));
         }
 
         final isDisplay = match.group(1) != null;
@@ -364,10 +464,8 @@ class InlineLatexText extends StatelessWidget {
       }
 
       if (lastEnd < normalizedText.length) {
-        spans.add(TextSpan(
-          text: normalizedText.substring(lastEnd),
-          style: effectiveStyle,
-        ));
+        final textChunk = normalizedText.substring(lastEnd);
+        spans.addAll(parseMarkdownSpans(textChunk, effectiveStyle));
       }
 
       return Text.rich(
@@ -394,10 +492,9 @@ class InlineLatexText extends StatelessWidget {
       );
     }
 
-    // Cas 3 : Texte normal
-    return Text(
-      normalizedText,
-      style: effectiveStyle,
+    // Cas 3 : Texte normal avec syntaxe Markdown enrichie
+    return Text.rich(
+      TextSpan(children: parseMarkdownSpans(normalizedText, effectiveStyle)),
       textAlign: textAlign,
       maxLines: maxLines,
       overflow: overflow,

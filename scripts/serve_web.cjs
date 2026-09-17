@@ -17,4 +17,4 @@ http.createServer((req,res) => {
     res.writeHead(200,{'Content-Type':types[path.extname(file)] || 'application/octet-stream','Cache-Control':'no-store'});
     res.end(data);
   });
-}).listen(port,'127.0.0.1',() => console.log('Local preview: http://127.0.0.1:' + port));
+}).listen(port,'0.0.0.0',() => console.log('Local preview: http://localhost:' + port));
