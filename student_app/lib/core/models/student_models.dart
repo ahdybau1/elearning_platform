@@ -308,6 +308,46 @@ class TermInfo {
   });
 }
 
+// §6.4 du cahier des charges : catalogue de notifications (échéances d'abonnement, requalification
+// mensuelle, rappels d'examens...) — ligne réelle de `notification_log`, jamais un texte inventé
+// côté client. `template_id` est nullable côté base (le trigger de cumul mensuel, migration 04,
+// écrit title/body directement sans template) donc absent ici : l'écran n'affiche que le
+// title/body déjà résolus, quelle que soit leur origine.
+class StudentNotification {
+  final String id;
+  final String title;
+  final String body;
+  final String channel;
+  final DateTime sentAt;
+  final DateTime? openedAt;
+
+  StudentNotification({
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.channel,
+    required this.sentAt,
+    this.openedAt,
+  });
+
+  bool get isUnread => openedAt == null;
+
+  factory StudentNotification.fromJson(Map<String, dynamic> json) {
+    return StudentNotification(
+      id: json['id'] as String,
+      title: json['title'] as String? ?? '',
+      body: json['body'] as String? ?? '',
+      channel: json['channel'] as String? ?? 'in_app',
+      sentAt: json['sent_at'] != null
+          ? DateTime.parse(json['sent_at'] as String)
+          : DateTime.now(),
+      openedAt: json['opened_at'] != null
+          ? DateTime.parse(json['opened_at'] as String)
+          : null,
+    );
+  }
+}
+
 // Pas de champ `progressPercent` : aucune table de suivi de progression réelle n'existe encore
 // (§3.5 du cahier des charges — pourcentage de leçons vues par matière). Mieux vaut l'omettre côté
 // UI que d'inventer un pourcentage.

@@ -8,6 +8,7 @@ import '../../../core/theme/student_theme.dart';
 import '../../../core/theme/subject_visuals.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../design_system/tokens/app_spacing.dart';
+import '../../notifications/screens/notifications_screen.dart';
 import '../../subscription/screens/paywall_modal.dart';
 
 /// Accueil v2 centré sur la prochaine action pédagogique.
@@ -35,6 +36,7 @@ class HomeLearningScreen extends ConsumerWidget {
             _Header(
               firstName: auth.account?.firstName ?? '',
               className: profile?.className ?? '',
+              profileId: profile?.id,
             ),
             const SizedBox(height: 20),
             subjects.when(
@@ -137,16 +139,24 @@ class MainTabIntent extends Intent {
   final int index;
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.firstName, required this.className});
+class _Header extends ConsumerWidget {
+  const _Header({
+    required this.firstName,
+    required this.className,
+    required this.profileId,
+  });
   final String firstName;
   final String className;
+  final String? profileId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final greeting = firstName.trim().isEmpty
         ? 'Bonjour'
         : 'Bonjour, $firstName';
+    final unreadCount = profileId == null
+        ? 0
+        : ref.watch(unreadNotificationCountProvider(profileId!));
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -165,14 +175,39 @@ class _Header extends StatelessWidget {
             ],
           ),
         ),
-        IconButton(
-          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Tes notifications seront regroupées ici.'),
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            IconButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+              ),
+              tooltip: 'Notifications',
+              icon: const Icon(Icons.notifications_none_rounded),
             ),
-          ),
-          tooltip: 'Notifications',
-          icon: const Icon(Icons.notifications_none_rounded),
+            if (unreadCount > 0)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: context.colors.accentRose,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  constraints: const BoxConstraints(minWidth: 16),
+                  child: Text(
+                    unreadCount > 9 ? '9+' : '$unreadCount',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
         IconButton(
           onPressed: () => ScaffoldMessenger.of(context).showSnackBar(

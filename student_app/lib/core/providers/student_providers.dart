@@ -19,6 +19,22 @@ final appSettingsProvider = FutureProvider<AppSettings>((ref) async {
   return service.fetchAppSettings();
 });
 
+// §6.4 du cahier des charges : centre de notifications réel (échéances d'abonnement, requalification
+// mensuelle, rappels d'examens...), remplace le "Tes notifications seront regroupées ici." affiché
+// jusqu'ici en SnackBar par la cloche de l'accueil.
+final notificationsProvider =
+    FutureProvider.family<List<StudentNotification>, String>((ref, profileId) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchNotifications(profileId);
+});
+
+final unreadNotificationCountProvider = Provider.family<int, String>((ref, profileId) {
+  return ref.watch(notificationsProvider(profileId)).maybeWhen(
+        data: (items) => items.where((n) => n.isUnread).length,
+        orElse: () => 0,
+      );
+});
+
 final studentSubjectsProvider =
     FutureProvider.family<List<Subject>, String>((ref, classNodeId) async {
   final service = ref.watch(studentSupabaseServiceProvider);

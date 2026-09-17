@@ -680,4 +680,32 @@ class StudentSupabaseService {
     } catch (_) {}
     return AppSettings(appName: 'pq learn');
   }
+
+  // ─── Notifications (§6.4 du cahier des charges) ──────────────
+
+  /// Historique réel des notifications écrites par les fonctions serveur (échéances d'abonnement,
+  /// requalification mensuelle, rappels d'examens...) — jamais un texte généré côté client.
+  Future<List<StudentNotification>> fetchNotifications(
+    String profileId, {
+    int limit = 50,
+  }) async {
+    final rows = await client
+        .from('notification_log')
+        .select()
+        .eq('profile_id', profileId)
+        .order('sent_at', ascending: false)
+        .limit(limit)
+        .then((r) => r as List);
+    return rows
+        .map((r) => StudentNotification.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  Future<void> markNotificationOpened(String notificationId) async {
+    await client
+        .from('notification_log')
+        .update({'opened_at': DateTime.now().toIso8601String()})
+        .eq('id', notificationId)
+        .isFilter('opened_at', null);
+  }
 }
