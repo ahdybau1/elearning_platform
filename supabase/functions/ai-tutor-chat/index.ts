@@ -315,28 +315,40 @@ Deno.serve(async (req: Request) => {
           .eq("cache_key", cacheKey)
           .maybeSingle();
         if (cached?.reply) {
-          await supabase
-            .from("ai_tutor_cache")
-            .update({
-              hit_count: (cached.hit_count ?? 0) + 1,
-              last_hit_at: new Date().toISOString(),
-            })
-            .eq("cache_key", cacheKey);
-          return new Response(
-            JSON.stringify({
-              reply: cached.reply,
-              citations: cached.citations ?? [],
-              _request_id: requestId,
-              _agent_version: AGENT_VERSION,
-              _model: null,
-              _route: "cache",
-              _duration_ms: Date.now() - startTime,
-            }),
-            {
-              status: 200,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
+          const replyStr = typeof cached.reply === "string" ? cached.reply : "";
+          const hasPollinations = replyStr.includes("pollinations.ai");
+          const hasAsciiArt = replyStr.includes("+---") ||
+            replyStr.includes("| - -") ||
+            replyStr.includes("[Sommet]") ||
+            replyStr.includes("Altitude (y)");
+
+          if (!hasPollinations && !hasAsciiArt) {
+            await supabase
+              .from("ai_tutor_cache")
+              .update({
+                hit_count: (cached.hit_count ?? 0) + 1,
+                last_hit_at: new Date().toISOString(),
+              })
+              .eq("cache_key", cacheKey);
+            return new Response(
+              JSON.stringify({
+                reply: cached.reply,
+                citations: cached.citations ?? [],
+                _request_id: requestId,
+                _agent_version: AGENT_VERSION,
+                _model: null,
+                _route: "cache",
+                _duration_ms: Date.now() - startTime,
+              }),
+              {
+                status: 200,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
+          } else {
+            // Purge immédiate de la réponse polluée par les faux schémas ou l'ASCII art
+            await supabase.from("ai_tutor_cache").delete().eq("cache_key", cacheKey);
+          }
         }
       } catch (cacheErr) {
         console.warn("Lecture de cache ignorée:", cacheErr);
@@ -368,10 +380,12 @@ Mise en forme soignée (Markdown riche, LaTeX & Émojis) :
 - Mets en *italique* les indices subtils et remarques méthodologiques.
 - Encadre les rappels et astuces avec une citation : > 💡 **Conseil** : ...
 - Formules mathématiques : écris TOUJOURS les variables, fractions et formules en notation LaTeX standard entre $...$ pour l'en-ligne (ex: $\\Delta = b^2 - 4ac$, $x = \\frac{-b \\pm \\sqrt{\\Delta}}{2a}$) ou $$...$$ pour une équation officielle centrée.
-- Schémas & Représentations Graphiques (§1 & §6 CDC) : N'invente JAMAIS d'URLs d'images externes aléatoires et n'utilise pas de générateurs d'art IA (qui inventent des courbes mathématiquement fausses et du texte flou).
-  - Pour toute fonction mathématique (parabole, polynôme, droite, trigonométrie...) : écris TOUJOURS la formule exacte en notation LaTeX (ex: $P(x) = 2x^2 - 4x - 6$). L'interface de l'application détecte automatiquement la fonction et affiche un bouton direct pour tracer la courbe exacte et sa tangente dans un repère interactif calculé au millimètre !
-  - Pour les démarches, algorithmes et cycles : utilise des schémas textuels clairs et structurés (ex: Entrée ➔ Étape 1 ➔ Résultat) ou des tableaux récapitulatifs.
-  - Pour les documents officiels : cite les extraits de cours et fiches du programme validées fournies dans le contexte.
+- Schémas & Représentations Graphiques (§1 & §6 CDC) :
+  - INTERDICTION STRICTE DE L'ART ASCII : Ne dessine JAMAIS de graphiques, de montagnes, de repères ou de figures avec des caractères texte (barres |, tirets -, slashs /, anti-slashs \, flèches ^, croix + ou étoiles *). C'est illisible, laid et interdit dans l'interface.
+  - N'invente JAMAIS d'URLs d'images externes aléatoires (pas d'images génératives IA qui inventent des courbes fausses).
+  - Pour illustrer une fonction ou un théorème (ex : Théorème des Valeurs Intermédiaires, TVI, parabole, dérivée) : écris TOUJOURS une formule concrète en notation LaTeX (ex: $f(x) = x^3 - 3x + 1$ ou $P(x) = 2x^2 - 4x - 6$). L'application Flutter détecte la fonction et affiche automatiquement un bouton interactif « Tracer la courbe & tangente » pour ouvrir un repère cartésien vectoriel propre et manipulable au doigt !
+  - Pour les démarches et algorithmes : utilise des listes à puces numérotées, des flèches textuelles simples (➔) ou des tableaux Markdown.
+  - Pour les documents officiels : cite les extraits de cours et fiches validées du contexte.
 
 Support multimodal :
 - Analyse minutieusement les photos/images jointes (OCR d'exercice manuscrit, figure, livre), cite les données reconnues et aide l'élève.
