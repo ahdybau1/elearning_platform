@@ -17,6 +17,10 @@ Alignement rigoureux du Tuteur Numérique (`Tuteur pq learn`) sur le **Cahier de
 - **Câblage Contextuel Élève & RAG Intégral dans l'Écran de Chat (`AiTutorChatScreen`)** :
   - Transmission systématique de `profile_id`, `class_node_id`, `subject_id`, `subject_name` et `lesson_id` lors de chaque message envoyé à l'Edge Function `ai-tutor-chat`.
   - Permet l'activation native du **Student Model** (`get_student_skill_mastery`, historique des tentatives) et du **RAG vectoriel** (`match_rag_chunks`) directement depuis l'écran principal de discussion, garantissant des réponses adaptées au niveau exact et à la classe de l'élève.
+- **Suppression des Hallucinations d'Images IA & Activation des Vrais Outils Graphiques Déterministes (§1 & §6 CDC)** :
+  - Identification de l'anomalie : l'utilisation d'un modèle d'art génératif externe (`pollinations.ai`) produisait de fausses peintures avec du texte flou et des courbes mathématiques erronées, tout en échouant à s'afficher sur Flutter Web (blocages CORS et latence réseau excessive 504).
+  - Éradication de la consigne d'images génératives dans le prompt système de l'Edge Function `ai-tutor-chat`.
+  - Conformité stricte au Cahier Technique : la visualisation mathématique s'appuie désormais sur le moteur déterministe réel de l'application (`InteractiveFunctionGraph` et `ScientificToolsModal` avec SymPy), déclenché automatiquement par la notation LaTeX exacte ($f(x) = ax^2 + bx + c$). L'élève dispose d'un vrai repère cartésien manipulable au doigt, sans hallucination ni dépendance externe.
 - **Validation & Déploiement** :
   - Edge Function `ai-tutor-chat` redéployée et validée en production sur Supabase.
   - 104/104 tests Flutter validés à 100%.
