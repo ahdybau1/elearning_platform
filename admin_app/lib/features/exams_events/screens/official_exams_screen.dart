@@ -14,10 +14,6 @@ import '../widgets/exam_paper_ai_processing_action.dart';
 
 /// Fusionne classes et séries dans une seule liste de sélection — un sujet de Bac Série C n'est pas
 /// le même document qu'un sujet de Bac Série D, la série doit donc être sélectionnable ici aussi.
-List<AcademicNode> _mergeClassOptions(List<AcademicNode> classes, List<AcademicNode> series) {
-  return [...classes, ...series]..sort((a, b) => a.name.compareTo(b.name));
-}
-
 class OfficialExamsScreen extends ConsumerStatefulWidget {
   const OfficialExamsScreen({super.key});
 
@@ -40,7 +36,7 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
   Widget build(BuildContext context) {
     final classesRawAsync = ref.watch(nodesByTypeProvider('class'));
     final seriesAsync = ref.watch(nodesByTypeProvider('series'));
-    final classOptions = _mergeClassOptions(
+    final classOptions = mergeClassOptions(
       classesRawAsync.valueOrNull ?? [],
       seriesAsync.valueOrNull ?? [],
     );

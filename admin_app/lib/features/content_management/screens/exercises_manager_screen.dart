@@ -150,10 +150,10 @@ class _ExercisesManagerScreenState
     final exercisesAsync = ref.watch(exercisesProvider(_showInactive));
     final classNodesAsync = ref.watch(nodesByTypeProvider('class'));
     final seriesNodesAsync = ref.watch(nodesByTypeProvider('series'));
-    final classOptions = <AcademicNode>[
-      ...classNodesAsync.valueOrNull ?? [],
-      ...seriesNodesAsync.valueOrNull ?? [],
-    ]..sort((a, b) => a.name.compareTo(b.name));
+    final classOptions = mergeClassOptions(
+      classNodesAsync.valueOrNull ?? [],
+      seriesNodesAsync.valueOrNull ?? [],
+    );
 
     final allExercises = exercisesAsync.valueOrNull ?? <Exercise>[];
     final curriculumCount = allExercises

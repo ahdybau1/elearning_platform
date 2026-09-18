@@ -671,7 +671,7 @@ class _OnboardingWizardScreenState
                 color: context.colors.accentPrimary,
               ),
               title: Text(
-                node.name,
+                _leafDisplayLabel(node, _selectedPath),
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.w600,
                   color: context.colors.textPrimary,
@@ -684,6 +684,32 @@ class _OnboardingWizardScreenState
       ],
     );
   }
+
+  /// Une série/spécialité citée seule ("A", "ESCOM") n'a pas de sens hors de sa classe — l'élève
+  /// doit voir "2nde A" ou "Première ESCOM", jamais la série isolée (retour utilisateur explicite :
+  /// le nom de la classe doit toujours accompagner sa série). Remonte `path` jusqu'à la classe la
+  /// plus proche plutôt que le seul parent direct, car une spécialité technique est parfois séparée
+  /// de sa classe par un ou plusieurs niveaux de famille (ex: Terminale -> IND -> Génie mécanique ->
+  /// BIJO).
+  String _leafDisplayLabel(StudentAcademicNode leaf, List<StudentAcademicNode> path) {
+    if (leaf.nodeType != 'series' && leaf.nodeType != 'specialty') {
+      return leaf.name;
+    }
+    StudentAcademicNode? ancestorClass;
+    for (final n in path.reversed) {
+      if (n.nodeType == 'class') {
+        ancestorClass = n;
+        break;
+      }
+    }
+    if (ancestorClass == null) return leaf.name;
+    return '${_shortNodeName(ancestorClass.name)} ${_shortNodeName(leaf.name)}';
+  }
+
+  String _shortNodeName(String name) => name
+      .replaceFirst(RegExp(r'^Classe de\s+', caseSensitive: false), '')
+      .replaceFirst(RegExp(r'^Série\s+', caseSensitive: false), '')
+      .trim();
 
   String _nodeTypeLabel(String nodeType) {
     switch (nodeType) {
@@ -767,7 +793,13 @@ class _OnboardingWizardScreenState
                   : _emailCtrl.text,
             ),
           ],
-          _buildSummaryRow('Classe', leaf.name),
+          _buildSummaryRow(
+            'Classe',
+            _leafDisplayLabel(
+              leaf,
+              _selectedPath.sublist(0, _selectedPath.length - 1),
+            ),
+          ),
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,

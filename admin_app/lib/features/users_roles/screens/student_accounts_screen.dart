@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/models/academic_node.dart';
 import '../../../core/models/admin_models.dart';
 import '../../../core/providers/data_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -731,10 +732,17 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                     final classesAsync = ref.watch(
                       nodesByTypeProvider('class'),
                     );
+                    final seriesAsync = ref.watch(
+                      nodesByTypeProvider('series'),
+                    );
                     return classesAsync.when(
                       data: (classes) {
-                        selectedClassId ??= classes.isNotEmpty
-                            ? classes.first.id
+                        final classOptions = mergeClassOptions(
+                          classes,
+                          seriesAsync.valueOrNull ?? [],
+                        );
+                        selectedClassId ??= classOptions.isNotEmpty
+                            ? classOptions.first.id
                             : null;
                         return DropdownButtonFormField<String>(
                           // ignore: deprecated_member_use
@@ -744,7 +752,7 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                           decoration: const InputDecoration(
                             labelText: 'Classe',
                           ),
-                          items: classes
+                          items: classOptions
                               .map(
                                 (c) => DropdownMenuItem(
                                   value: c.id,
@@ -1017,10 +1025,17 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                       final classesAsync = ref.watch(
                         nodesByTypeProvider('class'),
                       );
+                      final seriesAsync = ref.watch(
+                        nodesByTypeProvider('series'),
+                      );
                       return classesAsync.when(
                         data: (classes) {
-                          selectedClassId ??= classes.isNotEmpty
-                              ? classes.first.id
+                          final classOptions = mergeClassOptions(
+                            classes,
+                            seriesAsync.valueOrNull ?? [],
+                          );
+                          selectedClassId ??= classOptions.isNotEmpty
+                              ? classOptions.first.id
                               : null;
                           return DropdownButtonFormField<String>(
                             // ignore: deprecated_member_use
@@ -1030,7 +1045,7 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                             decoration: const InputDecoration(
                               labelText: 'Classe',
                             ),
-                            items: classes
+                            items: classOptions
                                 .map(
                                   (c) => DropdownMenuItem(
                                     value: c.id,

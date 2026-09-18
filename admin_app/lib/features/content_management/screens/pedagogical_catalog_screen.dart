@@ -1178,10 +1178,10 @@ class _PedagogicalCatalogScreenState
                           final seriesAsync = ref.watch(
                             nodesByTypeProvider('series'),
                           );
-                          final options = <AcademicNode>[
-                            ...classesAsync.valueOrNull ?? [],
-                            ...seriesAsync.valueOrNull ?? [],
-                          ]..sort((a, b) => a.name.compareTo(b.name));
+                          final options = mergeClassOptions(
+                            classesAsync.valueOrNull ?? [],
+                            seriesAsync.valueOrNull ?? [],
+                          );
                           // Une classe/série liée à cette matière peut avoir été archivée depuis
                           // l'Arbre Académique entre-temps : elle n'apparaît plus dans `options`
                           // (filtré is_active) mais reste dans selectedClassIds tant qu'on ne

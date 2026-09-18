@@ -388,18 +388,17 @@ class _SubscriptionTiersScreenState
                         final seriesAsync = ref.watch(
                           nodesByTypeProvider('series'),
                         );
-                        final options =
-                            <AcademicNode>[
-                                  ...classesAsync.valueOrNull ?? [],
-                                  ...seriesAsync.valueOrNull ?? [],
-                                ]
-                                .where(
-                                  (c) =>
-                                      selectedCountryId == null ||
-                                      c.countryId == selectedCountryId,
-                                )
-                                .toList()
-                              ..sort((a, b) => a.name.compareTo(b.name));
+                        bool inSelectedCountry(AcademicNode c) =>
+                            selectedCountryId == null ||
+                            c.countryId == selectedCountryId;
+                        final options = mergeClassOptions(
+                          (classesAsync.valueOrNull ?? [])
+                              .where(inSelectedCountry)
+                              .toList(),
+                          (seriesAsync.valueOrNull ?? [])
+                              .where(inSelectedCountry)
+                              .toList(),
+                        );
                         return DropdownButtonFormField<String?>(
                           // ignore: deprecated_member_use
                           value: selectedClassNodeId,

@@ -103,10 +103,10 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
         ref.invalidate(nodesByTypeProvider('series'));
       });
     }
-    final classOptions = <AcademicNode>[
-      ...classNodesAsync.valueOrNull ?? [],
-      ...seriesNodesAsync.valueOrNull ?? [],
-    ]..sort((a, b) => a.name.compareTo(b.name));
+    final classOptions = mergeClassOptions(
+      classNodesAsync.valueOrNull ?? [],
+      seriesNodesAsync.valueOrNull ?? [],
+    );
 
     if (_selectedClassNodeId == null && classOptions.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {

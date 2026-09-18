@@ -397,10 +397,10 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                     builder: (context, ref, _) {
                       final classesAsync = ref.watch(nodesByTypeProvider('class'));
                       final seriesAsync = ref.watch(nodesByTypeProvider('series'));
-                      final classOptions = <AcademicNode>[
-                        ...classesAsync.valueOrNull ?? [],
-                        ...seriesAsync.valueOrNull ?? [],
-                      ]..sort((a, b) => a.name.compareTo(b.name));
+                      final classOptions = mergeClassOptions(
+                        classesAsync.valueOrNull ?? [],
+                        seriesAsync.valueOrNull ?? [],
+                      );
                       return DropdownButtonFormField<String?>(
                         // ignore: deprecated_member_use
                         value: targetClassId,

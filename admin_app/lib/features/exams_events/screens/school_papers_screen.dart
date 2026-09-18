@@ -13,10 +13,6 @@ import '../widgets/exam_paper_ai_processing_action.dart';
 
 /// Fusionne classes et séries dans une seule liste de sélection (une série est un "classe" plus
 /// précise pour les niveaux qui en ont — même logique que Leçons & Cours).
-List<AcademicNode> _mergeClassOptions(List<AcademicNode> classes, List<AcademicNode> series) {
-  return [...classes, ...series]..sort((a, b) => a.name.compareTo(b.name));
-}
-
 class SchoolPapersScreen extends ConsumerStatefulWidget {
   const SchoolPapersScreen({super.key});
 
@@ -688,7 +684,7 @@ class _SchoolPapersScreenState extends ConsumerState<SchoolPapersScreen> {
                     builder: (context, ref, _) {
                       final classesAsync = ref.watch(nodesByTypeProvider('class'));
                       final seriesAsync = ref.watch(nodesByTypeProvider('series'));
-                      final classOptions = _mergeClassOptions(
+                      final classOptions = mergeClassOptions(
                         classesAsync.valueOrNull ?? [],
                         seriesAsync.valueOrNull ?? [],
                       );

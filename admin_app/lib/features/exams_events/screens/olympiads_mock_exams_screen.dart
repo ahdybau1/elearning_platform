@@ -596,10 +596,10 @@ class _OlympiadsMockExamsScreenState extends ConsumerState<OlympiadsMockExamsScr
                       if (classesAsync.isLoading || seriesAsync.isLoading) {
                         return const LinearProgressIndicator();
                       }
-                      final classOptions = <AcademicNode>[
-                        ...classesAsync.valueOrNull ?? [],
-                        ...seriesAsync.valueOrNull ?? [],
-                      ]..sort((a, b) => a.name.compareTo(b.name));
+                      final classOptions = mergeClassOptions(
+                        classesAsync.valueOrNull ?? [],
+                        seriesAsync.valueOrNull ?? [],
+                      );
                       return classesAsync.when(
                         data: (classes) {
                           selectedClassId ??= classOptions.isNotEmpty ? classOptions.first.id : null;

@@ -270,9 +270,20 @@ class _ShopManagementScreenState extends ConsumerState<ShopManagementScreen> {
   List<AcademicNode> _extractClassNodes(List<AcademicNode> nodes) {
     final result = <AcademicNode>[];
     for (final node in nodes) {
-      if (node.nodeType == NodeType.classType ||
-          node.nodeType == NodeType.series) {
-        result.add(node);
+      if (node.nodeType == NodeType.classType) {
+        final childSeries = node.children
+            .where((c) => c.nodeType == NodeType.series)
+            .toList();
+        if (childSeries.isEmpty) {
+          // Classe sans série (ex: 6e/5e/4e/3e) : reste sélectionnable telle quelle.
+          result.add(node);
+        } else {
+          // Classe avec séries (ex: 2nde -> A, C) : la classe seule n'est plus une cible valide
+          // (le programme diffère par série) — on liste "2nde A", "2nde C", pas "2nde" isolée.
+          result.addAll(
+            childSeries.map((s) => combineClassWithLeafLabel(node, s)),
+          );
+        }
       }
       if (node.children.isNotEmpty) {
         result.addAll(_extractClassNodes(node.children));

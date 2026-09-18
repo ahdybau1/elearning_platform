@@ -103,6 +103,75 @@ class AcademicNode {
   }
 }
 
+/// Fusionne classes et séries en une liste d'options pour tout sélecteur qui rattache du contenu
+/// (leçon/exercice/examen/annonce/abonnement/groupe WhatsApp...) à une classe. Une classe qui a des
+/// séries n'est plus listée elle-même — son programme diffère par série — seules ses séries
+/// apparaissent, avec un libellé qui reprend le nom de la classe ("2nde A" plutôt que "Série A"
+/// isolée de son contexte, retour utilisateur explicite : la série doit toujours être citée avec sa
+/// classe). Triée par ordre d'affichage réel (classe puis série), jamais par ordre alphabétique
+/// brut des noms bruts (qui mélangeait "Classe de 2nde" et "Série A" sans lien visible entre eux).
+List<AcademicNode> mergeClassOptions(
+  List<AcademicNode> classes,
+  List<AcademicNode> series,
+) {
+  final seriesByParent = <String, List<AcademicNode>>{};
+  for (final s in series) {
+    final parentId = s.parentId;
+    if (parentId == null) continue;
+    seriesByParent.putIfAbsent(parentId, () => []).add(s);
+  }
+  for (final group in seriesByParent.values) {
+    group.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+  }
+
+  final sortedClasses = [...classes]
+    ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+
+  final options = <AcademicNode>[];
+  for (final classNode in sortedClasses) {
+    final childSeries = seriesByParent[classNode.id];
+    if (childSeries == null || childSeries.isEmpty) {
+      options.add(classNode);
+    } else {
+      options.addAll(
+        childSeries.map((s) => combineClassWithLeafLabel(classNode, s)),
+      );
+    }
+  }
+  return options;
+}
+
+/// Reconstruit un nœud (id/type/parent réels inchangés, seul `.name` devient le libellé combiné
+/// "{classe} {feuille}") pour un affichage qui cite toujours la classe avec sa série/spécialité.
+/// Utilisé par [mergeClassOptions] et par tout code qui parcourt un arbre déjà imbriqué (où classes
+/// et séries arrivent comme `node.children`, pas comme deux listes plates séparées).
+AcademicNode combineClassWithLeafLabel(AcademicNode classNode, AcademicNode leaf) {
+  final label =
+      '${shortNodeName(classNode.name)} ${shortNodeName(leaf.name)}';
+  return AcademicNode(
+    id: leaf.id,
+    parentId: leaf.parentId,
+    nodeType: leaf.nodeType,
+    name: label,
+    code: leaf.code,
+    countryId: leaf.countryId,
+    displayOrder: leaf.displayOrder,
+    isActive: leaf.isActive,
+    createdAt: leaf.createdAt,
+    updatedAt: leaf.updatedAt,
+    children: leaf.children,
+    verificationStatus: leaf.verificationStatus,
+    fromImport: leaf.fromImport,
+  );
+}
+
+/// Retire les préfixes administratifs ("Classe de ", "Série ") pour composer un libellé court et
+/// naturel ("2nde", "A") avant de les recombiner ("2nde A").
+String shortNodeName(String name) => name
+    .replaceFirst(RegExp(r'^Classe de\s+', caseSensitive: false), '')
+    .replaceFirst(RegExp(r'^Série\s+', caseSensitive: false), '')
+    .trim();
+
 /// Une classe/série membre d'un groupe de classes jumelées (class_twin_group_members).
 class TwinGroupMember {
   final String classNodeId;

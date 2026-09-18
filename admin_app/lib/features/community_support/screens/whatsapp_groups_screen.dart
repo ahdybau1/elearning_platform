@@ -375,10 +375,10 @@ class _WhatsappGroupsScreenState extends ConsumerState<WhatsappGroupsScreen> {
                       if (classesAsync.isLoading || seriesAsync.isLoading) {
                         return const LinearProgressIndicator();
                       }
-                      final classOptions = <AcademicNode>[
-                        ...classesAsync.valueOrNull ?? [],
-                        ...seriesAsync.valueOrNull ?? [],
-                      ]..sort((a, b) => a.name.compareTo(b.name));
+                      final classOptions = mergeClassOptions(
+                        classesAsync.valueOrNull ?? [],
+                        seriesAsync.valueOrNull ?? [],
+                      );
                       selectedClassId ??= classOptions.isNotEmpty ? classOptions.first.id : null;
                       return DropdownButtonFormField<String>(
                         // ignore: deprecated_member_use
