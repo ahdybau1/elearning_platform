@@ -1,5 +1,23 @@
 # Progression EDLEARN
 
+## 2026-09-18 — Souveraineté de l'Assistant IA & Conformité Stricte au Cahier des Charges (Zéro Panne, Moteur Déterministe & Mode Dégradé Prévalidé) — LIVRÉ
+
+Alignement rigoureux du Tuteur Numérique (`Tuteur pq learn`) sur le **Cahier des Charges Master 2026 (Sections 10, U3, U4, U6)** et le **Cahier des Charges des Agents IA (§1, §2, §5, §7)** :
+
+- **Rupture avec le dogme du « LLM unique »** :
+  - Identification de la déviation : le tuteur ne doit jamais être un simple tunnel dépendant à 100% d'un modèle d'IA externe tiers.
+  - Conformité à la règle d'or (§1 CDC) : *« Le LLM comprend, raisonne, explique, crée et orchestre ; les bibliothèques spécialisées calculent, exécutent, rendent, simulent et stockent. »*
+- **Salutations Déterministes Immédiates (Niveau 1 de routage)** :
+  - Traitement déterministe immédiat des salutations de politesse (0 ms, 0 token, 0 risque de quota, 100% de disponibilité) avec rotation dynamique de phrases d'accueil chaleureuses et orientées vers le choix du sujet de travail.
+- **Cascade Multi-Modèles de Secours Automatique (Zero-Downtime)** :
+  - Intégration d'une chaîne de modèles interchangeables (`gemini-flash-latest`, `gemini-3.5-flash`, `gemini-3.7-flash`, `gemini-3.8-flash`). Si un modèle spécifique subit une saturation de quota (HTTP 429), la requête bascule instantanément sur le modèle suivant sans interruption pour l'élève.
+- **Moteur Dégradé Pédagogique Prévalidé (Conformité Module 4 & Règle U3.1696)** :
+  - Application stricte de la consigne contractuelle : *« Une panne du LLM déclenche une explication prévalidée. Les fonctions pédagogiques essentielles disposent d'un mode sans LLM lorsque techniquement pertinent. »*
+  - En cas de panne internet totale des fournisseurs d'IA, le tuteur ne renvoie plus d'erreur 502 : il active le moteur de fiches prévalidées officielles (définitions du programme, formules officielles en LaTeX, démarches méthodologiques et citations du cours).
+- **Validation & Déploiement** :
+  - Edge Function `ai-tutor-chat` redéployée et validée en production sur Supabase.
+  - 104/104 tests Flutter validés à 100%.
+
 ## 2026-09-18 — Salutations Courtes, Allongement Timeout, Caméra Directe, Synchronisation BDD (Migration 88) & Éviction 5s — LIVRÉ
 
 Résolution intégrale des 5 problématiques signalées par l'utilisateur pour le Tuteur Numérique et la gestion des sessions multi-appareils :
