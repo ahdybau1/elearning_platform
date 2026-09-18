@@ -127,7 +127,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify the 3 tabs defined in the specification
-      expect(find.text('Calcul SymPy'), findsOneWidget);
+      expect(find.text('Calcul Formel'), findsOneWidget);
       expect(find.text('Grapheur & Dérivée'), findsOneWidget);
       expect(find.text('Labos Virtuels'), findsOneWidget);
     });
@@ -272,8 +272,9 @@ void main() {
       expect(find.textContaining(r'\Delta'), findsNothing);
 
       // Verify action ribbon with interactive curve buttons
-      expect(find.text('Tracer la courbe & tangente'), findsOneWidget);
-      expect(find.text('Calculer avec SymPy'), findsOneWidget);
+      expect(find.text('Tracer la courbe'), findsOneWidget);
+      expect(find.text('Étude de la fonction'), findsOneWidget);
+      expect(find.text('Calcul formel exact'), findsOneWidget);
     });
   });
 

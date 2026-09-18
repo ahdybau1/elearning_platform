@@ -673,7 +673,7 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
               },
               icon: const Icon(Icons.calculate_rounded, size: 16),
               label: const Text(
-                'Calculateur SymPy, Grapheur & Labos Virtuels',
+                'Atelier de Calcul Formel, Grapheur & Labos',
                 style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
               ),
             ),

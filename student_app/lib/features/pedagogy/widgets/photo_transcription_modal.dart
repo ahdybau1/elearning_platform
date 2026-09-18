@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../design_system/tokens/app_colors.dart';
 import '../../../core/rendering/math_formula_view.dart';
+import 'function_study_modal.dart';
 import 'interactive_function_graph.dart';
 import 'scientific_tools_modal.dart';
 
@@ -401,7 +402,7 @@ class _PhotoTranscriptionModalState extends State<PhotoTranscriptionModal> {
           spacing: 10,
           runSpacing: 10,
           children: [
-            if (_detectedFormula != null)
+            if (_detectedFormula != null) ...[
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryCyan,
@@ -409,9 +410,9 @@ class _PhotoTranscriptionModalState extends State<PhotoTranscriptionModal> {
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                icon: const Icon(Icons.timeline_rounded, size: 18),
+                icon: const Icon(Icons.show_chart_rounded, size: 18),
                 label: const Text(
-                  'Tracer la courbe & tangente',
+                  'Tracer la courbe',
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                 ),
                 onPressed: () {
@@ -422,6 +423,26 @@ class _PhotoTranscriptionModalState extends State<PhotoTranscriptionModal> {
                   );
                 },
               ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF8B5CF6),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: const Icon(Icons.analytics_rounded, size: 18),
+                label: const Text(
+                  'Étude de la fonction',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+                onPressed: () {
+                  FunctionStudyModal.show(
+                    context,
+                    _detectedFormula!,
+                  );
+                },
+              ),
+            ],
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.tealSuccess,
@@ -431,7 +452,7 @@ class _PhotoTranscriptionModalState extends State<PhotoTranscriptionModal> {
               ),
               icon: const Icon(Icons.calculate_rounded, size: 18),
               label: const Text(
-                'Résoudre / Vérifier (SymPy)',
+                'Calcul formel exact',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
               ),
               onPressed: () {

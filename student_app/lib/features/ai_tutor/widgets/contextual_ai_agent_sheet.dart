@@ -6,6 +6,7 @@ import '../../../core/rendering/math_formula_view.dart';
 import '../../../core/rendering/ai_message_bubble_renderer.dart';
 import '../../../design_system/tokens/app_colors.dart';
 import '../../../design_system/tokens/app_radius.dart';
+import '../../pedagogy/widgets/function_study_modal.dart';
 import '../../pedagogy/widgets/interactive_function_graph.dart';
 import '../../pedagogy/widgets/scientific_tools_modal.dart';
 
@@ -242,7 +243,7 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
                         Icons.calculate_rounded,
                         color: Color(0xFF10B981),
                       ),
-                      tooltip: 'Calculateur SymPy & Outils Scientifiques',
+                      tooltip: 'Atelier de Calcul Formel & Outils Scientifiques',
                       onPressed: () {
                         ScientificToolsModal.show(
                           context,
@@ -399,95 +400,135 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
           ),
         if (widget.formulaLatex != null)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            child: Row(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              alignment: WrapAlignment.center,
               children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      InteractiveFunctionGraph.showModal(
-                        context,
-                        expression: widget.formulaLatex!,
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
+                // 1. Tracer la courbe
+                InkWell(
+                  onTap: () {
+                    InteractiveFunctionGraph.showModal(
+                      context,
+                      expression: widget.formulaLatex!,
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.cyanAccent.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.cyanAccent.withValues(alpha: 0.4),
                       ),
-                      decoration: BoxDecoration(
-                        color: AppColors.cyanAccent.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: AppColors.cyanAccent.withValues(alpha: 0.35),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.show_chart_rounded,
+                          size: 14,
+                          color: AppColors.cyanAccent,
                         ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.show_chart_rounded,
-                            size: 15,
+                        const SizedBox(width: 5),
+                        Text(
+                          'Tracer la courbe',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
                             color: AppColors.cyanAccent,
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Tracer la courbe & variations',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.cyanAccent,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      ScientificToolsModal.show(
-                        context,
-                        initialQuery: widget.formulaLatex ?? widget.topicTitle,
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
+                // 2. Étude de la fonction
+                InkWell(
+                  onTap: () {
+                    FunctionStudyModal.show(
+                      context,
+                      widget.formulaLatex!,
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8B5CF6).withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: const Color(0xFF8B5CF6).withValues(alpha: 0.4),
                       ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: const Color(
-                            0xFF10B981,
-                          ).withValues(alpha: 0.35),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.analytics_rounded,
+                          size: 14,
+                          color: Color(0xFFA78BFA),
                         ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.calculate_rounded,
-                            size: 15,
-                            color: Color(0xFF10B981),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Étude de la fonction',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFA78BFA),
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Calculer avec SymPy',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF10B981),
-                            ),
-                          ),
-                        ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // 3. Calcul formel exact
+                InkWell(
+                  onTap: () {
+                    ScientificToolsModal.show(
+                      context,
+                      initialQuery: widget.formulaLatex ?? widget.topicTitle,
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.4),
                       ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.calculate_rounded,
+                          size: 14,
+                          color: Color(0xFF10B981),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Calcul formel exact',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF10B981),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

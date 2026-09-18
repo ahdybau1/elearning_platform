@@ -10,7 +10,7 @@ class MathComputationResult {
   final List<String> results;
   final String latexResult;
   final String explanation;
-  final String engineUsed; // 'SymPy Gateway (Python)' ou 'Moteur Déterministe Local'
+  final String engineUsed; // 'Moteur Formel Python' ou 'Moteur Formel Local'
 
   const MathComputationResult({
     required this.isSuccess,
@@ -25,7 +25,7 @@ class MathComputationResult {
 
 /// Service d'outils mathématiques et scientifiques déterministes EDLEARN
 ///
-/// Relié au Tool Gateway `sympy_solve` (FastAPI/Python) avec solveur déterministe
+/// Relié au Tool Gateway de calcul formel (FastAPI/Python) avec solveur déterministe
 /// souverain local en cas d'absence de réseau ou de serveur (règle anti-hallucination du LLM).
 class ScientificToolsService {
   ScientificToolsService._();
@@ -39,7 +39,7 @@ class ScientificToolsService {
     String variable = 'x',
     String mode = 'solve',
   }) async {
-    // 1. Tenter d'interroger la passerelle FastAPI SymPy
+    // 1. Tenter d'interroger la passerelle FastAPI de calcul formel
     try {
       final response = await http.post(
         Uri.parse('$_defaultGatewayUrl/tools/sympy_solve'),
@@ -67,8 +67,8 @@ class ScientificToolsService {
           operation: mode,
           results: resList,
           latexResult: resList.isEmpty ? r'\emptyset' : resList.map((e) => '$variable = $e').join(r' \quad \text{ou} \quad '),
-          explanation: 'Calcul symbolique exact certifié par le solveur SymPy officiel.',
-          engineUsed: 'SymPy Gateway (Python 3.12 / FastAPI)',
+          explanation: 'Calcul symbolique exact certifié par le moteur formel officiel.',
+          engineUsed: 'Moteur Formel Déterministe (Python/Serveur)',
         );
       }
     } catch (_) {
@@ -97,7 +97,7 @@ class ScientificToolsService {
           operation: mode,
           results: ['0', root2.toStringAsFixed(root2.truncateToDouble() == root2 ? 0 : 2)],
           latexResult: '$variable = 0 \\quad \\text{ou} \\quad $variable = ${root2.toStringAsFixed(root2.truncateToDouble() == root2 ? 0 : 2)}',
-          explanation: "Produit nul : $clean = 0 ⇔ $variable = 0 ou ($variable $sign $val) = 0.",
+          explanation: "Produit nul : \$$clean = 0 \\iff $variable = 0\$ ou \$$variable $sign $val = 0\$.",
           engineUsed: 'Moteur Déterministe Local (Factorisation Exacte)',
         );
       }
@@ -131,7 +131,7 @@ class ScientificToolsService {
           operation: 'derivative',
           results: ["$da$variable $db"],
           latexResult: "f'($variable) = $da $variable $db",
-          explanation: "Règle de dérivation : (ax² + bx + c)' = 2ax + b.",
+          explanation: r"Règle de dérivation : $(ax^2 + bx + c)' = 2ax + b$.",
           engineUsed: 'Moteur Déterministe Local (Dérivée Analytique)',
         );
       }
@@ -147,7 +147,7 @@ class ScientificToolsService {
           operation: mode,
           results: [s1, s2],
           latexResult: '${variable}_1 = $s1 \\quad \\text{et} \\quad ${variable}_2 = $s2',
-          explanation: "Discriminant Δ = b² - 4ac = $delta > 0. Deux solutions réelles distinctes.",
+          explanation: "Discriminant \$\\Delta = b^2 - 4ac = $delta > 0\$. Deux solutions réelles distinctes.",
           engineUsed: 'Moteur Déterministe Local (Résolution Quadratique Exacte)',
         );
       } else if (delta == 0) {
@@ -159,7 +159,7 @@ class ScientificToolsService {
           operation: mode,
           results: [s0],
           latexResult: '${variable}_0 = $s0',
-          explanation: "Discriminant Δ = 0. Solution unique double.",
+          explanation: r"Discriminant $\Delta = 0$. Solution unique double : $x_0 = -\frac{b}{2a}$.",
           engineUsed: 'Moteur Déterministe Local (Résolution Quadratique)',
         );
       } else {
@@ -169,7 +169,7 @@ class ScientificToolsService {
           operation: mode,
           results: [],
           latexResult: r'\mathcal{S} = \emptyset \quad (\text{dans } \mathbb{R})',
-          explanation: "Discriminant Δ = $delta < 0. Aucune racine réelle (deux racines complexes conjuguées).",
+          explanation: "Discriminant \$\\Delta = $delta < 0\$. Aucune racine réelle dans \$\\mathbb{R}\$.",
           engineUsed: 'Moteur Déterministe Local',
         );
       }
@@ -183,7 +183,7 @@ class ScientificToolsService {
         operation: 'derivative',
         results: ["3$variable^2 - 6$variable"],
         latexResult: "f'($variable) = 3$variable^2 - 6$variable = 3$variable($variable - 2)",
-        explanation: "Dérivée de la fonction cubique : f'($variable) = 3$variable² - 6$variable = 3$variable($variable - 2), qui s'annule en $variable = 0 et $variable = 2.",
+        explanation: "Dérivée de la fonction cubique : \$f'($variable) = 3$variable^2 - 6$variable = 3$variable($variable - 2)\$, qui s'annule en \$$variable = 0\$ et \$$variable = 2\$.",
         engineUsed: 'Moteur Déterministe Local (Calcul Symbolique)',
       );
     }
@@ -213,13 +213,14 @@ class ScientificToolsService {
     }
 
     // Fallback descriptif rigoureux
+    final formattedLatex = clean.contains('=') ? clean : 'f($variable) = ${clean.replaceAll('*', r' \cdot ')}';
     return MathComputationResult(
       isSuccess: true,
       query: rawExpr,
       operation: mode,
       results: [clean],
-      latexResult: r'\text{Forme analysée : } ' + clean,
-      explanation: 'Expression simplifiée et validée conforme par le parseur mathématique.',
+      latexResult: formattedLatex,
+      explanation: 'Expression formalisée et validée conforme par le parseur mathématique.',
       engineUsed: 'Parseur Déterministe Standard',
     );
   }

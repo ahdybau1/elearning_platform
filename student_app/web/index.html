@@ -43,14 +43,67 @@
 
   <!-- MathJax v3 (tex-svg) — Moteur de secours et haute fidélité conforme Cahier Technique §2 -->
   <script>
+    window.__isMathJaxReady = false;
     window.MathJax = {
       tex: {
         inlineMath: [['$', '$'], ['\\(', '\\)']],
         displayMath: [['$$', '$$'], ['\\[', '\\]']],
-        processEscapes: true
+        processEscapes: true,
+        packages: {'[+]': ['ams', 'noerrors', 'noundefined']}
       },
       svg: {
         fontCache: 'global'
+      },
+      startup: {
+        ready: function() {
+          MathJax.startup.defaultReady();
+          window.__isMathJaxReady = true;
+          window.dispatchEvent(new CustomEvent('mathjax-ready'));
+        }
+      }
+    };
+
+    // Helper global de rendu MathJax v3 vers un conteneur HTML du DOM
+    window.__renderMathJaxToContainer = function(container, latex, isDisplay, colorHex, fontSizePx) {
+      if (!window.MathJax || !window.MathJax.tex2svg) {
+        container.innerHTML = '<span style="color:' + (colorHex || '#38bdf8') + '; font-family: serif; font-style: italic;">' + latex + '</span>';
+        return false;
+      }
+      try {
+        var node = window.MathJax.tex2svg(latex, { display: !!isDisplay });
+        container.innerHTML = '';
+        if (colorHex) {
+          node.style.color = colorHex;
+        }
+        if (fontSizePx) {
+          node.style.fontSize = fontSizePx + 'px';
+        }
+        container.appendChild(node);
+        return true;
+      } catch (err) {
+        console.warn('[MathJax] Erreur de compilation pour:', latex, err);
+        container.innerText = latex;
+        return false;
+      }
+    };
+
+    // Helper global retournant le code SVG HTML généré par MathJax v3
+    window.__mathJaxTexToSvg = function(latex, isDisplay, colorHex, fontSizePx) {
+      if (!window.MathJax || !window.MathJax.tex2svg) {
+        return null;
+      }
+      try {
+        var node = window.MathJax.tex2svg(latex, { display: !!isDisplay });
+        if (colorHex) {
+          node.style.color = colorHex;
+        }
+        if (fontSizePx) {
+          node.style.fontSize = fontSizePx + 'px';
+        }
+        return node.outerHTML;
+      } catch (err) {
+        console.warn('[MathJax] Erreur SVG pour:', latex, err);
+        return null;
       }
     };
   </script>

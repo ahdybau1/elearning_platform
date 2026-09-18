@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
@@ -5,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../design_system/tokens/app_colors.dart';
 import '../../design_system/tokens/app_radius.dart';
 import 'latex_to_unicode_converter.dart';
+import 'mathjax_bridge.dart';
 
 /// Moteurs de rendu mathématique supportés (Cahier IA Zéro-Coût §5 & Cahier Technique §2)
 enum MathRendererEngine {
@@ -15,7 +17,7 @@ enum MathRendererEngine {
 /// Gestionnaire global du moteur de rendu mathématique
 class MathRendererSettings {
   static final ValueNotifier<MathRendererEngine> currentEngine =
-      ValueNotifier<MathRendererEngine>(MathRendererEngine.katex);
+      ValueNotifier<MathRendererEngine>(kIsWeb ? MathRendererEngine.mathjax : MathRendererEngine.katex);
 
   static void toggleEngine() {
     currentEngine.value = currentEngine.value == MathRendererEngine.katex
@@ -41,7 +43,7 @@ class MathFormulaView extends StatelessWidget {
   const MathFormulaView({
     super.key,
     required this.formulaLatex,
-    this.fontSize = 15.0,
+    this.fontSize = 17.5,
     this.textColor,
     this.isDisplayMode = true,
     this.showCopyButton = true,
@@ -213,26 +215,33 @@ class MathFormulaView extends StatelessWidget {
                     final cleanLine = hasEnvironment ? line : line.replaceAll('&', ' ').trim();
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Math.tex(
-                        cleanLine,
-                        mathStyle: isDisplayMode ? MathStyle.display : MathStyle.text,
-                        textStyle: TextStyle(
-                          fontSize: fontSize,
-                          color: effectiveTextColor,
-                        ),
-                        onErrorFallback: (err) {
-                          // Fallback mathématique Unicode propre sans jamais exposer de code TeX brut à l'élève
-                          final safeMathText = LatexToUnicodeConverter.convert(cleanLine);
-                          return SelectableText(
-                            safeMathText,
-                            style: GoogleFonts.inter(
-                              fontSize: fontSize,
-                              fontWeight: FontWeight.w600,
+                      child: isMathJax
+                          ? MathJaxSvgView(
+                              latex: cleanLine,
+                              isDisplay: isDisplayMode,
                               color: effectiveTextColor,
+                              fontSize: fontSize,
+                            )
+                          : Math.tex(
+                              cleanLine,
+                              mathStyle: isDisplayMode ? MathStyle.display : MathStyle.text,
+                              textStyle: TextStyle(
+                                fontSize: fontSize,
+                                color: effectiveTextColor,
+                              ),
+                              onErrorFallback: (err) {
+                                // Fallback mathématique Unicode propre sans jamais exposer de code TeX brut à l'élève
+                                final safeMathText = LatexToUnicodeConverter.convert(cleanLine);
+                                return SelectableText(
+                                  safeMathText,
+                                  style: GoogleFonts.inter(
+                                    fontSize: fontSize,
+                                    fontWeight: FontWeight.w600,
+                                    color: effectiveTextColor,
+                                  ),
+                                );
+                              },
                             ),
-                          );
-                        },
-                      ),
                     );
                   }).toList(),
                 ),
@@ -291,26 +300,106 @@ class InlineLatexText extends StatelessWidget {
       r'\mathbb',
       r'\pm',
       r'\approx',
+      r'\implies',
+      r'\iff',
+      r'\to',
+      '<=',
+      '>=',
+      '!=',
     ];
+    if (s.contains(r'\') || s.contains('^') || s.contains('²') || s.contains('³') || s.contains('∞')) {
+      return true;
+    }
     return mathTriggers.any((t) => s.contains(t));
   }
 
   /// Prépare le texte en encadrant automatiquement les fragments LaTeX isolés sans $...$
   static String autoDelimitMath(String input) {
-    if (input.contains(r'$')) return input;
+    if (input.isEmpty) return input;
 
-    // Détecte les commandes LaTeX courantes non délimitées et les englobe dans $...$
-    var processed = input;
-    final mathCommandRegex = RegExp(
-      r'(\\(?:frac\{[^}]*\}\{[^}]*\}|sqrt(?:\[[^\]]*\])?\{[^}]*\}|lim_\{[^}]*\}|Delta|infty|le|ge|neq|times|cdot|in|forall|exists|mathbb\{[A-Z]\}|pm|approx|[a-zA-Z]\(x\)\s*=\s*[^,.;\n]+))',
-    );
+    if (!input.contains(r'$')) {
+      return _autoDelimitSegment(input);
+    }
 
-    processed = processed.replaceAllMapped(mathCommandRegex, (m) {
-      final token = m.group(1) ?? '';
-      return '\$$token\$';
-    });
+    // Découpage entre segments déjà délimités par $ et segments de texte libre
+    final parts = input.split(r'$');
+    final buffer = StringBuffer();
 
-    return processed;
+    for (int i = 0; i < parts.length; i++) {
+      if (i % 2 == 1) {
+        // Déjà à l'intérieur d'un bloc $...$ : préservé intact
+        buffer.write('\$${parts[i]}\$');
+      } else {
+        // Texte libre : auto-délimiter les formules mathématiques oubliées
+        buffer.write(_autoDelimitSegment(parts[i]));
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  static final RegExp _mathScannerPattern = RegExp(
+    // 1. Équations type f(x) = ..., f'(x) = ..., y = ..., P(x) = ...
+    r'(\b(?:[a-zA-Z]\(x\)|[a-zA-Z]\x27\(x\)|y|P\(x\))\s*=\s*[^,.;:\n]+)|'
+    // 2. Limites \lim_{...} ... ou lim_{...}
+    r'(\\?lim_\{[^}]*\}\s*[^,.:;\n]+)|'
+    // 3. Commandes LaTeX avec arguments type \frac{...}{...}, \sqrt{...}
+    r'(\\(?:frac\{[^}]*\}\{[^}]*\}|sqrt(?:\[[^\]]*\])?\{[^}]*\}))|'
+    // 4. Formes factorisées type 3x(x - 2) ou (x - 1)(x + 2)
+    r'(\b[0-9]*\*?[a-zA-Z]?\s*\([a-zA-Z]\s*[+\-]\s*[0-9]+(?:\.[0-9]+)?\)(?:\s*\([a-zA-Z]\s*[+\-]\s*[0-9]+(?:\.[0-9]+)?\))?)|'
+    // 5. Polynômes et puissances avec x^2, x^3, etc. (ex: x^2 - 5x + 6, 2x^2 - 4)
+    r'(\b[+\-]?[0-9]*\.?[0-9]*\*?[a-zA-Z](?:\^[0-9]+|\²|\³)(?:\s*[+\-*/]\s*[0-9]*\.?[0-9]*\*?[a-zA-Z](?:\^[0-9]+|\²|\³)?)*(?:\s*[+\-*/]\s*[0-9]+)?)|'
+    // 6. Commandes LaTeX simples type \Delta, \infty, \mathbb{R}, \implies, \iff, \to
+    r'(\\(?:Delta|infty|pm|mp|le|ge|neq|times|cdot|in|forall|exists|mathbb\{[A-Z]\}|mathcal\{[A-Z]\}(?:_[a-zA-Z0-9]+)?|approx|implies|iff|to|left\(|right\)))|'
+    // 7. Intervalles mathématiques type ]-\infty ; +\infty[ ou [0 ; 2]
+    r'(\[[^\]\n]+\]|\][^\[\n]+\[)|'
+    // 8. Variables indicées type x_1, x_2, x_0, x_S, y_S
+    r'(\b[a-zA-Z]_[0-9a-zA-Z]+)|'
+    // 9. Équations simples type x = 0, x = 2, 2x - 4 = 0
+    r'(\b[0-9]*\*?[a-zA-Z]\s*=\s*[+\-]?[0-9]+(?:\.[0-9]+)?)|'
+    r'(\b[0-9]*\*?[a-zA-Z]\s*[+\-]\s*[0-9]+\s*=\s*0)',
+  );
+
+  static String _autoDelimitSegment(String segment) {
+    if (segment.isEmpty) return segment;
+
+    final buffer = StringBuffer();
+    int lastEnd = 0;
+
+    for (final match in _mathScannerPattern.allMatches(segment)) {
+      if (match.start > lastEnd) {
+        buffer.write(segment.substring(lastEnd, match.start));
+      }
+
+      final rawToken = match.group(0) ?? '';
+      final token = rawToken.trim();
+
+      // Vérifier les faux positifs pour les intervalles entre crochets comme [sommet] ou [indice]
+      if (token.startsWith('[') && token.endsWith(']')) {
+        final isMathInterval = token.contains(r'\') ||
+            token.contains('∞') ||
+            token.contains(';') ||
+            token.contains(RegExp(r'[0-9]'));
+        if (!isMathInterval) {
+          buffer.write(rawToken);
+          lastEnd = match.end;
+          continue;
+        }
+      }
+
+      if (token.isNotEmpty) {
+        buffer.write('\$$token\$');
+      } else {
+        buffer.write(rawToken);
+      }
+      lastEnd = match.end;
+    }
+
+    if (lastEnd < segment.length) {
+      buffer.write(segment.substring(lastEnd));
+    }
+
+    return buffer.toString();
   }
 
   /// Découpe un fragment de texte brut en spans stylisés selon la syntaxe Markdown
@@ -418,11 +507,13 @@ class InlineLatexText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveStyle = style ?? DefaultTextStyle.of(context).style;
-    final effectiveMathColor = mathColor ?? effectiveStyle.color ?? const Color(0xFF0EA5E9);
+    final effectiveMathColor = mathColor ?? const Color(0xFF38BDF8);
 
     final normalizedText = autoDelimitMath(text);
 
     // Cas 1 : contient des délimiteurs $...$ ou $$...$$
+    // Traitement exhaustif et exclusif — si $ est présent, tout le rendu est
+    // géré ici. On ne passe PAS dans les cas 2 ou 3.
     if (normalizedText.contains(r'$')) {
       final spans = <InlineSpan>[];
       int lastEnd = 0;
@@ -436,24 +527,34 @@ class InlineLatexText extends StatelessWidget {
         final isDisplay = match.group(1) != null;
         final mathContent = (isDisplay ? match.group(1) : match.group(2))?.trim() ?? '';
 
+        final double baseFontSize = effectiveStyle.fontSize ?? 14.0;
+        final double mathFontSize = isDisplay
+            ? (baseFontSize * 1.3).clamp(17.0, 24.0)
+            : (baseFontSize * 1.1).clamp(14.0, 20.0);
+
         if (mathContent.isNotEmpty) {
           spans.add(WidgetSpan(
             alignment: PlaceholderAlignment.middle,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Math.tex(
-                mathContent,
-                mathStyle: isDisplay ? MathStyle.display : MathStyle.text,
-                textStyle: TextStyle(
-                  fontSize: effectiveStyle.fontSize ?? 14,
-                  color: effectiveMathColor,
-                  fontWeight: effectiveStyle.fontWeight,
-                ),
-                onErrorFallback: (_) => Text(
-                  LatexToUnicodeConverter.convert(mathContent),
-                  style: effectiveStyle.copyWith(
+              padding: const EdgeInsets.symmetric(horizontal: 1.5),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Math.tex(
+                  mathContent,
+                  mathStyle: isDisplay ? MathStyle.display : MathStyle.text,
+                  textStyle: TextStyle(
+                    fontSize: mathFontSize,
                     color: effectiveMathColor,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: effectiveStyle.fontWeight,
+                  ),
+                  onErrorFallback: (_) => Text(
+                    LatexToUnicodeConverter.convert(mathContent),
+                    style: effectiveStyle.copyWith(
+                      fontSize: mathFontSize,
+                      color: effectiveMathColor,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -476,20 +577,31 @@ class InlineLatexText extends StatelessWidget {
       );
     }
 
-    // Cas 2 : Pas de $ mais formule directe
+    // Cas 2 : Pas de $ mais formule directe pure (sans phrases textuelles)
     if (containsMath(normalizedText)) {
-      return Math.tex(
-        normalizedText,
-        mathStyle: MathStyle.text,
-        textStyle: TextStyle(
-          fontSize: effectiveStyle.fontSize ?? 14,
-          color: effectiveMathColor,
-        ),
-        onErrorFallback: (_) => Text(
-          LatexToUnicodeConverter.convert(normalizedText),
-          style: effectiveStyle,
-        ),
-      );
+      final isNaturalLanguageSentence = RegExp(
+        r'\b(sur|et|ou|dans|pour|donc|alors|est|avec|sans|branche|direction|asymptote|parabolique|puis|car|soit)\b',
+        caseSensitive: false,
+      ).hasMatch(normalizedText);
+
+      if (!isNaturalLanguageSentence) {
+        return FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Math.tex(
+            normalizedText,
+            mathStyle: MathStyle.text,
+            textStyle: TextStyle(
+              fontSize: effectiveStyle.fontSize ?? 14,
+              color: effectiveMathColor,
+            ),
+            onErrorFallback: (_) => Text(
+              LatexToUnicodeConverter.convert(normalizedText),
+              style: effectiveStyle.copyWith(color: effectiveMathColor),
+            ),
+          ),
+        );
+      }
     }
 
     // Cas 3 : Texte normal avec syntaxe Markdown enrichie
@@ -501,4 +613,3 @@ class InlineLatexText extends StatelessWidget {
     );
   }
 }
-

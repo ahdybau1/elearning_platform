@@ -132,7 +132,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.calculate_rounded, color: Color(0xFF10B981)),
-            tooltip: 'Calculateur SymPy & Outils Scientifiques',
+            tooltip: 'Atelier de Calcul Formel & Outils Scientifiques',
             onPressed: () {
               ScientificToolsModal.show(
                 context,
@@ -345,7 +345,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            'SymPy / Grapheur',
+                            'Calcul Formel / Grapheur',
                             style: GoogleFonts.inter(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,

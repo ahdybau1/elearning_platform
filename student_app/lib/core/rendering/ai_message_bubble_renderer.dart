@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../design_system/tokens/app_colors.dart';
 import '../../design_system/tokens/app_radius.dart';
 import '../../features/pedagogy/widgets/interactive_function_graph.dart';
+import '../../features/pedagogy/widgets/function_study_modal.dart';
 import '../../features/pedagogy/widgets/scientific_tools_modal.dart';
 import 'math_formula_view.dart';
 import 'latex_to_unicode_converter.dart';
@@ -19,7 +21,7 @@ import 'latex_to_unicode_converter.dart';
 /// - Citations et conseils (>) sous forme de callouts glassmorphism avec bordure d'accent.
 /// - Blocs de code (```lang ... ```) avec en-tête de syntaxe et bouton copier.
 /// - Schémas et images pédagogiques (![légende](url)) avec chargement progressif, gestion d'erreur hors-ligne et modal plein écran avec zoom interactif.
-/// - Détection automatique de fonctions et polynômes (ex: P(x) = 2x^2 - 4x - 6) avec actions intégrées (Tracé de courbe & Calcul SymPy).
+/// - Détection automatique de fonctions et polynômes (ex: P(x) = 2x^2 - 4x - 6) avec actions intégrées (Tracé de courbe, Étude de fonction & Calcul formel exact).
 class AiMessageBubbleRenderer extends StatelessWidget {
   final String message;
   final bool isAssistant;
@@ -94,7 +96,7 @@ class AiMessageBubbleRenderer extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: MathFormulaView(
             formulaLatex: block.content,
-            fontSize: 15,
+            fontSize: 18,
             label: 'FORMULE ANALYSÉE',
             showCopyButton: false,
           ),
@@ -574,15 +576,39 @@ class AiMessageBubbleRenderer extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  'Fonction identifiée : $cleanExpr',
-                  style: GoogleFonts.outfit(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                child: Row(
+                  children: [
+                    Text(
+                      'Fonction identifiée : ',
+                      style: GoogleFonts.outfit(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Math.tex(
+                          rawFunction,
+                          mathStyle: MathStyle.text,
+                          textStyle: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          onErrorFallback: (_) => Text(
+                            cleanExpr,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -602,7 +628,7 @@ class AiMessageBubbleRenderer extends StatelessWidget {
                 ),
                 icon: const Icon(Icons.timeline_rounded, size: 15),
                 label: const Text(
-                  'Tracer la courbe & tangente',
+                  'Tracer la courbe',
                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                 ),
                 onPressed: () {
@@ -610,6 +636,26 @@ class AiMessageBubbleRenderer extends StatelessWidget {
                     context,
                     expression: rawFunction,
                     title: 'Tracé de $cleanExpr',
+                  );
+                },
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF8B5CF6),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: const Icon(Icons.analytics_rounded, size: 15),
+                label: const Text(
+                  'Étude de la fonction',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+                onPressed: () {
+                  FunctionStudyModal.show(
+                    context,
+                    rawFunction,
                   );
                 },
               ),
@@ -622,7 +668,7 @@ class AiMessageBubbleRenderer extends StatelessWidget {
                 ),
                 icon: const Icon(Icons.calculate_rounded, size: 15),
                 label: const Text(
-                  'Calculer avec SymPy',
+                  'Calcul formel exact',
                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                 ),
                 onPressed: () {

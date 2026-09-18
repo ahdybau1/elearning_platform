@@ -4,7 +4,10 @@ import '../../../design_system/tokens/app_colors.dart';
 import '../../../design_system/tokens/app_radius.dart';
 import '../../../core/rendering/math_formula_view.dart';
 import '../../ai_tutor/widgets/contextual_ai_agent_sheet.dart';
-import '../../pedagogy/widgets/variation_table_interactive.dart';
+import '../../pedagogy/widgets/academic_variation_table_view.dart';
+import '../../pedagogy/widgets/function_study_modal.dart';
+import '../../pedagogy/widgets/interactive_function_graph.dart';
+import '../../pedagogy/widgets/scientific_tools_modal.dart';
 
 /// Écran de Correction et de Remédiation après l'exercice du Tableau de Variations
 class ExerciseCorrectionScreen extends StatelessWidget {
@@ -254,8 +257,8 @@ class ExerciseCorrectionScreen extends StatelessWidget {
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Row(
+                        children: [
+                          const Row(
                             children: [
                               Icon(Icons.menu_book_rounded,
                                   color: Color(0xFF2563EB), size: 16),
@@ -270,15 +273,16 @@ class ExerciseCorrectionScreen extends StatelessWidget {
                               ),
                             ],
                           ),
-                          SizedBox(height: 6),
-                          Text(
-                            "Soit f(x) = x³ - 3x² + 1.\nOn donne f'(x) = 3x(x - 2).",
+                          const SizedBox(height: 6),
+                          InlineLatexText(
+                            r"Soit la fonction $f(x) = x^3 - 3x^2 + 1$ définie sur $\mathbb{R}$." "\n"
+                            r"Sa dérivée est $f'(x) = 3x^2 - 6x = 3x(x - 2)$.",
                             style: TextStyle(
                               color: Color(0xFF1E293B),
-                              fontSize: 13,
-                              fontFamily: 'serif',
-                              height: 1.35,
+                              fontSize: 13.5,
+                              height: 1.4,
                             ),
+                            mathColor: Color(0xFF1D4ED8),
                           ),
                         ],
                       ),
@@ -286,40 +290,79 @@ class ExerciseCorrectionScreen extends StatelessWidget {
 
                     const SizedBox(height: 14),
 
-                    // TABLEAU CORRIGÉ
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0FDF4),
-                        borderRadius: BorderRadius.circular(AppRadius.card),
-                        border: Border.all(color: const Color(0xFFBBF7D0)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: const [
-                              Icon(Icons.check_circle_rounded,
-                                  color: Color(0xFF16A34A), size: 16),
-                              SizedBox(width: 6),
-                              Text(
-                                'TABLEAU CORRIGÉ',
-                                style: TextStyle(
-                                  color: Color(0xFF15803D),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
+                    // TABLEAU CORRIGÉ OFFICIEL ACADÉMIQUE
+                    AcademicVariationTableView(
+                      data: AcademicVariationData.fromCubicStandard(),
+                      title: 'Tableau officiel des variations (Corrigé type Bac)',
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // Boutons d'outils interactifs sur la fonction de l'exercice
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryCyan,
+                            foregroundColor: const Color(0xFF0F172A),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
-                          const SizedBox(height: 10),
-                          VariationTableInteractive(
-                            isInteractive: false,
-                            initialData:
-                                VariationTableData.defaultCubicCorrection,
+                          icon: const Icon(Icons.show_chart_rounded, size: 16),
+                          label: const Text(
+                            'Tracer la courbe',
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
                           ),
-                        ],
-                      ),
+                          onPressed: () {
+                            InteractiveFunctionGraph.showModal(
+                              context,
+                              expression: 'x^3 - 3x^2 + 1',
+                              title: 'Tracé de f(x) = x³ - 3x² + 1',
+                            );
+                          },
+                        ),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF8B5CF6),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          icon: const Icon(Icons.analytics_rounded, size: 16),
+                          label: const Text(
+                            'Étude de la fonction',
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                          ),
+                          onPressed: () {
+                            FunctionStudyModal.show(
+                              context,
+                              'x^3 - 3x^2 + 1',
+                            );
+                          },
+                        ),
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.tealSuccess,
+                            side: const BorderSide(color: AppColors.tealSuccess, width: 1.2),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          icon: const Icon(Icons.calculate_rounded, size: 16),
+                          label: const Text(
+                            'Calcul formel exact',
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                          ),
+                          onPressed: () {
+                            ScientificToolsModal.show(
+                              context,
+                              initialQuery: 'x^3 - 3x^2 + 1',
+                            );
+                          },
+                        ),
+                      ],
                     ),
 
                     const SizedBox(height: 14),

@@ -140,8 +140,9 @@ Que remarques-tu sur le sommet ?''';
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Tracer la courbe & tangente'), findsOneWidget);
-      expect(find.text('Calculer avec SymPy'), findsOneWidget);
+      expect(find.text('Tracer la courbe'), findsOneWidget);
+      expect(find.text('Étude de la fonction'), findsOneWidget);
+      expect(find.text('Calcul formel exact'), findsOneWidget);
     });
   });
 }

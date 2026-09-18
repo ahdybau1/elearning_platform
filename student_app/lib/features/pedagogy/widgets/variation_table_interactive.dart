@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import '../../../design_system/tokens/app_colors.dart';
 import '../../../design_system/tokens/app_radius.dart';
+import 'academic_variation_table_view.dart';
 
 /// Données d'un tableau de variations
 class VariationTableData {
@@ -97,6 +98,26 @@ class _VariationTableInteractiveState extends State<VariationTableInteractive> {
 
   @override
   Widget build(BuildContext context) {
+    // Si affiché en mode lecture seule (corrigé), utiliser directement la vue officielle académique
+    if (!widget.isInteractive) {
+      return const AcademicVariationTableView(
+        data: AcademicVariationData(
+          points: [
+            VariationPoint(xLatex: r'-\infty', yLatex: r'-\infty', isHigh: false),
+            VariationPoint(xLatex: '0', yLatex: '1', isHigh: true, isZeroDerivative: true),
+            VariationPoint(xLatex: '2', yLatex: '-3', isHigh: false, isZeroDerivative: true),
+            VariationPoint(xLatex: r'+\infty', yLatex: r'+\infty', isHigh: true),
+          ],
+          intervals: [
+            VariationInterval(sign: '+', isIncreasing: true),
+            VariationInterval(sign: '-', isIncreasing: false),
+            VariationInterval(sign: '+', isIncreasing: true),
+          ],
+        ),
+        title: 'Tableau officiel des variations',
+      );
+    }
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF0E1726) : Colors.white;
     final borderColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFCBD5E1);
@@ -118,136 +139,245 @@ class _VariationTableInteractiveState extends State<VariationTableInteractive> {
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          // LIGNE 1 : Valeurs de x
-          _buildRow(
-            height: 46,
-            headerWidget: Math.tex(
-              'x',
-              mathStyle: MathStyle.display,
-              textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Colonne d'en-têtes fixes
+            Container(
+              width: 85,
+              decoration: BoxDecoration(
+                color: rowAltBg,
+                border: Border(right: BorderSide(color: borderColor, width: 1.2)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    height: 44,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      border: Border(bottom: BorderSide(color: borderColor, width: 1.2)),
+                    ),
+                    child: Math.tex(
+                      'x',
+                      mathStyle: MathStyle.display,
+                      textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+                    ),
+                  ),
+                  Container(
+                    height: 58,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      border: Border(bottom: BorderSide(color: borderColor, width: 1.2)),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Signe de', style: TextStyle(fontSize: 10.5, color: subTextColor, fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 2),
+                        Math.tex("f'(x)", mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: textColor)),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Container(
+                      alignment: Alignment.center,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('Variations de', style: TextStyle(fontSize: 10.5, color: subTextColor, fontWeight: FontWeight.w500)),
+                          const SizedBox(height: 2),
+                          Math.tex('f', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textColor)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            content: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Math.tex(r'-\infty', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
-                Math.tex('0', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
-                Math.tex('2', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
-                Math.tex(r'+\infty', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
-              ],
-            ),
-            backgroundColor: rowAltBg,
-            borderColor: borderColor,
-          ),
-          Divider(height: 1, color: borderColor, thickness: 1.2),
 
-          // LIGNE 2 : Signe de f'(x)
-          _buildRow(
-            height: 60,
-            headerWidget: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('Signe de', style: TextStyle(fontSize: 11, color: subTextColor, fontWeight: FontWeight.w500)),
-                const SizedBox(height: 2),
-                Math.tex("f'(x)", mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
-              ],
-            ),
-            content: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildDropSlot(
-                  slotId: 'sign_1',
-                  width: 64,
-                  height: 42,
-                  hint: 'Signe',
-                  isSign: true,
-                  isDark: isDark,
-                ),
-                Math.tex('0', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: subTextColor)),
-                _buildDropSlot(
-                  slotId: 'sign_2',
-                  width: 64,
-                  height: 42,
-                  hint: 'Signe',
-                  isSign: true,
-                  isDark: isDark,
-                ),
-                Math.tex('0', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: subTextColor)),
-                _buildDropSlot(
-                  slotId: 'sign_3',
-                  width: 64,
-                  height: 42,
-                  hint: 'Signe',
-                  isSign: true,
-                  isDark: isDark,
-                ),
-              ],
-            ),
-            borderColor: borderColor,
-          ),
-          Divider(height: 1, color: borderColor, thickness: 1.2),
+            // Contenu en colonnes alignées rigoureusement
+            Expanded(
+              child: Row(
+                children: [
+                  // 1. Intervalle ]-inf ; 0[
+                  Expanded(
+                    flex: 5,
+                    child: Column(
+                      children: [
+                        Container(
+                          height: 44,
+                          padding: const EdgeInsets.only(left: 8),
+                          alignment: Alignment.centerLeft,
+                          decoration: BoxDecoration(
+                            color: rowAltBg,
+                            border: Border(bottom: BorderSide(color: borderColor, width: 1.2)),
+                          ),
+                          child: Math.tex(r'-\infty', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor)),
+                        ),
+                        Container(
+                          height: 58,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            border: Border(bottom: BorderSide(color: borderColor, width: 1.2)),
+                          ),
+                          child: _buildDropSlot(slotId: 'sign_1', width: 48, height: 38, hint: 'Signe', isSign: true, isDark: isDark),
+                        ),
+                        Expanded(
+                          child: Container(
+                            alignment: Alignment.center,
+                            child: _buildDropSlot(slotId: 'var_1', width: 46, height: 46, hint: 'Flèche', isSign: false, isDark: isDark),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
-          // LIGNE 3 : Variations de f
-          _buildRow(
-            height: 88,
-            headerWidget: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('Variations de', style: TextStyle(fontSize: 11, color: subTextColor, fontWeight: FontWeight.w500)),
-                const SizedBox(height: 2),
-                Math.tex('f', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textColor)),
-              ],
+                  // 2. Point x = 0 (Zéro barré officiel & Maximum local 1)
+                  Container(
+                    width: 44,
+                    decoration: BoxDecoration(
+                      border: Border(
+                        left: BorderSide(color: borderColor.withAlpha(50), width: 0.8),
+                        right: BorderSide(color: borderColor.withAlpha(50), width: 0.8),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          height: 44,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: rowAltBg,
+                            border: Border(bottom: BorderSide(color: borderColor, width: 1.2)),
+                          ),
+                          child: Math.tex('0', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
+                        ),
+                        Container(
+                          height: 58,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            border: Border(bottom: BorderSide(color: borderColor, width: 1.2)),
+                          ),
+                          child: _buildBarredZero(borderColor: borderColor, textColor: textColor, isDark: isDark),
+                        ),
+                        Expanded(
+                          child: Container(
+                            alignment: Alignment.topCenter,
+                            padding: const EdgeInsets.only(top: 10),
+                            child: Math.tex('1', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // 3. Intervalle ]0 ; 2[
+                  Expanded(
+                    flex: 5,
+                    child: Column(
+                      children: [
+                        Container(
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: rowAltBg,
+                            border: Border(bottom: BorderSide(color: borderColor, width: 1.2)),
+                          ),
+                        ),
+                        Container(
+                          height: 58,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            border: Border(bottom: BorderSide(color: borderColor, width: 1.2)),
+                          ),
+                          child: _buildDropSlot(slotId: 'sign_2', width: 48, height: 38, hint: 'Signe', isSign: true, isDark: isDark),
+                        ),
+                        Expanded(
+                          child: Container(
+                            alignment: Alignment.center,
+                            child: _buildDropSlot(slotId: 'var_2', width: 46, height: 46, hint: 'Flèche', isSign: false, isDark: isDark),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // 4. Point x = 2 (Zéro barré officiel & Minimum local -3)
+                  Container(
+                    width: 44,
+                    decoration: BoxDecoration(
+                      border: Border(
+                        left: BorderSide(color: borderColor.withAlpha(50), width: 0.8),
+                        right: BorderSide(color: borderColor.withAlpha(50), width: 0.8),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          height: 44,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: rowAltBg,
+                            border: Border(bottom: BorderSide(color: borderColor, width: 1.2)),
+                          ),
+                          child: Math.tex('2', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
+                        ),
+                        Container(
+                          height: 58,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            border: Border(bottom: BorderSide(color: borderColor, width: 1.2)),
+                          ),
+                          child: _buildBarredZero(borderColor: borderColor, textColor: textColor, isDark: isDark),
+                        ),
+                        Expanded(
+                          child: Container(
+                            alignment: Alignment.bottomCenter,
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Math.tex('-3', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // 5. Intervalle ]2 ; +inf[
+                  Expanded(
+                    flex: 5,
+                    child: Column(
+                      children: [
+                        Container(
+                          height: 44,
+                          padding: const EdgeInsets.only(right: 8),
+                          alignment: Alignment.centerRight,
+                          decoration: BoxDecoration(
+                            color: rowAltBg,
+                            border: Border(bottom: BorderSide(color: borderColor, width: 1.2)),
+                          ),
+                          child: Math.tex(r'+\infty', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor)),
+                        ),
+                        Container(
+                          height: 58,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            border: Border(bottom: BorderSide(color: borderColor, width: 1.2)),
+                          ),
+                          child: _buildDropSlot(slotId: 'sign_3', width: 48, height: 38, hint: 'Signe', isSign: true, isDark: isDark),
+                        ),
+                        Expanded(
+                          child: Container(
+                            alignment: Alignment.center,
+                            child: _buildDropSlot(slotId: 'var_3', width: 46, height: 46, hint: 'Flèche', isSign: false, isDark: isDark),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            content: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Math.tex(r'-\infty', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: subTextColor)),
-                _buildDropSlot(
-                  slotId: 'var_1',
-                  width: 56,
-                  height: 52,
-                  hint: 'Flèche',
-                  isSign: false,
-                  isDark: isDark,
-                ),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Math.tex('1', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
-                    const SizedBox(height: 12),
-                  ],
-                ),
-                _buildDropSlot(
-                  slotId: 'var_2',
-                  width: 56,
-                  height: 52,
-                  hint: 'Flèche',
-                  isSign: false,
-                  isDark: isDark,
-                ),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 12),
-                    Math.tex('-3', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
-                  ],
-                ),
-                _buildDropSlot(
-                  slotId: 'var_3',
-                  width: 56,
-                  height: 52,
-                  hint: 'Flèche',
-                  isSign: false,
-                  isDark: isDark,
-                ),
-                Math.tex(r'+\infty', mathStyle: MathStyle.text, textStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: subTextColor)),
-              ],
-            ),
-            borderColor: borderColor,
-          ),
-        ],
+          ],
+        ),
       ),
     );
 
@@ -341,41 +471,38 @@ class _VariationTableInteractiveState extends State<VariationTableInteractive> {
     );
   }
 
-  Widget _buildRow({
-    required double height,
-    String? headerTitle,
-    Widget? headerWidget,
-    required Widget content,
-    Color? backgroundColor,
+  Widget _buildBarredZero({
     required Color borderColor,
+    required Color textColor,
+    required bool isDark,
   }) {
-    return Container(
-      height: height,
-      color: backgroundColor,
-      child: Row(
+    return SizedBox(
+      width: 40,
+      height: 58,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          // En-tête gauche
           Container(
-            width: 84,
-            alignment: Alignment.center,
+            width: 1.2,
+            height: 58,
+            color: borderColor.withAlpha(140),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
             decoration: BoxDecoration(
-              border: Border(
-                right: BorderSide(color: borderColor, width: 1.2),
+              color: isDark ? const Color(0xFF0E1726) : Colors.white,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Math.tex(
+              '0',
+              mathStyle: MathStyle.text,
+              textStyle: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.bold,
+                color: textColor,
               ),
             ),
-            child: headerWidget ??
-                Text(
-                  headerTitle ?? '',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'serif',
-                  ),
-                ),
           ),
-          // Contenu étalé
-          Expanded(child: content),
         ],
       ),
     );

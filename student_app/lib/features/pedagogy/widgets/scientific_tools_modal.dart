@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/rendering/math_formula_view.dart';
+import '../../../core/rendering/mathjax_bridge.dart';
 import '../../../core/services/scientific_tools_service.dart';
 import '../../../design_system/tokens/app_colors.dart';
 import '../../../design_system/tokens/app_radius.dart';
+import 'function_study_modal.dart';
 import 'interactive_function_graph.dart';
 import 'virtual_labs/circuit_simulator_widget.dart';
 import 'virtual_labs/molecular_viewer_3d_widget.dart';
@@ -13,12 +15,12 @@ import 'virtual_labs/ballistics_simulator_widget.dart';
 /// Modal complet des Outils Scientifiques et Laboratoires Virtuels EDLEARN
 ///
 /// Conforme au Cahier Technique Frameworks & Outils IA (docs/CAHIER_TECHNIQUE_FRAMEWORKS_OUTILS_IA.md) :
-/// - SymPy : calcul exact formel déterministe
+/// - Moteur de calcul formel exact déterministe
 /// - Grapheur : repère dynamique et dérivation
 /// - Simulateurs LabAssistant : Circuits (ngspice), Molécules 3D (3Dmol.js), Python (Pyodide)
 class ScientificToolsModal extends StatefulWidget {
   final String? initialQuery;
-  final int initialTabIndex; // 0 = SymPy, 1 = Grapheur, 2 = Labos
+  final int initialTabIndex; // 0 = Calcul Formel, 1 = Grapheur, 2 = Labos
 
   const ScientificToolsModal({
     super.key,
@@ -30,12 +32,12 @@ class ScientificToolsModal extends StatefulWidget {
     BuildContext context, {
     String? initialQuery,
     int initialTabIndex = 0,
-  }) {
-    return showModalBottomSheet(
+  }) async {
+    return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => ScientificToolsModal(
+      builder: (ctx) => ScientificToolsModal(
         initialQuery: initialQuery,
         initialTabIndex: initialTabIndex,
       ),
@@ -61,7 +63,7 @@ class _ScientificToolsModalState extends State<ScientificToolsModal>
     _tabCtrl = TabController(length: 3, vsync: this, initialIndex: widget.initialTabIndex);
     _exprCtrl = TextEditingController(text: widget.initialQuery ?? '3x(x - 2)');
     if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
-      _runSympySolve('solve');
+      _runFormalSolve('solve');
     }
   }
 
@@ -72,7 +74,7 @@ class _ScientificToolsModalState extends State<ScientificToolsModal>
     super.dispose();
   }
 
-  Future<void> _runSympySolve(String mode) async {
+  Future<void> _runFormalSolve(String mode) async {
     final query = _exprCtrl.text.trim();
     if (query.isEmpty) return;
 
@@ -91,48 +93,33 @@ class _ScientificToolsModalState extends State<ScientificToolsModal>
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final sheetHeight = mediaQuery.size.height * 0.88;
+
     return Container(
-      height: MediaQuery.of(context).size.height * 0.90,
+      height: sheetHeight,
       decoration: const BoxDecoration(
-        color: Color(0xFF0A0F1D),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.modal)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black54,
-            blurRadius: 30,
-            offset: Offset(0, -5),
-          ),
-        ],
+        color: Color(0xFF0F172A), // Slate sombre premium
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         children: [
-          // Barre supérieure de drag
-          const SizedBox(height: 12),
-          Center(
-            child: Container(
-              width: 44,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-
-          // En-tête avec titre et sélecteur de moteur KaTeX / MathJax
+          // Poignée et en-tête
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: AppColors.primaryCyan.withAlpha(30),
-                    borderRadius: AppRadius.radiusSmall,
-                    border: Border.all(color: AppColors.primaryCyan.withAlpha(100)),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.calculate_rounded, color: AppColors.primaryCyan, size: 20),
+                  child: const Icon(
+                    Icons.biotech_rounded,
+                    color: AppColors.primaryCyan,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -140,7 +127,7 @@ class _ScientificToolsModalState extends State<ScientificToolsModal>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'OUTILS SCIENTIFIQUES DÉTERMINISTES',
+                        'ATELIER DE CALCUL & OUTILS SCIENTIFIQUES',
                         style: GoogleFonts.inter(
                           color: AppColors.primaryCyan,
                           fontSize: 10,
@@ -149,7 +136,7 @@ class _ScientificToolsModalState extends State<ScientificToolsModal>
                         ),
                       ),
                       Text(
-                        'SymPy • Grapheur • Simulateurs',
+                        'Calcul Formel • Grapheur • Simulateurs',
                         style: GoogleFonts.inter(
                           color: Colors.white,
                           fontSize: 15,
@@ -190,7 +177,7 @@ class _ScientificToolsModalState extends State<ScientificToolsModal>
               tabs: const [
                 Tab(
                   icon: Icon(Icons.functions_rounded, size: 16),
-                  text: 'Calcul SymPy',
+                  text: 'Calcul Formel',
                 ),
                 Tab(
                   icon: Icon(Icons.show_chart_rounded, size: 16),
@@ -210,7 +197,7 @@ class _ScientificToolsModalState extends State<ScientificToolsModal>
             child: TabBarView(
               controller: _tabCtrl,
               children: [
-                _buildSympyCalculatorTab(),
+                _buildFormalCalculatorTab(),
                 _buildGrapherTab(),
                 _buildVirtualLabsTab(),
               ],
@@ -221,8 +208,8 @@ class _ScientificToolsModalState extends State<ScientificToolsModal>
     );
   }
 
-  /// Onglet 1 : Calculateur Formel SymPy Déterministe
-  Widget _buildSympyCalculatorTab() {
+  /// Onglet 1 : Calculateur Formel Exact Déterministe
+  Widget _buildFormalCalculatorTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -247,18 +234,58 @@ class _ScientificToolsModalState extends State<ScientificToolsModal>
                   controller: _exprCtrl,
                   style: GoogleFonts.firaCode(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                   decoration: const InputDecoration(
-                    hintText: 'ex: 3x(x - 2) ou x^2 - 5x + 6',
+                    hintText: 'ex: 3x(x - 2) ou x² - 5x + 6',
                     hintStyle: TextStyle(color: Colors.white30),
                     border: InputBorder.none,
                     isDense: true,
                   ),
+                ),
+                // Aperçu dynamique MathJax de la formule en cours de saisie (moteur unifié)
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _exprCtrl,
+                  builder: (context, val, _) {
+                    final raw = val.text.trim();
+                    if (raw.isEmpty) return const SizedBox.shrink();
+                    final texPreview = _cleanExprToLatex(raw);
+                    return Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryCyan.withAlpha(20),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.primaryCyan.withAlpha(70)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Aperçu : ',
+                            style: GoogleFonts.inter(
+                              color: AppColors.primaryCyan,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: MathJaxSvgView(
+                              latex: texPreview,
+                              isDisplay: false,
+                              color: Colors.white,
+                              fontSize: 14.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
           ),
           const SizedBox(height: 14),
 
-          // Boutons d'actions SymPy
+          // Boutons d'actions Calcul Formel
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -267,39 +294,49 @@ class _ScientificToolsModalState extends State<ScientificToolsModal>
                 label: 'Résoudre = 0',
                 icon: Icons.check_circle_outline_rounded,
                 color: AppColors.primaryCyan,
-                onTap: () => _runSympySolve('solve'),
+                onTap: () => _runFormalSolve('solve'),
               ),
               _buildActionButton(
                 label: 'Calculer Dérivée',
                 icon: Icons.trending_up_rounded,
                 color: const Color(0xFF10B981),
-                onTap: () => _runSympySolve('derivative'),
+                onTap: () => _runFormalSolve('derivative'),
+              ),
+              _buildActionButton(
+                label: 'Étude Complète (Bac)',
+                icon: Icons.analytics_rounded,
+                color: const Color(0xFF8B5CF6),
+                onTap: () {
+                  final q = _exprCtrl.text.trim();
+                  FunctionStudyModal.show(context, q.isEmpty ? 'x^3 - 3x^2 + 1' : q);
+                },
               ),
               _buildActionButton(
                 label: 'Simplifier',
                 icon: Icons.auto_fix_high_rounded,
-                color: const Color(0xFF8B5CF6),
-                onTap: () => _runSympySolve('simplify'),
+                color: const Color(0xFFEC4899),
+                onTap: () => _runFormalSolve('simplify'),
               ),
               _buildActionButton(
                 label: 'Évaluer (Float)',
                 icon: Icons.exposure_rounded,
                 color: const Color(0xFFF59E0B),
-                onTap: () => _runSympySolve('evaluate'),
+                onTap: () => _runFormalSolve('evaluate'),
               ),
             ],
           ),
           const SizedBox(height: 18),
 
-          // Raccourcis d'exemples classiques du programme Bac
+          // Raccourcis d'exemples classiques du programme Bac rendus en MathJax / KaTeX vectoriel
           Wrap(
-            spacing: 6,
-            runSpacing: 6,
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              _buildExampleChip('3x(x - 2)'),
-              _buildExampleChip('x^2 - 5x + 6'),
-              _buildExampleChip('x^3 - 3x^2 + 1'),
-              _buildExampleChip('2x - 4 = 0'),
+              _buildExampleChip('3x(x - 2)', texExpr: r'$3x(x - 2)$'),
+              _buildExampleChip('x^2 - 5x + 6', texExpr: r'$x^2 - 5x + 6$'),
+              _buildExampleChip('2x^2 - 4x - 6', texExpr: r'$2x^2 - 4x - 6$'),
+              _buildExampleChip('x^3 - 3x^2 + 1', texExpr: r'$x^3 - 3x^2 + 1$'),
+              _buildExampleChip('2x - 4 = 0', texExpr: r'$2x - 4 = 0$'),
             ],
           ),
           const SizedBox(height: 20),
@@ -317,6 +354,13 @@ class _ScientificToolsModalState extends State<ScientificToolsModal>
         ],
       ),
     );
+  }
+
+  String _cleanExprToLatex(String raw) {
+    var s = raw.trim();
+    if (s.isEmpty) return '';
+    s = s.replaceAll('*', r' \cdot ');
+    return s;
   }
 
   Widget _buildActionButton({
@@ -340,14 +384,21 @@ class _ScientificToolsModalState extends State<ScientificToolsModal>
     );
   }
 
-  Widget _buildExampleChip(String expr) {
+  Widget _buildExampleChip(String expr, {String? texExpr}) {
+    final rawLatex = texExpr ?? expr;
+    final latex = rawLatex.startsWith(r'$') ? rawLatex : '\$$rawLatex\$';
     return ActionChip(
-      backgroundColor: Colors.white.withAlpha(12),
-      side: BorderSide(color: Colors.white.withAlpha(30)),
-      label: Text(expr, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+      backgroundColor: const Color(0xFF1E293B),
+      side: BorderSide(color: AppColors.primaryCyan.withAlpha(80), width: 1.1),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      label: InlineLatexText(
+        latex,
+        style: const TextStyle(color: Colors.white, fontSize: 12.5),
+        mathColor: Colors.white,
+      ),
       onPressed: () {
         _exprCtrl.text = expr;
-        _runSympySolve('solve');
+        _runFormalSolve('solve');
       },
     );
   }
@@ -407,9 +458,10 @@ class _ScientificToolsModalState extends State<ScientificToolsModal>
             label: 'SOLUTIONS FORMELLES',
           ),
           const SizedBox(height: 12),
-          Text(
+          InlineLatexText(
             res.explanation,
             style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13, height: 1.45),
+            mathColor: const Color(0xFF10B981),
           ),
         ],
       ),

@@ -59,11 +59,34 @@ class LatexToUnicodeConverter {
     r'\!': '',
 
     // Ensembles mathématiques usuels
+    r'\mathcal{D}_f': '𝒟ₜ',
+    r'\mathcal{D}': '𝒟',
+    r'\mathcal{F}': 'ℱ',
+    r'\mathcal{C}': '𝒞',
+    r'\pm\infty': '±∞',
+    r'\mp\infty': '∓∞',
     r'\mathbb{R}': 'ℝ',
     r'\mathbb{N}': 'ℕ',
     r'\mathbb{Z}': 'ℤ',
     r'\mathbb{Q}': 'ℚ',
     r'\mathbb{C}': 'ℂ',
+    r'\mathbb{R}^*': 'ℝ*',
+    r'\mathbb{R}^+': 'ℝ⁺',
+    r'\mathbb{R}^-': 'ℝ⁻',
+    // Intervalles courants
+    r']-\infty ; +\infty[': ']-∞ ; +∞[',
+    r']-\infty;+\infty[': ']-∞;+∞[',
+    // Dérivée, prime
+    r"f'": "f'",
+    r"g'": "g'",
+    r"h'": "h'",
+    // Crochets/parenthèses LaTeX
+    r'\left[': '[',
+    r'\right]': ']',
+    r'\left]': ']',
+    r'\right[': '[',
+    r'\left(': '(',
+    r'\right)': ')',
   };
 
   static final Map<String, String> _superscriptMap = {
@@ -181,10 +204,30 @@ class LatexToUnicodeConverter {
       return converted;
     });
 
-    // 10. Supprimer les commandes résiduelles (\left, \right, \Big, \mathcal, etc.)
+    // 10. Supprimer les commandes résiduelles (\left, \right, \Big, etc.) + extraire contenu \mathcal, \vec
     result = result.replaceAll(RegExp(r'\\(left|right|Big|big|Bigg|bigg)'), '');
-    result = result.replaceAll(RegExp(r'\\mathcal\{([^}]*)\}'), r'$1');
-    result = result.replaceAll(RegExp(r'\\vec\{([^}]*)\}'), r'$1');
+    // Extraire contenu de \mathcal{X} et \vec{X} (backreference correcte en Dart)
+    result = result.replaceAllMapped(
+      RegExp(r'\\mathcal\{([^}]*)\}'),
+      (m) => m.group(1) ?? '',
+    );
+    result = result.replaceAllMapped(
+      RegExp(r'\\vec\{([^}]*)\}'),
+      (m) => m.group(1) ?? '',
+    );
+    result = result.replaceAllMapped(
+      RegExp(r'\\overline\{([^}]*)\}'),
+      (m) => m.group(1) ?? '',
+    );
+    result = result.replaceAllMapped(
+      RegExp(r'\\underline\{([^}]*)\}'),
+      (m) => m.group(1) ?? '',
+    );
+    // Extraire les arguments d'autres commandes à un argument
+    result = result.replaceAllMapped(
+      RegExp(r'\\[a-zA-Z]+\{([^}]*)\}'),
+      (m) => m.group(1) ?? '',
+    );
 
     // 11. Supprimer tout antislash résiduel orphelin
     result = result.replaceAll(RegExp(r'\\[a-zA-Z]+'), '');

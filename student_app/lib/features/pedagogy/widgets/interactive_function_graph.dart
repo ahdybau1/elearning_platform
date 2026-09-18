@@ -5,6 +5,8 @@ import '../../../design_system/tokens/app_colors.dart';
 import '../../../design_system/tokens/app_radius.dart';
 import '../../../core/rendering/math_formula_view.dart';
 import '../../../core/services/scientific_tools_service.dart';
+import 'academic_variation_table_view.dart';
+import 'function_study_modal.dart';
 import 'variation_table_interactive.dart';
 
 /// Équation et propriétés d'une droite tangente
@@ -36,6 +38,9 @@ class MathFunctionSpec {
   final double? vertexX;
   final double? vertexY;
   final List<double> roots;
+  final List<double> verticalAsymptotes;
+  final List<double> horizontalAsymptotes;
+  final List<TangentLine> obliqueAsymptotes;
 
   const MathFunctionSpec({
     required this.title,
@@ -52,7 +57,50 @@ class MathFunctionSpec {
     this.vertexX,
     this.vertexY,
     this.roots = const [],
+    this.verticalAsymptotes = const [],
+    this.horizontalAsymptotes = const [],
+    this.obliqueAsymptotes = const [],
   });
+
+  MathFunctionSpec copyWith({
+    String? title,
+    String? formulaLatex,
+    double Function(double x)? f,
+    double Function(double x)? df,
+    double? xMin,
+    double? xMax,
+    double? yMin,
+    double? yMax,
+    bool? isPolynomial,
+    String? expression,
+    String? derivativeExpression,
+    double? vertexX,
+    double? vertexY,
+    List<double>? roots,
+    List<double>? verticalAsymptotes,
+    List<double>? horizontalAsymptotes,
+    List<TangentLine>? obliqueAsymptotes,
+  }) {
+    return MathFunctionSpec(
+      title: title ?? this.title,
+      formulaLatex: formulaLatex ?? this.formulaLatex,
+      f: f ?? this.f,
+      df: df ?? this.df,
+      xMin: xMin ?? this.xMin,
+      xMax: xMax ?? this.xMax,
+      yMin: yMin ?? this.yMin,
+      yMax: yMax ?? this.yMax,
+      isPolynomial: isPolynomial ?? this.isPolynomial,
+      expression: expression ?? this.expression,
+      derivativeExpression: derivativeExpression ?? this.derivativeExpression,
+      vertexX: vertexX ?? this.vertexX,
+      vertexY: vertexY ?? this.vertexY,
+      roots: roots ?? this.roots,
+      verticalAsymptotes: verticalAsymptotes ?? this.verticalAsymptotes,
+      horizontalAsymptotes: horizontalAsymptotes ?? this.horizontalAsymptotes,
+      obliqueAsymptotes: obliqueAsymptotes ?? this.obliqueAsymptotes,
+    );
+  }
 
   double evaluate(double x) => f(x);
   double evaluateDerivative(double x) => df(x);
@@ -68,6 +116,24 @@ class MathFunctionSpec {
       yIntercept: p,
       formulaText: p == 0 ? 'y = ${mStr}x' : 'y = ${mStr}x $pSign',
     );
+  }
+
+  /// Génère le tableau officiel de variations académique de la fonction
+  AcademicVariationData get academicVariationTable {
+    if (vertexX != null && vertexY != null) {
+      final isUp = df(vertexX! + 1.0) > 0;
+      return AcademicVariationData.fromQuadratic(
+        a: isUp ? 1.0 : -1.0,
+        b: 0.0,
+        c: vertexY!,
+        vertexX: vertexX!,
+        vertexY: vertexY!,
+      );
+    }
+    if (expression.contains('x³') || expression.contains('x^3') || formulaLatex.contains('x^3')) {
+      return AcademicVariationData.fromCubicStandard();
+    }
+    return AcademicVariationData.fromAffine(a: df(0), b: f(0));
   }
 
   /// Modèle cubique réaliste fidèle à la maquette EDLEARN
@@ -207,7 +273,70 @@ class MathFunctionSpec {
       );
     }
 
-    // 3. Détection fonction affine ax + b
+    // 3. Détection fonction rationnelle / homographique type k/x, 1/(x-a) ou (ax+b)/(cx+d)
+    if (noSpaces.contains('/')) {
+      final parts = noSpaces.split('/');
+      if (parts.length == 2) {
+        final numPart = parts[0].replaceAll('(', '').replaceAll(')', '');
+        final denPart = parts[1].replaceAll('(', '').replaceAll(')', '');
+
+        // Analyse dénominateur cx + d
+        double cDen = 1.0;
+        double dDen = 0.0;
+        final denMatch = RegExp(r'^([+\-]?[0-9]*\.?[0-9]*)?\*?x([+\-][0-9]+\.?[0-9]*)?$').firstMatch(denPart);
+        if (denMatch != null) {
+          var cStr = denMatch.group(1) ?? '1';
+          if (cStr.isEmpty || cStr == '+') cStr = '1';
+          if (cStr == '-') cStr = '-1';
+          cDen = double.tryParse(cStr) ?? 1.0;
+          dDen = double.tryParse(denMatch.group(2) ?? '0') ?? 0.0;
+        }
+
+        // Analyse numérateur ax + b ou constante k
+        double aNum = 0.0;
+        double bNum = 1.0;
+        if (numPart.contains('x')) {
+          final numMatch = RegExp(r'^([+\-]?[0-9]*\.?[0-9]*)?\*?x([+\-][0-9]+\.?[0-9]*)?$').firstMatch(numPart);
+          if (numMatch != null) {
+            var aStr = numMatch.group(1) ?? '1';
+            if (aStr.isEmpty || aStr == '+') aStr = '1';
+            if (aStr == '-') aStr = '-1';
+            aNum = double.tryParse(aStr) ?? 1.0;
+            bNum = double.tryParse(numMatch.group(2) ?? '0') ?? 0.0;
+          }
+        } else {
+          bNum = double.tryParse(numPart) ?? 1.0;
+        }
+
+        if (cDen != 0) {
+          final xPole = -dDen / cDen;
+          final yAsymptote = aNum / cDen; // 0 si aNum == 0 (ex: 1/x)
+          return MathFunctionSpec(
+            title: title ?? 'Fonction rationnelle (homographique)',
+            formulaLatex: rawExpr.contains('=') ? rawExpr : 'f(x) = $clean',
+            f: (x) {
+              final den = cDen * x + dDen;
+              if (den.abs() < 1e-4) return double.nan;
+              return (aNum * x + bNum) / den;
+            },
+            df: (x) {
+              final den = cDen * x + dDen;
+              if (den.abs() < 1e-4) return double.nan;
+              // Formule dérivée quotient : (a*d - b*c) / (cx + d)^2
+              return (aNum * dDen - bNum * cDen) / (den * den);
+            },
+            xMin: (xPole - 5.0).floorToDouble(),
+            xMax: (xPole + 5.0).ceilToDouble(),
+            yMin: (yAsymptote - 5.0).floorToDouble(),
+            yMax: (yAsymptote + 5.0).ceilToDouble(),
+            verticalAsymptotes: [xPole],
+            horizontalAsymptotes: [yAsymptote],
+          );
+        }
+      }
+    }
+
+    // 4. Détection fonction affine ax + b
     if (noSpaces.contains('x') && !noSpaces.contains('^') && !noSpaces.contains('/')) {
       final affineRegex = RegExp(r'^([+\-]?[0-9]*\.?[0-9]*)?\*?x([+\-][0-9]+\.?[0-9]*)?$');
       final am = affineRegex.firstMatch(noSpaces);
@@ -233,7 +362,7 @@ class MathFunctionSpec {
       );
     }
 
-    // 4. Modèle par défaut standard
+    // 5. Modèle par défaut standard
     return MathFunctionSpec(
       title: title ?? 'Fonction f(x)',
       formulaLatex: rawExpr.contains('=') ? rawExpr : 'f(x) = $clean',
@@ -269,11 +398,20 @@ class InteractiveFunctionGraph extends StatefulWidget {
     MathFunctionSpec? spec,
     String? expression,
     String? title,
+    List<double>? verticalAsymptotes,
+    List<double>? horizontalAsymptotes,
   }) async {
-    final effectiveSpec = spec ??
+    var effectiveSpec = spec ??
         (expression != null
             ? MathFunctionSpec.fromExpression(expression, title: title)
             : MathFunctionSpec.defaultCubic);
+
+    if (verticalAsymptotes != null || horizontalAsymptotes != null) {
+      effectiveSpec = effectiveSpec.copyWith(
+        verticalAsymptotes: verticalAsymptotes ?? effectiveSpec.verticalAsymptotes,
+        horizontalAsymptotes: horizontalAsymptotes ?? effectiveSpec.horizontalAsymptotes,
+      );
+    }
 
     return showDialog<void>(
       context: context,
@@ -289,16 +427,67 @@ class InteractiveFunctionGraph extends StatefulWidget {
 
 class _InteractiveFunctionGraphState extends State<InteractiveFunctionGraph> {
   late double _currentX;
+  late double _yMin;
+  late double _yMax;
+  late double _xMin;
+  late double _xMax;
+  int _yDensityMode = 0; // 0 = Aéré (espacement large anti-collision), 1 = Standard, 2 = Détaillé
 
   @override
   void initState() {
     super.initState();
     _currentX = widget.initialX;
+    _yMin = widget.functionSpec.yMin;
+    _yMax = widget.functionSpec.yMax;
+    _xMin = widget.functionSpec.xMin;
+    _xMax = widget.functionSpec.xMax;
+  }
+
+  @override
+  void didUpdateWidget(covariant InteractiveFunctionGraph oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.functionSpec != widget.functionSpec) {
+      _yMin = widget.functionSpec.yMin;
+      _yMax = widget.functionSpec.yMax;
+      _xMin = widget.functionSpec.xMin;
+      _xMax = widget.functionSpec.xMax;
+    }
+  }
+
+  Widget _buildDensityChip(String label, int mode) {
+    final isSelected = _yDensityMode == mode;
+    return InkWell(
+      onTap: () => setState(() => _yDensityMode = mode),
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primaryCyan : Colors.white.withAlpha(20),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: isSelected ? AppColors.primaryCyan : Colors.white.withAlpha(50),
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? const Color(0xFF0F172A) : Colors.white70,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final spec = widget.functionSpec;
+    final spec = widget.functionSpec.copyWith(
+      xMin: _xMin,
+      xMax: _xMax,
+      yMin: _yMin,
+      yMax: _yMax,
+    );
     final currentY = spec.f(_currentX);
     final currentSlope = spec.df(_currentX);
 
@@ -307,15 +496,15 @@ class _InteractiveFunctionGraphState extends State<InteractiveFunctionGraph> {
     Color observationColor;
     IconData observationIcon;
 
-    if (currentSlope.abs() < 0.15) {
+    if (currentSlope.abs() < 0.08) {
       observationText =
-          "Au point critique où f'(x) = 0, la tangente est horizontale (extremum local).";
-      observationColor = const Color(0xFFF59E0B); // Ambre
+          "Tangente horizontale : f'(x) ≈ 0. La courbe admet un extremum local ou un palier.";
+      observationColor = const Color(0xFF10B981); // Vert succès
       observationIcon = Icons.horizontal_rule_rounded;
     } else if (currentSlope > 0) {
       observationText =
           "La fonction est strictement croissante lorsque f'(x) > 0 (pente positive).";
-      observationColor = AppColors.tealSuccess;
+      observationColor = AppColors.primaryCyan;
       observationIcon = Icons.trending_up_rounded;
     } else {
       observationText =
@@ -328,6 +517,111 @@ class _InteractiveFunctionGraphState extends State<InteractiveFunctionGraph> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Barre d'outils interactive : Gestion de l'échelle et de la densité de l'axe Y par l'élève
+        Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F172A),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.primaryCyan.withAlpha(60)),
+          ),
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              // Indicateur des bornes de l'axe Y
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.height_rounded, size: 15, color: AppColors.primaryCyan),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Axe Y : [${_yMin.toStringAsFixed(1)} ; ${_yMax.toStringAsFixed(1)}]',
+                    style: GoogleFonts.inter(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              // Contrôle de densité Y (Aéré, Standard, Fin)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildDensityChip('Aéré', 0),
+                  const SizedBox(width: 4),
+                  _buildDensityChip('Standard', 1),
+                  const SizedBox(width: 4),
+                  _buildDensityChip('Fin', 2),
+                ],
+              ),
+              // Contrôles de zoom Y
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildZoomControl(
+                    label: 'Y -',
+                    icon: Icons.unfold_more_rounded,
+                    tooltip: 'Élargir l’axe Y (dézoomer pour voir les sommets)',
+                    onTap: () {
+                      setState(() {
+                        final span = _yMax - _yMin;
+                        final mid = (_yMax + _yMin) / 2;
+                        _yMin = (mid - span * 0.75).roundToDouble();
+                        _yMax = (mid + span * 0.75).roundToDouble();
+                      });
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  _buildZoomControl(
+                    label: 'Y +',
+                    icon: Icons.unfold_less_rounded,
+                    tooltip: 'Resserrer l’axe Y (zoomer sur les détails)',
+                    onTap: () {
+                      setState(() {
+                        final span = _yMax - _yMin;
+                        if (span > 3.0) {
+                          final mid = (_yMax + _yMin) / 2;
+                          _yMin = (mid - span * 0.35).roundToDouble();
+                          _yMax = (mid + span * 0.35).roundToDouble();
+                        }
+                      });
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  _buildZoomControl(
+                    label: '1:1',
+                    icon: Icons.aspect_ratio_rounded,
+                    tooltip: 'Repère orthonormé (échelle Y = échelle X)',
+                    onTap: () {
+                      setState(() {
+                        final xSpan = _xMax - _xMin;
+                        final midY = (_yMax + _yMin) / 2;
+                        _yMin = (midY - xSpan / 2).roundToDouble();
+                        _yMax = (midY + xSpan / 2).roundToDouble();
+                      });
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  _buildZoomControl(
+                    label: 'Auto',
+                    icon: Icons.refresh_rounded,
+                    tooltip: 'Rétablir l’échelle optimale',
+                    onTap: () {
+                      setState(() {
+                        _yMin = widget.functionSpec.yMin;
+                        _yMax = widget.functionSpec.yMax;
+                        _xMin = widget.functionSpec.xMin;
+                        _xMax = widget.functionSpec.xMax;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
         // Carte du graphe vectoriel
         Container(
           height: 380,
@@ -352,6 +646,7 @@ class _InteractiveFunctionGraphState extends State<InteractiveFunctionGraph> {
                   pointX: _currentX,
                   pointY: currentY,
                   slope: currentSlope,
+                  yDensityMode: _yDensityMode,
                 ),
               ),
               // Badge indicatif du point A
@@ -616,6 +911,40 @@ class _InteractiveFunctionGraphState extends State<InteractiveFunctionGraph> {
       ],
     );
   }
+
+  Widget _buildZoomControl({
+    required String label,
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha(16),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.white.withAlpha(30)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 12, color: AppColors.primaryCyan),
+              const SizedBox(width: 3),
+              Text(
+                label,
+                style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Painter vectoriel Canvas traçant la grille, les axes, la courbe et la tangente
@@ -624,13 +953,34 @@ class _GraphPainter extends CustomPainter {
   final double pointX;
   final double pointY;
   final double slope;
+  final int yDensityMode;
 
   _GraphPainter({
     required this.spec,
     required this.pointX,
     required this.pointY,
     required this.slope,
+    this.yDensityMode = 0,
   });
+
+  /// Calcule un pas optimal (1, 2, 5, 10...) garantissant que le nombre de graduations ne dépasse pas maxTicks
+  static double calculateNiceStep(double range, {int maxTicks = 7}) {
+    if (range <= 0) return 1.0;
+    final roughStep = range / maxTicks;
+    final exponent = math.pow(10, (math.log(roughStep) / math.ln10).floor()).toDouble();
+    final fraction = roughStep / exponent;
+    double niceFraction;
+    if (fraction <= 1.5) {
+      niceFraction = 1.0;
+    } else if (fraction <= 3.5) {
+      niceFraction = 2.0;
+    } else if (fraction <= 7.5) {
+      niceFraction = 5.0;
+    } else {
+      niceFraction = 10.0;
+    }
+    return niceFraction * exponent;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -653,27 +1003,40 @@ class _GraphPainter extends CustomPainter {
     final originX = toScreenX(0);
     final originY = toScreenY(0);
 
-    // 1. Grille fine en pointillés légers
+    // Calcul des pas adaptatifs pour X et Y (zéro chevauchement de chiffres garanti)
+    final double xRange = (spec.xMax - spec.xMin).abs();
+    final double yRange = (spec.yMax - spec.yMin).abs();
+    final double xStep = calculateNiceStep(xRange > 0 ? xRange : 1.0, maxTicks: 8);
+    final int maxTicksY = yDensityMode == 0 ? 4 : (yDensityMode == 1 ? 6 : 9);
+    final double yStep = calculateNiceStep(yRange > 0 ? yRange : 1.0, maxTicks: maxTicksY);
+
+    // 1. Grille fine en pointillés légers adaptative
     final gridPaint = Paint()
       ..color = const Color(0xFFE2E8F0)
       ..strokeWidth = 1.0;
 
-    for (int x = spec.xMin.toInt(); x <= spec.xMax.toInt(); x++) {
-      final sx = toScreenX(x.toDouble());
-      canvas.drawLine(
-        Offset(sx, padding),
-        Offset(sx, size.height - padding),
-        gridPaint,
-      );
+    final double firstGridX = (spec.xMin / xStep).floor() * xStep;
+    for (double x = firstGridX; x <= spec.xMax + 0.0001; x += xStep) {
+      final sx = toScreenX(x);
+      if (sx >= padding && sx <= size.width - padding) {
+        canvas.drawLine(
+          Offset(sx, padding),
+          Offset(sx, size.height - padding),
+          gridPaint,
+        );
+      }
     }
 
-    for (int y = spec.yMin.toInt(); y <= spec.yMax.toInt(); y++) {
-      final sy = toScreenY(y.toDouble());
-      canvas.drawLine(
-        Offset(padding, sy),
-        Offset(size.width - padding, sy),
-        gridPaint,
-      );
+    final double firstGridY = (spec.yMin / yStep).floor() * yStep;
+    for (double y = firstGridY; y <= spec.yMax + 0.0001; y += yStep) {
+      final sy = toScreenY(y);
+      if (sy >= padding && sy <= size.height - padding) {
+        canvas.drawLine(
+          Offset(padding, sy),
+          Offset(size.width - padding, sy),
+          gridPaint,
+        );
+      }
     }
 
     // 2. Axes principaux avec flèches (x et y)
@@ -723,32 +1086,106 @@ class _GraphPainter extends CustomPainter {
             fontSize: 13,
             fontWeight: FontWeight.bold));
 
-    // Graduations numériques
-    for (int x = spec.xMin.toInt(); x <= spec.xMax.toInt(); x++) {
-      if (x == 0) continue;
-      final sx = toScreenX(x.toDouble());
-      canvas.drawLine(Offset(sx, originY - 3), Offset(sx, originY + 3), axisPaint);
+    // Graduations numériques aérées et adaptatives
+    final double clampedOriginX = originX.clamp(padding + 20, size.width - padding - 20);
+    final double clampedOriginY = originY.clamp(padding + 16, size.height - padding - 16);
+
+    for (double x = firstGridX; x <= spec.xMax + 0.0001; x += xStep) {
+      if (x.abs() < 0.0001) continue;
+      final sx = toScreenX(x);
+      if (sx < padding || sx > size.width - padding) continue;
+      canvas.drawLine(Offset(sx, clampedOriginY - 3), Offset(sx, clampedOriginY + 3), axisPaint);
+      final xLabel = x.truncateToDouble() == x ? '${x.toInt()}' : x.toStringAsFixed(1);
       _drawText(
         canvas,
-        '$x',
-        Offset(sx - 6, originY + 6),
-        const TextStyle(color: Color(0xFF64748B), fontSize: 10),
+        xLabel,
+        Offset(sx - (xLabel.length * 3.5), clampedOriginY + 6),
+        const TextStyle(color: Color(0xFF64748B), fontSize: 10, fontWeight: FontWeight.w600),
       );
     }
 
-    for (int y = spec.yMin.toInt(); y <= spec.yMax.toInt(); y++) {
-      if (y == 0) continue;
-      final sy = toScreenY(y.toDouble());
-      canvas.drawLine(Offset(originX - 3, sy), Offset(originX + 3, sy), axisPaint);
+    double? lastDrawnSy;
+    for (double y = firstGridY; y <= spec.yMax + 0.0001; y += yStep) {
+      if (y.abs() < 0.0001) continue;
+      final sy = toScreenY(y);
+      if (sy < padding || sy > size.height - padding) continue;
+      if (lastDrawnSy != null && (lastDrawnSy - sy).abs() < 28.0) {
+        continue;
+      }
+      lastDrawnSy = sy;
+
+      canvas.drawLine(Offset(clampedOriginX - 3, sy), Offset(clampedOriginX + 3, sy), axisPaint);
+      final yLabel = y.truncateToDouble() == y ? '${y.toInt()}' : y.toStringAsFixed(1);
       _drawText(
         canvas,
-        '$y',
-        Offset(originX - 16, sy - 6),
-        const TextStyle(color: Color(0xFF64748B), fontSize: 10),
+        yLabel,
+        Offset(clampedOriginX - (yLabel.length > 2 ? 24 : 18), sy - 6),
+        const TextStyle(color: Color(0xFF64748B), fontSize: 10, fontWeight: FontWeight.w600),
       );
     }
 
-    // 3. Tracé déterministe de la courbe f(x)
+    // 3. Tracé des Asymptotes (verticales, horizontales et obliques)
+    final vAsymptotePaint = Paint()
+      ..color = const Color(0xFFDC2626) // Rouge éducatif
+      ..strokeWidth = 1.8
+      ..style = PaintingStyle.stroke;
+
+    for (final vx in spec.verticalAsymptotes) {
+      final sx = toScreenX(vx);
+      if (sx >= padding - 4 && sx <= size.width - padding + 4) {
+        _drawDashedLine(
+          canvas,
+          Offset(sx, padding),
+          Offset(sx, size.height - padding),
+          vAsymptotePaint,
+          dashWidth: 6,
+          dashSpace: 4,
+        );
+        final label = 'x = ${vx.truncateToDouble() == vx ? vx.toInt() : vx.toStringAsFixed(1)}';
+        _drawText(
+          canvas,
+          label,
+          Offset(sx + 5, padding + 4),
+          const TextStyle(
+            color: Color(0xFFDC2626),
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        );
+      }
+    }
+
+    final hAsymptotePaint = Paint()
+      ..color = const Color(0xFF7C3AED) // Violet éducatif
+      ..strokeWidth = 1.8
+      ..style = PaintingStyle.stroke;
+
+    for (final hy in spec.horizontalAsymptotes) {
+      final sy = toScreenY(hy);
+      if (sy >= padding - 4 && sy <= size.height - padding + 4) {
+        _drawDashedLine(
+          canvas,
+          Offset(padding, sy),
+          Offset(size.width - padding, sy),
+          hAsymptotePaint,
+          dashWidth: 6,
+          dashSpace: 4,
+        );
+        final label = 'y = ${hy.truncateToDouble() == hy ? hy.toInt() : hy.toStringAsFixed(1)}';
+        _drawText(
+          canvas,
+          label,
+          Offset(size.width - padding - 42, sy - 14),
+          const TextStyle(
+            color: Color(0xFF7C3AED),
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        );
+      }
+    }
+
+    // 4. Tracé déterministe de la courbe f(x) (avec saut des discontinuités)
     final curvePaint = Paint()
       ..color = const Color(0xFF1E3A8A) // Bleu marine profond
       ..strokeWidth = 2.8
@@ -757,11 +1194,16 @@ class _GraphPainter extends CustomPainter {
 
     final curvePath = Path();
     bool firstPoint = true;
-    const int stepCount = 180;
+    const int stepCount = 240;
     for (int i = 0; i <= stepCount; i++) {
       final t = i / stepCount;
       final mathX = spec.xMin + t * (spec.xMax - spec.xMin);
       final mathY = spec.f(mathX);
+
+      if (mathY.isNaN || mathY.isInfinite || mathY.abs() > 1000) {
+        firstPoint = true;
+        continue;
+      }
 
       final sx = toScreenX(mathX);
       final sy = toScreenY(mathY);
@@ -775,7 +1217,7 @@ class _GraphPainter extends CustomPainter {
     }
     canvas.drawPath(curvePath, curvePaint);
 
-    // 4. Tracé de la tangente en pointillés oranges (y - y0 = slope * (x - x0))
+    // 5. Tracé de la tangente en pointillés oranges (y - y0 = slope * (x - x0))
     final tangentPaint = Paint()
       ..color = const Color(0xFFF97316) // Orange vif
       ..strokeWidth = 2.2
@@ -796,7 +1238,7 @@ class _GraphPainter extends CustomPainter {
       dashSpace: 4,
     );
 
-    // 5. Point A avec anneau d'accent
+    // 6. Point A avec anneau d'accent
     final screenPointX = toScreenX(pointX);
     final screenPointY = toScreenY(pointY);
 
@@ -878,7 +1320,9 @@ class _GraphPainter extends CustomPainter {
   bool shouldRepaint(covariant _GraphPainter oldDelegate) {
     return oldDelegate.pointX != pointX ||
         oldDelegate.pointY != pointY ||
-        oldDelegate.slope != slope;
+        oldDelegate.slope != slope ||
+        oldDelegate.yDensityMode != yDensityMode ||
+        oldDelegate.spec != spec;
   }
 }
 
@@ -893,7 +1337,7 @@ class _FunctionGraphModalDialog extends StatefulWidget {
 }
 
 class _FunctionGraphModalDialogState extends State<_FunctionGraphModalDialog> {
-  int _activeTabIndex = 0; // 0: Graphe & Tangente, 1: Variations, 2: Solveur SymPy
+  int _activeTabIndex = 0; // 0: Graphe & Tangente, 1: Variations, 2: Solveur Formel
   MathComputationResult? _solverResult;
   bool _isSolving = false;
 
@@ -973,6 +1417,27 @@ class _FunctionGraphModalDialogState extends State<_FunctionGraphModalDialog> {
                       ],
                     ),
                   ),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF8B5CF6).withAlpha(50),
+                      foregroundColor: const Color(0xFFA78BFA),
+                      side: const BorderSide(color: Color(0xFF8B5CF6), width: 1.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    icon: const Icon(Icons.analytics_rounded, size: 15),
+                    label: const Text(
+                      'Étude de la fonction',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: () {
+                      final expr = widget.spec.expression.isNotEmpty
+                          ? widget.spec.expression
+                          : widget.spec.formulaLatex;
+                      FunctionStudyModal.show(context, expr);
+                    },
+                  ),
+                  const SizedBox(width: 6),
                   IconButton(
                     icon: const Icon(Icons.close_rounded, color: Colors.white70),
                     onPressed: () => Navigator.of(context).pop(),
@@ -1073,6 +1538,11 @@ class _FunctionGraphModalDialogState extends State<_FunctionGraphModalDialog> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            AcademicVariationTableView(
+              data: widget.spec.academicVariationTable,
+              title: 'Tableau Officiel des Variations',
+            ),
+            const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -1081,15 +1551,15 @@ class _FunctionGraphModalDialogState extends State<_FunctionGraphModalDialog> {
                 border: Border.all(color: const Color(0xFF334155)),
               ),
               child: Text(
-                'Étude du signe de f\'(x) et des variations de f(x) :',
+                'Entraînement interactif : complète les signes et les flèches de variation',
                 style: GoogleFonts.inter(
-                  fontSize: 13,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: Colors.white70,
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             const VariationTableInteractive(isInteractive: true),
           ],
         );
@@ -1147,9 +1617,10 @@ class _FunctionGraphModalDialogState extends State<_FunctionGraphModalDialog> {
                     label: 'SOLUTIONS (RACINES / EXTREMA)',
                   ),
                   const SizedBox(height: 10),
-                  Text(
+                  InlineLatexText(
                     res.explanation,
                     style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFFE2E8F0)),
+                    mathColor: AppColors.tealSuccess,
                   ),
                 ],
               ),
