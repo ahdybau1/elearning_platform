@@ -1,6 +1,134 @@
 # Progression EDLEARN
 
-## 2026-09-18 — Souveraineté de l'Assistant IA & Conformité Stricte au Cahier des Charges (Zéro Panne, Moteur Déterministe & Mode Dégradé Prévalidé) — LIVRÉ
+## 2026-09-18 — Écran « Gestion des Leçons » Aligné sur l'Arbre Académique Hiérarchique (AcademicPathSelector) — LIVRÉ
+
+Extension du sélecteur de classe en cascade (`AcademicPathSelector`, livré précédemment pour l'écran « Matières par classe » — cf. commit `2a26595`) à l'écran `lessons_manager_screen.dart`, par cohérence : toute liste plate de classes mélangeant des sous-systèmes différents doit disparaître au profit d'une navigation explicite dans l'Arbre Académique.
+
+- **`lessons_manager_screen.dart`** :
+  - Remplacement du menu déroulant plat « Classe : » par `AcademicPathSelector` (navigation Sous-système → Type d'enseignement → Cycle → Classe → Série/Spécialité, ou recherche directe).
+  - Suppression de l'auto-sélection implicite de « la première classe » au chargement : retour utilisateur explicite déjà appliqué ailleurs (cf. [[project_generalized_node_scoping]]) — l'administrateur choisit sa classe, l'application ne devine plus à sa place. Le filet de sécurité contre une classe désactivée entre-temps est conservé (retour à « aucune sélection », plus de plantage).
+
+- **Non-régression** : ce changement cassait silencieusement 7 tests existants (`lessons_manager_ergonomics_test.dart`, `lessons_loading_test.dart`) qui présumaient encore l'ancien dropdown et l'auto-sélection. Tests mis à jour pour piloter le nouveau sélecteur (recherche rapide) et pour vérifier le nouveau message d'état vide (l'ancien texte « Aucune classe configurée » du dropdown supprimé est remplacé par le message de la zone de contenu « Configurez d'abord l'Arbre Académique »).
+  - `admin_app` : `flutter analyze` sans erreur, **85/85 tests** passés.
+
+## 2026-09-18 — Fix Critique Rendu MathJax : IFrame Self-Contained + MathJax Bundlé Local (CanvasKit Compatible) — LIVRÉ
+
+### Diagnostic Racine Identifié
+
+Le renderer web utilisait `HtmlElementView` + `DivElement` + `dart:js` pour afficher les formules MathJax.
+**Ce mécanisme est incompatible avec le renderer CanvasKit** (WebGL) utilisé par le build Flutter Web release.
+Résultat : toutes les formules via `MathJaxSvgView` apparaissaient vides silencieusement sur le web.
+
+De plus, l'aperçu live dans l'Atelier de Calcul appelait `Math.tex()` de `flutter_math_fork` directement,
+court-circuitant le moteur de rendu unifié `MathFormulaView`.
+
+### Solution Implémentée
+
+- **`mathjax_bridge_web.dart` — Réécriture complète** :
+  - Remplacement de `DivElement + HtmlElementView + dart:js` par **`IFrameElement` avec `srcdoc` auto-contenant**.
+  - Chaque formule est rendue dans son propre iframe HTML complet avec MathJax chargé depuis `/mathjax/tex-svg.js` (local, aucune dépendance CDN au moment du rendu).
+  - L'iframe est `sandbox="allow-scripts allow-same-origin"` — sécurisé, même origine.
+  - La factory est enregistrée une seule fois par `(latex_hash + mode + color + fontSize)` pour mutualiser les vues.
+  - Compatible CanvasKit : les iframes sont des platform views overlay gérés correctement par Flutter Web.
+
+- **`web/mathjax/tex-svg.js` — MathJax v3 bundlé localement** :
+  - Téléchargement de MathJax v3 `tex-svg.js` (~2MB) dans `web/mathjax/` pour éliminer la dépendance CDN.
+  - Inclus automatiquement dans le build Web Flutter (dossier `web/` copié vers `build/web/`).
+  - Mis en cache navigateur après premier chargement → zéro latence CDN dès la 2e visite.
+
+- **`scientific_tools_modal.dart` — Aperçu live unifié** :
+  - Remplacement du `Math.tex()` direct (flutter_math_fork) par `MathJaxSvgView` via le bridge unifié.
+  - L'aperçu live de la saisie utilise maintenant le même moteur que le reste de l'application.
+
+### Fichiers Modifiés
+- `lib/core/rendering/mathjax_bridge_web.dart` — Réécriture IFrame
+- `lib/features/pedagogy/widgets/scientific_tools_modal.dart` — Aperçu unifié
+- `web/mathjax/tex-svg.js` — MathJax bundlé local [NEW]
+
+## 2026-09-18 — Rigueur Mathématique Baccalauréat : Tableau de Variations Officiel CustomPainter, Démonstrations Déroulées Pas à Pas, Graduations Axe Y Adaptatives & Aperçu KaTeX Temps Réel — LIVRÉ
+
+Résolution exhaustive des 5 exigences critiques de rigueur académique et d'ergonomie scientifique :
+
+- **1. Atelier de Calcul Formel (`scientific_tools_modal.dart`)** :
+  - **Éradication des équations en texte brut avec accents circonflexes** : Les équations d'exemples et de suggestions ne s'affichent plus sous forme brute comme `x^2`, mais sont converties en rendu vectoriel KaTeX propre via `Math.tex` ($x^2 - 5x + 6$, $3x(x - 2)$, $2x^2 - 4x - 6$, $x^3 - 3x^2 + 1$).
+  - **Aperçu vectoriel KaTeX en direct** : Ajout d'une carte d'aperçu dynamique (`ValueListenableBuilder<TextEditingValue>`) positionnée directement sous le champ de saisie, permettant à l'élève de voir sa formule mathématique mise en page au fur et à mesure de sa frappe.
+
+- **2. Étude Complète de la Fonction Déroulée Pas à Pas (`function_study_modal.dart`)** :
+  - Remplacement des synthèses succinctes par de véritables démonstrations conformes aux standards des corrigés officiels du Baccalauréat :
+    - **Domaine de définition $\mathcal{D}_f$** : Justification mathématique par absence de dénominateur nul et de racine carrée négative, avec écriture ensembliste des intervalles.
+    - **Limites aux bornes $\pm\infty$** : Détail complet de la levée d'indétermination par factorisation par le monôme dominant ($x^2$ ou $x^3$), comparaison des termes quotients tendant vers 0 ($\lim \frac{b}{ax} = 0$), calcul du produit des limites et rappel du théorème officiel du cours.
+    - **Dérivation pas à pas** : Rappel des règles opératoires ($(x^n)' = n x^{n-1}$, $(ax)' = a$, $(c)' = 0$) et étapes de factorisation.
+    - **Signe de la dérivée & Sens de variation** : Résolution de $f'(x) = 0$, règle du signe du binôme ou du trinôme, et déduction rigoureuse des intervalles de croissance et décroissance.
+    - **Coordonnées du sommet & Concavité** : Calcul de $x_S = -\frac{b}{2a}$, calcul détaillé de $y_S = f(x_S)$ par substitution de chaque valeur numérique, justification de la concavité selon le signe de $a$, et équation de la tangente horizontale $y = y_S$.
+    - **Zéros et Discriminant $\Delta$** : Énoncé de la formule $\Delta = b^2 - 4ac$, substitution numérique intégrale avec étapes de calcul, condition $\Delta > 0$, calculs fractionnaires séparés de $x_1$ et $x_2$, et forme factorisée $a(x - x_1)(x - x_2)$.
+    - **Intersection avec l'axe $(Oy)$** : Calcul explicite de $f(0)$ et coordonnées du point $C(0 ; c)$.
+
+- **3. Tableau de Variations Officiel du Lycée Français (`academic_variation_table_view.dart`)** :
+  - Fin des pilules de texte simplistes avec flèches verticales.
+  - Conception d'un composant de rendu académique officiel propulsé par un `CustomPainter` vectoriel de précision (`_AcademicVariationPainter`) :
+    - Structure rigoureuse à **3 lignes officielles** : $x$, $f'(x)$ (signe), et variations de $f$.
+    - Ligne d'en-tête latérale sombre avec bordures séparatrices de style livre de cours.
+    - Points critiques avec **zéros barrés** positionnés sur les traits verticaux de séparation sous les extrema.
+    - Support des **doubles barres verticales** pour les valeurs interdites et asymptotes.
+    - **Vraies flèches vectorielles diagonales** montant du point bas vers le point haut (ou descendant du point haut vers le point bas), avec positionnement typographique des limites ($+\infty$, $-\infty$) et des extrema.
+
+- **4. Graduation de l'Axe Y & Contrôles Interactifs Élève (`interactive_function_graph.dart`)** :
+  - **Élimination des numéros d'ordonnées trop serrés** : Implémentation d'un algorithme de "pas élégant" adaptatif (`calculateNiceStep` $\in \{1, 2, 5, 10, 20\}$) calibrant les graduations et le quadrillage pour afficher entre 5 et 8 graduations maximum, évitant tout chevauchement ou saturation visuelle.
+  - **Barre d'outils interactive de l'Axe Y** : L'élève dispose désormais de boutons de commande directe :
+    - `Y +` : Resserrer l'échelle verticale (zoomer sur les détails locaux).
+    - `Y -` : Élargir l'échelle verticale (dézoomer pour observer les sommets élevés).
+    - `1:1` : Basculer instantanément en repère orthonormé (échelle X = échelle Y).
+    - `Auto` : Rétablir l'échelle optimale calculée automatiquement.
+
+- **5. Fiabilisation du Moteur de Rendu LaTeX (`math_formula_view.dart` & `latex_to_unicode_converter.dart`)** :
+  - Amélioration de `autoDelimitMath` pour encapsuler fidèlement les polynômes et puissances ($x^2$, $x^3$) sans altérer le texte environnant en français.
+  - Sécurisation de `InlineLatexText` pour empêcher le crash de KaTeX sur les phrases explicatives non délimitées.
+
+- **6. Validation & Non-Régression Totale** :
+  - **112/112 tests Flutter passés avec succès** (8 nouveaux tests ciblés dans `academic_math_and_variation_test.dart` + 104 tests existants).
+  - `flutter analyze` : 0 erreur de compilation, 0 problème sur tous les modules.
+  - Build Web de production (`flutter build web --release`) achevé avec succès, serveur actif sur le port 8080.
+
+## 2026-09-18 — Typographie KaTeX Agrandie, Éradication Totale de SymPy, Module d'Étude de Fonction avec Tableau de Variations & Tracé des Asymptotes — LIVRÉ
+
+Livraison complète des exigences d'alignement mathématique et pédagogique :
+
+- **Typographie Mathématique Agrandie & Alignement Optique (KaTeX)** :
+  - Rehaussement du dimensionnement des formules mathématiques KaTeX dans `math_formula_view.dart` (`fontSize` par défaut augmenté de 15.0 à **17.5**, multiplicateur optique de **1.22x** pour le LaTeX inline et **1.3x** pour le display math).
+  - Élimination complète de la sensation de formules "miniatures" ou décalées par rapport au texte environnant. Les symboles ($\Delta$, $x$, $\pm\infty$, $\frac{a}{b}$) s'alignent optiquement sur la hauteur du texte courant.
+  - Taille du bloc `displayMath` dans `ai_message_bubble_renderer.dart` rehaussée de 15 à **18**.
+
+- **Éradication Totale de « SymPy » de Toute l'Application Étudiante** :
+  - Conformité stricte : le nom de la bibliothèque technique interne n'est jamais divulgué à l'élève.
+  - Renommage intégral en termes académiques et scolaires clairs :
+    - `Calcul SymPy` ➔ **« Calcul Formel »** / **« Calcul formel exact »**.
+    - `Calculateur SymPy` ➔ **« Atelier de Calcul Formel »**.
+    - Mentions internes dans les services et modales adaptées en *« Moteur de Calcul Formel Déterministe »*.
+    - Purgé dans tous les écrans (`ai_message_bubble_renderer`, `scientific_tools_modal`, `photo_transcription_modal`, `interactive_function_graph`, `contextual_ai_agent_sheet`, `lesson_reader_screen`, `exercise_runner_screen`).
+
+- **Bandeau d'Action Interactif sous Toute Fonction Détectée** :
+  - Restructuration du bandeau pédagogique sous les fonctions et polynômes en **3 actions directes et distinctes** :
+    1. **[Tracer la courbe]** (`InteractiveFunctionGraph.showModal`) : ouvre le repère cartésien avec point $A$ mobile, tangente pointillée réactive et calcul de la pente $f'(x)$.
+    2. **[Étude de la fonction]** (`FunctionStudyModal.show`) : ouvre l'analyse mathématique complète avec domaine $\mathcal{D}_f$, limites en $\pm\infty$, dérivée $f'(x)$, racines, ordonnée à l'origine, asymptotes et **Tableau de Variations Complet**.
+    3. **[Calcul formel exact]** (`ScientificToolsModal.show`) : ouvre l'Atelier de Calcul Formel (résolution exacte, dérivée, simplification, factorisation).
+
+- **Module d'Étude Complète de Fonction & Tableau de Variations (`FunctionStudyModal`)** :
+  - Calcul déterministe certifié de toutes les caractéristiques d'une fonction (polynômes du second degré, degré 3, fonctions rationnelles, affines).
+  - Composant de rendu dédié `VariationTableViewer` affichant le tableau officiel de variations :
+    - Ligne 1 : Valeurs remarquables de $x$ ($-\infty$, racines de $f'$, pôles, $+\infty$).
+    - Ligne 2 : Signe de la dérivée $f'(x)$ ($+$, $0$, $-$).
+    - Ligne 3 : Variations de $f(x)$ avec flèches ascendantes ($\nearrow$), descendantes ($\searrow$), valeurs aux extrema et limites aux bornes.
+  - Bouton direct d'action intégré : **[Tracer la courbe dans le repère interactif]**.
+
+- **Grapheur Vectoriel Amélioré avec Tracé des Asymptotes & Sécurisation des Discontinuités** :
+  - Support natif des **asymptotes verticales** ($x = x_0$, tracées en rouge pointillé) et **asymptotes horizontales** ($y = y_0$, tracées en violet pointillé) avec étiquettes mathématiques vectorielles automatiques.
+  - Détection automatique des fonctions rationnelles et homographiques type $k/x$, $1/(x-a)$, $(ax+b)/(cx+d)$ dans `MathFunctionSpec.fromExpression`.
+  - Sécurisation du tracé vectoriel face aux discontinuités ($NaN$, $\infty$, saut de pôle) : le tracé coupe proprement la courbe sans relier artificiellement $-\infty$ et $+\infty$.
+
+- **Validation & Non-Régression** :
+  - **104/104 tests Flutter unitaires et d'intégration validés avec succès**.
+  - Compilation Web (`flutter build web --release`) réussie en 108s, immédiatement servie sur le port 8080.
+
 
 Alignement rigoureux du Tuteur Numérique (`Tuteur pq learn`) sur le **Cahier des Charges Master 2026 (Sections 10, U3, U4, U6)** et le **Cahier des Charges des Agents IA (§1, §2, §5, §7)** :
 
