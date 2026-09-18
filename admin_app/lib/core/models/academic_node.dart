@@ -87,10 +87,16 @@ class AcademicNode {
         return NodeType.section;
       case 'education_type':
         return NodeType.educationType;
+      case 'cycle':
+        return NodeType.cycle;
       case 'class':
         return NodeType.classType;
+      case 'family':
+        return NodeType.family;
       case 'series':
         return NodeType.series;
+      case 'specialty':
+        return NodeType.specialty;
       default:
         return NodeType.country;
     }

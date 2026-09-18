@@ -2507,9 +2507,12 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen>
                 );
               },
             ),
-            // Matières enseignées si c'est une classe ou série
+            // Matières enseignées si c'est une classe, une série ou une spécialité
+            // (les filières techniques/professionnelles rattachent le contenu au
+            // niveau spécialité plutôt qu'au niveau série — migration 88).
             if (currentNode.nodeType == NodeType.classType ||
-                currentNode.nodeType == NodeType.series)
+                currentNode.nodeType == NodeType.series ||
+                currentNode.nodeType == NodeType.specialty)
               Consumer(
                 builder: (context, ref, _) {
                   final subjectsAsync =

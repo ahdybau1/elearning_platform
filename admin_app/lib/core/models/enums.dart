@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
 
-enum NodeType { country, section, educationType, classType, series }
+enum NodeType {
+  country,
+  section,
+  educationType,
+  cycle,
+  classType,
+  family,
+  series,
+  specialty,
+}
 
 enum AccessLevel { complete, limited, none }
 
@@ -123,36 +132,51 @@ final Map<NodeType, Color> nodeTypeColors = {
   NodeType.country: const Color(0xFF10B981),
   NodeType.section: const Color(0xFF3B82F6),
   NodeType.educationType: const Color(0xFF6366F1),
+  NodeType.cycle: const Color(0xFF8B5CF6),
   NodeType.classType: const Color(0xFFF59E0B),
+  NodeType.family: const Color(0xFFEC4899),
   NodeType.series: const Color(0xFF06B6D4),
+  NodeType.specialty: const Color(0xFFEF4444),
 };
 
 final Map<NodeType, IconData> nodeTypeIcons = {
   NodeType.country: Icons.flag_rounded,
   NodeType.section: Icons.domain_rounded,
   NodeType.educationType: Icons.school_rounded,
+  NodeType.cycle: Icons.layers_rounded,
   NodeType.classType: Icons.class_rounded,
+  NodeType.family: Icons.category_rounded,
   NodeType.series: Icons.view_module_rounded,
+  NodeType.specialty: Icons.workspace_premium_rounded,
 };
 
 final Map<NodeType, String> nodeTypeLabels = {
   NodeType.country: 'Pays',
   NodeType.section: 'Section',
   NodeType.educationType: "Type d'Enseignement",
+  NodeType.cycle: 'Cycle',
   NodeType.classType: 'Classe',
+  NodeType.family: 'Famille',
   NodeType.series: 'Série',
+  NodeType.specialty: 'Spécialité',
 };
 
 /// Types d'enfants AUTORISÉS sous chaque type de nœud (plusieurs possibles, pas un seul type
 /// imposé) — permet de sauter des niveaux intermédiaires (ex: ajouter une Classe directement sous
-/// un Pays sans devoir créer Section puis Type d'Enseignement). Une Série reste terminale : le
+/// un Pays sans devoir créer Section puis Type d'Enseignement). Reflète aussi l'arbre camerounais
+/// réel (migration 88) : education_type -> cycle -> classe -> série|famille -> (sous-famille)*
+/// -> spécialité ; certaines filières techniques anglophones rattachent un cycle directement sous
+/// une famille (ex. Industrial -> First/Second Cycle). Spécialité et Série restent terminales : le
 /// contenu pédagogique s'y rattache via class_node_id, pas via l'arbre.
 final Map<NodeType, List<NodeType>> childNodeTypeOptions = {
   NodeType.country: [NodeType.section, NodeType.educationType, NodeType.classType],
   NodeType.section: [NodeType.educationType, NodeType.classType],
-  NodeType.educationType: [NodeType.classType],
-  NodeType.classType: [NodeType.series],
+  NodeType.educationType: [NodeType.cycle, NodeType.classType, NodeType.family],
+  NodeType.cycle: [NodeType.classType],
+  NodeType.classType: [NodeType.series, NodeType.family],
+  NodeType.family: [NodeType.cycle, NodeType.family, NodeType.specialty],
   NodeType.series: [],
+  NodeType.specialty: [],
 };
 
 
@@ -164,10 +188,16 @@ String nodeTypeToDb(NodeType type) {
       return 'section';
     case NodeType.educationType:
       return 'education_type';
+    case NodeType.cycle:
+      return 'cycle';
     case NodeType.classType:
       return 'class';
+    case NodeType.family:
+      return 'family';
     case NodeType.series:
       return 'series';
+    case NodeType.specialty:
+      return 'specialty';
   }
 }
 
@@ -179,10 +209,16 @@ String formatNodeTypeString(String raw) {
       return 'Section';
     case 'education_type':
       return 'Type d\'Enseignement';
+    case 'cycle':
+      return 'Cycle';
     case 'class':
       return 'Classe';
+    case 'family':
+      return 'Famille';
     case 'series':
       return 'Série';
+    case 'specialty':
+      return 'Spécialité';
     default:
       return raw;
   }
