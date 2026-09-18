@@ -6,6 +6,7 @@ import '../../../core/models/academic_node.dart';
 import '../../../core/models/subscription_models.dart';
 import '../../../core/providers/data_providers.dart';
 import '../../../core/widgets/app_dialog_title.dart';
+import '../../../core/widgets/class_node_picker_field.dart';
 
 class SubscriptionTiersScreen extends ConsumerStatefulWidget {
   const SubscriptionTiersScreen({super.key});
@@ -380,53 +381,11 @@ class _SubscriptionTiersScreenState
                       },
                     ),
                     const SizedBox(height: 12),
-                    Consumer(
-                      builder: (context, ref, _) {
-                        final classesAsync = ref.watch(
-                          nodesByTypeProvider('class'),
-                        );
-                        final seriesAsync = ref.watch(
-                          nodesByTypeProvider('series'),
-                        );
-                        bool inSelectedCountry(AcademicNode c) =>
-                            selectedCountryId == null ||
-                            c.countryId == selectedCountryId;
-                        final options = mergeClassOptions(
-                          (classesAsync.valueOrNull ?? [])
-                              .where(inSelectedCountry)
-                              .toList(),
-                          (seriesAsync.valueOrNull ?? [])
-                              .where(inSelectedCountry)
-                              .toList(),
-                        );
-                        return DropdownButtonFormField<String?>(
-                          // ignore: deprecated_member_use
-                          value: selectedClassNodeId,
-                          dropdownColor: AppTheme.primaryDark,
-                          style: const TextStyle(color: Colors.white),
-                          isExpanded: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Classe / Série',
-                            prefixIcon: Icon(Icons.school_rounded, size: 20),
-                          ),
-                          items: options
-                              .map(
-                                (c) => DropdownMenuItem<String?>(
-                                  value: c.id,
-                                  child: Text(
-                                    c.name,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: selectedCountryId == null
-                              ? null
-                              : (v) => setModalState(
-                                  () => selectedClassNodeId = v,
-                                ),
-                        );
-                      },
+                    ClassNodePickerField(
+                      label: 'Classe / Série',
+                      selectedId: selectedClassNodeId,
+                      enabled: selectedCountryId != null,
+                      onChanged: (v) => setModalState(() => selectedClassNodeId = v),
                     ),
                   ],
                   if (submitError != null) ...[

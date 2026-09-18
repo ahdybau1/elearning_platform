@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../core/models/academic_node.dart';
 import '../../../core/models/community_models.dart';
 import '../../../core/providers/data_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_dialog_title.dart';
+import '../../../core/widgets/class_node_picker_field.dart';
 
 class WhatsappGroupsScreen extends ConsumerStatefulWidget {
   const WhatsappGroupsScreen({super.key});
@@ -368,28 +368,9 @@ class _WhatsappGroupsScreenState extends ConsumerState<WhatsappGroupsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Consumer(
-                    builder: (context, ref, _) {
-                      final classesAsync = ref.watch(nodesByTypeProvider('class'));
-                      final seriesAsync = ref.watch(nodesByTypeProvider('series'));
-                      if (classesAsync.isLoading || seriesAsync.isLoading) {
-                        return const LinearProgressIndicator();
-                      }
-                      final classOptions = mergeClassOptions(
-                        classesAsync.valueOrNull ?? [],
-                        seriesAsync.valueOrNull ?? [],
-                      );
-                      selectedClassId ??= classOptions.isNotEmpty ? classOptions.first.id : null;
-                      return DropdownButtonFormField<String>(
-                        // ignore: deprecated_member_use
-                        value: selectedClassId,
-                        dropdownColor: AppTheme.primaryDark,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(labelText: 'Classe / Série'),
-                        items: classOptions.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-                        onChanged: (v) => setModalState(() => selectedClassId = v),
-                      );
-                    },
+                  ClassNodePickerField(
+                    selectedId: selectedClassId,
+                    onChanged: (v) => setModalState(() => selectedClassId = v),
                   ),
                   const SizedBox(height: 12),
                   TextField(

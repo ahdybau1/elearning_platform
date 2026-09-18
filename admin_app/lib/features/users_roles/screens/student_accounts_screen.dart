@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../core/models/academic_node.dart';
 import '../../../core/models/admin_models.dart';
 import '../../../core/providers/data_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_dialog_title.dart';
+import '../../../core/widgets/class_node_picker_field.dart';
 
 class StudentAccountsScreen extends ConsumerStatefulWidget {
   const StudentAccountsScreen({super.key});
@@ -727,50 +727,9 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Consumer(
-                  builder: (context, ref, _) {
-                    final classesAsync = ref.watch(
-                      nodesByTypeProvider('class'),
-                    );
-                    final seriesAsync = ref.watch(
-                      nodesByTypeProvider('series'),
-                    );
-                    return classesAsync.when(
-                      data: (classes) {
-                        final classOptions = mergeClassOptions(
-                          classes,
-                          seriesAsync.valueOrNull ?? [],
-                        );
-                        selectedClassId ??= classOptions.isNotEmpty
-                            ? classOptions.first.id
-                            : null;
-                        return DropdownButtonFormField<String>(
-                          // ignore: deprecated_member_use
-                          value: selectedClassId,
-                          dropdownColor: AppTheme.primaryDark,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: const InputDecoration(
-                            labelText: 'Classe',
-                          ),
-                          items: classOptions
-                              .map(
-                                (c) => DropdownMenuItem(
-                                  value: c.id,
-                                  child: Text(c.name),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (v) =>
-                              setModalState(() => selectedClassId = v),
-                        );
-                      },
-                      loading: () => const LinearProgressIndicator(),
-                      error: (err, _) => Text(
-                        'Erreur: $err',
-                        style: GoogleFonts.inter(color: AppTheme.accentRose),
-                      ),
-                    );
-                  },
+                ClassNodePickerField(
+                  selectedId: selectedClassId,
+                  onChanged: (v) => setModalState(() => selectedClassId = v),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -1020,50 +979,9 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Consumer(
-                    builder: (context, ref, _) {
-                      final classesAsync = ref.watch(
-                        nodesByTypeProvider('class'),
-                      );
-                      final seriesAsync = ref.watch(
-                        nodesByTypeProvider('series'),
-                      );
-                      return classesAsync.when(
-                        data: (classes) {
-                          final classOptions = mergeClassOptions(
-                            classes,
-                            seriesAsync.valueOrNull ?? [],
-                          );
-                          selectedClassId ??= classOptions.isNotEmpty
-                              ? classOptions.first.id
-                              : null;
-                          return DropdownButtonFormField<String>(
-                            // ignore: deprecated_member_use
-                            value: selectedClassId,
-                            dropdownColor: AppTheme.primaryDark,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: const InputDecoration(
-                              labelText: 'Classe',
-                            ),
-                            items: classOptions
-                                .map(
-                                  (c) => DropdownMenuItem(
-                                    value: c.id,
-                                    child: Text(c.name),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (v) =>
-                                setModalState(() => selectedClassId = v),
-                          );
-                        },
-                        loading: () => const LinearProgressIndicator(),
-                        error: (err, _) => Text(
-                          'Erreur: $err',
-                          style: GoogleFonts.inter(color: AppTheme.accentRose),
-                        ),
-                      );
-                    },
+                  ClassNodePickerField(
+                    selectedId: selectedClassId,
+                    onChanged: (v) => setModalState(() => selectedClassId = v),
                   ),
                   const SizedBox(height: 12),
                   TextField(

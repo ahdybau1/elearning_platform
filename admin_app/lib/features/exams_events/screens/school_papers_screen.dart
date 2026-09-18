@@ -2,17 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../core/models/academic_node.dart';
 import '../../../core/models/content_models.dart';
 import '../../../core/models/system_models.dart';
 import '../../../core/providers/data_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_dialog_title.dart';
+import '../../../core/widgets/class_node_picker_field.dart';
 import '../../content_management/widgets/media_attachment_picker.dart';
 import '../widgets/exam_paper_ai_processing_action.dart';
 
-/// Fusionne classes et séries dans une seule liste de sélection (une série est un "classe" plus
-/// précise pour les niveaux qui en ont — même logique que Leçons & Cours).
 class SchoolPapersScreen extends ConsumerStatefulWidget {
   const SchoolPapersScreen({super.key});
 
@@ -680,28 +678,9 @@ class _SchoolPapersScreenState extends ConsumerState<SchoolPapersScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Consumer(
-                    builder: (context, ref, _) {
-                      final classesAsync = ref.watch(nodesByTypeProvider('class'));
-                      final seriesAsync = ref.watch(nodesByTypeProvider('series'));
-                      final classOptions = mergeClassOptions(
-                        classesAsync.valueOrNull ?? [],
-                        seriesAsync.valueOrNull ?? [],
-                      );
-                      if (classesAsync.isLoading || seriesAsync.isLoading) {
-                        return const LinearProgressIndicator();
-                      }
-                      selectedClassId ??= classOptions.isNotEmpty ? classOptions.first.id : null;
-                      return DropdownButtonFormField<String>(
-                        // ignore: deprecated_member_use
-                        value: selectedClassId,
-                        dropdownColor: AppTheme.primaryDark,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(labelText: 'Classe / Série'),
-                        items: classOptions.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-                        onChanged: (v) => setModalState(() => selectedClassId = v),
-                      );
-                    },
+                  ClassNodePickerField(
+                    selectedId: selectedClassId,
+                    onChanged: (v) => setModalState(() => selectedClassId = v),
                   ),
                   const SizedBox(height: 12),
                   Consumer(

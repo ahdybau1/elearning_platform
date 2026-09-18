@@ -9,11 +9,10 @@ import '../../../core/models/system_models.dart';
 import '../../../core/providers/data_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_dialog_title.dart';
+import '../../../core/widgets/class_node_picker_field.dart';
 import '../../content_management/widgets/media_attachment_picker.dart';
 import '../widgets/exam_paper_ai_processing_action.dart';
 
-/// Fusionne classes et séries dans une seule liste de sélection — un sujet de Bac Série C n'est pas
-/// le même document qu'un sujet de Bac Série D, la série doit donc être sélectionnable ici aussi.
 class OfficialExamsScreen extends ConsumerStatefulWidget {
   const OfficialExamsScreen({super.key});
 
@@ -72,7 +71,7 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
                 children: [
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
-                    onPressed: () => _showCreateExamModal(context, classesAsync.valueOrNull ?? []),
+                    onPressed: () => _showCreateExamModal(context),
                     icon: const Icon(Icons.add_rounded, size: 18),
                     label: const Text('Nouvel Examen Officiel'),
                   ),
@@ -118,21 +117,14 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
                   ),
                 ),
                 const SizedBox(width: 16),
-                classesAsync.when(
-                  data: (classes) => DropdownButtonHideUnderline(
-                    child: DropdownButton<String?>(
-                      value: _selectedClassFilter,
-                      dropdownColor: AppTheme.primarySurface,
-                      style: GoogleFonts.inter(color: Colors.white, fontSize: 13),
-                      items: [
-                        const DropdownMenuItem<String?>(value: null, child: Text('Toutes les classes')),
-                        ...classes.map((c) => DropdownMenuItem<String?>(value: c.id, child: Text(c.name))),
-                      ],
-                      onChanged: (val) => setState(() => _selectedClassFilter = val),
-                    ),
+                SizedBox(
+                  width: 240,
+                  child: ClassNodePickerField(
+                    label: 'Filtrer par classe',
+                    selectedId: _selectedClassFilter,
+                    clearOptionLabel: 'Toutes les classes',
+                    onChanged: (val) => setState(() => _selectedClassFilter = val),
                   ),
-                  loading: () => const SizedBox(width: 120, child: LinearProgressIndicator()),
-                  error: (err, _) => Text('Erreur: $err', style: GoogleFonts.inter(color: AppTheme.accentRose)),
                 ),
               ],
             ),
@@ -225,7 +217,7 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
                                 label: const Text('Gérer les Sujets'),
                               ),
                               IconButton(
-                                onPressed: () => _showEditExamModal(context, exam, classesAsync.valueOrNull ?? []),
+                                onPressed: () => _showEditExamModal(context, exam),
                                 icon: const Icon(Icons.edit_rounded, color: AppTheme.accentBlue, size: 20),
                                 tooltip: 'Modifier',
                               ),
@@ -251,10 +243,10 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
     );
   }
 
-  void _showCreateExamModal(BuildContext context, List<AcademicNode> classes) {
+  void _showCreateExamModal(BuildContext context) {
     final nameCtrl = TextEditingController();
     DateTime? examDate;
-    String? selectedClassId = classes.isNotEmpty ? classes.first.id : null;
+    String? selectedClassId;
     bool isLoading = false;
 
     showDialog(
@@ -279,14 +271,9 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
                     decoration: const InputDecoration(labelText: 'Nom (ex: BEPC, Probatoire C & D, Baccalauréat)'),
                   ),
                   const SizedBox(height: 12),
-                  // ignore: deprecated_member_use
-                  DropdownButtonFormField<String>(
-                    // ignore: deprecated_member_use
-                    value: selectedClassId,
-                    dropdownColor: AppTheme.primaryDark,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(labelText: 'Classe concernée'),
-                    items: classes.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                  ClassNodePickerField(
+                    label: 'Classe concernée',
+                    selectedId: selectedClassId,
                     onChanged: (v) => setModalState(() => selectedClassId = v),
                   ),
                   const SizedBox(height: 12),
@@ -354,7 +341,7 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
     );
   }
 
-  void _showEditExamModal(BuildContext context, OfficialExam exam, List<AcademicNode> classes) {
+  void _showEditExamModal(BuildContext context, OfficialExam exam) {
     final nameCtrl = TextEditingController(text: exam.name);
     DateTime? examDate = exam.examDate;
     String? selectedClassId = exam.classNodeId;
@@ -385,13 +372,9 @@ class _OfficialExamsScreenState extends ConsumerState<OfficialExamsScreen> {
                     decoration: const InputDecoration(labelText: 'Nom (ex: BEPC, Probatoire C & D, Baccalauréat)'),
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    // ignore: deprecated_member_use
-                    value: selectedClassId,
-                    dropdownColor: AppTheme.primaryDark,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(labelText: 'Classe concernée'),
-                    items: classes.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                  ClassNodePickerField(
+                    label: 'Classe concernée',
+                    selectedId: selectedClassId,
                     onChanged: (v) => setModalState(() => selectedClassId = v),
                   ),
                   const SizedBox(height: 12),

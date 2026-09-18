@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../../core/models/academic_node.dart';
 import '../../../core/models/system_models.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/data_providers.dart';
 import '../../../core/widgets/app_dialog_title.dart';
+import '../../../core/widgets/class_node_picker_field.dart';
 
 class AnnouncementsScreen extends ConsumerStatefulWidget {
   const AnnouncementsScreen({super.key});
@@ -393,27 +393,11 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                     },
                   ),
                   const SizedBox(height: 12),
-                  Consumer(
-                    builder: (context, ref, _) {
-                      final classesAsync = ref.watch(nodesByTypeProvider('class'));
-                      final seriesAsync = ref.watch(nodesByTypeProvider('series'));
-                      final classOptions = mergeClassOptions(
-                        classesAsync.valueOrNull ?? [],
-                        seriesAsync.valueOrNull ?? [],
-                      );
-                      return DropdownButtonFormField<String?>(
-                        // ignore: deprecated_member_use
-                        value: targetClassId,
-                        dropdownColor: AppTheme.primaryDark,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(labelText: 'Classe / Série ciblée'),
-                        items: [
-                          const DropdownMenuItem(value: null, child: Text('Toutes les classes')),
-                          ...classOptions.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
-                        ],
-                        onChanged: (v) => setModalState(() => targetClassId = v),
-                      );
-                    },
+                  ClassNodePickerField(
+                    label: 'Classe / Série ciblée',
+                    selectedId: targetClassId,
+                    clearOptionLabel: 'Toutes les classes',
+                    onChanged: (v) => setModalState(() => targetClassId = v),
                   ),
                   const SizedBox(height: 16),
                   Text('Période de diffusion',

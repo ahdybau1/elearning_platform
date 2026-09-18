@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/auth/auth_provider.dart';
-import '../../../core/models/academic_node.dart';
 import '../../../core/models/admin_models.dart';
 import '../../../core/models/system_models.dart';
 import '../../../core/providers/data_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_dialog_title.dart';
+import '../../../core/widgets/class_node_picker_field.dart';
 
 class OlympiadsMockExamsScreen extends ConsumerStatefulWidget {
   const OlympiadsMockExamsScreen({super.key});
@@ -589,34 +589,10 @@ class _OlympiadsMockExamsScreenState extends ConsumerState<OlympiadsMockExamsScr
                     decoration: const InputDecoration(labelText: 'Titre (ex: Grand Examen Blanc BEPC 2026)'),
                   ),
                   const SizedBox(height: 12),
-                  Consumer(
-                    builder: (context, ref, _) {
-                      final classesAsync = ref.watch(nodesByTypeProvider('class'));
-                      final seriesAsync = ref.watch(nodesByTypeProvider('series'));
-                      if (classesAsync.isLoading || seriesAsync.isLoading) {
-                        return const LinearProgressIndicator();
-                      }
-                      final classOptions = mergeClassOptions(
-                        classesAsync.valueOrNull ?? [],
-                        seriesAsync.valueOrNull ?? [],
-                      );
-                      return classesAsync.when(
-                        data: (classes) {
-                          selectedClassId ??= classOptions.isNotEmpty ? classOptions.first.id : null;
-                          return DropdownButtonFormField<String>(
-                            // ignore: deprecated_member_use
-                            value: selectedClassId,
-                            dropdownColor: AppTheme.primaryDark,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: const InputDecoration(labelText: 'Classe / Série concernée'),
-                            items: classOptions.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-                            onChanged: (v) => setModalState(() => selectedClassId = v),
-                          );
-                        },
-                        loading: () => const LinearProgressIndicator(),
-                        error: (err, _) => Text('Erreur: $err', style: GoogleFonts.inter(color: AppTheme.accentRose)),
-                      );
-                    },
+                  ClassNodePickerField(
+                    label: 'Classe / Série concernée',
+                    selectedId: selectedClassId,
+                    onChanged: (v) => setModalState(() => selectedClassId = v),
                   ),
                   const SizedBox(height: 12),
                   Row(
