@@ -84,6 +84,15 @@ final subjectsForClassProvider =
   return service.fetchSubjectsForClass(classNodeId);
 });
 
+// Rattachements enrichis (obligatoire/optionnel/groupe de choix/curriculum/provenance) pour
+// l'écran « Matières par classe » — distinct de subjectsForClassProvider qui ne renvoie que la
+// matière brute pour les filtres de l'écran Leçons & Cours.
+final subjectAssignmentsProvider =
+    FutureProvider.family<List<SubjectClassLink>, String>((ref, classNodeId) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchSubjectAssignments(classNodeId);
+});
+
 // Classes/Séries où une matière est enseignée (voir fetchClassesForSubject) — n'implique aucun
 // partage de contenu, seulement une utilité de navigation/filtrage.
 final classesForSubjectProvider =

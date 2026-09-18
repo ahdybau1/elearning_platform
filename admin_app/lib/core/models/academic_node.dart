@@ -165,6 +165,22 @@ AcademicNode combineClassWithLeafLabel(AcademicNode classNode, AcademicNode leaf
   );
 }
 
+/// Libellé d'affichage d'un nœud qui cite toujours sa classe porteuse, même quand ce nœud est une
+/// spécialité séparée de sa classe par un ou plusieurs niveaux de famille (ex: Terminale -> IND ->
+/// Génie mécanique -> BIJO). Remonte `byId` jusqu'au premier ancêtre de type Classe plutôt que de
+/// se limiter au parent direct (qui serait ici "Génie mécanique", pas "Terminale").
+String describeNodeWithAncestorClass(AcademicNode node, Map<String, AcademicNode> byId) {
+  if (node.nodeType != NodeType.series && node.nodeType != NodeType.specialty) {
+    return node.name;
+  }
+  AcademicNode? ancestor = node.parentId != null ? byId[node.parentId] : null;
+  while (ancestor != null && ancestor.nodeType != NodeType.classType) {
+    ancestor = ancestor.parentId != null ? byId[ancestor.parentId] : null;
+  }
+  if (ancestor == null) return node.name;
+  return '${shortNodeName(ancestor.name)} ${shortNodeName(node.name)}';
+}
+
 /// Retire les préfixes administratifs ("Classe de ", "Série ") pour composer un libellé court et
 /// naturel ("2nde", "A") avant de les recombiner ("2nde A").
 String shortNodeName(String name) => name

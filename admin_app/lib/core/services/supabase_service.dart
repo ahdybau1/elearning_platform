@@ -313,6 +313,78 @@ class SupabaseService {
         .toList();
   }
 
+  /// Rattachements enrichis (obligatoire/optionnel/groupe de choix/curriculum/provenance) pour
+  /// l'écran « Matières par classe » — contrairement à [fetchSubjectsForClass], qui ne renvoie que
+  /// la matière brute pour les filtres.
+  Future<List<SubjectClassLink>> fetchSubjectAssignments(String classNodeId) async {
+    if (!_isValidUuid(classNodeId)) return [];
+    final rows = await client
+        .from('subject_class_links')
+        .select('*, subjects(name), curricula(name)')
+        .eq('class_node_id', classNodeId)
+        .then((r) => r as List);
+    return rows
+        .map((r) => SubjectClassLink.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
+  }
+
+  Future<String> getOrCreateSubjectByCode({
+    required String name,
+    required String code,
+    String? countryId,
+  }) async {
+    final existing = await client
+        .from('subjects')
+        .select('id')
+        .eq('code', code)
+        .maybeSingle();
+    if (existing != null) return existing['id'] as String;
+    final inserted = await client
+        .from('subjects')
+        .insert({
+          'name': name,
+          'code': code,
+          'country_id': countryId,
+          'is_active': true,
+          'verification_status': 'ok',
+        })
+        .select('id')
+        .single();
+    return inserted['id'] as String;
+  }
+
+  /// Crée ou met à jour un rattachement matière-classe (clé unique subject_id+class_node_id : un
+  /// second appel sur la même paire modifie la ligne existante plutôt que d'en créer une autre).
+  Future<void> assignSubjectToNode({
+    required String subjectId,
+    required String classNodeId,
+    required bool isMandatory,
+    required bool isOptional,
+    String? choiceGroup,
+    String verificationStatus = 'TO_VERIFY',
+    String? officialReference,
+    String? notes,
+    num? coefficient,
+    num? weeklyHours,
+  }) async {
+    await client.from('subject_class_links').upsert({
+      'subject_id': subjectId,
+      'class_node_id': classNodeId,
+      'is_mandatory': isMandatory,
+      'is_optional': isOptional,
+      'choice_group': choiceGroup,
+      'verification_status': verificationStatus,
+      'official_reference': officialReference,
+      'notes': notes,
+      'coefficient': coefficient,
+      'weekly_hours': weeklyHours,
+    }, onConflict: 'subject_id,class_node_id');
+  }
+
+  Future<void> removeSubjectAssignment(String linkId) async {
+    await client.from('subject_class_links').delete().eq('id', linkId);
+  }
+
   // ─── Chapters ─────────────────────────────────────────────────
 
   Future<List<Chapter>> fetchChapters(

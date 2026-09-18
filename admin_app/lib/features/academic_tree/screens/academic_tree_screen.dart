@@ -9,6 +9,7 @@ import '../../../core/models/enums.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/providers/data_providers.dart';
 import '../../../core/widgets/app_dialog_title.dart';
+import 'subjects_by_class_screen.dart';
 
 /// Écran de gestion de l'Arbre Académique — Refonte ergonomique pleine largeur par exploration
 /// de niveaux (Level-by-Level Exploration).
@@ -669,14 +670,15 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen>
     required IconData icon,
     required Color color,
     required double width,
+    VoidCallback? onTap,
   }) {
-    return Container(
+    final card = Container(
       width: width,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
         color: AppTheme.primarySurface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.primaryBorder),
+        border: Border.all(color: onTap != null ? color.withValues(alpha: 0.5) : AppTheme.primaryBorder),
       ),
       child: Row(
         children: [
@@ -716,6 +718,12 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen>
           ),
         ],
       ),
+    );
+    if (onTap == null) return card;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: card,
     );
   }
 
@@ -1624,8 +1632,10 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen>
 
           // 4. Statistiques & indicateurs utiles du nœud
           _buildNodeStatsRow(
+            context,
             currentNode: currentNode,
             totalDescendants: totalDescendants,
+            byId: byId,
           ),
           const SizedBox(height: 28),
 
@@ -2457,9 +2467,11 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen>
     );
   }
 
-  Widget _buildNodeStatsRow({
+  Widget _buildNodeStatsRow(
+    BuildContext context, {
     required AcademicNode currentNode,
     required int totalDescendants,
+    required Map<String, AcademicNode> byId,
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -2528,6 +2540,15 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen>
                     icon: Icons.menu_book_rounded,
                     color: AppTheme.accentCyan,
                     width: cardWidth,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SubjectsByClassScreen(
+                          node: currentNode,
+                          displayLabel: describeNodeWithAncestorClass(currentNode, byId),
+                        ),
+                      ),
+                    ),
                   );
                 },
               )

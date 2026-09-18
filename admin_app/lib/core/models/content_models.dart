@@ -40,6 +40,65 @@ class Subject {
       };
 }
 
+/// Rattachement enrichi matière ↔ classe/série/spécialité (`subject_class_links`, migrations
+/// 90-92) : contrairement à [Subject] seul (renvoyé par `fetchSubjectsForClass` pour les filtres),
+/// porte tout ce que l'écran « Matières par classe » doit pouvoir éditer — obligatoire/optionnelle,
+/// groupe de choix (ex. langues vivantes), curriculum et provenance.
+class SubjectClassLink {
+  final String id;
+  final String subjectId;
+  final String subjectName;
+  final String classNodeId;
+  final String? curriculumId;
+  final String? curriculumName;
+  final bool isMandatory;
+  final bool isOptional;
+  final String? choiceGroup;
+  final String verificationStatus;
+  final String? officialReference;
+  final String? notes;
+  final num? coefficient;
+  final num? weeklyHours;
+
+  SubjectClassLink({
+    required this.id,
+    required this.subjectId,
+    required this.subjectName,
+    required this.classNodeId,
+    this.curriculumId,
+    this.curriculumName,
+    this.isMandatory = true,
+    this.isOptional = false,
+    this.choiceGroup,
+    this.verificationStatus = 'TO_VERIFY',
+    this.officialReference,
+    this.notes,
+    this.coefficient,
+    this.weeklyHours,
+  });
+
+  factory SubjectClassLink.fromJson(Map<String, dynamic> json) {
+    final subjectJson = json['subjects'] as Map<String, dynamic>?;
+    final curriculumJson = json['curricula'] as Map<String, dynamic>?;
+    return SubjectClassLink(
+      id: json['id'] as String,
+      subjectId: json['subject_id'] as String,
+      subjectName: subjectJson?['name'] as String? ?? '—',
+      classNodeId: json['class_node_id'] as String,
+      curriculumId: json['curriculum_id'] as String?,
+      curriculumName: curriculumJson?['name'] as String?,
+      isMandatory: (json['is_mandatory'] as bool?) ?? true,
+      isOptional: (json['is_optional'] as bool?) ?? false,
+      choiceGroup: json['choice_group'] as String?,
+      verificationStatus: json['verification_status'] as String? ?? 'TO_VERIFY',
+      officialReference: json['official_reference'] as String?,
+      notes: json['notes'] as String?,
+      coefficient: json['coefficient'] as num?,
+      weeklyHours: json['weekly_hours'] as num?,
+    );
+  }
+}
+
 class Chapter {
   final String id;
   final String subjectId;
