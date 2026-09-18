@@ -14,6 +14,9 @@ Alignement rigoureux du Tuteur Numérique (`Tuteur pq learn`) sur le **Cahier de
 - **Moteur Dégradé Pédagogique Prévalidé (Conformité Module 4 & Règle U3.1696)** :
   - Application stricte de la consigne contractuelle : *« Une panne du LLM déclenche une explication prévalidée. Les fonctions pédagogiques essentielles disposent d'un mode sans LLM lorsque techniquement pertinent. »*
   - En cas de panne internet totale des fournisseurs d'IA, le tuteur ne renvoie plus d'erreur 502 : il active le moteur de fiches prévalidées officielles (définitions du programme, formules officielles en LaTeX, démarches méthodologiques et citations du cours).
+- **Câblage Contextuel Élève & RAG Intégral dans l'Écran de Chat (`AiTutorChatScreen`)** :
+  - Transmission systématique de `profile_id`, `class_node_id`, `subject_id`, `subject_name` et `lesson_id` lors de chaque message envoyé à l'Edge Function `ai-tutor-chat`.
+  - Permet l'activation native du **Student Model** (`get_student_skill_mastery`, historique des tentatives) et du **RAG vectoriel** (`match_rag_chunks`) directement depuis l'écran principal de discussion, garantissant des réponses adaptées au niveau exact et à la classe de l'élève.
 - **Validation & Déploiement** :
   - Edge Function `ai-tutor-chat` redéployée et validée en production sur Supabase.
   - 104/104 tests Flutter validés à 100%.

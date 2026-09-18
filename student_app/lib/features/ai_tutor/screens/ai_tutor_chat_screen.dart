@@ -18,7 +18,20 @@ import '../widgets/chat_history_drawer.dart';
 import '../widgets/chat_multimodal_dock.dart';
 
 class AiTutorChatScreen extends ConsumerStatefulWidget {
-  const AiTutorChatScreen({super.key});
+  final String? subjectId;
+  final String? subjectName;
+  final String? lessonId;
+  final String? classNodeId;
+  final String? chapterId;
+
+  const AiTutorChatScreen({
+    super.key,
+    this.subjectId,
+    this.subjectName,
+    this.lessonId,
+    this.classNodeId,
+    this.chapterId,
+  });
 
   @override
   ConsumerState<AiTutorChatScreen> createState() => _AiTutorChatScreenState();
@@ -253,12 +266,21 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
     }).toList();
 
     try {
+      final effectiveClassNodeId = widget.classNodeId ?? (profile?.classNodeId.isNotEmpty == true ? profile?.classNodeId : null);
+      final effectiveSubjectId = widget.subjectId;
+      final effectiveSubjectName = widget.subjectName;
+
       final response = await Supabase.instance.client.functions
           .invoke(
             'ai-tutor-chat',
             body: {
               'message': text.trim().isNotEmpty ? text.trim() : 'Analyse ces pièces jointes.',
               'class_name': profile?.className,
+              'profile_id': profile?.id,
+              'class_node_id': effectiveClassNodeId,
+              'subject_id': effectiveSubjectId,
+              'subject_name': effectiveSubjectName,
+              'lesson_id': widget.lessonId,
               'history': updatedMessages.take(updatedMessages.length - 1).map((m) {
                 return {'sender': m.sender, 'text': m.text};
               }).toList(),
