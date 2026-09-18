@@ -9,6 +9,7 @@ import '../../../core/models/editable_lesson_block.dart';
 import '../../../core/providers/data_providers.dart';
 import '../widgets/media_attachment_picker.dart';
 import '../utils/lesson_pdf_generator.dart';
+import '../../../core/widgets/academic_path_selector.dart';
 import '../../../core/widgets/app_dialog_title.dart';
 import '../../../core/widgets/math_text.dart';
 import 'lesson_builder_screen.dart';
@@ -108,25 +109,15 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
       seriesNodesAsync.valueOrNull ?? [],
     );
 
-    if (_selectedClassNodeId == null && classOptions.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _selectedClassNodeId == null) {
-          setState(() => _selectedClassNodeId = classOptions.first.id);
-        }
-      });
-    } else if (_selectedClassNodeId != null &&
+    // Plus d'auto-sélection de "la première classe" : avec l'AcademicPathSelector, l'administrateur
+    // navigue explicitement Sous-système -> Type d'enseignement -> ... -> Classe (retour utilisateur
+    // explicite — ne jamais deviner une classe à sa place). On garde seulement le filet de sécurité :
+    // si la classe choisie a été désactivée/archivée entre-temps dans l'Arbre Académique, on revient
+    // à "aucune sélection" plutôt que de planter sur une valeur qui n'existe plus.
+    if (_selectedClassNodeId != null &&
         !classOptions.any((n) => n.id == _selectedClassNodeId)) {
-      // La classe sélectionnée a été désactivée/archivée entre-temps (Arbre Académique) :
-      // sans ce filet, le DropdownButtonFormField ci-dessous planterait (value sans item
-      // correspondant). On retombe sur la première classe active disponible.
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(
-            () => _selectedClassNodeId = classOptions.isNotEmpty
-                ? classOptions.first.id
-                : null,
-          );
-        }
+        if (mounted) setState(() => _selectedClassNodeId = null);
       });
     }
 
@@ -181,6 +172,8 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader(context, classOptions, countryId),
+          const SizedBox(height: 16),
+          _buildClassPathSelector(),
           const SizedBox(height: 16),
           _buildFiltersBar(classOptions, subjects),
           const SizedBox(height: 16),
@@ -341,6 +334,32 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
     );
   }
 
+  /// Navigation en cascade dans l'Arbre académique (Sous-système -> Type d'enseignement -> Cycle ->
+  /// Classe -> Série/Famille -> Spécialité) au lieu d'un menu plat mélangeant toutes les classes de
+  /// tous les sous-systèmes (retour utilisateur explicite). Choisir une classe ici invalide
+  /// implicitement la matière sélectionnée dès que `_selectedClassNodeId` change (voir `build()`,
+  /// qui relit `subjectsForClassProvider` pour la nouvelle classe).
+  Widget _buildClassPathSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: AppTheme.primarySurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.primaryBorder),
+      ),
+      child: AcademicPathSelector(
+        selectedNodeId: _selectedClassNodeId,
+        onLeafSelected: (id) {
+          if (id == _selectedClassNodeId) return;
+          setState(() {
+            _selectedClassNodeId = id;
+            _selectedSubjectId = null;
+          });
+        },
+      ),
+    );
+  }
+
   Widget _buildFiltersBar(
     List<AcademicNode> classOptions,
     List<Subject> subjects,
@@ -364,96 +383,6 @@ class _LessonsManagerScreenState extends ConsumerState<LessonsManagerScreen> {
         spacing: 16,
         runSpacing: 12,
         children: [
-          // Sélecteur de classe
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: AppTheme.accentBlue.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Icon(
-                  Icons.school_rounded,
-                  color: AppTheme.accentBlue,
-                  size: 16,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Classe :',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white70,
-                ),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 200,
-                child: classOptions.isEmpty
-                    ? Text(
-                        'Aucune classe configurée',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: AppTheme.accentRose,
-                        ),
-                      )
-                    : DropdownButtonFormField<String>(
-                        // ignore: deprecated_member_use
-                        value: _selectedClassNodeId,
-                        isDense: true,
-                        isExpanded: true,
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: Colors.white,
-                        ),
-                        dropdownColor: AppTheme.primarySurface,
-                        decoration: InputDecoration(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          filled: true,
-                          fillColor: AppTheme.primaryDark,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(
-                              color: AppTheme.primaryBorder,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(
-                              color: AppTheme.primaryBorder,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(
-                              color: AppTheme.accentBlue,
-                            ),
-                          ),
-                        ),
-                        items: classOptions
-                            .map(
-                              (c) => DropdownMenuItem(
-                                value: c.id,
-                                child: Text(
-                                  c.name,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (v) =>
-                            setState(() => _selectedClassNodeId = v),
-                      ),
-              ),
-            ],
-          ),
-
           // Sélecteur de matière
           Row(
             mainAxisSize: MainAxisSize.min,

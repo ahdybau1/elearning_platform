@@ -7,6 +7,12 @@ import 'package:admin_app/core/models/academic_node.dart';
 import 'package:admin_app/core/providers/data_providers.dart';
 import 'package:admin_app/features/content_management/screens/lessons_manager_screen.dart';
 
+// Message affiché par `_buildNoSubjectState` (lessons_manager_screen.dart) quand l'Arbre
+// Académique ne contient aucune classe : depuis l'AcademicPathSelector, cet état ne passe plus par
+// un dropdown "Aucune classe configurée" mais par l'état vide de la zone de contenu.
+const kNoClassesConfiguredMessage =
+    'Configurez d\'abord l\'Arbre Académique (au moins une Classe).';
+
 void main() {
   setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
   testWidgets('Loading classes is not presented as an empty academic tree', (
@@ -24,10 +30,10 @@ void main() {
     );
     await tester.pump();
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    expect(find.textContaining('Aucune classe'), findsNothing);
+    expect(find.text(kNoClassesConfiguredMessage), findsNothing);
     pending.complete([]);
     await tester.pumpAndSettle();
-    expect(find.textContaining('Aucune classe'), findsOneWidget);
+    expect(find.text(kNoClassesConfiguredMessage), findsOneWidget);
   });
   testWidgets('Class query failure can retry instead of claiming no classes', (
     tester,
@@ -47,9 +53,9 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Impossible de charger les classes.'), findsOneWidget);
-    expect(find.textContaining('Aucune classe'), findsNothing);
+    expect(find.text(kNoClassesConfiguredMessage), findsNothing);
     await tester.tap(find.text('Réessayer'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Aucune classe'), findsOneWidget);
+    expect(find.text(kNoClassesConfiguredMessage), findsOneWidget);
   });
 }

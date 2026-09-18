@@ -35,21 +35,26 @@ class MockLessonSupabaseService extends SupabaseService {
 void main() {
   setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
 
+  // La classe doit être une feuille rattachée au pays pour que l'AcademicPathSelector (qui lit
+  // academicTreeStreamProvider, pas nodesByTypeProvider('class')) puisse la retrouver et la
+  // proposer via sa recherche rapide.
+  final testClass = AcademicNode(
+    id: 'class-tle-c',
+    parentId: 'country-cm',
+    nodeType: NodeType.classType,
+    name: 'Terminale C',
+    code: 'TC',
+    countryId: 'country-cm',
+    displayOrder: 1,
+  );
+
   final testCountry = AcademicNode(
     id: 'country-cm',
     nodeType: NodeType.country,
     name: 'Cameroun',
     code: 'CM',
     displayOrder: 1,
-  );
-
-  final testClass = AcademicNode(
-    id: 'class-tle-c',
-    nodeType: NodeType.classType,
-    name: 'Terminale C',
-    code: 'TC',
-    countryId: 'country-cm',
-    displayOrder: 1,
+    children: [testClass],
   );
 
   final testSubject = Subject(
@@ -133,6 +138,9 @@ void main() {
           (ref) async => classes ?? [testClass],
         ),
         nodesByTypeProvider('series').overrideWith((ref) async => []),
+        academicTreeStreamProvider(false).overrideWith(
+          (ref) => Stream.value(classes ?? [testCountry]),
+        ),
         subjectsForClassProvider(testClass.id).overrideWith(
           (ref) async => subjects ?? [testSubject],
         ),
@@ -156,6 +164,17 @@ void main() {
     );
   }
 
+  /// Sélectionne une classe via le raccourci de recherche de l'AcademicPathSelector (premier
+  /// TextField de l'écran, avant celui de recherche de chapitres/leçons) — reproduit le nouveau
+  /// parcours de navigation explicite qui remplace l'ancienne auto-sélection de "la première
+  /// classe" (voir lessons_manager_screen.dart, `_buildClassPathSelector`).
+  Future<void> selectClass(WidgetTester tester, String className) async {
+    await tester.enterText(find.byType(TextField).first, className);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(className).last);
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('LessonsManagerScreen renders modern header and filter controls', (
     tester,
   ) async {
@@ -168,9 +187,13 @@ void main() {
 
     expect(find.text('Gestion des Leçons & Cours'), findsOneWidget);
     expect(find.text('Créer un Chapitre'), findsOneWidget);
-    expect(find.text('Classe :'), findsOneWidget);
+    // Remplacé par l'AcademicPathSelector : plus de libellé "Classe :" fixe, mais son raccourci de
+    // recherche rapide est bien affiché.
+    expect(find.textContaining('Rechercher une classe'), findsOneWidget);
     expect(find.text('Matière :'), findsOneWidget);
-    expect(find.byType(TextField), findsOneWidget);
+    // Un TextField pour la recherche de classe (AcademicPathSelector), un pour la recherche de
+    // chapitres/leçons (barre de filtres).
+    expect(find.byType(TextField), findsNWidgets(2));
     expect(find.text('Afficher les archives'), findsOneWidget);
   });
 
@@ -183,6 +206,7 @@ void main() {
 
     await tester.pumpWidget(createSubjectUnderTest());
     await tester.pumpAndSettle();
+    await selectClass(tester, 'Terminale C');
 
     // KPI Cards: Total Chapitres (2), Total Leçons (3), Leçons Publiées (1), En Validation (1), Archivés (1)
     expect(find.text('Total Chapitres'), findsOneWidget);
@@ -207,6 +231,7 @@ void main() {
 
     await tester.pumpWidget(createSubjectUnderTest());
     await tester.pumpAndSettle();
+    await selectClass(tester, 'Terminale C');
 
     expect(find.text('Chapitre 1 : Analyse Fonctionnelle'), findsOneWidget);
     expect(find.text('Étude complète des fonctions réelles'), findsOneWidget);
@@ -228,6 +253,7 @@ void main() {
 
     await tester.pumpWidget(createSubjectUnderTest());
     await tester.pumpAndSettle();
+    await selectClass(tester, 'Terminale C');
 
     expect(find.text('Limites et Continuité'), findsOneWidget);
     expect(find.text('Publiée'), findsOneWidget);
@@ -250,19 +276,24 @@ void main() {
 
     await tester.pumpWidget(createSubjectUnderTest());
     await tester.pumpAndSettle();
+    await selectClass(tester, 'Terminale C');
 
     expect(find.text('Chapitre 1 : Analyse Fonctionnelle'), findsOneWidget);
     expect(find.text('Chapitre 2 : Suites Numériques'), findsOneWidget);
 
+    // Le premier TextField est le raccourci de recherche de classe (AcademicPathSelector) ; celui
+    // de recherche de chapitres/leçons est le second.
+    final chapterSearchField = find.byType(TextField).last;
+
     // Filter by "Suites"
-    await tester.enterText(find.byType(TextField), 'Suites');
+    await tester.enterText(chapterSearchField, 'Suites');
     await tester.pumpAndSettle();
 
     expect(find.text('Chapitre 2 : Suites Numériques'), findsOneWidget);
     expect(find.text('Chapitre 1 : Analyse Fonctionnelle'), findsNothing);
 
     // Filter non-existent
-    await tester.enterText(find.byType(TextField), 'InexistantXYZ');
+    await tester.enterText(chapterSearchField, 'InexistantXYZ');
     await tester.pumpAndSettle();
 
     expect(find.text('Aucun résultat'), findsOneWidget);
