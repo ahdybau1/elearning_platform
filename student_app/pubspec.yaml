@@ -31,6 +31,9 @@ dependencies:
   flutter:
     sdk: flutter
 
+  pq_ai_fabric_client:
+    path: ../packages/pq_ai_fabric_client
+
   cupertino_icons: ^1.0.8
   flutter_riverpod: ^2.6.1
   go_router: ^14.8.1

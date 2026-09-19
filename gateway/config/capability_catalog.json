@@ -1,0 +1,3183 @@
+{
+  "schema_version": "1.0.0",
+  "reviewed_at": "2026-09-19",
+  "policy": {
+    "mandatory_cost_eur": 0,
+    "paid_api_allowed": false,
+    "payment_card_allowed": false,
+    "paid_trial_as_dependency": false,
+    "external_free_tier_critical": false
+  },
+  "capabilities": [
+    {
+      "id": "text.generate",
+      "label": "Génération et dialogue textuels",
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "degraded_strategy": [
+        "template/cache",
+        "moteur déterministe",
+        "modèle local compact",
+        "file différée"
+      ]
+    },
+    {
+      "id": "vision.understand",
+      "label": "Compréhension d’images",
+      "input_modalities": [
+        "image",
+        "text"
+      ],
+      "output_modalities": [
+        "text",
+        "json"
+      ],
+      "degraded_strategy": [
+        "OCR local",
+        "détection classique",
+        "description indisponible explicitement"
+      ]
+    },
+    {
+      "id": "document.parse",
+      "label": "Lecture et structuration de fichiers",
+      "input_modalities": [
+        "document"
+      ],
+      "output_modalities": [
+        "text",
+        "markdown",
+        "json"
+      ],
+      "degraded_strategy": [
+        "extracteur natif",
+        "OCR page par page",
+        "mise en revue humaine"
+      ]
+    },
+    {
+      "id": "ocr.extract",
+      "label": "Extraction OCR",
+      "input_modalities": [
+        "image",
+        "document"
+      ],
+      "output_modalities": [
+        "text",
+        "json"
+      ],
+      "degraded_strategy": [
+        "Tesseract",
+        "saisie/revue humaine"
+      ]
+    },
+    {
+      "id": "image.generate",
+      "label": "Génération d’images",
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "image"
+      ],
+      "degraded_strategy": [
+        "SVG/Canvas déterministe",
+        "bibliothèque d’illustrations",
+        "file GPU différée"
+      ]
+    },
+    {
+      "id": "image.edit",
+      "label": "Édition d’images",
+      "input_modalities": [
+        "image",
+        "text"
+      ],
+      "output_modalities": [
+        "image"
+      ],
+      "degraded_strategy": [
+        "libvips/ImageMagick",
+        "édition manuelle",
+        "file GPU différée"
+      ]
+    },
+    {
+      "id": "image.segment",
+      "label": "Segmentation et détection",
+      "input_modalities": [
+        "image",
+        "text"
+      ],
+      "output_modalities": [
+        "mask",
+        "json"
+      ],
+      "degraded_strategy": [
+        "OpenCV/MediaPipe",
+        "revue manuelle"
+      ]
+    },
+    {
+      "id": "image.restore",
+      "label": "Restauration et agrandissement",
+      "input_modalities": [
+        "image"
+      ],
+      "output_modalities": [
+        "image"
+      ],
+      "degraded_strategy": [
+        "redimensionnement classique",
+        "original conservé"
+      ]
+    },
+    {
+      "id": "audio.transcribe",
+      "label": "Transcription et diarisation",
+      "input_modalities": [
+        "audio",
+        "video"
+      ],
+      "output_modalities": [
+        "text",
+        "json"
+      ],
+      "degraded_strategy": [
+        "modèle ASR compact",
+        "file locale différée",
+        "saisie manuelle"
+      ]
+    },
+    {
+      "id": "audio.synthesize",
+      "label": "Synthèse vocale",
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "audio"
+      ],
+      "degraded_strategy": [
+        "voix système",
+        "modèle TTS compact",
+        "texte seul"
+      ]
+    },
+    {
+      "id": "audio.generate",
+      "label": "Génération de sons",
+      "input_modalities": [
+        "text",
+        "audio"
+      ],
+      "output_modalities": [
+        "audio"
+      ],
+      "degraded_strategy": [
+        "sons procéduraux",
+        "banque libre",
+        "file GPU différée"
+      ]
+    },
+    {
+      "id": "music.generate",
+      "label": "Génération musicale",
+      "input_modalities": [
+        "text",
+        "audio"
+      ],
+      "output_modalities": [
+        "audio"
+      ],
+      "degraded_strategy": [
+        "MIDI/procédural",
+        "banque libre",
+        "file GPU différée"
+      ]
+    },
+    {
+      "id": "audio.separate",
+      "label": "Séparation et nettoyage audio",
+      "input_modalities": [
+        "audio"
+      ],
+      "output_modalities": [
+        "audio"
+      ],
+      "degraded_strategy": [
+        "filtres FFmpeg",
+        "original conservé"
+      ]
+    },
+    {
+      "id": "video.understand",
+      "label": "Compréhension de vidéos",
+      "input_modalities": [
+        "video",
+        "text"
+      ],
+      "output_modalities": [
+        "text",
+        "json"
+      ],
+      "degraded_strategy": [
+        "ASR + images clés",
+        "métadonnées seulement",
+        "file différée"
+      ]
+    },
+    {
+      "id": "video.generate",
+      "label": "Génération de vidéos",
+      "input_modalities": [
+        "text",
+        "image",
+        "audio"
+      ],
+      "output_modalities": [
+        "video"
+      ],
+      "degraded_strategy": [
+        "Manim/SVG/Canvas",
+        "diaporama narré",
+        "file GPU différée"
+      ]
+    },
+    {
+      "id": "video.edit",
+      "label": "Montage et transformation vidéo",
+      "input_modalities": [
+        "video",
+        "audio",
+        "image"
+      ],
+      "output_modalities": [
+        "video"
+      ],
+      "degraded_strategy": [
+        "FFmpeg/GStreamer",
+        "édition différée"
+      ]
+    },
+    {
+      "id": "media.transcode",
+      "label": "Transcodage média",
+      "input_modalities": [
+        "audio",
+        "video",
+        "image"
+      ],
+      "output_modalities": [
+        "audio",
+        "video",
+        "image"
+      ],
+      "degraded_strategy": [
+        "format original",
+        "traitement serveur différé"
+      ]
+    },
+    {
+      "id": "embeddings.generate",
+      "label": "Embeddings locaux",
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "vector"
+      ],
+      "degraded_strategy": [
+        "BM25/FTS5",
+        "modèle compact ONNX"
+      ]
+    },
+    {
+      "id": "retrieval.search",
+      "label": "Recherche et RAG",
+      "input_modalities": [
+        "text",
+        "vector"
+      ],
+      "output_modalities": [
+        "json",
+        "text"
+      ],
+      "degraded_strategy": [
+        "FTS5/BM25",
+        "pgvector",
+        "cache"
+      ]
+    },
+    {
+      "id": "agent.orchestrate",
+      "label": "Orchestration d’agents et workflows",
+      "input_modalities": [
+        "json",
+        "text"
+      ],
+      "output_modalities": [
+        "json",
+        "text"
+      ],
+      "degraded_strategy": [
+        "workflow déterministe",
+        "file persistante",
+        "validation humaine"
+      ]
+    },
+    {
+      "id": "tool.protocol",
+      "label": "Outils, skills et protocoles",
+      "input_modalities": [
+        "json"
+      ],
+      "output_modalities": [
+        "json"
+      ],
+      "degraded_strategy": [
+        "outil natif allowlisté",
+        "fonction indisponible explicitement"
+      ]
+    },
+    {
+      "id": "code.execute",
+      "label": "Exécution de code isolée",
+      "input_modalities": [
+        "code"
+      ],
+      "output_modalities": [
+        "text",
+        "json",
+        "file"
+      ],
+      "degraded_strategy": [
+        "interpréteur navigateur",
+        "validation statique",
+        "exécution refusée"
+      ]
+    },
+    {
+      "id": "math.solve",
+      "label": "Calcul symbolique et numérique",
+      "input_modalities": [
+        "text",
+        "formula"
+      ],
+      "output_modalities": [
+        "json",
+        "formula",
+        "text"
+      ],
+      "degraded_strategy": [
+        "SymPy",
+        "calcul numérique",
+        "revue humaine"
+      ]
+    },
+    {
+      "id": "science.simulate",
+      "label": "Simulation scientifique",
+      "input_modalities": [
+        "json",
+        "formula"
+      ],
+      "output_modalities": [
+        "json",
+        "chart"
+      ],
+      "degraded_strategy": [
+        "moteur déterministe",
+        "simulation simplifiée"
+      ]
+    },
+    {
+      "id": "diagram.render",
+      "label": "Diagrammes et animation pédagogique",
+      "input_modalities": [
+        "text",
+        "json"
+      ],
+      "output_modalities": [
+        "image",
+        "video",
+        "svg"
+      ],
+      "degraded_strategy": [
+        "SVG/Canvas",
+        "rendu statique"
+      ]
+    },
+    {
+      "id": "3d.render",
+      "label": "Rendu 3D et laboratoires",
+      "input_modalities": [
+        "json",
+        "text"
+      ],
+      "output_modalities": [
+        "3d",
+        "image",
+        "video"
+      ],
+      "degraded_strategy": [
+        "Three.js/Babylon.js",
+        "schéma 2D"
+      ]
+    },
+    {
+      "id": "translation.local",
+      "label": "Traduction locale",
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "degraded_strategy": [
+        "glossaire",
+        "mémoire de traduction",
+        "texte source"
+      ]
+    },
+    {
+      "id": "safety.scan",
+      "label": "Sécurité des fichiers et dépendances",
+      "input_modalities": [
+        "file",
+        "repository"
+      ],
+      "output_modalities": [
+        "json"
+      ],
+      "degraded_strategy": [
+        "quarantaine",
+        "refus d’exécution"
+      ]
+    },
+    {
+      "id": "observability.evaluate",
+      "label": "Observabilité et évaluation IA",
+      "input_modalities": [
+        "trace",
+        "dataset"
+      ],
+      "output_modalities": [
+        "metrics",
+        "report"
+      ],
+      "degraded_strategy": [
+        "logs locaux",
+        "échantillonnage"
+      ]
+    },
+    {
+      "id": "sync.offline",
+      "label": "Synchronisation hors ligne",
+      "input_modalities": [
+        "json",
+        "file"
+      ],
+      "output_modalities": [
+        "json",
+        "file"
+      ],
+      "degraded_strategy": [
+        "queue locale",
+        "export/import manuel"
+      ]
+    }
+  ],
+  "providers": [
+    {
+      "id": "llama_cpp",
+      "name": "llama.cpp",
+      "repository": "https://github.com/ggml-org/llama.cpp",
+      "project_kind": "runtime",
+      "capabilities": [
+        "text.generate",
+        "vision.understand"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "core",
+      "adapter": "openai_compatible_http",
+      "execution_targets": [
+        "android",
+        "ios",
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Runtime GGUF local; chaque modèle/VLM garde sa propre licence."
+    },
+    {
+      "id": "mlc_llm",
+      "name": "MLC LLM",
+      "repository": "https://github.com/mlc-ai/mlc-llm",
+      "project_kind": "runtime",
+      "capabilities": [
+        "text.generate",
+        "vision.understand"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "library",
+      "execution_targets": [
+        "browser",
+        "android",
+        "ios",
+        "desktop",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L2",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Compilation pour WebGPU, mobile et desktop; benchmark par appareil requis."
+    },
+    {
+      "id": "onnxruntime",
+      "name": "ONNX Runtime",
+      "repository": "https://github.com/microsoft/onnxruntime",
+      "project_kind": "runtime",
+      "capabilities": [
+        "text.generate",
+        "vision.understand",
+        "embeddings.generate",
+        "audio.transcribe",
+        "audio.synthesize"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "core",
+      "adapter": "library",
+      "execution_targets": [
+        "browser",
+        "android",
+        "ios",
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Runtime transversal; ne garantit pas la licence des modèles."
+    },
+    {
+      "id": "executorch",
+      "name": "ExecuTorch",
+      "repository": "https://github.com/pytorch/executorch",
+      "project_kind": "runtime",
+      "capabilities": [
+        "text.generate",
+        "vision.understand",
+        "audio.transcribe"
+      ],
+      "code_license": "BSD-3-Clause",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "library",
+      "execution_targets": [
+        "android",
+        "ios"
+      ],
+      "minimum_device_tier": "L2",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Cible mobile/edge PyTorch."
+    },
+    {
+      "id": "litert",
+      "name": "LiteRT",
+      "repository": "https://github.com/google-ai-edge/LiteRT",
+      "project_kind": "runtime",
+      "capabilities": [
+        "text.generate",
+        "vision.understand",
+        "embeddings.generate",
+        "audio.transcribe"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "library",
+      "execution_targets": [
+        "android",
+        "ios",
+        "browser",
+        "desktop"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Runtime Google AI Edge, modèles vérifiés séparément."
+    },
+    {
+      "id": "webllm",
+      "name": "WebLLM",
+      "repository": "https://github.com/mlc-ai/web-llm",
+      "project_kind": "runtime",
+      "capabilities": [
+        "text.generate",
+        "vision.understand"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "wasm",
+      "execution_targets": [
+        "browser"
+      ],
+      "minimum_device_tier": "L2",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Inference WebGPU dans le navigateur."
+    },
+    {
+      "id": "transformers_js",
+      "name": "Transformers.js",
+      "repository": "https://github.com/huggingface/transformers.js",
+      "project_kind": "runtime",
+      "capabilities": [
+        "text.generate",
+        "vision.understand",
+        "embeddings.generate",
+        "audio.transcribe",
+        "translation.local"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "wasm",
+      "execution_targets": [
+        "browser",
+        "desktop"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Inference ONNX/WASM/WebGPU côté navigateur."
+    },
+    {
+      "id": "vllm",
+      "name": "vLLM",
+      "repository": "https://github.com/vllm-project/vllm",
+      "project_kind": "server",
+      "capabilities": [
+        "text.generate",
+        "vision.understand"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "openai_compatible_http",
+      "execution_targets": [
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Serveur GPU à haut débit, activé seulement si un GPU existant est disponible."
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama",
+      "repository": "https://github.com/ollama/ollama",
+      "project_kind": "developer-runtime",
+      "capabilities": [
+        "text.generate",
+        "vision.understand",
+        "embeddings.generate"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "ollama_http",
+      "execution_targets": [
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L2",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Administration locale et développement; pas une dépendance mobile."
+    },
+    {
+      "id": "localai",
+      "name": "LocalAI",
+      "repository": "https://github.com/mudler/LocalAI",
+      "project_kind": "multimodal-server",
+      "capabilities": [
+        "text.generate",
+        "vision.understand",
+        "image.generate",
+        "audio.transcribe",
+        "audio.synthesize",
+        "audio.generate",
+        "video.generate",
+        "embeddings.generate"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "openai_compatible_http",
+      "execution_targets": [
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L2",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "API locale multimodale; capacités effectives dépendent des backends installés."
+    },
+    {
+      "id": "transformers",
+      "name": "Transformers",
+      "repository": "https://github.com/huggingface/transformers",
+      "project_kind": "library",
+      "capabilities": [
+        "text.generate",
+        "vision.understand",
+        "embeddings.generate",
+        "audio.transcribe",
+        "translation.local"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L2",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Bibliothèque modèle; vérification obligatoire de chaque model card."
+    },
+    {
+      "id": "qwen3_vl",
+      "name": "Qwen3-VL",
+      "repository": "https://github.com/QwenLM/Qwen3-VL",
+      "project_kind": "model-family",
+      "capabilities": [
+        "vision.understand",
+        "video.understand",
+        "document.parse",
+        "ocr.extract",
+        "text.generate"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "Apache-2.0",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L2",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Famille 2B+ pour image, document et vidéo; quantifier et benchmarker."
+    },
+    {
+      "id": "internvl",
+      "name": "InternVL",
+      "repository": "https://github.com/OpenGVLab/InternVL",
+      "project_kind": "model-family",
+      "capabilities": [
+        "vision.understand",
+        "video.understand",
+        "document.parse"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "experimental",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Vérifier la licence du checkpoint exact avant activation."
+    },
+    {
+      "id": "llava_next",
+      "name": "LLaVA-NeXT",
+      "repository": "https://github.com/LLaVA-VL/LLaVA-NeXT",
+      "project_kind": "model-family",
+      "capabilities": [
+        "vision.understand",
+        "video.understand"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "experimental",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L3",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Base models et checkpoints à auditer séparément."
+    },
+    {
+      "id": "docling",
+      "name": "Docling",
+      "repository": "https://github.com/docling-project/docling",
+      "project_kind": "document-engine",
+      "capabilities": [
+        "document.parse",
+        "ocr.extract",
+        "audio.transcribe",
+        "video.understand"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "core",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Formats bureautiques, PDF, images, audio et vidéo; modèles auxiliaires audités séparément."
+    },
+    {
+      "id": "markitdown",
+      "name": "MarkItDown",
+      "repository": "https://github.com/microsoft/markitdown",
+      "project_kind": "document-engine",
+      "capabilities": [
+        "document.parse",
+        "ocr.extract",
+        "audio.transcribe"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Conversion légère vers Markdown; exécuter en sandbox sur entrées non fiables."
+    },
+    {
+      "id": "paddleocr",
+      "name": "PaddleOCR",
+      "repository": "https://github.com/PaddlePaddle/PaddleOCR",
+      "project_kind": "ocr-engine",
+      "capabilities": [
+        "ocr.extract",
+        "document.parse"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "Apache-2.0/per-model",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "core",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "OCR multilingue 100+ langues et extraction structurée."
+    },
+    {
+      "id": "tesseract",
+      "name": "Tesseract OCR",
+      "repository": "https://github.com/tesseract-ocr/tesseract",
+      "project_kind": "ocr-engine",
+      "capabilities": [
+        "ocr.extract"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "Apache-2.0",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "core",
+      "adapter": "cli_sidecar",
+      "execution_targets": [
+        "android",
+        "ios",
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Fallback OCR léger, utile sur matériel faible."
+    },
+    {
+      "id": "mineru",
+      "name": "MinerU",
+      "repository": "https://github.com/opendatalab/MinerU",
+      "project_kind": "document-engine",
+      "capabilities": [
+        "document.parse",
+        "ocr.extract"
+      ],
+      "code_license": "MinerU Open Source License",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "experimental",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L3",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Licence basée sur Apache avec conditions additionnelles; revue juridique avant production."
+    },
+    {
+      "id": "surya",
+      "name": "Surya",
+      "repository": "https://github.com/datalab-to/surya",
+      "project_kind": "ocr-engine",
+      "capabilities": [
+        "ocr.extract",
+        "document.parse"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "modified OpenRAIL-M",
+      "commercial_use": "conditional",
+      "status": "conditional",
+      "integration_tier": "experimental",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L3",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Poids gratuits avec seuil commercial; ne pas activer sans validation de l’éligibilité."
+    },
+    {
+      "id": "apache_tika",
+      "name": "Apache Tika",
+      "repository": "https://github.com/apache/tika",
+      "project_kind": "document-engine",
+      "capabilities": [
+        "document.parse"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "cli_sidecar",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Métadonnées et extraction de très nombreux formats."
+    },
+    {
+      "id": "pypdf",
+      "name": "pypdf",
+      "repository": "https://github.com/py-pdf/pypdf",
+      "project_kind": "document-library",
+      "capabilities": [
+        "document.parse"
+      ],
+      "code_license": "BSD-3-Clause",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "library",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Extraction/manipulation PDF textuel sans OCR."
+    },
+    {
+      "id": "opencv",
+      "name": "OpenCV",
+      "repository": "https://github.com/opencv/opencv",
+      "project_kind": "vision-library",
+      "capabilities": [
+        "vision.understand",
+        "ocr.extract",
+        "image.edit",
+        "image.segment",
+        "video.understand",
+        "video.edit"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "core",
+      "adapter": "library",
+      "execution_targets": [
+        "browser",
+        "android",
+        "ios",
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Prétraitement, vision classique, suivi et géométrie."
+    },
+    {
+      "id": "mediapipe",
+      "name": "MediaPipe",
+      "repository": "https://github.com/google-ai-edge/mediapipe",
+      "project_kind": "vision-runtime",
+      "capabilities": [
+        "vision.understand",
+        "image.segment",
+        "video.understand"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "library",
+      "execution_targets": [
+        "browser",
+        "android",
+        "ios",
+        "desktop"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Flux temps réel multiplateforme; modèles individuels à vérifier."
+    },
+    {
+      "id": "sam2",
+      "name": "SAM 2",
+      "repository": "https://github.com/facebookresearch/sam2",
+      "project_kind": "vision-model",
+      "capabilities": [
+        "image.segment",
+        "video.understand"
+      ],
+      "code_license": "Apache-2.0/BSD-3-Clause",
+      "artifact_license": "Apache-2.0",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L3",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Segmentation d’images et vidéos."
+    },
+    {
+      "id": "groundingdino",
+      "name": "Grounding DINO",
+      "repository": "https://github.com/IDEA-Research/GroundingDINO",
+      "project_kind": "vision-model",
+      "capabilities": [
+        "vision.understand",
+        "image.segment"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "Apache-2.0",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L3",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Détection ouverte guidée par texte."
+    },
+    {
+      "id": "openclip",
+      "name": "OpenCLIP",
+      "repository": "https://github.com/mlfoundations/open_clip",
+      "project_kind": "vision-model",
+      "capabilities": [
+        "vision.understand",
+        "embeddings.generate",
+        "retrieval.search"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L2",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Embeddings image-texte; licence du checkpoint à vérifier."
+    },
+    {
+      "id": "realesrgan",
+      "name": "Real-ESRGAN",
+      "repository": "https://github.com/xinntao/Real-ESRGAN",
+      "project_kind": "image-model",
+      "capabilities": [
+        "image.restore"
+      ],
+      "code_license": "BSD-3-Clause",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L3",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Restauration/agrandissement, à évaluer sur les visages de mineurs."
+    },
+    {
+      "id": "libvips",
+      "name": "libvips",
+      "repository": "https://github.com/libvips/libvips",
+      "project_kind": "image-library",
+      "capabilities": [
+        "image.edit",
+        "image.restore",
+        "media.transcode"
+      ],
+      "code_license": "LGPL-2.1+",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "core",
+      "adapter": "library",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Traitement image rapide à faible mémoire."
+    },
+    {
+      "id": "imagemagick",
+      "name": "ImageMagick",
+      "repository": "https://github.com/ImageMagick/ImageMagick",
+      "project_kind": "image-library",
+      "capabilities": [
+        "image.edit",
+        "image.restore",
+        "media.transcode"
+      ],
+      "code_license": "ImageMagick License",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "cli_sidecar",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Conversion et composition; appliquer limites de ressources et sandbox."
+    },
+    {
+      "id": "diffusers",
+      "name": "Diffusers",
+      "repository": "https://github.com/huggingface/diffusers",
+      "project_kind": "generation-library",
+      "capabilities": [
+        "image.generate",
+        "image.edit",
+        "video.generate",
+        "audio.generate"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "core",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L2",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Orchestrateur de modèles; aucun checkpoint n’est automatiquement approuvé."
+    },
+    {
+      "id": "comfyui",
+      "name": "ComfyUI",
+      "repository": "https://github.com/Comfy-Org/ComfyUI",
+      "project_kind": "generation-server",
+      "capabilities": [
+        "image.generate",
+        "image.edit",
+        "audio.generate",
+        "music.generate",
+        "video.generate",
+        "video.edit",
+        "3d.render"
+      ],
+      "code_license": "GPL-3.0",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "comfyui_http",
+      "execution_targets": [
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L2",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Sidecar isolé; désactiver API nodes payants et n’autoriser que des nodes signés."
+    },
+    {
+      "id": "qwen_image",
+      "name": "Qwen-Image",
+      "repository": "https://github.com/QwenLM/Qwen-Image",
+      "project_kind": "image-model",
+      "capabilities": [
+        "image.generate",
+        "image.edit"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "Apache-2.0",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Génération/édition avec bon rendu du texte; GPU requis."
+    },
+    {
+      "id": "flux_schnell",
+      "name": "FLUX.1 schnell",
+      "repository": "https://github.com/black-forest-labs/flux",
+      "project_kind": "image-model",
+      "capabilities": [
+        "image.generate"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "Apache-2.0",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Seule variante FLUX.1 schnell approuvable par défaut dans cette famille."
+    },
+    {
+      "id": "flux_dev",
+      "name": "FLUX.1 dev family",
+      "repository": "https://github.com/black-forest-labs/flux",
+      "project_kind": "image-model",
+      "capabilities": [
+        "image.generate",
+        "image.edit"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "FLUX non-commercial",
+      "commercial_use": "blocked",
+      "status": "blocked",
+      "integration_tier": "rejected",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Bloqué pour le produit commercial sans licence distincte."
+    },
+    {
+      "id": "whisper_cpp",
+      "name": "whisper.cpp",
+      "repository": "https://github.com/ggml-org/whisper.cpp",
+      "project_kind": "speech-runtime",
+      "capabilities": [
+        "audio.transcribe",
+        "video.understand"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "MIT",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "core",
+      "adapter": "cli_sidecar",
+      "execution_targets": [
+        "browser",
+        "android",
+        "ios",
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "ASR quantifié CPU/GPU, y compris Android/iOS/WASM."
+    },
+    {
+      "id": "faster_whisper",
+      "name": "faster-whisper",
+      "repository": "https://github.com/SYSTRAN/faster-whisper",
+      "project_kind": "speech-runtime",
+      "capabilities": [
+        "audio.transcribe",
+        "video.understand"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "MIT/per-model",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "ASR serveur/desktop via CTranslate2."
+    },
+    {
+      "id": "sherpa_onnx",
+      "name": "sherpa-onnx",
+      "repository": "https://github.com/k2-fsa/sherpa-onnx",
+      "project_kind": "speech-runtime",
+      "capabilities": [
+        "audio.transcribe",
+        "audio.synthesize",
+        "audio.separate"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "core",
+      "adapter": "library",
+      "execution_targets": [
+        "android",
+        "ios",
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "STT, TTS, VAD, diarisation et séparation hors ligne."
+    },
+    {
+      "id": "vosk",
+      "name": "Vosk",
+      "repository": "https://github.com/alphacep/vosk-api",
+      "project_kind": "speech-runtime",
+      "capabilities": [
+        "audio.transcribe"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "Apache-2.0/per-model",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "library",
+      "execution_targets": [
+        "android",
+        "ios",
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "ASR hors ligne léger."
+    },
+    {
+      "id": "kokoro",
+      "name": "Kokoro",
+      "repository": "https://github.com/hexgrad/kokoro",
+      "project_kind": "tts-model",
+      "capabilities": [
+        "audio.synthesize"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "Apache-2.0",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "core",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "TTS compact 82M; vérifier couverture français/anglais sur corpus camerounais."
+    },
+    {
+      "id": "melotts",
+      "name": "MeloTTS",
+      "repository": "https://github.com/myshell-ai/MeloTTS",
+      "project_kind": "tts-model",
+      "capabilities": [
+        "audio.synthesize"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "MIT",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "TTS multilingue, français inclus."
+    },
+    {
+      "id": "piper",
+      "name": "Piper",
+      "repository": "https://github.com/OHF-Voice/piper1-gpl",
+      "project_kind": "tts-runtime",
+      "capabilities": [
+        "audio.synthesize"
+      ],
+      "code_license": "GPL-3.0",
+      "artifact_license": "per-voice",
+      "commercial_use": "conditional",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "cli_sidecar",
+      "execution_targets": [
+        "android",
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Sidecar copyleft; chaque voix doit être auditée."
+    },
+    {
+      "id": "bark",
+      "name": "Bark",
+      "repository": "https://github.com/suno-ai/bark",
+      "project_kind": "audio-model",
+      "capabilities": [
+        "audio.synthesize",
+        "audio.generate"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "MIT",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "experimental",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L3",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Génératif et imprévisible; jamais pour une consigne critique sans validation."
+    },
+    {
+      "id": "ace_step",
+      "name": "ACE-Step",
+      "repository": "https://github.com/ace-step/ACE-Step",
+      "project_kind": "music-model",
+      "capabilities": [
+        "music.generate",
+        "audio.generate"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "Apache-2.0",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Musique locale; contrôle originalité, droits et contenus mineurs obligatoire."
+    },
+    {
+      "id": "stable_audio_tools",
+      "name": "stable-audio-tools",
+      "repository": "https://github.com/Stability-AI/stable-audio-tools",
+      "project_kind": "audio-library",
+      "capabilities": [
+        "audio.generate",
+        "music.generate"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "per-model/gated",
+      "commercial_use": "conditional",
+      "status": "conditional",
+      "integration_tier": "experimental",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Code libre mais acceptation/licence du modèle distincte."
+    },
+    {
+      "id": "audiocraft_musicgen",
+      "name": "AudioCraft / MusicGen",
+      "repository": "https://github.com/facebookresearch/audiocraft",
+      "project_kind": "music-model",
+      "capabilities": [
+        "music.generate",
+        "audio.generate"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "CC-BY-NC-4.0",
+      "commercial_use": "blocked",
+      "status": "blocked",
+      "integration_tier": "rejected",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Poids non commerciaux: interdit dans le produit commercial."
+    },
+    {
+      "id": "demucs",
+      "name": "Demucs",
+      "repository": "https://github.com/facebookresearch/demucs",
+      "project_kind": "audio-model",
+      "capabilities": [
+        "audio.separate"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "watch",
+      "integration_tier": "experimental",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L3",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Dépôt archivé depuis 2025; ne pas adopter sans fork maintenu."
+    },
+    {
+      "id": "ffmpeg",
+      "name": "FFmpeg",
+      "repository": "https://github.com/FFmpeg/FFmpeg",
+      "project_kind": "media-engine",
+      "capabilities": [
+        "media.transcode",
+        "video.edit",
+        "audio.separate",
+        "video.understand",
+        "diagram.render"
+      ],
+      "code_license": "LGPL-2.1+/GPL-2+ per build",
+      "artifact_license": "same-as-build",
+      "commercial_use": "conditional",
+      "status": "conditional",
+      "integration_tier": "core",
+      "adapter": "cli_sidecar",
+      "execution_targets": [
+        "android",
+        "ios",
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Construire une variante conforme et conserver l’inventaire des codecs."
+    },
+    {
+      "id": "gstreamer",
+      "name": "GStreamer",
+      "repository": "https://github.com/GStreamer/gstreamer",
+      "project_kind": "media-engine",
+      "capabilities": [
+        "media.transcode",
+        "video.edit",
+        "audio.separate"
+      ],
+      "code_license": "LGPL-2.1+",
+      "artifact_license": "per-plugin",
+      "commercial_use": "conditional",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "library",
+      "execution_targets": [
+        "android",
+        "ios",
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Plugins/codecs à auditer séparément."
+    },
+    {
+      "id": "ffmpeg_wasm",
+      "name": "ffmpeg.wasm",
+      "repository": "https://github.com/ffmpegwasm/ffmpeg.wasm",
+      "project_kind": "media-runtime",
+      "capabilities": [
+        "media.transcode",
+        "video.edit",
+        "audio.separate"
+      ],
+      "code_license": "MIT + FFmpeg build license",
+      "artifact_license": "same-as-build",
+      "commercial_use": "conditional",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "wasm",
+      "execution_targets": [
+        "browser"
+      ],
+      "minimum_device_tier": "L2",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Transcodage navigateur pour petits médias; limites mémoire strictes."
+    },
+    {
+      "id": "pyscenedetect",
+      "name": "PySceneDetect",
+      "repository": "https://github.com/Breakthrough/PySceneDetect",
+      "project_kind": "video-library",
+      "capabilities": [
+        "video.understand",
+        "video.edit"
+      ],
+      "code_license": "BSD-3-Clause",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Détection de plans pour échantillonnage vidéo."
+    },
+    {
+      "id": "decord",
+      "name": "Decord",
+      "repository": "https://github.com/dmlc/decord",
+      "project_kind": "video-library",
+      "capabilities": [
+        "video.understand"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "library",
+      "execution_targets": [
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Chargement vidéo efficace pour VLM."
+    },
+    {
+      "id": "wan21",
+      "name": "Wan 2.1",
+      "repository": "https://github.com/Wan-Video/Wan2.1",
+      "project_kind": "video-model",
+      "capabilities": [
+        "video.generate"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "Apache-2.0",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "experimental",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Génération locale lourde; versions optimisées possibles mais non garanties."
+    },
+    {
+      "id": "ltx_video",
+      "name": "LTX-Video",
+      "repository": "https://github.com/Lightricks/LTX-Video",
+      "project_kind": "video-model",
+      "capabilities": [
+        "video.generate",
+        "audio.generate"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "Apache-2.0/per-model",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "experimental",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "LTX-2 ajoute audio-vidéo synchronisé; GPU existant requis."
+    },
+    {
+      "id": "cogvideox_2b",
+      "name": "CogVideoX-2B",
+      "repository": "https://github.com/zai-org/CogVideo",
+      "project_kind": "video-model",
+      "capabilities": [
+        "video.generate"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "Apache-2.0",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "experimental",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Utiliser uniquement le checkpoint 2B Apache; autres checkpoints à auditer."
+    },
+    {
+      "id": "framepack",
+      "name": "FramePack",
+      "repository": "https://github.com/lllyasviel/FramePack",
+      "project_kind": "video-runtime",
+      "capabilities": [
+        "video.generate"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "experimental",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Le runtime est libre; le modèle sous-jacent doit être autorisé."
+    },
+    {
+      "id": "mochi",
+      "name": "Mochi 1",
+      "repository": "https://github.com/genmoai/mochi",
+      "project_kind": "video-model",
+      "capabilities": [
+        "video.generate"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "Apache-2.0",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "experimental",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Modèle vidéo lourd, réservé à une file GPU opportuniste."
+    },
+    {
+      "id": "open_sora",
+      "name": "Open-Sora",
+      "repository": "https://github.com/hpcaitech/Open-Sora",
+      "project_kind": "video-model",
+      "capabilities": [
+        "video.generate"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "per-checkpoint",
+      "commercial_use": "review",
+      "status": "watch",
+      "integration_tier": "experimental",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": true,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Candidat recherche; checkpoints et besoins matériels à revalider."
+    },
+    {
+      "id": "pgvector",
+      "name": "pgvector",
+      "repository": "https://github.com/pgvector/pgvector",
+      "project_kind": "database-extension",
+      "capabilities": [
+        "retrieval.search",
+        "embeddings.generate"
+      ],
+      "code_license": "PostgreSQL License",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "core",
+      "adapter": "library",
+      "execution_targets": [
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": true,
+      "notes": "Déjà cohérent avec Supabase/PostgreSQL; choix par défaut."
+    },
+    {
+      "id": "qdrant",
+      "name": "Qdrant",
+      "repository": "https://github.com/qdrant/qdrant",
+      "project_kind": "vector-database",
+      "capabilities": [
+        "retrieval.search"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "openai_compatible_http",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "N’adopter qu’après benchmark supérieur à pgvector."
+    },
+    {
+      "id": "sqlite_vec",
+      "name": "sqlite-vec",
+      "repository": "https://github.com/asg017/sqlite-vec",
+      "project_kind": "database-extension",
+      "capabilities": [
+        "retrieval.search",
+        "sync.offline"
+      ],
+      "code_license": "MIT/Apache-2.0 dual",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "library",
+      "execution_targets": [
+        "browser",
+        "android",
+        "ios",
+        "desktop"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Recherche vectorielle locale/offline."
+    },
+    {
+      "id": "faiss",
+      "name": "FAISS",
+      "repository": "https://github.com/facebookresearch/faiss",
+      "project_kind": "vector-library",
+      "capabilities": [
+        "retrieval.search"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "library",
+      "execution_targets": [
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Index local en mémoire/fichiers."
+    },
+    {
+      "id": "lancedb",
+      "name": "LanceDB",
+      "repository": "https://github.com/lancedb/lancedb",
+      "project_kind": "vector-database",
+      "capabilities": [
+        "retrieval.search"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "library",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Base embarquée; benchmark avant substitution."
+    },
+    {
+      "id": "sentence_transformers",
+      "name": "Sentence Transformers",
+      "repository": "https://github.com/huggingface/sentence-transformers",
+      "project_kind": "embedding-library",
+      "capabilities": [
+        "embeddings.generate",
+        "retrieval.search"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "core",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Modèles d’embeddings locaux, licence par checkpoint."
+    },
+    {
+      "id": "haystack",
+      "name": "Haystack",
+      "repository": "https://github.com/deepset-ai/haystack",
+      "project_kind": "rag-framework",
+      "capabilities": [
+        "retrieval.search",
+        "agent.orchestrate",
+        "tool.protocol"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Pipelines RAG/agents modulaires; éviter doublon avec le Gateway."
+    },
+    {
+      "id": "llama_index",
+      "name": "LlamaIndex",
+      "repository": "https://github.com/run-llama/llama_index",
+      "project_kind": "rag-framework",
+      "capabilities": [
+        "document.parse",
+        "retrieval.search",
+        "agent.orchestrate"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Connecteurs à activer seulement au besoin."
+    },
+    {
+      "id": "langgraph",
+      "name": "LangGraph",
+      "repository": "https://github.com/langchain-ai/langgraph",
+      "project_kind": "agent-framework",
+      "capabilities": [
+        "agent.orchestrate"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "core",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Workflows durables; ne pas recréer les agents existants."
+    },
+    {
+      "id": "microsoft_agent_framework",
+      "name": "Microsoft Agent Framework",
+      "repository": "https://github.com/microsoft/agent-framework",
+      "project_kind": "agent-framework",
+      "capabilities": [
+        "agent.orchestrate",
+        "tool.protocol"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Successeur production d’AutoGen; providers payants désactivés par politique."
+    },
+    {
+      "id": "smolagents",
+      "name": "smolagents",
+      "repository": "https://github.com/huggingface/smolagents",
+      "project_kind": "agent-framework",
+      "capabilities": [
+        "agent.orchestrate",
+        "tool.protocol"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Agents compacts; utiliser modèles locaux uniquement."
+    },
+    {
+      "id": "pydantic_ai",
+      "name": "PydanticAI",
+      "repository": "https://github.com/pydantic/pydantic-ai",
+      "project_kind": "agent-framework",
+      "capabilities": [
+        "agent.orchestrate",
+        "tool.protocol"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Contrats typés; éviter coexistence inutile de plusieurs orchestrateurs."
+    },
+    {
+      "id": "dspy",
+      "name": "DSPy",
+      "repository": "https://github.com/stanfordnlp/dspy",
+      "project_kind": "optimization-framework",
+      "capabilities": [
+        "agent.orchestrate",
+        "observability.evaluate"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "experimental",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Optimisation/évaluation de programmes LM, après baseline stable."
+    },
+    {
+      "id": "autogen",
+      "name": "AutoGen",
+      "repository": "https://github.com/microsoft/autogen",
+      "project_kind": "agent-framework",
+      "capabilities": [
+        "agent.orchestrate"
+      ],
+      "code_license": "MIT/CC-BY-4.0",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "blocked",
+      "integration_tier": "rejected",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Dépôt en maintenance; Microsoft recommande Agent Framework."
+    },
+    {
+      "id": "mcp_servers",
+      "name": "MCP Servers",
+      "repository": "https://github.com/modelcontextprotocol/servers",
+      "project_kind": "protocol-implementations",
+      "capabilities": [
+        "tool.protocol"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "per-server",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "core",
+      "adapter": "mcp",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Serveurs de référence; chaque serveur reste non fiable jusqu’à allowlist et sandbox."
+    },
+    {
+      "id": "fastmcp",
+      "name": "FastMCP",
+      "repository": "https://github.com/PrefectHQ/fastmcp",
+      "project_kind": "protocol-framework",
+      "capabilities": [
+        "tool.protocol",
+        "agent.orchestrate"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "mcp",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Construction de serveurs MCP internes typés."
+    },
+    {
+      "id": "pyodide",
+      "name": "Pyodide",
+      "repository": "https://github.com/pyodide/pyodide",
+      "project_kind": "code-runtime",
+      "capabilities": [
+        "code.execute",
+        "math.solve",
+        "science.simulate"
+      ],
+      "code_license": "MPL-2.0",
+      "artifact_license": "package-dependent",
+      "commercial_use": "conditional",
+      "status": "conditional",
+      "integration_tier": "core",
+      "adapter": "wasm",
+      "execution_targets": [
+        "browser"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Python/WASM isolé dans le navigateur; allowlist de paquets."
+    },
+    {
+      "id": "jupyterlite",
+      "name": "JupyterLite",
+      "repository": "https://github.com/jupyterlite/jupyterlite",
+      "project_kind": "code-runtime",
+      "capabilities": [
+        "code.execute",
+        "science.simulate"
+      ],
+      "code_license": "BSD-3-Clause",
+      "artifact_license": "package-dependent",
+      "commercial_use": "conditional",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "wasm",
+      "execution_targets": [
+        "browser"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Notebooks sans serveur, adaptés aux exercices."
+    },
+    {
+      "id": "wasmtime",
+      "name": "Wasmtime",
+      "repository": "https://github.com/bytecodealliance/wasmtime",
+      "project_kind": "sandbox-runtime",
+      "capabilities": [
+        "code.execute",
+        "tool.protocol"
+      ],
+      "code_license": "Apache-2.0 WITH LLVM-exception",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "core",
+      "adapter": "library",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Sandbox WASI avec budgets CPU/mémoire."
+    },
+    {
+      "id": "gvisor",
+      "name": "gVisor",
+      "repository": "https://github.com/google/gvisor",
+      "project_kind": "sandbox-runtime",
+      "capabilities": [
+        "code.execute",
+        "safety.scan"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "cli_sidecar",
+      "execution_targets": [
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Isolation Linux côté serveur."
+    },
+    {
+      "id": "firecracker",
+      "name": "Firecracker",
+      "repository": "https://github.com/firecracker-microvm/firecracker",
+      "project_kind": "sandbox-runtime",
+      "capabilities": [
+        "code.execute"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "experimental",
+      "adapter": "cli_sidecar",
+      "execution_targets": [
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "MicroVM exigeant un hôte Linux/KVM maîtrisé."
+    },
+    {
+      "id": "sympy",
+      "name": "SymPy",
+      "repository": "https://github.com/sympy/sympy",
+      "project_kind": "math-library",
+      "capabilities": [
+        "math.solve",
+        "science.simulate"
+      ],
+      "code_license": "BSD-3-Clause",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "core",
+      "adapter": "native_python",
+      "execution_targets": [
+        "browser",
+        "android",
+        "ios",
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": true,
+      "notes": "Déjà présent dans le Gateway; calcul symbolique vérifiable."
+    },
+    {
+      "id": "scipy",
+      "name": "SciPy",
+      "repository": "https://github.com/scipy/scipy",
+      "project_kind": "science-library",
+      "capabilities": [
+        "math.solve",
+        "science.simulate"
+      ],
+      "code_license": "BSD-3-Clause",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "core",
+      "adapter": "native_python",
+      "execution_targets": [
+        "browser",
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Calcul numérique scientifique."
+    },
+    {
+      "id": "manim",
+      "name": "Manim Community",
+      "repository": "https://github.com/ManimCommunity/manim",
+      "project_kind": "render-engine",
+      "capabilities": [
+        "diagram.render",
+        "video.generate"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "core",
+      "adapter": "cli_sidecar",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Animations mathématiques déterministes."
+    },
+    {
+      "id": "rdkit",
+      "name": "RDKit",
+      "repository": "https://github.com/rdkit/rdkit",
+      "project_kind": "science-library",
+      "capabilities": [
+        "science.simulate",
+        "3d.render"
+      ],
+      "code_license": "BSD-3-Clause",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "library",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Cheminformatique et rendu moléculaire."
+    },
+    {
+      "id": "openbabel",
+      "name": "Open Babel",
+      "repository": "https://github.com/openbabel/openbabel",
+      "project_kind": "science-library",
+      "capabilities": [
+        "science.simulate",
+        "3d.render"
+      ],
+      "code_license": "GPL-2.0",
+      "artifact_license": "same-as-code",
+      "commercial_use": "conditional",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "cli_sidecar",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Utiliser comme processus séparé avec conformité GPL."
+    },
+    {
+      "id": "cantera",
+      "name": "Cantera",
+      "repository": "https://github.com/Cantera/cantera",
+      "project_kind": "science-library",
+      "capabilities": [
+        "science.simulate"
+      ],
+      "code_license": "BSD-3-Clause",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Cinétique, combustion et thermodynamique."
+    },
+    {
+      "id": "threejs",
+      "name": "three.js",
+      "repository": "https://github.com/mrdoob/three.js",
+      "project_kind": "render-library",
+      "capabilities": [
+        "3d.render",
+        "diagram.render",
+        "science.simulate"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "asset-dependent",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "core",
+      "adapter": "library",
+      "execution_targets": [
+        "browser",
+        "android",
+        "ios",
+        "desktop"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Rendu WebGL/WebGPU; licences des assets séparées."
+    },
+    {
+      "id": "babylonjs",
+      "name": "Babylon.js",
+      "repository": "https://github.com/BabylonJS/Babylon.js",
+      "project_kind": "render-library",
+      "capabilities": [
+        "3d.render",
+        "diagram.render",
+        "science.simulate"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "asset-dependent",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "library",
+      "execution_targets": [
+        "browser",
+        "android",
+        "ios",
+        "desktop"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Moteur 3D web alternatif."
+    },
+    {
+      "id": "godot",
+      "name": "Godot Engine",
+      "repository": "https://github.com/godotengine/godot",
+      "project_kind": "game-engine",
+      "capabilities": [
+        "3d.render",
+        "science.simulate",
+        "diagram.render"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "asset-dependent",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "optional",
+      "adapter": "cli_sidecar",
+      "execution_targets": [
+        "android",
+        "ios",
+        "desktop"
+      ],
+      "minimum_device_tier": "L1",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Labs/jeux exportables; assets sous licences vérifiées."
+    },
+    {
+      "id": "yjs",
+      "name": "Yjs",
+      "repository": "https://github.com/yjs/yjs",
+      "project_kind": "sync-library",
+      "capabilities": [
+        "sync.offline"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "core",
+      "adapter": "library",
+      "execution_targets": [
+        "browser",
+        "android",
+        "ios",
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "CRDT pour collaboration et synchronisation."
+    },
+    {
+      "id": "automerge",
+      "name": "Automerge",
+      "repository": "https://github.com/automerge/automerge",
+      "project_kind": "sync-library",
+      "capabilities": [
+        "sync.offline"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "library",
+      "execution_targets": [
+        "browser",
+        "android",
+        "ios",
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "CRDT alternatif; choisir après benchmark."
+    },
+    {
+      "id": "presidio",
+      "name": "Microsoft Presidio",
+      "repository": "https://github.com/microsoft/presidio",
+      "project_kind": "privacy-engine",
+      "capabilities": [
+        "safety.scan"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "per-model",
+      "commercial_use": "review",
+      "status": "conditional",
+      "integration_tier": "core",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Détection/anonymisation PII; adaptation langues locales nécessaire."
+    },
+    {
+      "id": "trivy",
+      "name": "Trivy",
+      "repository": "https://github.com/aquasecurity/trivy",
+      "project_kind": "security-scanner",
+      "capabilities": [
+        "safety.scan"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "core",
+      "adapter": "cli_sidecar",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Scan vulnérabilités, secrets, SBOM et images."
+    },
+    {
+      "id": "syft",
+      "name": "Syft",
+      "repository": "https://github.com/anchore/syft",
+      "project_kind": "sbom-tool",
+      "capabilities": [
+        "safety.scan"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "core",
+      "adapter": "cli_sidecar",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Génération SBOM de chaque pack."
+    },
+    {
+      "id": "opentelemetry_python",
+      "name": "OpenTelemetry Python",
+      "repository": "https://github.com/open-telemetry/opentelemetry-python",
+      "project_kind": "observability-library",
+      "capabilities": [
+        "observability.evaluate"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "core",
+      "adapter": "library",
+      "execution_targets": [
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Traces/métriques exportées vers un backend libre."
+    },
+    {
+      "id": "mlflow",
+      "name": "MLflow",
+      "repository": "https://github.com/mlflow/mlflow",
+      "project_kind": "evaluation-platform",
+      "capabilities": [
+        "observability.evaluate"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "openai_compatible_http",
+      "execution_targets": [
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Runs, modèles et évaluations auto-hébergés."
+    },
+    {
+      "id": "ragas",
+      "name": "Ragas",
+      "repository": "https://github.com/explodinggradients/ragas",
+      "project_kind": "evaluation-library",
+      "capabilities": [
+        "observability.evaluate",
+        "retrieval.search"
+      ],
+      "code_license": "Apache-2.0",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "native_python",
+      "execution_targets": [
+        "server_cpu",
+        "server_gpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Évaluation RAG; juges locaux ou métriques sans API payante."
+    },
+    {
+      "id": "promptfoo",
+      "name": "Promptfoo",
+      "repository": "https://github.com/promptfoo/promptfoo",
+      "project_kind": "evaluation-tool",
+      "capabilities": [
+        "observability.evaluate",
+        "safety.scan"
+      ],
+      "code_license": "MIT",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "cli_sidecar",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Tests prompts, red-team et régressions avec providers locaux."
+    }
+  ]
+}
+
