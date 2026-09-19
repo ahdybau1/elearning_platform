@@ -30,6 +30,7 @@ ExecutionTarget = Literal[
     "server_gpu",
 ]
 DeviceTier = Literal["L0", "L1", "L2", "L3"]
+ActorRole = Literal["student", "admin"]
 
 
 class ZeroCostPolicy(BaseModel):
@@ -46,6 +47,20 @@ class CapabilityDefinition(BaseModel):
     input_modalities: list[str]
     output_modalities: list[str]
     degraded_strategy: list[str] = Field(default_factory=list)
+    allowed_roles: list[ActorRole] = Field(
+        default_factory=lambda: ["student", "admin"]
+    )
+    pipeline_stages: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def enforce_role_and_pipeline_metadata(self) -> "CapabilityDefinition":
+        if not self.allowed_roles:
+            raise ValueError("A capability must allow at least one authenticated role")
+        if len(self.allowed_roles) != len(set(self.allowed_roles)):
+            raise ValueError("Duplicate capability role")
+        if len(self.pipeline_stages) != len(set(self.pipeline_stages)):
+            raise ValueError("Duplicate capability pipeline stage")
+        return self
 
 
 class ProviderDefinition(BaseModel):
@@ -56,6 +71,7 @@ class ProviderDefinition(BaseModel):
     repository: HttpUrl
     project_kind: str
     capabilities: list[str]
+    capability_stages: dict[str, list[str]] = Field(default_factory=dict)
     code_license: str
     artifact_license: str
     commercial_use: CommercialUse
@@ -105,6 +121,7 @@ class ProviderDecision(BaseModel):
     reasons: list[str] = Field(default_factory=list)
     adapter: AdapterKind
     execution_targets: list[ExecutionTarget]
+    stages: list[str] = Field(default_factory=list)
 
 
 class CapabilityPlan(BaseModel):
@@ -112,4 +129,5 @@ class CapabilityPlan(BaseModel):
     eligible: list[ProviderDecision]
     rejected: list[ProviderDecision]
     degraded_strategy: list[str]
+    uncovered_stages: list[str] = Field(default_factory=list)
     zero_cost_enforced: bool = True

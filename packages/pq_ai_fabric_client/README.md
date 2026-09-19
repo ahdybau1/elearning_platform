@@ -8,6 +8,8 @@ Le package n'embarque aucun modèle et n'appelle aucune API payante. Il transmet
 - `getCapability(id)` ;
 - `planCapability(request)`.
 
+Le client ne transmet aucun rôle. Le Gateway déduit `student` ou `admin` de la session authentifiée afin qu'une application Élève ne puisse pas demander les capacités audio/vidéo réservées à l'Administration.
+
 L'URL est injectée dans les applications avec :
 
 ```bash

@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "reviewed_at": "2026-09-19",
   "policy": {
     "mandatory_cost_eur": 0,
@@ -23,7 +23,12 @@
         "moteur déterministe",
         "modèle local compact",
         "file différée"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "vision.understand",
@@ -40,7 +45,12 @@
         "OCR local",
         "détection classique",
         "description indisponible explicitement"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "document.parse",
@@ -57,7 +67,12 @@
         "extracteur natif",
         "OCR page par page",
         "mise en revue humaine"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "ocr.extract",
@@ -73,7 +88,12 @@
       "degraded_strategy": [
         "Tesseract",
         "saisie/revue humaine"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "image.generate",
@@ -89,7 +109,12 @@
         "SVG/Canvas déterministe",
         "bibliothèque d’illustrations",
         "file GPU différée"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "image.edit",
@@ -105,7 +130,12 @@
         "libvips/ImageMagick",
         "édition manuelle",
         "file GPU différée"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "image.segment",
@@ -121,7 +151,12 @@
       "degraded_strategy": [
         "OpenCV/MediaPipe",
         "revue manuelle"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "image.restore",
@@ -135,7 +170,12 @@
       "degraded_strategy": [
         "redimensionnement classique",
         "original conservé"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "audio.transcribe",
@@ -152,7 +192,12 @@
         "modèle ASR compact",
         "file locale différée",
         "saisie manuelle"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "audio.synthesize",
@@ -167,6 +212,40 @@
         "voix système",
         "modèle TTS compact",
         "texte seul"
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
+    },
+    {
+      "id": "audio.read_scientific_text",
+      "label": "Lecture vocale scientifique et mathématique",
+      "input_modalities": [
+        "text",
+        "latex",
+        "mathml",
+        "formula"
+      ],
+      "output_modalities": [
+        "audio",
+        "text",
+        "ssml"
+      ],
+      "degraded_strategy": [
+        "afficher l’expression originale",
+        "voix système après verbalisation vérifiée",
+        "texte verbalisé sans audio"
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": [
+        "parse_math",
+        "verbalize_math",
+        "synthesize_speech"
       ]
     },
     {
@@ -183,7 +262,11 @@
         "sons procéduraux",
         "banque libre",
         "file GPU différée"
-      ]
+      ],
+      "allowed_roles": [
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "music.generate",
@@ -199,7 +282,11 @@
         "MIDI/procédural",
         "banque libre",
         "file GPU différée"
-      ]
+      ],
+      "allowed_roles": [
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "audio.separate",
@@ -213,7 +300,12 @@
       "degraded_strategy": [
         "filtres FFmpeg",
         "original conservé"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "video.understand",
@@ -230,7 +322,12 @@
         "ASR + images clés",
         "métadonnées seulement",
         "file différée"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "video.generate",
@@ -247,7 +344,11 @@
         "Manim/SVG/Canvas",
         "diaporama narré",
         "file GPU différée"
-      ]
+      ],
+      "allowed_roles": [
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "video.edit",
@@ -263,7 +364,11 @@
       "degraded_strategy": [
         "FFmpeg/GStreamer",
         "édition différée"
-      ]
+      ],
+      "allowed_roles": [
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "media.transcode",
@@ -281,7 +386,12 @@
       "degraded_strategy": [
         "format original",
         "traitement serveur différé"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "embeddings.generate",
@@ -296,7 +406,12 @@
       "degraded_strategy": [
         "BM25/FTS5",
         "modèle compact ONNX"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "retrieval.search",
@@ -313,7 +428,12 @@
         "FTS5/BM25",
         "pgvector",
         "cache"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "agent.orchestrate",
@@ -330,7 +450,12 @@
         "workflow déterministe",
         "file persistante",
         "validation humaine"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "tool.protocol",
@@ -344,7 +469,12 @@
       "degraded_strategy": [
         "outil natif allowlisté",
         "fonction indisponible explicitement"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "code.execute",
@@ -361,7 +491,12 @@
         "interpréteur navigateur",
         "validation statique",
         "exécution refusée"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "math.solve",
@@ -379,7 +514,12 @@
         "SymPy",
         "calcul numérique",
         "revue humaine"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "science.simulate",
@@ -395,7 +535,12 @@
       "degraded_strategy": [
         "moteur déterministe",
         "simulation simplifiée"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "diagram.render",
@@ -406,13 +551,17 @@
       ],
       "output_modalities": [
         "image",
-        "video",
         "svg"
       ],
       "degraded_strategy": [
         "SVG/Canvas",
         "rendu statique"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "3d.render",
@@ -423,13 +572,17 @@
       ],
       "output_modalities": [
         "3d",
-        "image",
-        "video"
+        "image"
       ],
       "degraded_strategy": [
         "Three.js/Babylon.js",
         "schéma 2D"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "translation.local",
@@ -444,7 +597,12 @@
         "glossaire",
         "mémoire de traduction",
         "texte source"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "safety.scan",
@@ -459,7 +617,12 @@
       "degraded_strategy": [
         "quarantaine",
         "refus d’exécution"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "observability.evaluate",
@@ -475,7 +638,12 @@
       "degraded_strategy": [
         "logs locaux",
         "échantillonnage"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     },
     {
       "id": "sync.offline",
@@ -491,7 +659,12 @@
       "degraded_strategy": [
         "queue locale",
         "export/import manuel"
-      ]
+      ],
+      "allowed_roles": [
+        "student",
+        "admin"
+      ],
+      "pipeline_stages": []
     }
   ],
   "providers": [
@@ -523,7 +696,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Runtime GGUF local; chaque modèle/VLM garde sa propre licence."
+      "notes": "Runtime GGUF local; chaque modèle/VLM garde sa propre licence.",
+      "capability_stages": {}
     },
     {
       "id": "mlc_llm",
@@ -553,7 +727,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Compilation pour WebGPU, mobile et desktop; benchmark par appareil requis."
+      "notes": "Compilation pour WebGPU, mobile et desktop; benchmark par appareil requis.",
+      "capability_stages": {}
     },
     {
       "id": "onnxruntime",
@@ -587,7 +762,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Runtime transversal; ne garantit pas la licence des modèles."
+      "notes": "Runtime transversal; ne garantit pas la licence des modèles.",
+      "capability_stages": {}
     },
     {
       "id": "executorch",
@@ -615,7 +791,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Cible mobile/edge PyTorch."
+      "notes": "Cible mobile/edge PyTorch.",
+      "capability_stages": {}
     },
     {
       "id": "litert",
@@ -646,7 +823,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Runtime Google AI Edge, modèles vérifiés séparément."
+      "notes": "Runtime Google AI Edge, modèles vérifiés séparément.",
+      "capability_stages": {}
     },
     {
       "id": "webllm",
@@ -662,7 +840,7 @@
       "commercial_use": "review",
       "status": "conditional",
       "integration_tier": "optional",
-      "adapter": "wasm",
+      "adapter": "library",
       "execution_targets": [
         "browser"
       ],
@@ -672,7 +850,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Inference WebGPU dans le navigateur."
+      "notes": "Inference WebGPU dans le navigateur.",
+      "capability_stages": {}
     },
     {
       "id": "transformers_js",
@@ -702,7 +881,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Inference ONNX/WASM/WebGPU côté navigateur."
+      "notes": "Inference ONNX/WASM/WebGPU côté navigateur.",
+      "capability_stages": {}
     },
     {
       "id": "vllm",
@@ -728,7 +908,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Serveur GPU à haut débit, activé seulement si un GPU existant est disponible."
+      "notes": "Serveur GPU à haut débit, activé seulement si un GPU existant est disponible.",
+      "capability_stages": {}
     },
     {
       "id": "ollama",
@@ -757,7 +938,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Administration locale et développement; pas une dépendance mobile."
+      "notes": "Administration locale et développement; pas une dépendance mobile.",
+      "capability_stages": {}
     },
     {
       "id": "localai",
@@ -791,7 +973,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "API locale multimodale; capacités effectives dépendent des backends installés."
+      "notes": "API locale multimodale; capacités effectives dépendent des backends installés.",
+      "capability_stages": {}
     },
     {
       "id": "transformers",
@@ -822,7 +1005,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Bibliothèque modèle; vérification obligatoire de chaque model card."
+      "notes": "Bibliothèque modèle; vérification obligatoire de chaque model card.",
+      "capability_stages": {}
     },
     {
       "id": "qwen3_vl",
@@ -853,7 +1037,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Famille 2B+ pour image, document et vidéo; quantifier et benchmarker."
+      "notes": "Famille 2B+ pour image, document et vidéo; quantifier et benchmarker.",
+      "capability_stages": {}
     },
     {
       "id": "internvl",
@@ -880,7 +1065,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Vérifier la licence du checkpoint exact avant activation."
+      "notes": "Vérifier la licence du checkpoint exact avant activation.",
+      "capability_stages": {}
     },
     {
       "id": "llava_next",
@@ -907,7 +1093,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Base models et checkpoints à auditer séparément."
+      "notes": "Base models et checkpoints à auditer séparément.",
+      "capability_stages": {}
     },
     {
       "id": "docling",
@@ -937,7 +1124,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Formats bureautiques, PDF, images, audio et vidéo; modèles auxiliaires audités séparément."
+      "notes": "Formats bureautiques, PDF, images, audio et vidéo; modèles auxiliaires audités séparément.",
+      "capability_stages": {}
     },
     {
       "id": "markitdown",
@@ -965,7 +1153,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Conversion légère vers Markdown; exécuter en sandbox sur entrées non fiables."
+      "notes": "Conversion légère vers Markdown; exécuter en sandbox sur entrées non fiables.",
+      "capability_stages": {}
     },
     {
       "id": "paddleocr",
@@ -993,7 +1182,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "OCR multilingue 100+ langues et extraction structurée."
+      "notes": "OCR multilingue 100+ langues et extraction structurée.",
+      "capability_stages": {}
     },
     {
       "id": "tesseract",
@@ -1021,7 +1211,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Fallback OCR léger, utile sur matériel faible."
+      "notes": "Fallback OCR léger, utile sur matériel faible.",
+      "capability_stages": {}
     },
     {
       "id": "mineru",
@@ -1048,7 +1239,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Licence basée sur Apache avec conditions additionnelles; revue juridique avant production."
+      "notes": "Licence basée sur Apache avec conditions additionnelles; revue juridique avant production.",
+      "capability_stages": {}
     },
     {
       "id": "surya",
@@ -1075,7 +1267,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Poids gratuits avec seuil commercial; ne pas activer sans validation de l’éligibilité."
+      "notes": "Poids gratuits avec seuil commercial; ne pas activer sans validation de l’éligibilité.",
+      "capability_stages": {}
     },
     {
       "id": "apache_tika",
@@ -1101,7 +1294,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Métadonnées et extraction de très nombreux formats."
+      "notes": "Métadonnées et extraction de très nombreux formats.",
+      "capability_stages": {}
     },
     {
       "id": "pypdf",
@@ -1127,7 +1321,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Extraction/manipulation PDF textuel sans OCR."
+      "notes": "Extraction/manipulation PDF textuel sans OCR.",
+      "capability_stages": {}
     },
     {
       "id": "opencv",
@@ -1162,7 +1357,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Prétraitement, vision classique, suivi et géométrie."
+      "notes": "Prétraitement, vision classique, suivi et géométrie.",
+      "capability_stages": {}
     },
     {
       "id": "mediapipe",
@@ -1192,7 +1388,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Flux temps réel multiplateforme; modèles individuels à vérifier."
+      "notes": "Flux temps réel multiplateforme; modèles individuels à vérifier.",
+      "capability_stages": {}
     },
     {
       "id": "sam2",
@@ -1219,7 +1416,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Segmentation d’images et vidéos."
+      "notes": "Segmentation d’images et vidéos.",
+      "capability_stages": {}
     },
     {
       "id": "groundingdino",
@@ -1246,7 +1444,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Détection ouverte guidée par texte."
+      "notes": "Détection ouverte guidée par texte.",
+      "capability_stages": {}
     },
     {
       "id": "openclip",
@@ -1275,7 +1474,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Embeddings image-texte; licence du checkpoint à vérifier."
+      "notes": "Embeddings image-texte; licence du checkpoint à vérifier.",
+      "capability_stages": {}
     },
     {
       "id": "realesrgan",
@@ -1301,7 +1501,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Restauration/agrandissement, à évaluer sur les visages de mineurs."
+      "notes": "Restauration/agrandissement, à évaluer sur les visages de mineurs.",
+      "capability_stages": {}
     },
     {
       "id": "libvips",
@@ -1329,7 +1530,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Traitement image rapide à faible mémoire."
+      "notes": "Traitement image rapide à faible mémoire.",
+      "capability_stages": {}
     },
     {
       "id": "imagemagick",
@@ -1357,7 +1559,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Conversion et composition; appliquer limites de ressources et sandbox."
+      "notes": "Conversion et composition; appliquer limites de ressources et sandbox.",
+      "capability_stages": {}
     },
     {
       "id": "diffusers",
@@ -1387,7 +1590,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Orchestrateur de modèles; aucun checkpoint n’est automatiquement approuvé."
+      "notes": "Orchestrateur de modèles; aucun checkpoint n’est automatiquement approuvé.",
+      "capability_stages": {}
     },
     {
       "id": "comfyui",
@@ -1420,7 +1624,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Sidecar isolé; désactiver API nodes payants et n’autoriser que des nodes signés."
+      "notes": "Sidecar isolé; désactiver API nodes payants et n’autoriser que des nodes signés.",
+      "capability_stages": {}
     },
     {
       "id": "qwen_image",
@@ -1446,7 +1651,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Génération/édition avec bon rendu du texte; GPU requis."
+      "notes": "Génération/édition avec bon rendu du texte; GPU requis.",
+      "capability_stages": {}
     },
     {
       "id": "flux_schnell",
@@ -1471,7 +1677,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Seule variante FLUX.1 schnell approuvable par défaut dans cette famille."
+      "notes": "Seule variante FLUX.1 schnell approuvable par défaut dans cette famille.",
+      "capability_stages": {}
     },
     {
       "id": "flux_dev",
@@ -1497,7 +1704,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Bloqué pour le produit commercial sans licence distincte."
+      "notes": "Bloqué pour le produit commercial sans licence distincte.",
+      "capability_stages": {}
     },
     {
       "id": "whisper_cpp",
@@ -1528,7 +1736,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "ASR quantifié CPU/GPU, y compris Android/iOS/WASM."
+      "notes": "ASR quantifié CPU/GPU, y compris Android/iOS/WASM.",
+      "capability_stages": {}
     },
     {
       "id": "faster_whisper",
@@ -1556,7 +1765,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "ASR serveur/desktop via CTranslate2."
+      "notes": "ASR serveur/desktop via CTranslate2.",
+      "capability_stages": {}
     },
     {
       "id": "sherpa_onnx",
@@ -1566,7 +1776,8 @@
       "capabilities": [
         "audio.transcribe",
         "audio.synthesize",
-        "audio.separate"
+        "audio.separate",
+        "audio.read_scientific_text"
       ],
       "code_license": "Apache-2.0",
       "artifact_license": "per-model",
@@ -1586,7 +1797,12 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "STT, TTS, VAD, diarisation et séparation hors ligne."
+      "notes": "STT, TTS, VAD, diarisation et séparation hors ligne.",
+      "capability_stages": {
+        "audio.read_scientific_text": [
+          "synthesize_speech"
+        ]
+      }
     },
     {
       "id": "vosk",
@@ -1614,7 +1830,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "ASR hors ligne léger."
+      "notes": "ASR hors ligne léger.",
+      "capability_stages": {}
     },
     {
       "id": "kokoro",
@@ -1622,7 +1839,8 @@
       "repository": "https://github.com/hexgrad/kokoro",
       "project_kind": "tts-model",
       "capabilities": [
-        "audio.synthesize"
+        "audio.synthesize",
+        "audio.read_scientific_text"
       ],
       "code_license": "Apache-2.0",
       "artifact_license": "Apache-2.0",
@@ -1641,7 +1859,12 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "TTS compact 82M; vérifier couverture français/anglais sur corpus camerounais."
+      "notes": "TTS compact 82M; vérifier couverture français/anglais sur corpus camerounais.",
+      "capability_stages": {
+        "audio.read_scientific_text": [
+          "synthesize_speech"
+        ]
+      }
     },
     {
       "id": "melotts",
@@ -1649,7 +1872,8 @@
       "repository": "https://github.com/myshell-ai/MeloTTS",
       "project_kind": "tts-model",
       "capabilities": [
-        "audio.synthesize"
+        "audio.synthesize",
+        "audio.read_scientific_text"
       ],
       "code_license": "MIT",
       "artifact_license": "MIT",
@@ -1668,7 +1892,12 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "TTS multilingue, français inclus."
+      "notes": "TTS multilingue, français inclus.",
+      "capability_stages": {
+        "audio.read_scientific_text": [
+          "synthesize_speech"
+        ]
+      }
     },
     {
       "id": "piper",
@@ -1676,7 +1905,8 @@
       "repository": "https://github.com/OHF-Voice/piper1-gpl",
       "project_kind": "tts-runtime",
       "capabilities": [
-        "audio.synthesize"
+        "audio.synthesize",
+        "audio.read_scientific_text"
       ],
       "code_license": "GPL-3.0",
       "artifact_license": "per-voice",
@@ -1695,7 +1925,12 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Sidecar copyleft; chaque voix doit être auditée."
+      "notes": "Sidecar copyleft; chaque voix doit être auditée.",
+      "capability_stages": {
+        "audio.read_scientific_text": [
+          "synthesize_speech"
+        ]
+      }
     },
     {
       "id": "bark",
@@ -1722,7 +1957,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Génératif et imprévisible; jamais pour une consigne critique sans validation."
+      "notes": "Génératif et imprévisible; jamais pour une consigne critique sans validation.",
+      "capability_stages": {}
     },
     {
       "id": "ace_step",
@@ -1748,7 +1984,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Musique locale; contrôle originalité, droits et contenus mineurs obligatoire."
+      "notes": "Musique locale; contrôle originalité, droits et contenus mineurs obligatoire.",
+      "capability_stages": {}
     },
     {
       "id": "stable_audio_tools",
@@ -1774,7 +2011,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Code libre mais acceptation/licence du modèle distincte."
+      "notes": "Code libre mais acceptation/licence du modèle distincte.",
+      "capability_stages": {}
     },
     {
       "id": "audiocraft_musicgen",
@@ -1800,7 +2038,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Poids non commerciaux: interdit dans le produit commercial."
+      "notes": "Poids non commerciaux: interdit dans le produit commercial.",
+      "capability_stages": {}
     },
     {
       "id": "demucs",
@@ -1826,7 +2065,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Dépôt archivé depuis 2025; ne pas adopter sans fork maintenu."
+      "notes": "Dépôt archivé depuis 2025; ne pas adopter sans fork maintenu.",
+      "capability_stages": {}
     },
     {
       "id": "ffmpeg",
@@ -1859,7 +2099,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Construire une variante conforme et conserver l’inventaire des codecs."
+      "notes": "Construire une variante conforme et conserver l’inventaire des codecs.",
+      "capability_stages": {}
     },
     {
       "id": "gstreamer",
@@ -1889,7 +2130,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Plugins/codecs à auditer séparément."
+      "notes": "Plugins/codecs à auditer séparément.",
+      "capability_stages": {}
     },
     {
       "id": "ffmpeg_wasm",
@@ -1916,7 +2158,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Transcodage navigateur pour petits médias; limites mémoire strictes."
+      "notes": "Transcodage navigateur pour petits médias; limites mémoire strictes.",
+      "capability_stages": {}
     },
     {
       "id": "pyscenedetect",
@@ -1943,7 +2186,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Détection de plans pour échantillonnage vidéo."
+      "notes": "Détection de plans pour échantillonnage vidéo.",
+      "capability_stages": {}
     },
     {
       "id": "decord",
@@ -1970,7 +2214,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Chargement vidéo efficace pour VLM."
+      "notes": "Chargement vidéo efficace pour VLM.",
+      "capability_stages": {}
     },
     {
       "id": "wan21",
@@ -1995,7 +2240,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Génération locale lourde; versions optimisées possibles mais non garanties."
+      "notes": "Génération locale lourde; versions optimisées possibles mais non garanties.",
+      "capability_stages": {}
     },
     {
       "id": "ltx_video",
@@ -2021,7 +2267,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "LTX-2 ajoute audio-vidéo synchronisé; GPU existant requis."
+      "notes": "LTX-2 ajoute audio-vidéo synchronisé; GPU existant requis.",
+      "capability_stages": {}
     },
     {
       "id": "cogvideox_2b",
@@ -2046,7 +2293,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Utiliser uniquement le checkpoint 2B Apache; autres checkpoints à auditer."
+      "notes": "Utiliser uniquement le checkpoint 2B Apache; autres checkpoints à auditer.",
+      "capability_stages": {}
     },
     {
       "id": "framepack",
@@ -2071,7 +2319,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Le runtime est libre; le modèle sous-jacent doit être autorisé."
+      "notes": "Le runtime est libre; le modèle sous-jacent doit être autorisé.",
+      "capability_stages": {}
     },
     {
       "id": "mochi",
@@ -2096,7 +2345,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Modèle vidéo lourd, réservé à une file GPU opportuniste."
+      "notes": "Modèle vidéo lourd, réservé à une file GPU opportuniste.",
+      "capability_stages": {}
     },
     {
       "id": "open_sora",
@@ -2121,7 +2371,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Candidat recherche; checkpoints et besoins matériels à revalider."
+      "notes": "Candidat recherche; checkpoints et besoins matériels à revalider.",
+      "capability_stages": {}
     },
     {
       "id": "pgvector",
@@ -2147,7 +2398,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": true,
-      "notes": "Déjà cohérent avec Supabase/PostgreSQL; choix par défaut."
+      "notes": "Déjà cohérent avec Supabase/PostgreSQL; choix par défaut.",
+      "capability_stages": {}
     },
     {
       "id": "qdrant",
@@ -2173,7 +2425,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "N’adopter qu’après benchmark supérieur à pgvector."
+      "notes": "N’adopter qu’après benchmark supérieur à pgvector.",
+      "capability_stages": {}
     },
     {
       "id": "sqlite_vec",
@@ -2202,7 +2455,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Recherche vectorielle locale/offline."
+      "notes": "Recherche vectorielle locale/offline.",
+      "capability_stages": {}
     },
     {
       "id": "faiss",
@@ -2229,7 +2483,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Index local en mémoire/fichiers."
+      "notes": "Index local en mémoire/fichiers.",
+      "capability_stages": {}
     },
     {
       "id": "lancedb",
@@ -2255,7 +2510,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Base embarquée; benchmark avant substitution."
+      "notes": "Base embarquée; benchmark avant substitution.",
+      "capability_stages": {}
     },
     {
       "id": "sentence_transformers",
@@ -2283,7 +2539,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Modèles d’embeddings locaux, licence par checkpoint."
+      "notes": "Modèles d’embeddings locaux, licence par checkpoint.",
+      "capability_stages": {}
     },
     {
       "id": "haystack",
@@ -2311,7 +2568,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Pipelines RAG/agents modulaires; éviter doublon avec le Gateway."
+      "notes": "Pipelines RAG/agents modulaires; éviter doublon avec le Gateway.",
+      "capability_stages": {}
     },
     {
       "id": "llama_index",
@@ -2339,7 +2597,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Connecteurs à activer seulement au besoin."
+      "notes": "Connecteurs à activer seulement au besoin.",
+      "capability_stages": {}
     },
     {
       "id": "langgraph",
@@ -2365,7 +2624,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Workflows durables; ne pas recréer les agents existants."
+      "notes": "Workflows durables; ne pas recréer les agents existants.",
+      "capability_stages": {}
     },
     {
       "id": "microsoft_agent_framework",
@@ -2392,7 +2652,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Successeur production d’AutoGen; providers payants désactivés par politique."
+      "notes": "Successeur production d’AutoGen; providers payants désactivés par politique.",
+      "capability_stages": {}
     },
     {
       "id": "smolagents",
@@ -2419,7 +2680,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Agents compacts; utiliser modèles locaux uniquement."
+      "notes": "Agents compacts; utiliser modèles locaux uniquement.",
+      "capability_stages": {}
     },
     {
       "id": "pydantic_ai",
@@ -2446,7 +2708,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Contrats typés; éviter coexistence inutile de plusieurs orchestrateurs."
+      "notes": "Contrats typés; éviter coexistence inutile de plusieurs orchestrateurs.",
+      "capability_stages": {}
     },
     {
       "id": "dspy",
@@ -2473,7 +2736,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Optimisation/évaluation de programmes LM, après baseline stable."
+      "notes": "Optimisation/évaluation de programmes LM, après baseline stable.",
+      "capability_stages": {}
     },
     {
       "id": "autogen",
@@ -2498,7 +2762,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Dépôt en maintenance; Microsoft recommande Agent Framework."
+      "notes": "Dépôt en maintenance; Microsoft recommande Agent Framework.",
+      "capability_stages": {}
     },
     {
       "id": "mcp_servers",
@@ -2524,7 +2789,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Serveurs de référence; chaque serveur reste non fiable jusqu’à allowlist et sandbox."
+      "notes": "Serveurs de référence; chaque serveur reste non fiable jusqu’à allowlist et sandbox.",
+      "capability_stages": {}
     },
     {
       "id": "fastmcp",
@@ -2551,7 +2817,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Construction de serveurs MCP internes typés."
+      "notes": "Construction de serveurs MCP internes typés.",
+      "capability_stages": {}
     },
     {
       "id": "pyodide",
@@ -2578,7 +2845,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Python/WASM isolé dans le navigateur; allowlist de paquets."
+      "notes": "Python/WASM isolé dans le navigateur; allowlist de paquets.",
+      "capability_stages": {}
     },
     {
       "id": "jupyterlite",
@@ -2604,7 +2872,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Notebooks sans serveur, adaptés aux exercices."
+      "notes": "Notebooks sans serveur, adaptés aux exercices.",
+      "capability_stages": {}
     },
     {
       "id": "wasmtime",
@@ -2631,7 +2900,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Sandbox WASI avec budgets CPU/mémoire."
+      "notes": "Sandbox WASI avec budgets CPU/mémoire.",
+      "capability_stages": {}
     },
     {
       "id": "gvisor",
@@ -2657,7 +2927,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Isolation Linux côté serveur."
+      "notes": "Isolation Linux côté serveur.",
+      "capability_stages": {}
     },
     {
       "id": "firecracker",
@@ -2682,7 +2953,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "MicroVM exigeant un hôte Linux/KVM maîtrisé."
+      "notes": "MicroVM exigeant un hôte Linux/KVM maîtrisé.",
+      "capability_stages": {}
     },
     {
       "id": "sympy",
@@ -2712,7 +2984,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": true,
-      "notes": "Déjà présent dans le Gateway; calcul symbolique vérifiable."
+      "notes": "Déjà présent dans le Gateway; calcul symbolique vérifiable.",
+      "capability_stages": {}
     },
     {
       "id": "scipy",
@@ -2740,7 +3013,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Calcul numérique scientifique."
+      "notes": "Calcul numérique scientifique.",
+      "capability_stages": {}
     },
     {
       "id": "manim",
@@ -2767,7 +3041,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Animations mathématiques déterministes."
+      "notes": "Animations mathématiques déterministes.",
+      "capability_stages": {}
     },
     {
       "id": "rdkit",
@@ -2794,7 +3069,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Cheminformatique et rendu moléculaire."
+      "notes": "Cheminformatique et rendu moléculaire.",
+      "capability_stages": {}
     },
     {
       "id": "openbabel",
@@ -2821,7 +3097,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Utiliser comme processus séparé avec conformité GPL."
+      "notes": "Utiliser comme processus séparé avec conformité GPL.",
+      "capability_stages": {}
     },
     {
       "id": "cantera",
@@ -2847,7 +3124,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Cinétique, combustion et thermodynamique."
+      "notes": "Cinétique, combustion et thermodynamique.",
+      "capability_stages": {}
     },
     {
       "id": "threejs",
@@ -2877,7 +3155,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Rendu WebGL/WebGPU; licences des assets séparées."
+      "notes": "Rendu WebGL/WebGPU; licences des assets séparées.",
+      "capability_stages": {}
     },
     {
       "id": "babylonjs",
@@ -2907,7 +3186,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Moteur 3D web alternatif."
+      "notes": "Moteur 3D web alternatif.",
+      "capability_stages": {}
     },
     {
       "id": "godot",
@@ -2936,7 +3216,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Labs/jeux exportables; assets sous licences vérifiées."
+      "notes": "Labs/jeux exportables; assets sous licences vérifiées.",
+      "capability_stages": {}
     },
     {
       "id": "yjs",
@@ -2965,7 +3246,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "CRDT pour collaboration et synchronisation."
+      "notes": "CRDT pour collaboration et synchronisation.",
+      "capability_stages": {}
     },
     {
       "id": "automerge",
@@ -2994,7 +3276,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "CRDT alternatif; choisir après benchmark."
+      "notes": "CRDT alternatif; choisir après benchmark.",
+      "capability_stages": {}
     },
     {
       "id": "presidio",
@@ -3019,7 +3302,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Détection/anonymisation PII; adaptation langues locales nécessaire."
+      "notes": "Détection/anonymisation PII; adaptation langues locales nécessaire.",
+      "capability_stages": {}
     },
     {
       "id": "trivy",
@@ -3045,7 +3329,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Scan vulnérabilités, secrets, SBOM et images."
+      "notes": "Scan vulnérabilités, secrets, SBOM et images.",
+      "capability_stages": {}
     },
     {
       "id": "syft",
@@ -3071,7 +3356,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Génération SBOM de chaque pack."
+      "notes": "Génération SBOM de chaque pack.",
+      "capability_stages": {}
     },
     {
       "id": "opentelemetry_python",
@@ -3097,7 +3383,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Traces/métriques exportées vers un backend libre."
+      "notes": "Traces/métriques exportées vers un backend libre.",
+      "capability_stages": {}
     },
     {
       "id": "mlflow",
@@ -3122,7 +3409,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Runs, modèles et évaluations auto-hébergés."
+      "notes": "Runs, modèles et évaluations auto-hébergés.",
+      "capability_stages": {}
     },
     {
       "id": "ragas",
@@ -3149,7 +3437,8 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Évaluation RAG; juges locaux ou métriques sans API payante."
+      "notes": "Évaluation RAG; juges locaux ou métriques sans API payante.",
+      "capability_stages": {}
     },
     {
       "id": "promptfoo",
@@ -3176,8 +3465,105 @@
       "mandatory_paid_api": false,
       "card_required": false,
       "default_enabled": false,
-      "notes": "Tests prompts, red-team et régressions avec providers locaux."
+      "notes": "Tests prompts, red-team et régressions avec providers locaux.",
+      "capability_stages": {}
+    },
+    {
+      "id": "mathjax_src",
+      "name": "MathJax Source",
+      "repository": "https://github.com/mathjax/MathJax-src",
+      "project_kind": "math-accessibility-runtime",
+      "capabilities": [
+        "audio.read_scientific_text"
+      ],
+      "capability_stages": {
+        "audio.read_scientific_text": [
+          "parse_math"
+        ]
+      },
+      "code_license": "Apache-2.0",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "core",
+      "adapter": "wasm",
+      "execution_targets": [
+        "browser",
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": true,
+      "notes": "Normalise TeX, MathML et AsciiMath; aucun service payant requis."
+    },
+    {
+      "id": "speech_rule_engine",
+      "name": "Speech Rule Engine",
+      "repository": "https://github.com/Speech-Rule-Engine/speech-rule-engine",
+      "project_kind": "math-verbalization-engine",
+      "capabilities": [
+        "audio.read_scientific_text"
+      ],
+      "capability_stages": {
+        "audio.read_scientific_text": [
+          "parse_math",
+          "verbalize_math"
+        ]
+      },
+      "code_license": "Apache-2.0",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "core",
+      "adapter": "library",
+      "execution_targets": [
+        "browser",
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": true,
+      "notes": "Règles sémantiques Mathspeak/Clearspeak, locale française et sortie SSML."
+    },
+    {
+      "id": "mathcat",
+      "name": "MathCAT",
+      "repository": "https://github.com/daisy/MathCAT",
+      "project_kind": "math-accessibility-engine",
+      "capabilities": [
+        "audio.read_scientific_text"
+      ],
+      "capability_stages": {
+        "audio.read_scientific_text": [
+          "parse_math",
+          "verbalize_math"
+        ]
+      },
+      "code_license": "MIT",
+      "artifact_license": "same-as-code",
+      "commercial_use": "allowed",
+      "status": "approved",
+      "integration_tier": "optional",
+      "adapter": "library",
+      "execution_targets": [
+        "desktop",
+        "server_cpu"
+      ],
+      "minimum_device_tier": "L0",
+      "offline": true,
+      "requires_gpu": false,
+      "mandatory_paid_api": false,
+      "card_required": false,
+      "default_enabled": false,
+      "notes": "Fallback Rust pour MathML, parole, braille et navigation structurée."
     }
   ]
 }
-

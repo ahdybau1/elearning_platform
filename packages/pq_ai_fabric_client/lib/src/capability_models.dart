@@ -5,6 +5,8 @@ class CapabilitySummary {
     required this.inputModalities,
     required this.outputModalities,
     required this.degradedStrategy,
+    required this.allowedRoles,
+    required this.pipelineStages,
     required this.providerCount,
     required this.approvedProviderCount,
   });
@@ -18,6 +20,8 @@ class CapabilitySummary {
       inputModalities: strings('input_modalities'),
       outputModalities: strings('output_modalities'),
       degradedStrategy: strings('degraded_strategy'),
+      allowedRoles: strings('allowed_roles'),
+      pipelineStages: strings('pipeline_stages'),
       providerCount: json['provider_count'] as int? ?? 0,
       approvedProviderCount: json['approved_provider_count'] as int? ?? 0,
     );
@@ -28,6 +32,8 @@ class CapabilitySummary {
   final List<String> inputModalities;
   final List<String> outputModalities;
   final List<String> degradedStrategy;
+  final List<String> allowedRoles;
+  final List<String> pipelineStages;
   final int providerCount;
   final int approvedProviderCount;
 }
@@ -70,6 +76,7 @@ class ProviderDecision {
     required this.reasons,
     required this.adapter,
     required this.executionTargets,
+    required this.stages,
   });
 
   factory ProviderDecision.fromJson(Map<String, dynamic> json) => ProviderDecision(
@@ -80,6 +87,7 @@ class ProviderDecision {
         adapter: json['adapter'] as String,
         executionTargets:
             (json['execution_targets'] as List<dynamic>? ?? const []).cast<String>(),
+        stages: (json['stages'] as List<dynamic>? ?? const []).cast<String>(),
       );
 
   final String providerId;
@@ -88,6 +96,7 @@ class ProviderDecision {
   final List<String> reasons;
   final String adapter;
   final List<String> executionTargets;
+  final List<String> stages;
 }
 
 class CapabilityPlan {
@@ -96,6 +105,7 @@ class CapabilityPlan {
     required this.eligible,
     required this.rejected,
     required this.degradedStrategy,
+    required this.uncoveredStages,
     required this.zeroCostEnforced,
   });
 
@@ -111,6 +121,8 @@ class CapabilityPlan {
       rejected: decisions('rejected'),
       degradedStrategy:
           (json['degraded_strategy'] as List<dynamic>? ?? const []).cast<String>(),
+      uncoveredStages:
+          (json['uncovered_stages'] as List<dynamic>? ?? const []).cast<String>(),
       zeroCostEnforced: json['zero_cost_enforced'] as bool? ?? false,
     );
   }
@@ -119,5 +131,6 @@ class CapabilityPlan {
   final List<ProviderDecision> eligible;
   final List<ProviderDecision> rejected;
   final List<String> degradedStrategy;
+  final List<String> uncoveredStages;
   final bool zeroCostEnforced;
 }

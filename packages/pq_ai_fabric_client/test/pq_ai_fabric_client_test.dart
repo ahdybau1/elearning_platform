@@ -19,6 +19,8 @@ void main() {
               'input_modalities': ['audio'],
               'output_modalities': ['text'],
               'degraded_strategy': ['saisie manuelle'],
+              'allowed_roles': ['student', 'admin'],
+              'pipeline_stages': [],
               'provider_count': 3,
               'approved_provider_count': 2,
             },
@@ -38,6 +40,7 @@ void main() {
 
     expect(capabilities.single.id, 'audio.transcribe');
     expect(capabilities.single.approvedProviderCount, 2);
+    expect(capabilities.single.allowedRoles, ['student', 'admin']);
   });
 
   test('une session absente est refusée avant le réseau', () async {

@@ -30,6 +30,31 @@ def main() -> None:
     if missing:
         raise SystemExit(f"Capabilities without providers: {', '.join(missing)}")
 
+    admin_only = {
+        "audio.generate",
+        "music.generate",
+        "video.generate",
+        "video.edit",
+    }
+    capabilities = {item.id: item for item in registry.catalog.capabilities}
+    for capability_id in admin_only:
+        if capabilities[capability_id].allowed_roles != ["admin"]:
+            raise SystemExit(f"{capability_id}: must remain admin-only")
+
+    speech = capabilities["audio.read_scientific_text"]
+    expected_stages = {"parse_math", "verbalize_math", "synthesize_speech"}
+    covered_stages = {
+        stage
+        for provider in providers
+        if speech.id in provider.capabilities and provider.status == "approved"
+        for stage in provider.capability_stages.get(speech.id, [])
+    }
+    if expected_stages - covered_stages:
+        raise SystemExit(
+            "scientific speech is incomplete: "
+            + ", ".join(sorted(expected_stages - covered_stages))
+        )
+
     statuses = Counter(provider.status for provider in providers)
     print(
         "catalogue valide: "

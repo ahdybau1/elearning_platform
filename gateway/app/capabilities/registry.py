@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from .models import (
+    ActorRole,
     CapabilityCatalog,
     CapabilityPlan,
     CapabilityPlanRequest,
@@ -42,6 +43,22 @@ class CapabilityRegistry:
                 raise CapabilityRegistryError(
                     f"Provider {provider.id} references unknown capabilities: {sorted(unknown)}"
                 )
+            unknown_stage_capabilities = (
+                set(provider.capability_stages) - set(provider.capabilities)
+            )
+            if unknown_stage_capabilities:
+                raise CapabilityRegistryError(
+                    f"Provider {provider.id} declares stages for unlisted capabilities: "
+                    f"{sorted(unknown_stage_capabilities)}"
+                )
+            for capability_id, stages in provider.capability_stages.items():
+                declared = set(self._capabilities[capability_id].pipeline_stages)
+                unknown_stages = set(stages) - declared
+                if unknown_stages:
+                    raise CapabilityRegistryError(
+                        f"Provider {provider.id} references unknown stages for "
+                        f"{capability_id}: {sorted(unknown_stages)}"
+                    )
 
     def list_capabilities(self) -> list[dict]:
         result = []
@@ -72,9 +89,14 @@ class CapabilityRegistry:
         self,
         provider: ProviderDefinition,
         request: CapabilityPlanRequest,
+        actor_role: ActorRole,
     ) -> ProviderDecision:
         reasons: list[str] = []
         policy = self.catalog.policy
+        capability = self._capabilities[request.capability_id]
+
+        if actor_role not in capability.allowed_roles:
+            reasons.append("policy:role-not-allowed")
 
         if provider.status in ("blocked", "watch"):
             reasons.append(f"status:{provider.status}")
@@ -107,9 +129,14 @@ class CapabilityRegistry:
             reasons=reasons,
             adapter=provider.adapter,
             execution_targets=provider.execution_targets,
+            stages=provider.capability_stages.get(request.capability_id, []),
         )
 
-    def plan(self, request: CapabilityPlanRequest) -> CapabilityPlan:
+    def plan(
+        self,
+        request: CapabilityPlanRequest,
+        actor_role: ActorRole = "student",
+    ) -> CapabilityPlan:
         capability = self._capabilities.get(request.capability_id)
         if capability is None:
             raise CapabilityRegistryError(f"Unknown capability: {request.capability_id}")
@@ -118,7 +145,10 @@ class CapabilityRegistry:
             provider for provider in self.catalog.providers
             if request.capability_id in provider.capabilities
         ]
-        decisions = [(provider, self._decide(provider, request)) for provider in provider_defs]
+        decisions = [
+            (provider, self._decide(provider, request, actor_role))
+            for provider in provider_defs
+        ]
         decisions.sort(key=lambda item: (
             not item[1].eligible,
             _TIER_PRIORITY[item[0].integration_tier],
@@ -126,15 +156,25 @@ class CapabilityRegistry:
             item[0].requires_gpu,
             item[0].name.casefold(),
         ))
+        eligible = [decision for _, decision in decisions if decision.eligible]
+        covered_stages = {
+            stage
+            for decision in eligible
+            for stage in decision.stages
+        }
         return CapabilityPlan(
             capability_id=request.capability_id,
-            eligible=[decision for _, decision in decisions if decision.eligible],
+            eligible=eligible,
             rejected=[decision for _, decision in decisions if not decision.eligible],
             degraded_strategy=capability.degraded_strategy,
+            uncovered_stages=[
+                stage
+                for stage in capability.pipeline_stages
+                if stage not in covered_stages
+            ],
         )
 
 
 @lru_cache(maxsize=1)
 def get_capability_registry() -> CapabilityRegistry:
     return CapabilityRegistry()
-

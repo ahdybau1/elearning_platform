@@ -1,0 +1,1056 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-09-19T16:50:57.249883+00:00",
+  "decision": "Preliminary expansion shortlist only. Every entry remains disabled until a pinned-version licence, security and benchmark review passes.",
+  "groups": [
+    {
+      "category": "agents_rag",
+      "repositories": [
+        {
+          "full_name": "langchain-ai/langchain",
+          "repository": "https://github.com/langchain-ai/langchain",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 146669,
+          "archived": false,
+          "pushed_at": "2026-09-19T08:59:52Z",
+          "families": [
+            "agents",
+            "rag"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "infiniflow/ragflow",
+          "repository": "https://github.com/infiniflow/ragflow",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 90993,
+          "archived": false,
+          "pushed_at": "2026-09-19T15:32:27Z",
+          "families": [
+            "agents",
+            "rag"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "browser-use/browser-use",
+          "repository": "https://github.com/browser-use/browser-use",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 115284,
+          "archived": false,
+          "pushed_at": "2026-09-18T22:34:42Z",
+          "families": [
+            "agents"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "Mintplex-Labs/anything-llm",
+          "repository": "https://github.com/Mintplex-Labs/anything-llm",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 66217,
+          "archived": false,
+          "pushed_at": "2026-09-19T00:13:36Z",
+          "families": [
+            "agents",
+            "rag",
+            "vector"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "mem0ai/mem0",
+          "repository": "https://github.com/mem0ai/mem0",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 65643,
+          "archived": false,
+          "pushed_at": "2026-09-19T01:14:39Z",
+          "families": [
+            "agents",
+            "rag"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "crewAIInc/crewAI",
+          "repository": "https://github.com/crewAIInc/crewAI",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 58766,
+          "archived": false,
+          "pushed_at": "2026-09-19T00:49:11Z",
+          "families": [
+            "agents"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "HKUDS/LightRAG",
+          "repository": "https://github.com/HKUDS/LightRAG",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 39761,
+          "archived": false,
+          "pushed_at": "2026-09-19T16:06:00Z",
+          "families": [
+            "rag"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "microsoft/graphrag",
+          "repository": "https://github.com/microsoft/graphrag",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 36031,
+          "archived": false,
+          "pushed_at": "2026-09-19T09:30:33Z",
+          "families": [
+            "rag"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "getzep/graphiti",
+          "repository": "https://github.com/getzep/graphiti",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 31010,
+          "archived": false,
+          "pushed_at": "2026-09-19T08:28:21Z",
+          "families": [
+            "rag"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "topoteretes/cognee",
+          "repository": "https://github.com/topoteretes/cognee",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 30839,
+          "archived": false,
+          "pushed_at": "2026-09-19T10:54:09Z",
+          "families": [
+            "agents",
+            "vector"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "milvus-io/milvus",
+          "repository": "https://github.com/milvus-io/milvus",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 46160,
+          "archived": false,
+          "pushed_at": "2026-09-18T23:35:37Z",
+          "families": [
+            "rag",
+            "vector"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "documents_ocr",
+      "repositories": [
+        {
+          "full_name": "ocrmypdf/OCRmyPDF",
+          "repository": "https://github.com/ocrmypdf/OCRmyPDF",
+          "license_spdx": "MPL-2.0",
+          "license_class": "copyleft-review",
+          "stars_snapshot": 34803,
+          "archived": false,
+          "pushed_at": "2026-09-16T23:20:07Z",
+          "families": [
+            "ocr"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "JaidedAI/EasyOCR",
+          "repository": "https://github.com/JaidedAI/EasyOCR",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 30005,
+          "archived": false,
+          "pushed_at": "2025-12-05T12:23:12Z",
+          "families": [
+            "ocr"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "naptha/tesseract.js",
+          "repository": "https://github.com/naptha/tesseract.js",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 38716,
+          "archived": false,
+          "pushed_at": "2026-05-17T04:19:12Z",
+          "families": [
+            "ocr"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "hiroi-sora/Umi-OCR",
+          "repository": "https://github.com/hiroi-sora/Umi-OCR",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 47394,
+          "archived": false,
+          "pushed_at": "2025-11-20T14:58:13Z",
+          "families": [
+            "ocr"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "clovaai/donut",
+          "repository": "https://github.com/clovaai/donut",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 6926,
+          "archived": false,
+          "pushed_at": "2024-07-11T15:33:26Z",
+          "families": [
+            "document_ai",
+            "ocr"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "deepdoctection/deepdoctection",
+          "repository": "https://github.com/deepdoctection/deepdoctection",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 3260,
+          "archived": false,
+          "pushed_at": "2026-09-14T20:46:22Z",
+          "families": [
+            "document_ai",
+            "ocr"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "speech_audio",
+      "repositories": [
+        {
+          "full_name": "m-bain/whisperX",
+          "repository": "https://github.com/m-bain/whisperX",
+          "license_spdx": "BSD-2-Clause",
+          "license_class": "permissive",
+          "stars_snapshot": 24124,
+          "archived": false,
+          "pushed_at": "2026-08-30T15:40:47Z",
+          "families": [
+            "asr"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "modelscope/FunASR",
+          "repository": "https://github.com/modelscope/FunASR",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 20431,
+          "archived": false,
+          "pushed_at": "2026-09-19T02:42:10Z",
+          "families": [
+            "asr",
+            "diarization",
+            "mcp"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "PaddlePaddle/PaddleSpeech",
+          "repository": "https://github.com/PaddlePaddle/PaddleSpeech",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 12685,
+          "archived": false,
+          "pushed_at": "2026-08-12T01:07:51Z",
+          "families": [
+            "asr",
+            "voice"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "speechbrain/speechbrain",
+          "repository": "https://github.com/speechbrain/speechbrain",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 11826,
+          "archived": false,
+          "pushed_at": "2026-08-27T13:48:19Z",
+          "families": [
+            "asr",
+            "diarization"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "pyannote/pyannote-audio",
+          "repository": "https://github.com/pyannote/pyannote-audio",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 10572,
+          "archived": false,
+          "pushed_at": "2026-09-18T23:04:35Z",
+          "families": [
+            "diarization"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "coqui-ai/TTS",
+          "repository": "https://github.com/coqui-ai/TTS",
+          "license_spdx": "MPL-2.0",
+          "license_class": "copyleft-review",
+          "stars_snapshot": 46028,
+          "archived": false,
+          "pushed_at": "2024-08-16T12:07:14Z",
+          "families": [
+            "tts",
+            "voice"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "myshell-ai/OpenVoice",
+          "repository": "https://github.com/myshell-ai/OpenVoice",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 37581,
+          "archived": false,
+          "pushed_at": "2025-04-19T16:00:00Z",
+          "families": [
+            "tts"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "QwenAudio/CosyVoice",
+          "repository": "https://github.com/QwenAudio/CosyVoice",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 23688,
+          "archived": false,
+          "pushed_at": "2026-05-25T18:15:40Z",
+          "families": [
+            "audio_generation",
+            "tts",
+            "voice"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "open-mmlab/Amphion",
+          "repository": "https://github.com/open-mmlab/Amphion",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 10303,
+          "archived": false,
+          "pushed_at": "2026-03-25T14:11:57Z",
+          "families": [
+            "audio_generation",
+            "music_generation",
+            "tts"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "image_video_vision",
+      "repositories": [
+        {
+          "full_name": "invoke-ai/InvokeAI",
+          "repository": "https://github.com/invoke-ai/InvokeAI",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 28247,
+          "archived": false,
+          "pushed_at": "2026-09-15T12:27:03Z",
+          "families": [
+            "image_generation"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "AUTOMATIC1111/stable-diffusion-webui",
+          "repository": "https://github.com/AUTOMATIC1111/stable-diffusion-webui",
+          "license_spdx": "AGPL-3.0",
+          "license_class": "copyleft-review",
+          "stars_snapshot": 165020,
+          "archived": false,
+          "pushed_at": "2026-03-02T07:00:53Z",
+          "families": [
+            "image_generation"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "Wan-Video/Wan2.2",
+          "repository": "https://github.com/Wan-Video/Wan2.2",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 17552,
+          "archived": false,
+          "pushed_at": "2026-03-17T10:48:41Z",
+          "families": [
+            "video_generation"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "HKUDS/ViMax",
+          "repository": "https://github.com/HKUDS/ViMax",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 12424,
+          "archived": false,
+          "pushed_at": "2026-07-29T08:56:47Z",
+          "families": [
+            "video_generation"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "m87-labs/moondream",
+          "repository": "https://github.com/m87-labs/moondream",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 10050,
+          "archived": false,
+          "pushed_at": "2026-04-20T06:52:50Z",
+          "families": [
+            "vision_language"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "Blaizzy/mlx-vlm",
+          "repository": "https://github.com/Blaizzy/mlx-vlm",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 5511,
+          "archived": false,
+          "pushed_at": "2026-09-18T22:17:02Z",
+          "families": [
+            "vision_language"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "deepseek-ai/DeepSeek-VL2",
+          "repository": "https://github.com/deepseek-ai/DeepSeek-VL2",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 5375,
+          "archived": false,
+          "pushed_at": "2025-02-26T05:03:42Z",
+          "families": [
+            "vision_language"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "NVlabs/VILA",
+          "repository": "https://github.com/NVlabs/VILA",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 3863,
+          "archived": false,
+          "pushed_at": "2026-03-12T01:04:00Z",
+          "families": [
+            "vision_language"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "translation_math_science",
+      "repositories": [
+        {
+          "full_name": "argosopentech/argos-translate",
+          "repository": "https://github.com/argosopentech/argos-translate",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 6482,
+          "archived": false,
+          "pushed_at": "2026-08-08T12:09:57Z",
+          "families": [
+            "translation"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "OpenNMT/CTranslate2",
+          "repository": "https://github.com/OpenNMT/CTranslate2",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 4678,
+          "archived": false,
+          "pushed_at": "2026-08-31T19:11:23Z",
+          "families": [
+            "translation"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "davidedc/Algebrite",
+          "repository": "https://github.com/davidedc/Algebrite",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 1002,
+          "archived": false,
+          "pushed_at": "2026-05-12T19:46:24Z",
+          "families": [
+            "math"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "asc-community/AngouriMath",
+          "repository": "https://github.com/asc-community/AngouriMath",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 832,
+          "archived": false,
+          "pushed_at": "2026-09-18T22:58:43Z",
+          "families": [
+            "math"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "flintlib/flint",
+          "repository": "https://github.com/flintlib/flint",
+          "license_spdx": "LGPL-3.0",
+          "license_class": "copyleft-review",
+          "stars_snapshot": 653,
+          "archived": false,
+          "pushed_at": "2026-09-17T22:50:16Z",
+          "families": [
+            "math"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "K-Dense-AI/scientific-agent-skills",
+          "repository": "https://github.com/K-Dense-AI/scientific-agent-skills",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 45621,
+          "archived": false,
+          "pushed_at": "2026-09-14T09:27:38Z",
+          "families": [
+            "science"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "gonum/gonum",
+          "repository": "https://github.com/gonum/gonum",
+          "license_spdx": "BSD-3-Clause",
+          "license_class": "permissive",
+          "stars_snapshot": 8427,
+          "archived": false,
+          "pushed_at": "2026-08-30T22:34:35Z",
+          "families": [
+            "science"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "stdlib-js/stdlib",
+          "repository": "https://github.com/stdlib-js/stdlib",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 5966,
+          "archived": false,
+          "pushed_at": "2026-09-19T14:15:17Z",
+          "families": [
+            "science"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "evaluation_tools_sandbox",
+      "repositories": [
+        {
+          "full_name": "comet-ml/opik",
+          "repository": "https://github.com/comet-ml/opik",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 22132,
+          "archived": false,
+          "pushed_at": "2026-09-19T09:37:41Z",
+          "families": [
+            "evaluation"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "evidentlyai/evidently",
+          "repository": "https://github.com/evidentlyai/evidently",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 7926,
+          "archived": false,
+          "pushed_at": "2026-09-11T09:03:28Z",
+          "families": [
+            "evaluation"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "Giskard-AI/giskard-oss",
+          "repository": "https://github.com/Giskard-AI/giskard-oss",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 5827,
+          "archived": false,
+          "pushed_at": "2026-09-18T17:29:17Z",
+          "families": [
+            "evaluation"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "open-compass/VLMEvalKit",
+          "repository": "https://github.com/open-compass/VLMEvalKit",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 4401,
+          "archived": false,
+          "pushed_at": "2026-09-18T11:51:18Z",
+          "families": [
+            "evaluation"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "judge0/judge0",
+          "repository": "https://github.com/judge0/judge0",
+          "license_spdx": "GPL-3.0",
+          "license_class": "copyleft-review",
+          "stars_snapshot": 4437,
+          "archived": false,
+          "pushed_at": "2026-08-17T11:05:41Z",
+          "families": [
+            "sandbox"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "bytedance/deer-flow",
+          "repository": "https://github.com/bytedance/deer-flow",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 82693,
+          "archived": false,
+          "pushed_at": "2026-09-19T07:09:37Z",
+          "families": [
+            "agents",
+            "sandbox"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "upstash/context7",
+          "repository": "https://github.com/upstash/context7",
+          "license_spdx": "MIT",
+          "license_class": "permissive",
+          "stars_snapshot": 62204,
+          "archived": false,
+          "pushed_at": "2026-09-19T10:22:03Z",
+          "families": [
+            "mcp"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        },
+        {
+          "full_name": "ChromeDevTools/chrome-devtools-mcp",
+          "repository": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
+          "license_spdx": "Apache-2.0",
+          "license_class": "permissive",
+          "stars_snapshot": 52302,
+          "archived": false,
+          "pushed_at": "2026-09-18T17:11:10Z",
+          "families": [
+            "mcp"
+          ],
+          "already_in_registry": false,
+          "trust_state": "discovery-only",
+          "review_requirements": [
+            "verify current repository licence at pinned commit",
+            "audit every model, dataset, voice and plugin licence separately",
+            "run SBOM, malware, secret, network and prompt-injection checks",
+            "benchmark French quality, RAM/VRAM, latency and offline behaviour"
+          ]
+        }
+      ]
+    }
+  ]
+}

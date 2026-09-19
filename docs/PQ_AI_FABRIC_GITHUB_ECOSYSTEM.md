@@ -1,334 +1,191 @@
-# PQ AI Fabric - Écosystème GitHub contrôlé
+# PQ AI Fabric - Écosystème GitHub contrôlé v5
 
-> Extrait opérationnel du cahier des charges v4. Les agents et chats existants sont conservés.
+> Matrice Élève/Administration, lecture scientifique et audit GitHub élargi.
 
-# 36. Certification de l'écosystème GitHub
+# 44. Correction fonctionnelle v5 : droits Élève et Administration
 
-## 36.1 Réponse formelle
+Les deux applications partagent le même Gateway et le même client, mais **pas les mêmes autorisations**. Le rôle vient de l'identité authentifiée, jamais de la requête.
 
-Oui : il existe suffisamment de projets GitHub sérieux pour couvrir la lecture et la génération de texte, documents, images, audio, musique et vidéo, ainsi que l'OCR, la recherche, le RAG, l'orchestration, les outils scientifiques, l'exécution de code, la sécurité et l'évaluation.
+| Capacité | Élève | Administration | Règle |
+|---|---:|---:|---|
+| Chat, génération et reformulation de texte | Oui | Oui | modèles locaux ou auto-hébergés validés |
+| Lecture de PDF, documents et fichiers | Oui | Oui | scan, extraction, OCR, citations |
+| Lecture/compréhension d'images | Oui | Oui | OCR puis vision si nécessaire |
+| Lecture/compréhension de vidéos | Oui | Oui | scènes, images clés et transcription |
+| Transcription d'un audio ou d'une vidéo | Oui | Oui | traitement local prioritaire |
+| Création et édition d'images | Oui | Oui | provenance, quotas et matériel disponible |
+| Diagrammes et vues 3D statiques | Oui | Oui | sorties image/SVG/3D, jamais vidéo côté Élève |
+| Lecture vocale d'un texte ordinaire | Oui | Oui | TTS d'accessibilité et d'apprentissage |
+| Lecture vocale scientifique et mathématique | Oui | Oui | verbalisation sémantique obligatoire avant TTS |
+| Génération de sons créatifs | **Non** | Oui | `audio.generate` réservé au rôle `admin` |
+| Génération musicale | **Non** | Oui | `music.generate` réservé au rôle `admin` |
+| Génération vidéo | **Non** | Oui | `video.generate` réservé au rôle `admin` |
+| Montage/transformation vidéo | **Non** | Oui | `video.edit` réservé au rôle `admin` |
 
-Non : « prendre absolument tous les GitHub » ne constitue ni une architecture ni une garantie de gratuité. GitHub contient des centaines de millions de dépôts, des forks, des projets abandonnés, des licences incompatibles, du code malveillant et des modèles dont la licence diffère de celle du code. PQ doit donc rendre **tout ajout possible**, mais n'activer que les composants passés par le Registry, le Zero Cost Guard, la revue de licence, le scan de sécurité et les benchmarks.
+La synthèse vocale Élève transforme uniquement un contenu pédagogique en parole. Les vidéos et animations sont préparées dans l'Administration puis publiées aux élèves.
 
-Au 2026-09-19, le catalogue machine-readable contient **30 capacités** et **97 candidats** : **54 approuvés**, **38 conditionnels**, **2 à surveiller** et **3 bloqués**. Cette certification porte sur la politique de sélection et les métadonnées vérifiées à cette date ; elle ne remplace pas une revue juridique lors de chaque mise à jour de code ou de poids.
+## 44.1 Invariants désormais testés
 
-## 36.2 Ce qu'est réellement un « outil GitHub »
+1. Côté Élève, `video.generate`, `video.edit`, `audio.generate` et `music.generate` ne retournent aucun provider.
+2. Côté Administration, elles restent possibles si licence, matériel et coût zéro sont validés.
+3. `image.generate` reste disponible à l'élève.
+4. `diagram.render` produit `image/svg` ; `3d.render` produit `3d/image`.
+5. Le serveur déduit le rôle authentifié et refuse toute promotion côté client.
 
-| Objet | Rôle | Contrôle obligatoire |
-|---|---|---|
-| Dépôt de code | runtime, bibliothèque, application ou serveur | licence du code, activité, vulnérabilités, reproductibilité |
-| Poids de modèle | capacité IA réelle | licence distincte, provenance, taille, langues, matériel |
-| Agent | boucle de décision utilisant modèles et outils | permissions, budget, arrêt, observabilité |
-| Skill | procédure réutilisable et contrainte | source, version, capacités autorisées |
-| Serveur MCP | exposition standardisée d'outils | allowlist, authentification, schémas, sandbox |
-| Adapter | contrat PQ vers un runtime | timeout, quotas, format, fallback, tests |
-| Workflow | composition de plusieurs capacités | reprise, idempotence, traçage, compensation |
+# 45. Lecture vocale scientifique et mathématique
 
-# 37. Implémentation ajoutée au projet pq learn
-
-## 37.1 Principe
-
-Les chats et agents existants restent en place. La nouvelle couche n'est pas un chatbot supplémentaire : elle leur fournit un catalogue partagé et un planificateur déterministe. L'application Élève et l'application Administration utilisent le même Gateway et le même client Dart, sans intégrer directement 97 SDK différents.
+Un TTS brut ne doit jamais recevoir directement une formule ambiguë. La capacité `audio.read_scientific_text` est un pipeline en trois étapes obligatoires :
 
 ```mermaid
 flowchart TD
-    A[App Élève] --> C[Client Dart partagé]
-    B[App Administration] --> C
-    C --> D[Gateway authentifié]
-    D --> E[Registry et Zero Cost Planner]
-    E --> F[Adapters locaux ou auto-hébergés]
+    A[Texte, LaTeX ou MathML] --> B[MathJax : structure]
+    B --> C[SRE ou MathCAT : sens et verbalisation FR]
+    C --> D[Texte canonique et SSML vérifiés]
+    D --> E[MeloTTS, Kokoro ou voix validée]
 ```
 
-## 37.2 Fichiers et contrats
+| Étape | Projet principal | Repli | Sortie contrôlée |
+|---|---|---|---|
+| `parse_math` | [MathJax Source](https://github.com/mathjax/MathJax-src) | parseur local déterministe | arbre MathML/structure |
+| `verbalize_math` | [Speech Rule Engine](https://github.com/Speech-Rule-Engine/speech-rule-engine) | [MathCAT](https://github.com/daisy/MathCAT) | français canonique + SSML |
+| `synthesize_speech` | MeloTTS/Kokoro | Piper ou voix système auditée | audio |
 
-| Élément | Emplacement | Fonction |
-|---|---|---|
-| Catalogue JSON | `gateway/config/capability_catalog.json` | 30 capacités, 97 candidats, licences et contraintes |
-| Modèles typés | `gateway/app/capabilities/models.py` | schéma Pydantic et invariants zéro coût |
-| Registry/Planner | `gateway/app/capabilities/registry.py` | validation, filtrage, classement et dégradation |
-| Routes partagées | `gateway/app/capabilities/routes.py` | inventaire et planification authentifiés |
-| Validateur CI | `gateway/scripts/validate_capability_catalog.py` | échec si coût, carte, doublon ou capacité vide |
-| Tests | `gateway/tests/test_capability_registry.py` | licences, GPU, offline, capacités inconnues |
-| Client Flutter/Dart | `packages/pq_ai_fabric_client/` | contrat unique pour les deux applications |
+La formulation exacte de SRE ou MathCAT peut varier selon le jeu de règles. PQ ajoute donc une couche de normalisation et un corpus d'acceptation français. Exemples attendus :
 
-API exposée :
-
-- `GET /v1/capabilities` : inventaire compact ;
-- `GET /v1/capabilities/{capability_id}` : détail et providers ;
-- `POST /v1/capabilities/plan` : plan compatible avec cible, matériel, réseau, GPU et licence.
-
-Le Planner n'exécute encore aucun binaire tiers : il décide d'abord si un provider est admissible. Les adapters d'exécution doivent être ajoutés par lots après test. Cette séparation empêche qu'un simple ajout au catalogue déclenche un téléchargement, une exécution ou une fuite de données.
-
-## 37.3 Invariants exécutables
-
-1. `mandatory_cost_eur` reste égal à zéro.
-2. Les API payantes et cartes bancaires restent interdites.
-3. Un provider bloqué ou en veille ne peut pas devenir `core`.
-4. Un provider activé par défaut doit être approuvé.
-5. Une licence conditionnelle exige un opt-in explicite.
-6. Une demande sans GPU élimine les providers GPU-only.
-7. Une demande offline élimine les providers nécessitant Internet.
-8. Une capacité inconnue échoue explicitement.
-9. Chaque capacité conserve une stratégie de dégradation gratuite.
-10. Les poids et voix sont revus séparément du code.
-
-# 38. Couverture des 30 capacités
-
-| Capacité | Entrées -> sorties | Candidats | Approuvés | Dégradation gratuite |
-|---|---|---:|---:|---|
-| `text.generate` | text -> text | 12 | 1 | template/cache; moteur déterministe; modèle local compact; file différée |
-| `vision.understand` | image, text -> text, json | 18 | 3 | OCR local; détection classique; description indisponible explicitement |
-| `document.parse` | document -> text, markdown, json | 10 | 5 | extracteur natif; OCR page par page; mise en revue humaine |
-| `ocr.extract` | image, document -> text, json | 8 | 4 | Tesseract; saisie/revue humaine |
-| `image.generate` | text, image -> image | 6 | 2 | SVG/Canvas déterministe; bibliothèque d’illustrations; file GPU différée |
-| `image.edit` | image, text -> image | 7 | 4 | libvips/ImageMagick; édition manuelle; file GPU différée |
-| `image.segment` | image, text -> mask, json | 4 | 3 | OpenCV/MediaPipe; revue manuelle |
-| `image.restore` | image -> image | 3 | 2 | redimensionnement classique; original conservé |
-| `audio.transcribe` | audio, video -> text, json | 12 | 3 | modèle ASR compact; file locale différée; saisie manuelle |
-| `audio.synthesize` | text -> audio | 7 | 3 | voix système; modèle TTS compact; texte seul |
-| `audio.generate` | text, audio -> audio | 8 | 3 | sons procéduraux; banque libre; file GPU différée |
-| `music.generate` | text, audio -> audio | 4 | 1 | MIDI/procédural; banque libre; file GPU différée |
-| `audio.separate` | audio -> audio | 5 | 0 | filtres FFmpeg; original conservé |
-| `video.understand` | video, text -> text, json | 12 | 7 | ASR + images clés; métadonnées seulement; file différée |
-| `video.generate` | text, image, audio -> video | 10 | 5 | Manim/SVG/Canvas; diaporama narré; file GPU différée |
-| `video.edit` | video, audio, image -> video | 6 | 2 | FFmpeg/GStreamer; édition différée |
-| `media.transcode` | audio, video, image -> audio, video, image | 5 | 2 | format original; traitement serveur différé |
-| `embeddings.generate` | text, image -> vector | 9 | 1 | BM25/FTS5; modèle compact ONNX |
-| `retrieval.search` | text, vector -> json, text | 10 | 8 | FTS5/BM25; pgvector; cache |
-| `agent.orchestrate` | json, text -> json, text | 9 | 8 | workflow déterministe; file persistante; validation humaine |
-| `tool.protocol` | json -> json | 7 | 6 | outil natif allowlisté; fonction indisponible explicitement |
-| `code.execute` | code -> text, json, file | 5 | 3 | interpréteur navigateur; validation statique; exécution refusée |
-| `math.solve` | text, formula -> json, formula, text | 3 | 2 | SymPy; calcul numérique; revue humaine |
-| `science.simulate` | json, formula -> json, chart | 10 | 4 | moteur déterministe; simulation simplifiée |
-| `diagram.render` | text, json -> image, video, svg | 5 | 1 | SVG/Canvas; rendu statique |
-| `3d.render` | json, text -> 3d, image, video | 6 | 1 | Three.js/Babylon.js; schéma 2D |
-| `translation.local` | text -> text | 2 | 0 | glossaire; mémoire de traduction; texte source |
-| `safety.scan` | file, repository -> json | 5 | 4 | quarantaine; refus d’exécution |
-| `observability.evaluate` | trace, dataset -> metrics, report | 5 | 5 | logs locaux; échantillonnage |
-| `sync.offline` | json, file -> json, file | 3 | 3 | queue locale; export/import manuel |
-
-Une capacité affichant zéro provider approuvé n'est pas supprimée : elle reste disponible via une stratégie déterministe, un artefact validé, une revue de licence ou une file différée. Elle ne doit jamais basculer silencieusement vers un service payant.
-
-# 39. Catalogue GitHub contrôlé
-
-## 39.1 Légende
-
-- **ADOPT** : utilisable après tests de version, checksum et benchmark.
-- **REVIEW** : le code peut être libre mais le modèle, la voix, l'asset ou la configuration doit être validé.
-- **WATCH** : projet non prioritaire, archivé ou insuffisamment stable.
-- **BLOCK** : incompatibilité connue avec le produit commercial ou projet remplacé.
-- **core/optional/experimental/rejected** : priorité d'intégration PQ, pas une note de popularité.
-
-### Runtimes LLM et multimodaux
-
-| Projet | Licence code | Licence modèle/artefact | Commercial | Statut | Niveau |
-|---|---|---|---|---|---|
-| [llama.cpp](https://github.com/ggml-org/llama.cpp) | MIT | per-model | review | REVIEW | core |
-| [MLC LLM](https://github.com/mlc-ai/mlc-llm) | Apache-2.0 | per-model | review | REVIEW | optional |
-| [ONNX Runtime](https://github.com/microsoft/onnxruntime) | MIT | per-model | review | REVIEW | core |
-| [ExecuTorch](https://github.com/pytorch/executorch) | BSD-3-Clause | per-model | review | REVIEW | optional |
-| [LiteRT](https://github.com/google-ai-edge/LiteRT) | Apache-2.0 | per-model | review | REVIEW | optional |
-| [WebLLM](https://github.com/mlc-ai/web-llm) | Apache-2.0 | per-model | review | REVIEW | optional |
-| [Transformers.js](https://github.com/huggingface/transformers.js) | Apache-2.0 | per-model | review | REVIEW | optional |
-| [vLLM](https://github.com/vllm-project/vllm) | Apache-2.0 | per-model | review | REVIEW | optional |
-| [Ollama](https://github.com/ollama/ollama) | MIT | per-model | review | REVIEW | optional |
-| [LocalAI](https://github.com/mudler/LocalAI) | MIT | per-model | review | REVIEW | optional |
-| [Transformers](https://github.com/huggingface/transformers) | Apache-2.0 | per-model | review | REVIEW | optional |
-| [Qwen3-VL](https://github.com/QwenLM/Qwen3-VL) | Apache-2.0 | Apache-2.0 | allowed | ADOPT | optional |
-
-### Documents, OCR, image et vision
-
-| Projet | Licence code | Licence modèle/artefact | Commercial | Statut | Niveau |
-|---|---|---|---|---|---|
-| [InternVL](https://github.com/OpenGVLab/InternVL) | MIT | per-model | review | REVIEW | experimental |
-| [LLaVA-NeXT](https://github.com/LLaVA-VL/LLaVA-NeXT) | Apache-2.0 | per-model | review | REVIEW | experimental |
-| [Docling](https://github.com/docling-project/docling) | MIT | per-model | review | REVIEW | core |
-| [MarkItDown](https://github.com/microsoft/markitdown) | MIT | per-model | review | REVIEW | optional |
-| [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) | Apache-2.0 | Apache-2.0/per-model | allowed | ADOPT | core |
-| [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) | Apache-2.0 | Apache-2.0 | allowed | ADOPT | core |
-| [MinerU](https://github.com/opendatalab/MinerU) | MinerU Open Source License | per-model | review | REVIEW | experimental |
-| [Surya](https://github.com/datalab-to/surya) | Apache-2.0 | modified OpenRAIL-M | conditional | REVIEW | experimental |
-| [Apache Tika](https://github.com/apache/tika) | Apache-2.0 | same-as-code | allowed | ADOPT | optional |
-| [pypdf](https://github.com/py-pdf/pypdf) | BSD-3-Clause | same-as-code | allowed | ADOPT | optional |
-| [OpenCV](https://github.com/opencv/opencv) | Apache-2.0 | same-as-code | allowed | ADOPT | core |
-| [MediaPipe](https://github.com/google-ai-edge/mediapipe) | Apache-2.0 | per-model | review | REVIEW | optional |
-| [SAM 2](https://github.com/facebookresearch/sam2) | Apache-2.0/BSD-3-Clause | Apache-2.0 | allowed | ADOPT | optional |
-| [Grounding DINO](https://github.com/IDEA-Research/GroundingDINO) | Apache-2.0 | Apache-2.0 | allowed | ADOPT | optional |
-| [OpenCLIP](https://github.com/mlfoundations/open_clip) | MIT | per-model | review | REVIEW | optional |
-| [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) | BSD-3-Clause | per-model | review | REVIEW | optional |
-| [libvips](https://github.com/libvips/libvips) | LGPL-2.1+ | same-as-code | allowed | ADOPT | core |
-| [ImageMagick](https://github.com/ImageMagick/ImageMagick) | ImageMagick License | same-as-code | allowed | ADOPT | optional |
-| [Diffusers](https://github.com/huggingface/diffusers) | Apache-2.0 | per-model | review | REVIEW | core |
-| [ComfyUI](https://github.com/Comfy-Org/ComfyUI) | GPL-3.0 | per-model | review | REVIEW | optional |
-| [Qwen-Image](https://github.com/QwenLM/Qwen-Image) | Apache-2.0 | Apache-2.0 | allowed | ADOPT | optional |
-| [FLUX.1 schnell](https://github.com/black-forest-labs/flux) | Apache-2.0 | Apache-2.0 | allowed | ADOPT | optional |
-| [FLUX.1 dev family](https://github.com/black-forest-labs/flux) | Apache-2.0 | FLUX non-commercial | blocked | BLOCK | rejected |
-| [LlamaIndex](https://github.com/run-llama/llama_index) | MIT | same-as-code | allowed | ADOPT | optional |
-
-### Parole, audio et musique
-
-| Projet | Licence code | Licence modèle/artefact | Commercial | Statut | Niveau |
-|---|---|---|---|---|---|
-| [whisper.cpp](https://github.com/ggml-org/whisper.cpp) | MIT | MIT | allowed | ADOPT | core |
-| [faster-whisper](https://github.com/SYSTRAN/faster-whisper) | MIT | MIT/per-model | allowed | ADOPT | optional |
-| [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) | Apache-2.0 | per-model | review | REVIEW | core |
-| [Vosk](https://github.com/alphacep/vosk-api) | Apache-2.0 | Apache-2.0/per-model | allowed | ADOPT | optional |
-| [Kokoro](https://github.com/hexgrad/kokoro) | Apache-2.0 | Apache-2.0 | allowed | ADOPT | core |
-| [MeloTTS](https://github.com/myshell-ai/MeloTTS) | MIT | MIT | allowed | ADOPT | optional |
-| [Piper](https://github.com/OHF-Voice/piper1-gpl) | GPL-3.0 | per-voice | conditional | REVIEW | optional |
-| [Bark](https://github.com/suno-ai/bark) | MIT | MIT | allowed | ADOPT | experimental |
-| [ACE-Step](https://github.com/ace-step/ACE-Step) | Apache-2.0 | Apache-2.0 | allowed | ADOPT | optional |
-| [stable-audio-tools](https://github.com/Stability-AI/stable-audio-tools) | MIT | per-model/gated | conditional | REVIEW | experimental |
-| [AudioCraft / MusicGen](https://github.com/facebookresearch/audiocraft) | MIT | CC-BY-NC-4.0 | blocked | BLOCK | rejected |
-| [Demucs](https://github.com/facebookresearch/demucs) | MIT | per-model | review | WATCH | experimental |
-| [FFmpeg](https://github.com/FFmpeg/FFmpeg) | LGPL-2.1+/GPL-2+ per build | same-as-build | conditional | REVIEW | core |
-| [GStreamer](https://github.com/GStreamer/gstreamer) | LGPL-2.1+ | per-plugin | conditional | REVIEW | optional |
-| [ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm) | MIT + FFmpeg build license | same-as-build | conditional | REVIEW | optional |
-| [LTX-Video](https://github.com/Lightricks/LTX-Video) | Apache-2.0 | Apache-2.0/per-model | allowed | ADOPT | experimental |
-
-### Vidéo et média
-
-| Projet | Licence code | Licence modèle/artefact | Commercial | Statut | Niveau |
-|---|---|---|---|---|---|
-| [PySceneDetect](https://github.com/Breakthrough/PySceneDetect) | BSD-3-Clause | same-as-code | allowed | ADOPT | optional |
-| [Decord](https://github.com/dmlc/decord) | Apache-2.0 | same-as-code | allowed | ADOPT | optional |
-| [Wan 2.1](https://github.com/Wan-Video/Wan2.1) | Apache-2.0 | Apache-2.0 | allowed | ADOPT | experimental |
-| [CogVideoX-2B](https://github.com/zai-org/CogVideo) | Apache-2.0 | Apache-2.0 | allowed | ADOPT | experimental |
-| [FramePack](https://github.com/lllyasviel/FramePack) | Apache-2.0 | per-model | review | REVIEW | experimental |
-| [Mochi 1](https://github.com/genmoai/mochi) | Apache-2.0 | Apache-2.0 | allowed | ADOPT | experimental |
-| [Open-Sora](https://github.com/hpcaitech/Open-Sora) | Apache-2.0 | per-checkpoint | review | WATCH | experimental |
-| [Manim Community](https://github.com/ManimCommunity/manim) | MIT | same-as-code | allowed | ADOPT | core |
-
-### RAG, orchestration et protocoles
-
-| Projet | Licence code | Licence modèle/artefact | Commercial | Statut | Niveau |
-|---|---|---|---|---|---|
-| [pgvector](https://github.com/pgvector/pgvector) | PostgreSQL License | same-as-code | allowed | ADOPT | core |
-| [Qdrant](https://github.com/qdrant/qdrant) | Apache-2.0 | same-as-code | allowed | ADOPT | optional |
-| [sqlite-vec](https://github.com/asg017/sqlite-vec) | MIT/Apache-2.0 dual | same-as-code | allowed | ADOPT | optional |
-| [FAISS](https://github.com/facebookresearch/faiss) | MIT | same-as-code | allowed | ADOPT | optional |
-| [LanceDB](https://github.com/lancedb/lancedb) | Apache-2.0 | same-as-code | allowed | ADOPT | optional |
-| [Sentence Transformers](https://github.com/huggingface/sentence-transformers) | Apache-2.0 | per-model | review | REVIEW | core |
-| [Haystack](https://github.com/deepset-ai/haystack) | Apache-2.0 | same-as-code | allowed | ADOPT | optional |
-| [LangGraph](https://github.com/langchain-ai/langgraph) | MIT | same-as-code | allowed | ADOPT | core |
-| [Microsoft Agent Framework](https://github.com/microsoft/agent-framework) | MIT | same-as-code | allowed | ADOPT | optional |
-| [smolagents](https://github.com/huggingface/smolagents) | Apache-2.0 | same-as-code | allowed | ADOPT | optional |
-| [PydanticAI](https://github.com/pydantic/pydantic-ai) | MIT | same-as-code | allowed | ADOPT | optional |
-| [DSPy](https://github.com/stanfordnlp/dspy) | MIT | same-as-code | allowed | ADOPT | experimental |
-| [AutoGen](https://github.com/microsoft/autogen) | MIT/CC-BY-4.0 | same-as-code | allowed | BLOCK | rejected |
-| [MCP Servers](https://github.com/modelcontextprotocol/servers) | MIT | per-server | review | REVIEW | core |
-| [FastMCP](https://github.com/PrefectHQ/fastmcp) | Apache-2.0 | same-as-code | allowed | ADOPT | optional |
-| [Wasmtime](https://github.com/bytecodealliance/wasmtime) | Apache-2.0 WITH LLVM-exception | same-as-code | allowed | ADOPT | core |
-| [Ragas](https://github.com/explodinggradients/ragas) | Apache-2.0 | same-as-code | allowed | ADOPT | optional |
-
-### Code, sciences, rendu et collaboration
-
-| Projet | Licence code | Licence modèle/artefact | Commercial | Statut | Niveau |
-|---|---|---|---|---|---|
-| [Pyodide](https://github.com/pyodide/pyodide) | MPL-2.0 | package-dependent | conditional | REVIEW | core |
-| [JupyterLite](https://github.com/jupyterlite/jupyterlite) | BSD-3-Clause | package-dependent | conditional | REVIEW | optional |
-| [gVisor](https://github.com/google/gvisor) | Apache-2.0 | same-as-code | allowed | ADOPT | optional |
-| [Firecracker](https://github.com/firecracker-microvm/firecracker) | Apache-2.0 | same-as-code | allowed | ADOPT | experimental |
-| [SymPy](https://github.com/sympy/sympy) | BSD-3-Clause | same-as-code | allowed | ADOPT | core |
-| [SciPy](https://github.com/scipy/scipy) | BSD-3-Clause | same-as-code | allowed | ADOPT | core |
-| [RDKit](https://github.com/rdkit/rdkit) | BSD-3-Clause | same-as-code | allowed | ADOPT | optional |
-| [Open Babel](https://github.com/openbabel/openbabel) | GPL-2.0 | same-as-code | conditional | REVIEW | optional |
-| [Cantera](https://github.com/Cantera/cantera) | BSD-3-Clause | same-as-code | allowed | ADOPT | optional |
-| [three.js](https://github.com/mrdoob/three.js) | MIT | asset-dependent | review | REVIEW | core |
-| [Babylon.js](https://github.com/BabylonJS/Babylon.js) | Apache-2.0 | asset-dependent | review | REVIEW | optional |
-| [Godot Engine](https://github.com/godotengine/godot) | MIT | asset-dependent | review | REVIEW | optional |
-| [Yjs](https://github.com/yjs/yjs) | MIT | same-as-code | allowed | ADOPT | core |
-| [Automerge](https://github.com/automerge/automerge) | MIT | same-as-code | allowed | ADOPT | optional |
-
-### Sécurité, observabilité et qualité
-
-| Projet | Licence code | Licence modèle/artefact | Commercial | Statut | Niveau |
-|---|---|---|---|---|---|
-| [Microsoft Presidio](https://github.com/microsoft/presidio) | MIT | per-model | review | REVIEW | core |
-| [Trivy](https://github.com/aquasecurity/trivy) | Apache-2.0 | same-as-code | allowed | ADOPT | core |
-| [Syft](https://github.com/anchore/syft) | Apache-2.0 | same-as-code | allowed | ADOPT | core |
-| [OpenTelemetry Python](https://github.com/open-telemetry/opentelemetry-python) | Apache-2.0 | same-as-code | allowed | ADOPT | core |
-| [MLflow](https://github.com/mlflow/mlflow) | Apache-2.0 | same-as-code | allowed | ADOPT | optional |
-| [Promptfoo](https://github.com/promptfoo/promptfoo) | MIT | same-as-code | allowed | ADOPT | optional |
-
-
-## 39.2 Blocages explicites
-
-| Élément | Décision | Motif |
-|---|---|---|
-| AudioCraft/MusicGen | BLOCK | poids sous CC-BY-NC 4.0, non adaptés au produit commercial |
-| FLUX.1 dev et dérivés non commerciaux | BLOCK | licence des poids non commerciale ; seul `schnell` Apache-2.0 est retenu |
-| AutoGen | BLOCK pour nouveau développement | projet en maintenance ; Microsoft Agent Framework est le successeur retenu |
-| Ultralytics | hors catalogue initial | AGPL-3.0 ou licence commerciale ; décision juridique/architecturale requise |
-| Surya | REVIEW | poids sous licence modifiée avec conditions d'usage |
-| MinerU | REVIEW | licence modifiée et modèles à contrôler séparément |
-| Demucs | WATCH | dépôt archivé ; pas de dépendance de coeur |
-
-# 40. Pipelines multimodaux cibles
-
-## 40.1 Lire un fichier
-
-1. Détection MIME réelle et scan de sécurité.
-2. Extraction native par type ; Docling/Tika/pypdf pour la structure.
-3. OCR local PaddleOCR/Tesseract si le document est scanné.
-4. Découpage, métadonnées, embeddings locaux et index pgvector/FTS.
-5. Citations obligatoires vers page, bloc et version du fichier.
-
-## 40.2 Lire une image ou une vidéo
-
-1. Suppression des métadonnées non nécessaires et contrôle de taille.
-2. OCR et vision classique avant VLM.
-3. Échantillonnage vidéo, scènes, images clés et transcription audio.
-4. VLM Apache-2.0 seulement si nécessaire et matériel compatible.
-5. Résultat structuré, confiance, provenance et possibilité de revue.
-
-## 40.3 Lire et produire de l'audio
-
-1. FFmpeg pour normaliser le flux.
-2. whisper.cpp/faster-whisper/Vosk pour la transcription locale.
-3. Kokoro/MeloTTS ou voix système pour la synthèse.
-4. ACE-Step pour une musique originale lorsque le GPU existe.
-5. Texte, partition, samples et licences conservés comme provenance.
-
-## 40.4 Produire une image ou une vidéo
-
-1. Chercher d'abord une ressource validée ou produire SVG/Canvas/Manim.
-2. Qwen-Image ou FLUX.1 schnell pour l'image générative, après benchmark.
-3. LTX-Video, Wan 2.1, CogVideoX-2B ou Mochi comme options GPU expérimentales.
-4. ComfyUI peut orchestrer les workflows locaux, avec noeuds API payants désactivés.
-5. Si aucun GPU n'est disponible : file différée, animation déterministe ou contenu pré-calculé.
-
-# 41. Plan d'adoption sans dette incontrôlée
-
-| Vague | Contenu | Condition de sortie |
-|---|---|---|
-| G0 - fondation | Registry, Planner, API, client Dart, tests | aucune régression, coût nul prouvé |
-| G1 - lecture | fichiers, OCR, transcription, transcodage | corpus réel, CPU et offline validés |
-| G2 - recherche | embeddings locaux, pgvector/FTS, citations | précision et isolation par profil |
-| G3 - production légère | SVG, diagrammes, TTS, Manim | appareils faibles et accessibilité |
-| G4 - génération GPU | images, musique, vidéo | worker volontaire, quota, licence, provenance |
-| G5 - protocoles | MCP et adapters supplémentaires | allowlist, sandbox et tests d'injection |
-| G6 - optimisation | benchmarks et remplacement des mauvais candidats | un primaire et un fallback par capacité |
-
-Le catalogue peut grandir sans limite artificielle, mais l'installation active doit rester petite. Une nouvelle technologie entre par pull request avec : licence, checksum, SBOM, propriétaire, capacité, adapter, matériel minimal, cas de test, benchmark, fallback et procédure de retrait.
-
-# 42. Matrice de tests obligatoire
-
-| Axe | Test minimum |
+| Expression | Lecture attendue |
 |---|---|
-| Zéro coût | panne totale des services externes ; aucune demande de carte ; aucun fallback payant |
-| Licence | code et poids vérifiés séparément ; blocage si inconnu |
-| Sécurité | fichiers hostiles, prompt injection, SSRF, archive bomb, secrets, sandbox |
-| Mobile faible | L0/L1 sans modèle lourd, batterie et mémoire mesurées |
-| Offline | lancement, cache, recherche, reprise et synchronisation |
-| Qualité | français et programmes ciblés ; précision par matière et classe |
-| Média | durée, résolution, latence, VRAM/RAM, provenance |
-| Résilience | timeout, crash worker, reprise, dégradation et idempotence |
-| Confidentialité | profil non autorisé refusé ; traces sans données sensibles |
-| Applications | même contrat vérifié dans Élève et Administration |
+| `f(x)=x^2+3` | « f de x égale x au carré plus trois » |
+| `\frac{a}{b}` | « a sur b » |
+| `\sqrt{x+1}` | « racine carrée de x plus un » |
+| `\int_0^1 x^2\,dx` | « intégrale de zéro à un de x au carré, d x » |
+| `H_2SO_4` | « H deux S O quatre » |
 
-# 43. Décision finale v4
+La qualité est validée sur fonctions, fractions, puissances, racines, intégrales, matrices, unités, chimie et ponctuation pédagogique. L'expression source, la verbalisation finale, la locale, le moteur et sa version sont conservés dans la trace ; l'audio seul n'est jamais la source de vérité.
 
-L'écosystème GitHub est **suffisant pour construire l'ensemble des capacités demandées**, mais il ne rend pas la puissance de calcul gratuite et il ne justifie pas d'installer tous les dépôts. La stratégie correcte est un **catalogue total, une activation sélective et des adapters remplaçables**.
+# 46. Fouille GitHub élargie et reproductible
 
-PQ peut donc intégrer progressivement texte, documents, images, audio, musique, vidéo, code et sciences sans API payante obligatoire. La promesse vérifiable reste : coeur utile sans Internet, aucune carte, aucun basculement payant, et refus automatique de toute licence ou provenance non validée.
+## 46.1 Ce qui a réellement été fouillé
+
+Au 2026-09-19, le relevé reproductible contient :
+
+| Mesure | Résultat |
+|---|---:|
+| Familles/requêtes de recherche | 30 |
+| Résultats retournés avant déduplication | 1940 |
+| Correspondances totales annoncées par GitHub, avec recouvrements | 10091 |
+| Dépôts uniques conservés | 1656 |
+| Dépôts hors catalogue d'exécution | 1635 |
+| Dépôts archivés | 57 |
+| Licence absente ou `NOASSERTION` | 358 |
+
+Familles interrogées : agents, asr, audio_generation, diarization, document_ai, document_parser, evaluation, image_edit, image_generation, local_api, local_llm, math, mcp, multimodal, music_generation, ocr, pdf, rag, sandbox, science, translation, tts, tts_multilingual, vector, video_generation, video_understanding, vision_language, voice, webgpu, workflow.
+
+Le compte GitHub du projet (`ahdybau1`) est explicitement exclu. L'unité pertinente est le **dépôt**, pas le compte : un compte peut contenir des projets sans rapport, des forks, des données ou des démonstrations.
+
+## 46.2 Limite honnête du mot « tous »
+
+Il est techniquement impossible de certifier « tous les comptes GitHub » : l'inventaire change en continu, les dépôts privés sont inaccessibles, GitHub Search classe et plafonne les résultats, et les mots-clés produisent des faux positifs. Le présent audit est donc une **fouille large, datée et reproductible**, pas une prétention d'exhaustivité absolue.
+
+Les 1656 entrées ne sont ni installées, ni téléchargées, ni exécutées. Elles alimentent un index de découverte. Les statistiques GitHub et licences déclarées sont des indices de tri, jamais une certification de sécurité ou de droit d'usage.
+
+## 46.3 Licences observées
+
+| Licence déclarée | Dépôts |
+|---|---:|
+| MIT | 599 |
+| Apache-2.0 | 479 |
+| BSD-2/3-Clause | 40 |
+| MPL-2.0 | 15 |
+| GPL-2.0/GPL-3.0 | 78 |
+| AGPL-3.0 | 66 |
+| `UNKNOWN`/`NOASSERTION` | 358 |
+
+# 47. Index de découverte, shortlist et registre approuvé
+
+Trois niveaux empêchent l'installation aveugle :
+
+| Niveau | Taille actuelle | Peut être exécuté ? | Fonction |
+|---|---:|---:|---|
+| Discovery Index | 1656 dépôts | Non | ne rien rater et relancer les audits |
+| Shortlist d'expansion | 50 dépôts | Non | candidats prioritaires à examiner |
+| Capability Registry | 100 composants | Seulement après décision du Planner | intégrations documentées et contrôlées |
+
+Le registre comprend désormais **31 capacités** et **100 composants** : **57 approuvés**, **38 conditionnels**, **2 à surveiller** et **3 bloqués**. Même un composant « approuvé » reste soumis au pin de version, au checksum, au scan et au benchmark avant activation réelle.
+
+## 47.1 Shortlist supplémentaire issue du relevé
+
+| Famille | Dépôt | Licence GitHub déclarée | Étoiles au relevé | État PQ |
+|---|---|---|---:|---|
+| Agents, mémoire et RAG | [langchain-ai/langchain](https://github.com/langchain-ai/langchain) | MIT | 146669 | DISCOVERY — désactivé, revue requise |
+| Agents, mémoire et RAG | [infiniflow/ragflow](https://github.com/infiniflow/ragflow) | Apache-2.0 | 90993 | DISCOVERY — désactivé, revue requise |
+| Agents, mémoire et RAG | [browser-use/browser-use](https://github.com/browser-use/browser-use) | MIT | 115284 | DISCOVERY — désactivé, revue requise |
+| Agents, mémoire et RAG | [Mintplex-Labs/anything-llm](https://github.com/Mintplex-Labs/anything-llm) | MIT | 66217 | DISCOVERY — désactivé, revue requise |
+| Agents, mémoire et RAG | [mem0ai/mem0](https://github.com/mem0ai/mem0) | Apache-2.0 | 65643 | DISCOVERY — désactivé, revue requise |
+| Agents, mémoire et RAG | [crewAIInc/crewAI](https://github.com/crewAIInc/crewAI) | MIT | 58766 | DISCOVERY — désactivé, revue requise |
+| Agents, mémoire et RAG | [HKUDS/LightRAG](https://github.com/HKUDS/LightRAG) | MIT | 39761 | DISCOVERY — désactivé, revue requise |
+| Agents, mémoire et RAG | [microsoft/graphrag](https://github.com/microsoft/graphrag) | MIT | 36031 | DISCOVERY — désactivé, revue requise |
+| Agents, mémoire et RAG | [getzep/graphiti](https://github.com/getzep/graphiti) | Apache-2.0 | 31010 | DISCOVERY — désactivé, revue requise |
+| Agents, mémoire et RAG | [topoteretes/cognee](https://github.com/topoteretes/cognee) | Apache-2.0 | 30839 | DISCOVERY — désactivé, revue requise |
+| Agents, mémoire et RAG | [milvus-io/milvus](https://github.com/milvus-io/milvus) | Apache-2.0 | 46160 | DISCOVERY — désactivé, revue requise |
+| Documents, PDF et OCR | [ocrmypdf/OCRmyPDF](https://github.com/ocrmypdf/OCRmyPDF) | MPL-2.0 | 34803 | DISCOVERY — désactivé, revue requise |
+| Documents, PDF et OCR | [JaidedAI/EasyOCR](https://github.com/JaidedAI/EasyOCR) | Apache-2.0 | 30005 | DISCOVERY — désactivé, revue requise |
+| Documents, PDF et OCR | [naptha/tesseract.js](https://github.com/naptha/tesseract.js) | Apache-2.0 | 38716 | DISCOVERY — désactivé, revue requise |
+| Documents, PDF et OCR | [hiroi-sora/Umi-OCR](https://github.com/hiroi-sora/Umi-OCR) | MIT | 47394 | DISCOVERY — désactivé, revue requise |
+| Documents, PDF et OCR | [clovaai/donut](https://github.com/clovaai/donut) | MIT | 6926 | DISCOVERY — désactivé, revue requise |
+| Documents, PDF et OCR | [deepdoctection/deepdoctection](https://github.com/deepdoctection/deepdoctection) | Apache-2.0 | 3260 | DISCOVERY — désactivé, revue requise |
+| Parole, transcription et audio | [m-bain/whisperX](https://github.com/m-bain/whisperX) | BSD-2-Clause | 24124 | DISCOVERY — désactivé, revue requise |
+| Parole, transcription et audio | [modelscope/FunASR](https://github.com/modelscope/FunASR) | MIT | 20431 | DISCOVERY — désactivé, revue requise |
+| Parole, transcription et audio | [PaddlePaddle/PaddleSpeech](https://github.com/PaddlePaddle/PaddleSpeech) | Apache-2.0 | 12685 | DISCOVERY — désactivé, revue requise |
+| Parole, transcription et audio | [speechbrain/speechbrain](https://github.com/speechbrain/speechbrain) | Apache-2.0 | 11826 | DISCOVERY — désactivé, revue requise |
+| Parole, transcription et audio | [pyannote/pyannote-audio](https://github.com/pyannote/pyannote-audio) | MIT | 10572 | DISCOVERY — désactivé, revue requise |
+| Parole, transcription et audio | [coqui-ai/TTS](https://github.com/coqui-ai/TTS) | MPL-2.0 | 46028 | DISCOVERY — désactivé, revue requise |
+| Parole, transcription et audio | [myshell-ai/OpenVoice](https://github.com/myshell-ai/OpenVoice) | MIT | 37581 | DISCOVERY — désactivé, revue requise |
+| Parole, transcription et audio | [QwenAudio/CosyVoice](https://github.com/QwenAudio/CosyVoice) | Apache-2.0 | 23688 | DISCOVERY — désactivé, revue requise |
+| Parole, transcription et audio | [open-mmlab/Amphion](https://github.com/open-mmlab/Amphion) | MIT | 10303 | DISCOVERY — désactivé, revue requise |
+| Image, vidéo et vision | [invoke-ai/InvokeAI](https://github.com/invoke-ai/InvokeAI) | Apache-2.0 | 28247 | DISCOVERY — désactivé, revue requise |
+| Image, vidéo et vision | [AUTOMATIC1111/stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui) | AGPL-3.0 | 165020 | DISCOVERY — désactivé, revue requise |
+| Image, vidéo et vision | [Wan-Video/Wan2.2](https://github.com/Wan-Video/Wan2.2) | Apache-2.0 | 17552 | DISCOVERY — désactivé, revue requise |
+| Image, vidéo et vision | [HKUDS/ViMax](https://github.com/HKUDS/ViMax) | MIT | 12424 | DISCOVERY — désactivé, revue requise |
+| Image, vidéo et vision | [m87-labs/moondream](https://github.com/m87-labs/moondream) | Apache-2.0 | 10050 | DISCOVERY — désactivé, revue requise |
+| Image, vidéo et vision | [Blaizzy/mlx-vlm](https://github.com/Blaizzy/mlx-vlm) | MIT | 5511 | DISCOVERY — désactivé, revue requise |
+| Image, vidéo et vision | [deepseek-ai/DeepSeek-VL2](https://github.com/deepseek-ai/DeepSeek-VL2) | MIT | 5375 | DISCOVERY — désactivé, revue requise |
+| Image, vidéo et vision | [NVlabs/VILA](https://github.com/NVlabs/VILA) | Apache-2.0 | 3863 | DISCOVERY — désactivé, revue requise |
+| Traduction, mathématiques et sciences | [argosopentech/argos-translate](https://github.com/argosopentech/argos-translate) | MIT | 6482 | DISCOVERY — désactivé, revue requise |
+| Traduction, mathématiques et sciences | [OpenNMT/CTranslate2](https://github.com/OpenNMT/CTranslate2) | MIT | 4678 | DISCOVERY — désactivé, revue requise |
+| Traduction, mathématiques et sciences | [davidedc/Algebrite](https://github.com/davidedc/Algebrite) | MIT | 1002 | DISCOVERY — désactivé, revue requise |
+| Traduction, mathématiques et sciences | [asc-community/AngouriMath](https://github.com/asc-community/AngouriMath) | MIT | 832 | DISCOVERY — désactivé, revue requise |
+| Traduction, mathématiques et sciences | [flintlib/flint](https://github.com/flintlib/flint) | LGPL-3.0 | 653 | DISCOVERY — désactivé, revue requise |
+| Traduction, mathématiques et sciences | [K-Dense-AI/scientific-agent-skills](https://github.com/K-Dense-AI/scientific-agent-skills) | MIT | 45621 | DISCOVERY — désactivé, revue requise |
+| Traduction, mathématiques et sciences | [gonum/gonum](https://github.com/gonum/gonum) | BSD-3-Clause | 8427 | DISCOVERY — désactivé, revue requise |
+| Traduction, mathématiques et sciences | [stdlib-js/stdlib](https://github.com/stdlib-js/stdlib) | Apache-2.0 | 5966 | DISCOVERY — désactivé, revue requise |
+| Évaluation, outils et sandbox | [comet-ml/opik](https://github.com/comet-ml/opik) | Apache-2.0 | 22132 | DISCOVERY — désactivé, revue requise |
+| Évaluation, outils et sandbox | [evidentlyai/evidently](https://github.com/evidentlyai/evidently) | Apache-2.0 | 7926 | DISCOVERY — désactivé, revue requise |
+| Évaluation, outils et sandbox | [Giskard-AI/giskard-oss](https://github.com/Giskard-AI/giskard-oss) | Apache-2.0 | 5827 | DISCOVERY — désactivé, revue requise |
+| Évaluation, outils et sandbox | [open-compass/VLMEvalKit](https://github.com/open-compass/VLMEvalKit) | Apache-2.0 | 4401 | DISCOVERY — désactivé, revue requise |
+| Évaluation, outils et sandbox | [judge0/judge0](https://github.com/judge0/judge0) | GPL-3.0 | 4437 | DISCOVERY — désactivé, revue requise |
+| Évaluation, outils et sandbox | [bytedance/deer-flow](https://github.com/bytedance/deer-flow) | MIT | 82693 | DISCOVERY — désactivé, revue requise |
+| Évaluation, outils et sandbox | [upstash/context7](https://github.com/upstash/context7) | MIT | 62204 | DISCOVERY — désactivé, revue requise |
+| Évaluation, outils et sandbox | [ChromeDevTools/chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp) | Apache-2.0 | 52302 | DISCOVERY — désactivé, revue requise |
+
+Cette shortlist n'accorde aucune confiance implicite. AGPL/GPL/MPL imposent une revue d'architecture et de distribution ; chaque modèle ou voix impose une revue d'artefact distincte ; les projets d'agents, MCP, navigation et sandbox reçoivent les contrôles réseau et permissions les plus stricts.
+
+# 48. Mise en oeuvre ajoutée dans la branche
+
+| Élément | Résultat |
+|---|---|
+| Catalogue v2 | rôles, 31 capacités, 100 composants, étapes de pipeline |
+| Planner | refus par rôle et détection des étapes non couvertes |
+| Route authentifiée | rôle dérivé du compte, jamais accepté depuis le client |
+| Lecture scientifique | MathJax + Speech Rule Engine + MathCAT + TTS |
+| Corpus français | fonctions, fractions, racines, intégrales, chimie et unités |
+| Discovery Index | 1 656 dépôts compactés, non exécutables |
+| Shortlist | 50 projets supplémentaires, tous désactivés |
+| Validation | politique zéro coût, matrice des rôles et pipeline scientifique |
+
+Ordre d'intégration recommandé : lecture scientifique d'abord ; documents/OCR et transcription ensuite ; image côté deux applications ; génération audio/musique/vidéo uniquement dans les workers Administration ; agents, MCP et sandbox en dernier après durcissement.
+
+# 49. Décision finale v5
+
+Oui, l'écosystème libre et auto-hébergeable est suffisamment riche pour construire les capacités demandées. Non, aucun inventaire GitHub ne rend les calculs lourds illimités ou sans coût d'infrastructure, et aucun dépôt ne doit être branché automatiquement parce qu'il est public.
+
+La cible confirmée est donc : **deux applications, un socle partagé, des droits différents**. L'Élève peut converser, générer du texte et des images, lire les fichiers et médias, et écouter une lecture scientifique correcte. L'Administration peut en plus générer et monter vidéos, sons et musiques. Le système ne dépend d'aucune API payante, d'aucune carte bancaire et d'aucun free tier externe critique.

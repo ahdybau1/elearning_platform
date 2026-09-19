@@ -9,11 +9,13 @@ Gateway FastAPI authentifié partagé par les applications Élève et Administra
 - Tool Gateway allowlisté ;
 - RAG et Model Router existants ;
 - traçage et quotas ;
-- registre de 30 capacités multimodales et 97 providers GitHub ;
-- planification déterministe selon licence, matériel, réseau, cible et GPU ;
+- registre de 31 capacités multimodales et 100 composants GitHub contrôlés ;
+- planification déterministe selon rôle, licence, matériel, réseau, cible et GPU ;
+- lecture scientifique en trois étapes : structure, verbalisation française, TTS ;
+- index de découverte séparé de 1 656 dépôts et shortlist désactivée de 50 projets ;
 - blocage de toute API payante ou carte bancaire dans la politique Zero-Cost Absolute.
 
-Le catalogue n'installe et n'exécute aucun dépôt automatiquement. Chaque adapter est activé séparément après revue de licence, scan de sécurité et benchmark.
+Le catalogue n'installe et n'exécute aucun dépôt automatiquement. Chaque adapter est activé séparément après revue de licence, scan de sécurité et benchmark. Le rôle est dérivé de l'identité authentifiée : l'Élève peut générer du texte et des images et utiliser la lecture vocale, tandis que la génération audio créative, musicale et vidéo reste réservée à l'Administration.
 
 ## Lancer localement
 
@@ -69,4 +71,4 @@ Les providers Riverpod des deux applications réutilisent automatiquement le JWT
 
 ## Limite volontaire de cette tranche
 
-Cette fondation décide **ce qui peut être utilisé** ; elle ne prétend pas que les 97 providers sont déjà installés. Les premiers adapters à implémenter après fusion sont : lecture de documents/OCR, transcription locale, transcodage, puis embeddings et RAG locaux. Les générations image, musique et vidéo restent des workers GPU optionnels et différés.
+Cette fondation décide **ce qui peut être utilisé** ; elle ne prétend pas que les 100 composants sont déjà installés. Les premiers adapters à implémenter après fusion sont : MathJax/Speech Rule Engine/MathCAT pour la lecture scientifique, documents/OCR, transcription locale, transcodage, puis embeddings et RAG locaux. Les générations musique et vidéo restent des workers GPU Administration optionnels et différés.

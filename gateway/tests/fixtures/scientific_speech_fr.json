@@ -1,0 +1,36 @@
+{
+  "locale": "fr-FR",
+  "purpose": "Corpus d’acceptation pour la verbalisation sémantique avant TTS",
+  "cases": [
+    {
+      "input_format": "plain_math",
+      "input": "f(x)=x^2+3",
+      "expected_normalized": "f de x égale x au carré plus trois"
+    },
+    {
+      "input_format": "latex",
+      "input": "\\frac{a}{b}",
+      "expected_normalized": "a sur b"
+    },
+    {
+      "input_format": "latex",
+      "input": "\\sqrt{x+1}",
+      "expected_normalized": "racine carrée de x plus un"
+    },
+    {
+      "input_format": "latex",
+      "input": "\\int_0^1 x^2\\,dx",
+      "expected_normalized": "intégrale de zéro à un de x au carré, d x"
+    },
+    {
+      "input_format": "plain_science",
+      "input": "H_2SO_4",
+      "expected_normalized": "H deux S O quatre"
+    },
+    {
+      "input_format": "plain_science",
+      "input": "9.81 m/s^2",
+      "expected_normalized": "neuf virgule huit un mètres par seconde au carré"
+    }
+  ]
+}

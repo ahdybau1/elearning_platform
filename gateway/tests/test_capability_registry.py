@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 import unittest
 
 from app.capabilities.models import CapabilityPlanRequest
@@ -11,8 +13,8 @@ class CapabilityRegistryTests(unittest.TestCase):
 
     def test_catalogue_is_complete_and_unique(self) -> None:
         catalogue = self.registry.catalog
-        self.assertEqual(30, len(catalogue.capabilities))
-        self.assertEqual(97, len(catalogue.providers))
+        self.assertEqual(31, len(catalogue.capabilities))
+        self.assertEqual(100, len(catalogue.providers))
         self.assertEqual(
             len(catalogue.providers),
             len({provider.id for provider in catalogue.providers}),
@@ -43,7 +45,8 @@ class CapabilityRegistryTests(unittest.TestCase):
                 online=False,
                 commercial_use=True,
                 allow_gpu=True,
-            )
+            ),
+            actor_role="admin",
         )
         self.assertIn("ace_step", {item.provider_id for item in plan.eligible})
         rejected = {item.provider_id: item.reasons for item in plan.rejected}
@@ -77,6 +80,79 @@ class CapabilityRegistryTests(unittest.TestCase):
         rejected = {item.provider_id: item.reasons for item in plan.rejected}
         self.assertIn("docling", rejected)
         self.assertIn("license:review-required", rejected["docling"])
+
+    def test_student_cannot_plan_video_generation(self) -> None:
+        plan = self.registry.plan(
+            CapabilityPlanRequest(
+                capability_id="video.generate",
+                available_targets=["server_cpu", "server_gpu"],
+                device_tier="L3",
+                online=False,
+                allow_gpu=True,
+            ),
+            actor_role="student",
+        )
+        self.assertFalse(plan.eligible)
+        self.assertTrue(plan.rejected)
+        self.assertTrue(
+            all("policy:role-not-allowed" in item.reasons for item in plan.rejected)
+        )
+
+    def test_admin_keeps_video_generation(self) -> None:
+        plan = self.registry.plan(
+            CapabilityPlanRequest(
+                capability_id="video.generate",
+                available_targets=["server_cpu", "server_gpu"],
+                device_tier="L3",
+                online=False,
+                allow_gpu=True,
+            ),
+            actor_role="admin",
+        )
+        self.assertIn("manim", {item.provider_id for item in plan.eligible})
+
+    def test_student_keeps_image_generation(self) -> None:
+        plan = self.registry.plan(
+            CapabilityPlanRequest(
+                capability_id="image.generate",
+                available_targets=["server_gpu"],
+                device_tier="L3",
+                online=False,
+                allow_gpu=True,
+            ),
+            actor_role="student",
+        )
+        self.assertTrue(plan.eligible)
+
+    def test_scientific_speech_pipeline_is_complete_for_student(self) -> None:
+        plan = self.registry.plan(
+            CapabilityPlanRequest(
+                capability_id="audio.read_scientific_text",
+                available_targets=["server_cpu"],
+                device_tier="L1",
+                online=False,
+                allow_gpu=False,
+            ),
+            actor_role="student",
+        )
+        eligible = {item.provider_id for item in plan.eligible}
+        self.assertIn("speech_rule_engine", eligible)
+        self.assertTrue({"kokoro", "melotts"}.intersection(eligible))
+        self.assertEqual([], plan.uncovered_stages)
+
+    def test_scientific_speech_french_acceptance_fixture(self) -> None:
+        fixture_path = (
+            Path(__file__).resolve().parent
+            / "fixtures"
+            / "scientific_speech_fr.json"
+        )
+        fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+        by_input = {case["input"]: case["expected_normalized"] for case in fixture["cases"]}
+        self.assertEqual(
+            "f de x égale x au carré plus trois",
+            by_input["f(x)=x^2+3"],
+        )
+        self.assertNotIn("parenthèse", by_input["f(x)=x^2+3"])
 
     def test_unknown_capability_is_rejected(self) -> None:
         with self.assertRaises(CapabilityRegistryError):
