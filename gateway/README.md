@@ -1,49 +1,74 @@
-# EDLEARN Sovereign AI Gateway — IA-002 (Gateway minimal)
+# EDLEARN Sovereign AI Gateway
 
-Premier work package du chantier « Agents IA » selon l'ordre imposé par
-`docs/CAHIER_DES_CHARGES_AGENTS_IA.md` §22 :
+Gateway FastAPI authentifié partagé par les applications Élève et Administration. Il conserve les agents existants et ajoute le **PQ Open Capability Registry** : une couche de sélection zéro coût pour les outils et modèles locaux ou auto-hébergés.
 
-- IA-000 Audit — fait (`docs/AUDIT_REPORT.md`)
-- IA-001 Contracts — fait (migration `55_ai_agent_registry_ia001.sql`, écran Admin « Registre des Agents IA »)
-- **IA-002 Gateway minimal — ce dossier**
-- IA-003 Tool Gateway, IA-004 RAG (schéma déjà fait, pipeline d'ingestion à venir), IA-005 Model Router... : pas encore faits.
+## Fonctions présentes
 
-## Ce que c'est réellement
+- authentification et autorisation Supabase ;
+- registre et invocation des agents existants ;
+- Tool Gateway allowlisté ;
+- RAG et Model Router existants ;
+- traçage et quotas ;
+- registre de 31 capacités multimodales et 100 composants GitHub contrôlés ;
+- planification déterministe selon rôle, licence, matériel, réseau, cible et GPU ;
+- lecture scientifique en trois étapes : structure, verbalisation française, TTS ;
+- index de découverte séparé de 1 656 dépôts et shortlist désactivée de 50 projets ;
+- blocage de toute API payante ou carte bancaire dans la politique Zero-Cost Absolute.
 
-Un service FastAPI qui :
-1. Vérifie l'authentification Supabase du client (JWT réel, via `/auth/v1/user` — pas de
-   réimplémentation de vérification de signature).
-2. Consulte le registre réel des agents (IA-001, table `ai_agents`/`ai_agent_versions`) pour savoir
-   quelle Edge Function exécute vraiment l'agent demandé.
-3. Route la requête vers cette Edge Function Deno réelle (déjà en production), avec le payload
-   spécifique à cet agent.
-4. Journalise l'appel dans `ai_agent_calls` (même table que les Edge Functions, CF-004).
-5. Renvoie l'enveloppe de sortie standard `§4.2` du cahier (`request_id`, `status`, `result`, `usage`,
-   `agent_version`, `model_version`) au lieu de la réponse brute et hétérogène de chaque Edge Function.
+Le catalogue n'installe et n'exécute aucun dépôt automatiquement. Chaque adapter est activé séparément après revue de licence, scan de sécurité et benchmark. Le rôle est dérivé de l'identité authentifiée : l'Élève peut générer du texte et des images et utiliser la lecture vocale, tandis que la génération audio créative, musicale et vidéo reste réservée à l'Administration.
 
-**Ce que ce n'est PAS** : pas d'Agent Orchestrator (LangGraph), pas de modèle auto-hébergé
-(vLLM/Ollama), pas de RAG branché, pas de Quota Engine réel. La Gateway est aujourd'hui un
-**proxy authentifié et observable** devant les agents Deno existants — la prochaine étape logique
-(IA-005 Model Router) ajoutera un vrai choix de modèle indépendant du provider.
-
-## Lancer en local
-
-Conforme à la stratégie « coût initial nul » du cahier (§33) : la machine de développement est un
-nœud Compute Fabric légitime pour prototyper (§U6). Pas encore déployé sur un hébergement dédié —
-décision à prendre séparément quand ce sera nécessaire.
+## Lancer localement
 
 ```bash
 cd gateway
 pip install -r requirements.txt
-cp .env.example .env   # puis remplir avec les vraies clés (voir student_app/.env pour les valeurs)
+cp .env.example .env
 uvicorn app.main:app --reload --port 8000
 ```
 
-Test rapide :
+## Valider le catalogue
+
 ```bash
-curl http://localhost:8000/health
-curl -X POST http://localhost:8000/v1/agents/AIA-AGT-001/invoke \
-  -H "Authorization: Bearer <un vrai JWT Supabase>" \
-  -H "Content-Type: application/json" \
-  -d '{"agent_id":"AIA-AGT-001","payload":{"message":"Bonjour"}}'
+cd gateway
+PYTHONPATH=. python scripts/validate_capability_catalog.py
+PYTHONPATH=. python -m unittest discover -s tests -v
 ```
+
+## API Capability Registry
+
+Les trois routes exigent un JWT Supabase valide.
+
+```bash
+curl http://localhost:8000/v1/capabilities \
+  -H "Authorization: Bearer <JWT>"
+
+curl http://localhost:8000/v1/capabilities/audio.transcribe \
+  -H "Authorization: Bearer <JWT>"
+
+curl -X POST http://localhost:8000/v1/capabilities/plan \
+  -H "Authorization: Bearer <JWT>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "capability_id": "audio.transcribe",
+    "available_targets": ["android", "server_cpu"],
+    "device_tier": "L1",
+    "online": false,
+    "commercial_use": true,
+    "allow_conditional_licenses": false,
+    "allow_gpu": false
+  }'
+```
+
+## Utilisation Flutter
+
+Le package `packages/pq_ai_fabric_client` est une dépendance commune de `admin_app` et `student_app`. L'adresse du Gateway est injectée sans secret :
+
+```bash
+flutter run --dart-define=PQ_AI_GATEWAY_URL=http://ADRESSE_DU_GATEWAY:8000
+```
+
+Les providers Riverpod des deux applications réutilisent automatiquement le JWT de la session Supabase courante.
+
+## Limite volontaire de cette tranche
+
+Cette fondation décide **ce qui peut être utilisé** ; elle ne prétend pas que les 100 composants sont déjà installés. Les premiers adapters à implémenter après fusion sont : MathJax/Speech Rule Engine/MathCAT pour la lecture scientifique, documents/OCR, transcription locale, transcodage, puis embeddings et RAG locaux. Les générations musique et vidéo restent des workers GPU Administration optionnels et différés.

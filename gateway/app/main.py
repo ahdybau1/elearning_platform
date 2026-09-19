@@ -39,6 +39,7 @@ from .auth import (
     verify_parent_child_access,
     verify_profile_access,
 )
+from .capabilities.routes import router as capability_router
 from .config import settings
 from .envelope import AgentRequest, AgentResponse, SafetyInfo, UsageInfo
 from .model_router.router import route_generate
@@ -64,9 +65,11 @@ class ReviewAttemptRequest(BaseModel):
 
 app = FastAPI(
     title="EDLEARN Sovereign AI Gateway",
-    version="0.1.0",
+    version="0.2.0",
     description="IA-002 — voir docs/CAHIER_DES_CHARGES_AGENTS_IA.md",
 )
+
+app.include_router(capability_router)
 
 
 @app.get("/health")
