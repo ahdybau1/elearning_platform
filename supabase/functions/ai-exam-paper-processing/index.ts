@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.39.0";
+import { requireAdminOrService } from "../_shared/caller_guard.ts";
 
 // Exam Resource Factory — Tranche 1 (docs/CAHIER_IA_ZERO_COUT_MASTER.md, Annexe D.8-D.9).
 // OCR : la vision multimodale de Gemini est utilisée comme moteur OCR (décision validée avec le
@@ -122,6 +123,9 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+
+  const denied = await requireAdminOrService(req, supabase, corsHeaders);
+  if (denied) return denied;
 
   const startTime = Date.now();
   const requestId = crypto.randomUUID();

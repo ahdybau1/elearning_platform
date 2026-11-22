@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.39.0";
+import { requireAdminOrService } from "../_shared/caller_guard.ts";
 
 
 
@@ -18,6 +19,9 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+
+  const denied = await requireAdminOrService(req, supabase, corsHeaders, { serviceOnly: true });
+  if (denied) return denied;
 
   try {
     const now = new Date();

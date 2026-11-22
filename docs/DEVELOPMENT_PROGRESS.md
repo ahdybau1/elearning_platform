@@ -1,5 +1,25 @@
 # Progression EDLEARN
 
+## 2026-11-22 — Lot 1 de l'audit : durcissement des accès (branche `claude/audit-securite-lot1`)
+
+Vérifié sur une base PostgreSQL 16 locale rejouant les migrations 01→84 (stubs Supabase dans
+`supabase/tests/lot1/supabase_stubs.sql`). Pas encore appliqué en production.
+
+- **Migration `85_access_hardening_lot1.sql`** (non destructive) :
+  - un élève ne peut plus s'attribuer un palier (`subscription_tier`) en modifiant ou créant son profil ;
+  - lecture des leçons / exercices / sujets officiels limitée à la **classe du profil actif** ;
+  - hiérarchie des paliers respectée (Gratuit < Journalier < Hebdomadaire < Mensuel < Annuel) ;
+  - déblocage trimestriel appliqué côté serveur (plus seulement dans l'app) ;
+  - `is_correct` recalculé côté serveur pour les QCM, champs de revue (`official_correct`, `ai_*`) ignorés s'ils viennent de l'élève.
+- **Tests** : `supabase/tests/lot1/run.sh` (sans 85 : 9 failles sur 15 scénarios ; avec 85 : 15/15).
+- **Edge Functions** : garde commune `_shared/caller_guard.ts` (admin actif OU clé service) ajoutée à
+  9 fonctions qui ne vérifiaient pas l'appelant ; `cron-subscription-reminders` n'accepte plus que la
+  clé service. `deno check` OK, `deno test` 7/7.
+- **Droits d'auteur** : retrait des 31 visuels de tiers de `scratch_design_images/` (restent dans
+  l'historique git).
+- **Restant (lots suivants)** : `solution_json` toujours lisible avant tentative ; bucket `media` en
+  lecture publique ; session unique non écrite par l'app ; paiement ; notifications push.
+
 ## 2026-09-11 — Ergonomie & Modernisation : Arbre Académique & Gestion des Leçons et Cours
 
 - **Étape 1 : Page Arbre Académique (`AcademicTreeScreen`) — LIVRÉ** :

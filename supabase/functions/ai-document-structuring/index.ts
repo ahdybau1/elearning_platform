@@ -12,6 +12,7 @@
 // que du texte déjà extrait (raw_source_text) — pas d'image/PDF scanné, qui nécessiterait
 // OCRAgent (AIA-AGT-014, OpenCV/PaddleOCR) en amont, explicitement différé faute d'infra.
 import { createClient } from "npm:@supabase/supabase-js@2.39.0";
+import { requireAdminOrService } from "../_shared/caller_guard.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
@@ -44,6 +45,9 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+
+  const denied = await requireAdminOrService(req, supabase, corsHeaders);
+  if (denied) return denied;
 
   const startTime = Date.now();
   const requestId = crypto.randomUUID();
