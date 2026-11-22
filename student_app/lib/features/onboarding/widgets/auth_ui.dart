@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/data/phone_countries.dart';
 import '../../../core/theme/student_theme.dart';
 
 /// Composants partagés par les écrans d'authentification (connexion, inscription, mot de passe).
@@ -11,36 +12,63 @@ import '../../../core/theme/student_theme.dart';
 const Color kBrandBlue = Color(0xFF1F5EFF);
 const Color kBrandGreen = Color(0xFF12B04F);
 
-/// Fond commun : carte centrée sur mobile, panneau de marque à gauche sur grand écran (≥ 960 px).
+/// Fond commun des écrans d'authentification.
+/// - Téléphone (< 600 px) : plein écran, contenu qui défile, bouton principal fixé en bas
+///   ([bottomBar]) pour qu'il reste toujours accessible au pouce, au-dessus du clavier.
+/// - Tablette : carte centrée.
+/// - Grand écran (≥ 960 px) : panneau de marque à gauche, formulaire à droite.
 class AuthScaffold extends StatelessWidget {
   final Widget child;
   final Widget? topBar;
+  final Widget? bottomBar;
   final double maxWidth;
 
-  const AuthScaffold({super.key, required this.child, this.topBar, this.maxWidth = 460});
+  const AuthScaffold({super.key, required this.child, this.topBar, this.bottomBar, this.maxWidth = 460});
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: context.colors.background,
+      backgroundColor: c.background,
+      resizeToAvoidBottomInset: true,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final wide = constraints.maxWidth >= 960;
+          final phone = constraints.maxWidth < 600;
           final form = SafeArea(
+            bottom: !phone || bottomBar == null,
             child: Column(
               children: [
                 if (topBar != null) topBar!,
                 Expanded(
                   child: Center(
                     child: SingleChildScrollView(
-                      padding: EdgeInsets.symmetric(horizontal: wide ? 48 : 20, vertical: 24),
+                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: EdgeInsets.fromLTRB(phone ? 20 : 40, phone ? 12 : 24, phone ? 20 : 40, 24),
                       child: ConstrainedBox(
                         constraints: BoxConstraints(maxWidth: maxWidth),
-                        child: child,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            child,
+                            if (!phone && bottomBar != null) ...[const SizedBox(height: 28), bottomBar!],
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
+                if (phone && bottomBar != null)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: c.surface,
+                      border: Border(top: BorderSide(color: c.border)),
+                    ),
+                    child: SafeArea(
+                      top: false,
+                      child: Padding(padding: const EdgeInsets.fromLTRB(20, 12, 20, 12), child: bottomBar!),
+                    ),
+                  ),
               ],
             ),
           );
@@ -53,6 +81,35 @@ class AuthScaffold extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+/// Barre de progression en segments (une par étape), plus lisible qu'une barre continue.
+class StepProgress extends StatelessWidget {
+  final int current; // index de l'étape courante (0-based)
+  final int total;
+  const StepProgress({super.key, required this.current, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Row(
+      children: [
+        for (var i = 0; i < total; i++) ...[
+          Expanded(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              height: 5,
+              decoration: BoxDecoration(
+                color: i <= current ? c.accentPrimary : c.border,
+                borderRadius: BorderRadius.circular(5),
+              ),
+            ),
+          ),
+          if (i < total - 1) const SizedBox(width: 6),
+        ],
+      ],
     );
   }
 }
@@ -415,6 +472,296 @@ class OrDivider extends StatelessWidget {
         ),
         Expanded(child: Divider(color: c.border)),
       ],
+    );
+  }
+}
+
+
+// ─── Sexe ────────────────────────────────────────────────────────────────────
+
+/// Choix du sexe en deux grandes cartes (plus simple au doigt qu'une liste déroulante).
+class GenderField extends FormField<String> {
+  GenderField({super.key, super.initialValue, required ValueChanged<String> onChanged})
+      : super(
+          validator: (v) => v == null ? 'Choisissez une option' : null,
+          builder: (state) {
+            final context = state.context;
+            final c = context.colors;
+            Widget option(String value, String label, IconData icon) {
+              final selected = state.value == value;
+              return Expanded(
+                child: Semantics(
+                  selected: selected,
+                  button: true,
+                  label: label,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      state.didChange(value);
+                      onChanged(value);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: selected ? c.accentPrimary.withValues(alpha: 0.14) : c.card,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: selected ? c.accentPrimary : c.border, width: selected ? 1.6 : 1),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(icon, size: 20, color: selected ? c.accentPrimary : c.textSecondary),
+                          const SizedBox(width: 8),
+                          Text(label,
+                              style: GoogleFonts.inter(
+                                  fontSize: 15,
+                                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                                  color: c.textPrimary)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 8),
+                  child: Text('Sexe', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: c.textSecondary)),
+                ),
+                Row(children: [
+                  option('masculin', 'Masculin', Icons.male_rounded),
+                  const SizedBox(width: 12),
+                  option('feminin', 'Féminin', Icons.female_rounded),
+                ]),
+                if (state.hasError)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12, top: 6),
+                    child: Text(state.errorText!, style: TextStyle(color: c.accentRose, fontSize: 12)),
+                  ),
+              ],
+            );
+          },
+        );
+}
+
+// ─── Téléphone avec pays ─────────────────────────────────────────────────────
+
+/// Numéro national valide pour le pays choisi. Cameroun : 9 chiffres commençant par 6 ou 2.
+/// Autres pays : de 6 à 14 chiffres (norme E.164, indicatif non compris).
+String? phoneValidatorFor(PhoneCountry country, String? value, {bool required = false}) {
+  final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+  if (digits.isEmpty) return required ? 'Champ obligatoire' : null;
+  if (country.code == 'CM') {
+    if (digits.length != 9 || !(digits.startsWith('6') || digits.startsWith('2'))) {
+      return '9 chiffres commençant par 6 ou 2 (ex. 6 77 12 34 56)';
+    }
+    return null;
+  }
+  if (digits.length < 6 || digits.length > 14) return 'Numéro invalide pour ${country.name}';
+  return null;
+}
+
+class CountryFlag extends StatelessWidget {
+  final PhoneCountry country;
+  final double height;
+  const CountryFlag({super.key, required this.country, this.height = 16});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(3),
+      child: Image.network(
+        country.flagUrl,
+        height: height,
+        width: height * 1.4,
+        fit: BoxFit.cover,
+        errorBuilder: (context, _, _) => SizedBox(
+          height: height,
+          width: height * 1.4,
+          child: Center(child: Text(country.code, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700))),
+        ),
+      ),
+    );
+  }
+}
+
+/// Champ téléphone : bouton pays (drapeau + indicatif) puis numéro national.
+class PhoneCountryField extends StatelessWidget {
+  final TextEditingController controller;
+  final PhoneCountry country;
+  final ValueChanged<PhoneCountry> onCountryChanged;
+  final String label;
+  final String? helper;
+  final bool required;
+
+  const PhoneCountryField({
+    super.key,
+    required this.controller,
+    required this.country,
+    required this.onCountryChanged,
+    this.label = 'Téléphone',
+    this.helper,
+    this.required = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return TextFormField(
+      controller: controller,
+      keyboardType: TextInputType.phone,
+      textInputAction: TextInputAction.next,
+      autofillHints: const [AutofillHints.telephoneNumberNational],
+      style: TextStyle(color: c.textPrimary),
+      decoration: authInputDecoration(
+        context,
+        label: label,
+        hint: country.code == 'CM' ? '6 77 12 34 56' : null,
+        helper: helper,
+      ).copyWith(
+        prefixIcon: Padding(
+          padding: const EdgeInsets.only(left: 6, right: 4),
+          child: TextButton(
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              foregroundColor: c.textPrimary,
+              minimumSize: const Size(0, 40),
+            ),
+            onPressed: () async {
+              final picked = await showPhoneCountryPicker(context, selected: country);
+              if (picked != null) onCountryChanged(picked);
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CountryFlag(country: country),
+                const SizedBox(width: 6),
+                Text(country.dialCode, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600)),
+                Icon(Icons.arrow_drop_down_rounded, color: c.textSecondary),
+              ],
+            ),
+          ),
+        ),
+      ),
+      validator: (v) => phoneValidatorFor(country, v, required: required),
+    );
+  }
+}
+
+/// Fenêtre de choix du pays, avec recherche (même principe que Voie Vérité Vie).
+Future<PhoneCountry?> showPhoneCountryPicker(BuildContext context, {PhoneCountry? selected}) {
+  return showModalBottomSheet<PhoneCountry>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: context.colors.surface,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+    builder: (_) => _CountryPickerSheet(selected: selected),
+  );
+}
+
+class _CountryPickerSheet extends StatefulWidget {
+  final PhoneCountry? selected;
+  const _CountryPickerSheet({this.selected});
+
+  @override
+  State<_CountryPickerSheet> createState() => _CountryPickerSheetState();
+}
+
+class _CountryPickerSheetState extends State<_CountryPickerSheet> {
+  final _searchCtrl = TextEditingController();
+  final _all = phoneCountriesSorted();
+  String _query = '';
+
+  static String _normalize(String s) => s
+      .toLowerCase()
+      .replaceAll(RegExp('[àâä]'), 'a')
+      .replaceAll(RegExp('[éèêë]'), 'e')
+      .replaceAll(RegExp('[îï]'), 'i')
+      .replaceAll(RegExp('[ôö]'), 'o')
+      .replaceAll(RegExp('[ùûü]'), 'u')
+      .replaceAll('ç', 'c');
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final q = _normalize(_query.trim());
+    final list = q.isEmpty
+        ? _all
+        : _all
+            .where((x) => _normalize(x.name).contains(q) || x.dialCode.contains(q) || x.code.toLowerCase() == q)
+            .toList();
+    return FractionallySizedBox(
+      heightFactor: 0.85,
+      child: Column(
+        children: [
+          const SizedBox(height: 10),
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(4))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text('Pays de votre numéro',
+                      style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700, color: c.textPrimary)),
+                ),
+                IconButton(
+                  tooltip: 'Fermer',
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(Icons.close_rounded, color: c.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: TextField(
+              controller: _searchCtrl,
+              autofocus: false,
+              style: TextStyle(color: c.textPrimary),
+              decoration: authInputDecoration(context, label: 'Rechercher un pays ou un indicatif', icon: Icons.search_rounded),
+              onChanged: (v) => setState(() => _query = v),
+            ),
+          ),
+          Expanded(
+            child: list.isEmpty
+                ? Center(child: Text('Aucun pays trouvé', style: TextStyle(color: c.textMuted)))
+                : ListView.builder(
+                    itemCount: list.length,
+                    itemBuilder: (context, i) {
+                      final country = list[i];
+                      final isSelected = country.code == widget.selected?.code;
+                      return ListTile(
+                        leading: CountryFlag(country: country, height: 20),
+                        title: Text(country.name, style: GoogleFonts.inter(color: c.textPrimary, fontSize: 15)),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(country.dialCode, style: GoogleFonts.inter(color: c.textSecondary, fontSize: 14)),
+                            if (isSelected) ...[
+                              const SizedBox(width: 8),
+                              Icon(Icons.check_rounded, color: c.accentPrimary, size: 20),
+                            ],
+                          ],
+                        ),
+                        onTap: () => Navigator.pop(context, country),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -3531,6 +3531,8 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen>
     final nameController = TextEditingController(text: node.name);
     final codeController = TextEditingController(text: node.code ?? '');
     bool isActive = node.isActive;
+    String? track = node.track;
+    final isSeries = node.nodeType == NodeType.series;
     String? fieldError;
     String? submitError;
     bool isLoading = false;
@@ -3578,6 +3580,25 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen>
                       prefixIcon: Icon(Icons.tag_rounded, size: 20),
                     ),
                   ),
+                  if (isSeries) ...[
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String?>(
+                      initialValue: track,
+                      dropdownColor: AppTheme.primarySurface,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Groupe de série (choix proposé à l\'élève)',
+                        prefixIcon: Icon(Icons.call_split_rounded, size: 20),
+                        helperText: 'L\'élève choisit d\'abord « scientifique » ou « littéraire », puis sa série.',
+                      ),
+                      items: const [
+                        DropdownMenuItem<String?>(value: 'scientifique', child: Text('Scientifique (C, D, E, TI…)')),
+                        DropdownMenuItem<String?>(value: 'litteraire', child: Text('Littéraire (A1–A5, ABI, SH, AC…)')),
+                        DropdownMenuItem<String?>(value: null, child: Text('Non défini')),
+                      ],
+                      onChanged: (v) => setModalState(() => track = v),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -3671,6 +3692,8 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen>
                           name: name,
                           code: codeController.text.trim(),
                           isActive: isActive,
+                          updateTrack: isSeries,
+                          track: track,
                         );
                         ref.invalidate(academicTreeStreamProvider);
                         ref.invalidate(nodesByTypeProvider);

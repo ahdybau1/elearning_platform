@@ -334,7 +334,13 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
             runSpacing: 4,
             children: [
               Text(
-                account.phone ?? 'Téléphone non renseigné',
+                account.phone == null
+                    ? 'Téléphone non renseigné'
+                    : '${account.phone}${account.phoneCountryCode != null ? ' (${account.phoneCountryCode})' : ''}',
+                style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
+              ),
+              Text(
+                account.genderLabel,
                 style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
               ),
               Text(

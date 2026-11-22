@@ -378,7 +378,7 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
   Future<List<StudentProfile>> _fetchProfiles(String accountId) async {
     final rows = await _client
         .from('profiles')
-        .select('*, academic_nodes(name)')
+        .select('*, academic_nodes(name, display_name)')
         .eq('account_id', accountId)
         .eq('status', 'actif')
         .order('created_at')
@@ -472,6 +472,9 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
             'first_name': firstName,
             'last_name': lastName,
             if ((meta['phone'] as String?)?.isNotEmpty ?? false) 'phone': meta['phone'],
+            if ((meta['phone_country_code'] as String?)?.isNotEmpty ?? false)
+              'phone_country_code': meta['phone_country_code'],
+            if ((meta['gender'] as String?)?.isNotEmpty ?? false) 'gender': meta['gender'],
             if ((meta['birth_date'] as String?)?.isNotEmpty ?? false) 'birth_date': meta['birth_date'],
             if ((meta['school_name'] as String?)?.isNotEmpty ?? false) 'school_name': meta['school_name'],
           })
@@ -519,6 +522,8 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
     String? schoolName,
     String? pendingClassNodeId,
     String? pendingSchoolYear,
+    String? gender,
+    String? phoneCountryCode,
   }) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
@@ -533,6 +538,8 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
           'first_name': firstName,
           'last_name': lastName,
           if (phone != null) 'phone': phone,
+          if (phoneCountryCode != null) 'phone_country_code': phoneCountryCode,
+          if (gender != null) 'gender': gender,
           if (birth != null) 'birth_date': birth,
           if (schoolName != null && schoolName.trim().isNotEmpty) 'school_name': schoolName.trim(),
           if (pendingClassNodeId != null) 'pending_class_node_id': pendingClassNodeId,
@@ -587,6 +594,8 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
     String? phone,
     DateTime? birthDate,
     String? schoolName,
+    String? gender,
+    String? phoneCountryCode,
   }) async {
     final user = _client.auth.currentUser;
     if (user == null || user.email == null) return 'Aucune session active.';
@@ -595,6 +604,8 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
         'auth_user_id': user.id,
         'email': user.email,
         'phone': phone,
+        if (phoneCountryCode != null) 'phone_country_code': phoneCountryCode,
+        if (gender != null) 'gender': gender,
         'first_name': firstName,
         'last_name': lastName,
         if (birthDate != null) 'birth_date': birthDate.toIso8601String().split('T').first,
@@ -714,7 +725,7 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
             'class_node_id': classNodeId,
             'school_year': schoolYear,
           })
-          .select('*, academic_nodes(name)')
+          .select('*, academic_nodes(name, display_name)')
           .single();
       final newProfile = StudentProfile.fromJson(Map<String, dynamic>.from(row));
       state = state.copyWith(

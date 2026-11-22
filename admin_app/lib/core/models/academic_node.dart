@@ -15,6 +15,9 @@ class AcademicNode {
   /// 'ok' | 'ambiguous' | 'incomplete' — « À vérifier » quand différent de 'ok' (migration 83).
   final String verificationStatus;
   final bool fromImport;
+  /// Groupe de série (migration 95) : 'scientifique' | 'litteraire' | null. L'app élève demande
+  /// d'abord ce groupe avant de lister les séries d'une classe du second cycle.
+  final String? track;
 
   AcademicNode({
     required this.id,
@@ -30,6 +33,7 @@ class AcademicNode {
     List<AcademicNode>? children,
     this.verificationStatus = 'ok',
     this.fromImport = false,
+    this.track,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now(),
         children = children ?? [];
@@ -63,6 +67,7 @@ class AcademicNode {
       children: parsedChildren,
       verificationStatus: json['verification_status'] as String? ?? 'ok',
       fromImport: json['curriculum_import_id'] != null,
+      track: json['track'] as String?,
     );
   }
 

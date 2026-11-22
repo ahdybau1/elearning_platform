@@ -147,6 +147,8 @@ class SupabaseService {
     String? name,
     String? code,
     bool? isActive,
+    bool updateTrack = false,
+    String? track,
   }) async {
     final updates = <String, dynamic>{
       'updated_at': DateTime.now().toIso8601String(),
@@ -154,6 +156,8 @@ class SupabaseService {
     if (name != null) updates['name'] = name;
     if (code != null) updates['code'] = code;
     if (isActive != null) updates['is_active'] = isActive;
+    // Groupe de série (migration 95) : `updateTrack` permet aussi de le remettre à « non défini ».
+    if (updateTrack) updates['track'] = track;
     await client.from('academic_nodes').update(updates).eq('id', id);
   }
 

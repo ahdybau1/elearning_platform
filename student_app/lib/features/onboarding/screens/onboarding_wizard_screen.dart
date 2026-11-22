@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/auth/student_auth_provider.dart';
+import '../../../core/data/phone_countries.dart';
 import '../../../core/models/student_models.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/theme/student_theme.dart';
@@ -36,7 +37,11 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
   final _phoneCtrl = TextEditingController();
   final _schoolNameCtrl = TextEditingController();
   DateTime? _birthDate;
+  String? _gender;
+  PhoneCountry _phoneCountry = phoneCountryByCode('CM');
   bool _obscurePassword = true;
+  /// Groupe de séries choisi (scientifique / littéraire) pour un nœud parent donné.
+  final Map<String, String> _trackByParent = {};
 
   int _stepIndex = 0;
   final List<StudentAcademicNode> _selectedPath = [];
@@ -109,8 +114,10 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
 
   String? get _normalizedPhone {
     final digits = _phoneCtrl.text.replaceAll(RegExp(r'\D'), '');
-    return digits.isEmpty ? null : '+237$digits';
+    return digits.isEmpty ? null : '${_phoneCountry.dialCode}$digits';
   }
+
+  String? get _phoneCountryCode => _normalizedPhone == null ? null : _phoneCountry.code;
 
   // ─── Navigation ────────────────────────────────────────────────────────────
 
@@ -136,7 +143,10 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     setState(() {
       _errorMessage = null;
       _infoMessage = null;
-      if (_currentStep == _Step.classe && _selectedPath.isNotEmpty) {
+      final parentKey = _selectedPath.isEmpty ? '' : _selectedPath.last.id;
+      if (_currentStep == _Step.classe && _trackByParent.containsKey(parentKey)) {
+        _trackByParent.remove(parentKey);
+      } else if (_currentStep == _Step.classe && _selectedPath.isNotEmpty) {
         _selectedPath.removeLast();
       } else if (_stepIndex > 0) {
         _stepIndex--;
@@ -245,6 +255,8 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
         schoolName: school,
         pendingClassNodeId: leaf.id,
         pendingSchoolYear: schoolYear,
+        gender: _gender,
+        phoneCountryCode: _phoneCountryCode,
       );
       if (!mounted) return;
       if (result == kSignUpNeedsEmailConfirmation) {
@@ -270,6 +282,8 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
         phone: _normalizedPhone,
         birthDate: _birthDate,
         schoolName: school,
+        gender: _gender,
+        phoneCountryCode: _phoneCountryCode,
       );
       if (error != null) return _fail(error);
     }
@@ -345,9 +359,25 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     final totalSteps = steps.length + 1; // + récapitulatif
     final displayIndex = atLeaf ? steps.length : _stepIndex;
 
+    Widget? bottomBar;
+    if (_currentStep != _Step.classe) {
+      bottomBar = AuthPrimaryButton(label: 'Continuer', icon: Icons.arrow_forward_rounded, onPressed: _next);
+    } else if (atLeaf) {
+      bottomBar = AuthPrimaryButton(
+        label: switch (_accountStepKind) {
+          _AccountStepKind.fullSignUp => 'Créer mon compte',
+          _AccountStepKind.completeProfile => 'Terminer mon inscription',
+          _AccountStepKind.none => 'Ajouter cette classe',
+        },
+        isLoading: _isSubmitting,
+        onPressed: () => _submitFinal(_selectedPath.last),
+      );
+    }
+
     return AuthScaffold(
       maxWidth: 520,
       topBar: _buildTopBar(displayIndex, totalSteps),
+      bottomBar: bottomBar,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -362,7 +392,7 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
               ),
             ),
             child: KeyedSubtree(
-              key: ValueKey('${_currentStep.name}-${_selectedPath.length}-$atLeaf'),
+              key: ValueKey('${_currentStep.name}-${_selectedPath.length}-$atLeaf-${_trackByParent[parentId ?? ''] ?? ''}'),
               child: switch (_currentStep) {
                 _Step.identity => _buildIdentityStep(),
                 _Step.account => _buildAccountStep(),
@@ -378,12 +408,8 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
             const SizedBox(height: 16),
             AuthMessageBox.error(message: _errorMessage!),
           ],
-          if (_currentStep != _Step.classe) ...[
-            const SizedBox(height: 28),
-            AuthPrimaryButton(label: 'Continuer', icon: Icons.arrow_forward_rounded, onPressed: _next),
-          ],
           if (_accountStepKind == _AccountStepKind.fullSignUp && _stepIndex == 0) ...[
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             _buildAlreadyHaveAccount(),
           ],
         ],
@@ -395,12 +421,12 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     final c = context.colors;
     const labels = {
       _Step.identity: 'Vous',
-      _Step.account: 'Votre compte',
+      _Step.account: 'Contact et compte',
       _Step.classe: 'Votre classe',
     };
     final label = index >= _steps.length ? 'Récapitulatif' : labels[_steps[index]]!;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
+      padding: const EdgeInsets.fromLTRB(4, 4, 20, 4),
       child: Column(
         children: [
           Row(
@@ -410,32 +436,25 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
                 onPressed: _canGoBack && !_isSubmitting ? _back : null,
                 icon: Icon(Icons.arrow_back_rounded, color: c.textSecondary),
               ),
-              const SizedBox(width: 4),
               Expanded(
-                child: Text(
-                  'Étape ${index + 1} sur $total · $label',
-                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: c.textSecondary),
+                child: Text.rich(
+                  TextSpan(children: [
+                    TextSpan(
+                      text: 'Étape ${index + 1}/$total  ',
+                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: c.accentPrimary),
+                    ),
+                    TextSpan(
+                      text: label,
+                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: c.textSecondary),
+                    ),
+                  ]),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
           Padding(
-            padding: const EdgeInsets.only(left: 12),
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: (index + 1) / total),
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-              builder: (context, value, _) => ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: value,
-                  minHeight: 4,
-                  backgroundColor: c.border,
-                  valueColor: AlwaysStoppedAnimation(c.accentPrimary),
-                ),
-              ),
-            ),
+            padding: const EdgeInsets.only(left: 16, top: 2),
+            child: StepProgress(current: index, total: total),
           ),
         ],
       ),
@@ -445,19 +464,19 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
   Widget _stepHeader(String title, String subtitle) {
     final c = context.colors;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.only(bottom: 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: GoogleFonts.outfit(fontSize: 28, height: 1.2, fontWeight: FontWeight.w700, color: c.textPrimary)),
-          const SizedBox(height: 8),
+          Text(title, style: GoogleFonts.outfit(fontSize: 26, height: 1.2, fontWeight: FontWeight.w700, color: c.textPrimary)),
+          const SizedBox(height: 6),
           Text(subtitle, style: GoogleFonts.inter(fontSize: 14, height: 1.5, color: c.textSecondary)),
         ],
       ),
     );
   }
 
-  // Étape 1 — identité
+  // Étape 1 — vous
   Widget _buildIdentityStep() {
     final kind = _accountStepKind;
     final c = context.colors;
@@ -469,13 +488,11 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (kind == _AccountStepKind.fullSignUp) ...[
-              const AuthLogo(size: 56),
-              const SizedBox(height: 20),
               _stepHeader('Créez votre compte élève', 'Gratuit, en moins de deux minutes.'),
               GoogleAuthButton(onPressed: _continueWithGoogle, isLoading: _isGoogleLoading, label: 'S\'inscrire avec Google'),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
               const OrDivider(label: 'ou avec votre email'),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
             ] else
               _stepHeader(
                 'Faisons connaissance',
@@ -483,42 +500,34 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
                     ? 'Vérifiez vos informations avant de choisir votre classe.'
                     : 'Connecté avec $sessionEmail. Vérifiez vos informations avant de choisir votre classe.',
               ),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final first = TextFormField(
-                  controller: _firstNameCtrl,
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                  autofillHints: const [AutofillHints.givenName],
-                  style: TextStyle(color: c.textPrimary),
-                  decoration: authInputDecoration(context, label: 'Prénom', icon: Icons.person_outline_rounded),
-                  validator: requiredValidator,
-                );
-                final last = TextFormField(
-                  controller: _lastNameCtrl,
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                  autofillHints: const [AutofillHints.familyName],
-                  style: TextStyle(color: c.textPrimary),
-                  decoration: authInputDecoration(context, label: 'Nom'),
-                  validator: requiredValidator,
-                );
-                if (constraints.maxWidth < 380) {
-                  return Column(children: [first, const SizedBox(height: 14), last]);
-                }
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [Expanded(child: first), const SizedBox(width: 12), Expanded(child: last)],
-                );
-              },
+            TextFormField(
+              controller: _firstNameCtrl,
+              textCapitalization: TextCapitalization.words,
+              textInputAction: TextInputAction.next,
+              autofillHints: const [AutofillHints.givenName],
+              style: TextStyle(color: c.textPrimary),
+              decoration: authInputDecoration(context, label: 'Prénom', icon: Icons.person_outline_rounded),
+              validator: requiredValidator,
             ),
             const SizedBox(height: 14),
+            TextFormField(
+              controller: _lastNameCtrl,
+              textCapitalization: TextCapitalization.words,
+              textInputAction: TextInputAction.next,
+              autofillHints: const [AutofillHints.familyName],
+              style: TextStyle(color: c.textPrimary),
+              decoration: authInputDecoration(context, label: 'Nom', icon: Icons.badge_outlined),
+              validator: requiredValidator,
+            ),
+            const SizedBox(height: 18),
+            GenderField(initialValue: _gender, onChanged: (v) => setState(() => _gender = v)),
+            const SizedBox(height: 18),
             _buildBirthDateField(),
             const SizedBox(height: 14),
             TextFormField(
               controller: _schoolNameCtrl,
               textCapitalization: TextCapitalization.words,
-              textInputAction: TextInputAction.next,
+              textInputAction: TextInputAction.done,
               style: TextStyle(color: c.textPrimary),
               decoration: authInputDecoration(
                 context,
@@ -571,25 +580,18 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
   }
 
   Widget _buildPhoneField() {
-    return TextFormField(
+    return PhoneCountryField(
       controller: _phoneCtrl,
-      keyboardType: TextInputType.phone,
-      textInputAction: TextInputAction.next,
-      autofillHints: const [AutofillHints.telephoneNumberNational],
-      style: TextStyle(color: context.colors.textPrimary),
-      decoration: authInputDecoration(
-        context,
-        label: 'Téléphone (facultatif)',
-        icon: Icons.phone_iphone_rounded,
-        prefixText: '+237 ',
-        hint: '6 77 12 34 56',
-        helper: 'Servira au paiement Mobile Money (Orange Money, MTN MoMo).',
-      ),
-      validator: cameroonPhoneValidator,
+      country: _phoneCountry,
+      onCountryChanged: (country) => setState(() => _phoneCountry = country),
+      label: 'Téléphone (facultatif)',
+      helper: _phoneCountry.code == 'CM'
+          ? 'Servira au paiement Mobile Money (Orange Money, MTN MoMo).'
+          : 'Choisissez d\'abord le pays de votre numéro.',
     );
   }
 
-  // Étape 2 — compte
+  // Étape 2 — contact et compte
   Widget _buildAccountStep() {
     final c = context.colors;
     return Form(
@@ -598,7 +600,7 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _stepHeader('Vos identifiants', 'Vous vous connecterez avec cet email et ce mot de passe.'),
+            _stepHeader('Contact et identifiants', 'Vous vous connecterez avec cet email et ce mot de passe.'),
             TextFormField(
               controller: _emailCtrl,
               keyboardType: TextInputType.emailAddress,
@@ -623,10 +625,7 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
                 title: 'Cette adresse a déjà un compte',
                 message: 'Connectez-vous avec votre mot de passe actuel. Si vous l\'avez oublié, recevez un lien pour en choisir un nouveau.',
                 actions: [
-                  TextButton(
-                    onPressed: _goToLogin,
-                    child: const Text('Me connecter'),
-                  ),
+                  TextButton(onPressed: _goToLogin, child: const Text('Me connecter')),
                   TextButton(onPressed: _sendPasswordReset, child: const Text('Mot de passe oublié')),
                 ],
               ),
@@ -673,18 +672,39 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     );
   }
 
-  // Étape 3 — classe
+  // Étape 3 — classe (avec choix scientifique / littéraire au second cycle)
   Widget _buildClassStep(AsyncValue<List<StudentAcademicNode>> childrenAsync) {
     final c = context.colors;
+    final parentKey = _selectedPath.isEmpty ? '' : _selectedPath.last.id;
+    final children = childrenAsync.valueOrNull;
+    final tracks = <String>{
+      for (final n in children ?? const <StudentAcademicNode>[])
+        if (n.nodeType == 'series' && n.track != null) n.track!,
+    };
+    final needsTrackChoice = tracks.length >= 2 && !_trackByParent.containsKey(parentKey);
+    final chosenTrack = _trackByParent[parentKey];
+    final classNode = _nearestClass(_selectedPath);
+
+    final String title;
+    if (_selectedPath.isEmpty) {
+      title = 'Dans quel pays étudiez-vous ?';
+    } else if (needsTrackChoice) {
+      title = 'Quelle série en ${_shortNodeName(classNode?.name ?? 'classe')} ?';
+    } else {
+      title = 'Choisissez ${_choiceLabel(children)}';
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _stepHeader(
-          _selectedPath.isEmpty ? 'Dans quel pays étudiez-vous ?' : 'Choisissez ${_choiceLabel(childrenAsync.valueOrNull)}',
-          'Les cours, exercices et sujets d\'examens seront ceux de votre classe.',
+          title,
+          needsTrackChoice
+              ? 'Indiquez d\'abord si vous êtes dans une série scientifique ou littéraire.'
+              : 'Les cours, exercices et sujets d\'examens seront ceux de votre classe.',
         ),
         if (_selectedPath.isNotEmpty) ...[
-          _buildBreadcrumb(),
+          _buildBreadcrumb(chosenTrack),
           const SizedBox(height: 16),
         ],
         childrenAsync.when(
@@ -702,40 +722,20 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
               ),
             ],
           ),
-          data: (children) {
-            if (children.isEmpty) {
+          data: (list) {
+            if (list.isEmpty) {
               return AuthMessageBox.info(
                 message: 'Aucune classe n\'est encore disponible. L\'équipe pq learn les ajoute progressivement.',
               );
             }
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                final columns = constraints.maxWidth >= 440 ? 2 : 1;
-                final spacing = 12.0;
-                final width = (constraints.maxWidth - spacing * (columns - 1)) / columns;
-                return Wrap(
-                  spacing: spacing,
-                  runSpacing: spacing,
-                  children: [
-                    for (final node in children)
-                      SizedBox(
-                        width: width,
-                        child: _NodeTile(
-                          label: _leafDisplayLabel(node, _selectedPath),
-                          icon: _nodeIcon(node.nodeType),
-                          onTap: () => setState(() {
-                            _errorMessage = null;
-                            _selectedPath.add(node);
-                          }),
-                        ),
-                      ),
-                  ],
-                );
-              },
-            );
+            if (needsTrackChoice) return _buildTrackChoice(list, parentKey);
+            final visible = chosenTrack == null
+                ? list
+                : list.where((n) => n.track == chosenTrack || n.track == null).toList();
+            return _buildNodeGrid(visible);
           },
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Text(
           'Vous pourrez suivre d\'autres classes plus tard depuis votre profil.',
           style: GoogleFonts.inter(fontSize: 12, color: c.textMuted),
@@ -744,25 +744,89 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     );
   }
 
-  Widget _buildBreadcrumb() {
+  Widget _buildNodeGrid(List<StudentAcademicNode> nodes) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 440 ? 2 : 1;
+        const spacing = 12.0;
+        final width = (constraints.maxWidth - spacing * (columns - 1)) / columns;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final node in nodes)
+              SizedBox(
+                width: width,
+                child: _NodeTile(
+                  label: _leafDisplayLabel(node, _selectedPath),
+                  icon: _nodeIcon(node.nodeType),
+                  onTap: () => setState(() {
+                    _errorMessage = null;
+                    _selectedPath.add(node);
+                  }),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildTrackChoice(List<StudentAcademicNode> nodes, String parentKey) {
+    String examples(String track) => nodes
+        .where((n) => n.track == track)
+        .map((n) => _shortNodeName(n.name))
+        .join(', ');
+    final anglophone = nodes.any((n) => RegExp(r'^[AS]\d+$').hasMatch(_shortNodeName(n.name)));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _TrackCard(
+          title: anglophone ? 'Science' : 'Série scientifique',
+          subtitle: examples('scientifique'),
+          icon: Icons.science_rounded,
+          color: kBrandBlue,
+          onTap: () => setState(() => _trackByParent[parentKey] = 'scientifique'),
+        ),
+        const SizedBox(height: 12),
+        _TrackCard(
+          title: anglophone ? 'Arts' : 'Série littéraire',
+          subtitle: examples('litteraire'),
+          icon: Icons.menu_book_rounded,
+          color: kBrandGreen,
+          onTap: () => setState(() => _trackByParent[parentKey] = 'litteraire'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBreadcrumb(String? chosenTrack) {
     final c = context.colors;
+    final parentKey = _selectedPath.isEmpty ? '' : _selectedPath.last.id;
+    Widget chip(String label, VoidCallback onPressed) => ActionChip(
+          label: Text(label),
+          labelStyle: GoogleFonts.inter(fontSize: 12, color: c.textPrimary, fontWeight: FontWeight.w600),
+          backgroundColor: c.surface,
+          side: BorderSide(color: c.border),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+          tooltip: 'Revenir à ce niveau',
+          onPressed: onPressed,
+        );
     return Wrap(
       spacing: 6,
       runSpacing: 6,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         for (var i = 0; i < _selectedPath.length; i++) ...[
-          ActionChip(
-            label: Text(_selectedPath[i].name),
-            labelStyle: GoogleFonts.inter(fontSize: 12, color: c.textPrimary, fontWeight: FontWeight.w600),
-            backgroundColor: c.surface,
-            side: BorderSide(color: c.border),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-            tooltip: 'Revenir à ce niveau',
-            onPressed: () => setState(() => _selectedPath.removeRange(i, _selectedPath.length)),
-          ),
-          if (i < _selectedPath.length - 1) Icon(Icons.chevron_right_rounded, size: 16, color: c.textMuted),
+          chip(_selectedPath[i].name, () => setState(() {
+                _selectedPath.removeRange(i, _selectedPath.length);
+              })),
+          if (i < _selectedPath.length - 1 || chosenTrack != null)
+            Icon(Icons.chevron_right_rounded, size: 16, color: c.textMuted),
         ],
+        if (chosenTrack != null)
+          chip(chosenTrack == 'scientifique' ? 'Scientifique' : 'Littéraire',
+              () => setState(() => _trackByParent.remove(parentKey))),
       ],
     );
   }
@@ -828,6 +892,9 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
                   child: Column(
                     children: [
                       _reviewRow(Icons.person_outline_rounded, 'Élève', '${_firstNameCtrl.text.trim()} ${_lastNameCtrl.text.trim()}'),
+                      if (_gender != null)
+                        _reviewRow(_gender == 'feminin' ? Icons.female_rounded : Icons.male_rounded, 'Sexe',
+                            _gender == 'feminin' ? 'Féminin' : 'Masculin'),
                       _reviewRow(Icons.alternate_email_rounded, 'Email', email),
                       if (_normalizedPhone != null) _reviewRow(Icons.phone_iphone_rounded, 'Téléphone', _normalizedPhone!),
                       if (_schoolNameCtrl.text.trim().isNotEmpty)
@@ -837,16 +904,6 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
                 ),
             ],
           ),
-        ),
-        const SizedBox(height: 24),
-        AuthPrimaryButton(
-          label: switch (kind) {
-            _AccountStepKind.fullSignUp => 'Créer mon compte',
-            _AccountStepKind.completeProfile => 'Terminer mon inscription',
-            _AccountStepKind.none => 'Ajouter cette classe',
-          },
-          isLoading: _isSubmitting,
-          onPressed: () => _submitFinal(leaf),
         ),
         if (kind == _AccountStepKind.fullSignUp) ...[
           const SizedBox(height: 12),
@@ -1013,6 +1070,13 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     return '${_shortNodeName(ancestorClass.name)} ${_shortNodeName(leaf.name)}';
   }
 
+  StudentAcademicNode? _nearestClass(List<StudentAcademicNode> path) {
+    for (final n in path.reversed) {
+      if (n.nodeType == 'class') return n;
+    }
+    return null;
+  }
+
   String _shortNodeName(String name) => name
       .replaceFirst(RegExp(r'^Classe de\s+', caseSensitive: false), '')
       .replaceFirst(RegExp(r'^Série\s+', caseSensitive: false), '')
@@ -1052,6 +1116,56 @@ class _NodeTile extends StatelessWidget {
               Expanded(
                 child: Text(label,
                     style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: c.textPrimary)),
+              ),
+              Icon(Icons.chevron_right_rounded, color: c.textMuted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TrackCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _TrackCard({required this.title, required this.subtitle, required this.icon, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Material(
+      color: c.card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: c.border)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(color: color.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(14)),
+                child: Icon(icon, color: color, size: 28),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: c.textPrimary)),
+                    if (subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text('Séries $subtitle', style: GoogleFonts.inter(fontSize: 13, color: c.textSecondary)),
+                    ],
+                  ],
+                ),
               ),
               Icon(Icons.chevron_right_rounded, color: c.textMuted),
             ],

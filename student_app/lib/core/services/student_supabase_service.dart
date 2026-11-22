@@ -253,7 +253,7 @@ class StudentSupabaseService {
     if (!_isValidUuid(accountId)) return [];
     final rows = await client
         .from('profiles')
-        .select('*, academic_nodes(name)')
+        .select('*, academic_nodes(name, display_name)')
         .eq('account_id', accountId)
         .eq('status', 'archive')
         .order('created_at')

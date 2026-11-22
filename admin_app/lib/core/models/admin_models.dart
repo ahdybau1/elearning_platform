@@ -302,6 +302,10 @@ class Account {
   final String firstName;
   final String lastName;
   final DateTime createdAt;
+  /// 'masculin' | 'feminin' | null (migration 95).
+  final String? gender;
+  /// Pays de l'indicatif téléphonique, code ISO à deux lettres (migration 95).
+  final String? phoneCountryCode;
 
   Account({
     required this.id,
@@ -310,7 +314,15 @@ class Account {
     required this.firstName,
     required this.lastName,
     DateTime? createdAt,
+    this.gender,
+    this.phoneCountryCode,
   }) : createdAt = createdAt ?? DateTime.now();
+
+  String get genderLabel => switch (gender) {
+        'masculin' => 'Masculin',
+        'feminin' => 'Féminin',
+        _ => 'Sexe non renseigné',
+      };
 
   factory Account.fromJson(Map<String, dynamic> json) {
     return Account(
@@ -322,6 +334,8 @@ class Account {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
+      gender: json['gender'] as String?,
+      phoneCountryCode: json['phone_country_code'] as String?,
     );
   }
 }

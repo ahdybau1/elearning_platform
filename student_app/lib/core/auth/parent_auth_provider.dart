@@ -167,7 +167,7 @@ class ParentAuthNotifier extends StateNotifier<ParentAuthState> {
 
       final linkRows = await _client
           .from('parent_profile_links')
-          .select('profiles(id, school_year, subscription_tier, status, accounts(first_name, last_name), academic_nodes(name))')
+          .select('profiles(id, school_year, subscription_tier, status, accounts(first_name, last_name), academic_nodes(name, display_name))')
           .eq('parent_account_id', parent.id)
           .then((r) => r as List);
 
