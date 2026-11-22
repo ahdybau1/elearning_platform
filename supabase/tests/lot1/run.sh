@@ -9,7 +9,7 @@ su postgres -c "psql -q -c 'drop database if exists $DB' -c 'create database $DB
 su postgres -c "psql -q -d $DB -v ON_ERROR_STOP=1 -f $STUBS" >/dev/null
 for f in $(ls "$MIG"/*.sql); do
   b=$(basename "$f")
-  [ "$b" = "93_access_hardening_lot1.sql" ] && [ "$1" != "avec_93" ] && continue
+  case "$b" in 93_access_hardening_lot1.sql|94_hide_exercise_solutions.sql) [ "$1" != "avec_93" ] && continue ;; esac
   [ "$b" = "65_ia007_test_skills_seed.sql" ] && continue   # seed à identifiants codés en dur
   sed '/create extension.*pg_cron/Id' "$f" > /tmp/_m.sql
   case "$b" in

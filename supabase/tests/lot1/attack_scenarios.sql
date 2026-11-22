@@ -61,3 +61,16 @@ select case when is_correct is null and official_correct is null then 'OK  ' els
 select set_config('request.jwt.claim.sub','',false);
 update profiles set subscription_tier='mensuel' where id='c2000000-0000-0000-0000-00000000000c';
 select case when subscription_tier='mensuel' then 'OK  ' else 'FAILLE' end || ' S15 (non-régression) le serveur peut toujours changer un palier après paiement' from profiles where id='c2000000-0000-0000-0000-00000000000c';
+
+-- ── Corrigés (migration 94) : les élèves lisent la vue exercises_for_student ──
+set role authenticated;
+select set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-00000000000a',false);
+select case when count(*)=0 then 'OK  ' else 'FAILLE' end || ' S16 A ne lit plus directement la table exercises (vu: '||count(*)||')' from exercises;
+select case when solution_json is null then 'OK  ' else 'FAILLE' end || ' S17 Corrigé d''une évaluation masqué avant la tentative' from exercises_for_student where id='60000000-0000-0000-0000-000000000004';
+select case when (solution_json->>'correct_index')='1' then 'OK  ' else 'FAILLE' end || ' S18 (non-régression) Corrigé d''un entraînement visible directement' from exercises_for_student where id='60000000-0000-0000-0000-000000000001';
+select case when count(*)=0 then 'OK  ' else 'FAILLE' end || ' S19 A ne voit pas les exercices de Terminale dans la vue (vu: '||count(*)||')' from exercises_for_student where id='60000000-0000-0000-0000-000000000003';
+insert into exercise_attempts(profile_id,exercise_id,submitted_answer) values ('a2000000-0000-0000-0000-00000000000a','60000000-0000-0000-0000-000000000004','{"selected_index":0}');
+select case when (solution_json->>'correct_index')='1' then 'OK  ' else 'FAILLE' end || ' S20 Corrigé de l''évaluation visible après la tentative' from exercises_for_student where id='60000000-0000-0000-0000-000000000004';
+select set_config('request.jwt.claim.sub','b0000000-0000-0000-0000-00000000000b',false);
+select case when solution_json is null then 'OK  ' else 'FAILLE' end || ' S21 B (autre élève, sans tentative) ne voit pas ce corrigé' from exercises_for_student where id='60000000-0000-0000-0000-000000000004';
+reset role;

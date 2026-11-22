@@ -21,7 +21,8 @@ insert into lessons(id,chapter_id,title,is_published,is_active,min_subscription_
 insert into exercises(id,type,difficulty,format,title,instructions_json,solution_json,is_published,is_active,chapter_id,class_node_id,term_id,min_subscription_tier) values
  ('60000000-0000-0000-0000-000000000001','entraînement','facile','qcm','QCM 3e','{"statement":"1+1","options":["1","2"]}','{"correct_index":1}',true,true,'40000000-0000-0000-0000-000000000031','10000000-0000-0000-0000-000000000003','30000000-0000-0000-0000-000000000001','gratuit'),
  ('60000000-0000-0000-0000-000000000002','entraînement','facile','reponse_courte','Libre 3e','{}','{}',true,true,'40000000-0000-0000-0000-000000000031','10000000-0000-0000-0000-000000000003','30000000-0000-0000-0000-000000000001','gratuit'),
- ('60000000-0000-0000-0000-000000000003','entraînement','facile','qcm','QCM Tle','{}','{"correct_index":0}',true,true,'40000000-0000-0000-0000-0000000000c1','10000000-0000-0000-0000-00000000000c','30000000-0000-0000-0000-000000000001','gratuit');
+ ('60000000-0000-0000-0000-000000000003','entraînement','facile','qcm','QCM Tle','{}','{"correct_index":0}',true,true,'40000000-0000-0000-0000-0000000000c1','10000000-0000-0000-0000-00000000000c','30000000-0000-0000-0000-000000000001','gratuit'),
+ ('60000000-0000-0000-0000-000000000004','évaluation','facile','qcm','Évaluation 3e','{"statement":"2+2","options":["3","4"]}','{"correct_index":1,"correction":"2+2=4"}',true,true,'40000000-0000-0000-0000-000000000031','10000000-0000-0000-0000-000000000003','30000000-0000-0000-0000-000000000001','gratuit');
 insert into subscription_tiers(id,name,country_id,class_node_id) values
  ('70000000-0000-0000-0000-000000000030','gratuit','10000000-0000-0000-0000-000000000000','10000000-0000-0000-0000-000000000003'),
  ('70000000-0000-0000-0000-000000000031','journalier','10000000-0000-0000-0000-000000000000','10000000-0000-0000-0000-000000000003'),

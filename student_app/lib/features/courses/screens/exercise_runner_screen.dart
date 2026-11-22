@@ -65,36 +65,53 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
   /// chaque changement d'exercice, jamais partagé entre deux exercices différents.
   int _hintsShown = 0;
 
+  /// Exercices relus après validation (corrigé renvoyé par le serveur, migration 94), par id.
+  final Map<String, Exercise> _resolved = {};
+  /// Correction calculée par le serveur pour l'exercice courant (null : non évalué / hors ligne).
+  bool? _serverIsCorrect;
+  bool _isValidating = false;
+
   @override
   void dispose() {
     _freeTextCtrl.dispose();
     super.dispose();
   }
 
-  /// IA-007 (Student Model, U9 du cahier maître) : persiste une preuve d'apprentissage réelle.
-  /// Exclut 'flashcard'/'manuscrit_scan' : aucune réponse n'y est réellement soumise (retourner une
-  /// carte / voir un corrigé de référence n'est pas une tentative mesurable).
-  void _recordAttempt(Exercise ex, bool isQcmCorrect) {
-    if (ex.format == 'flashcard' || ex.format == 'manuscrit_scan') return;
+  /// Validation d'une réponse. La tentative est enregistrée côté serveur, qui calcule lui-même la
+  /// correction (migration 93) ; l'exercice est ensuite relu pour obtenir le corrigé, qui pour une
+  /// évaluation n'est visible qu'après la tentative (migration 94). Les flashcards et les scans de
+  /// manuscrit ne sont pas des tentatives mesurables : rien n'est enregistré, on retourne la carte.
+  Future<void> _validate(Exercise ex) async {
     final profileId = ref.read(studentAuthProvider).activeProfile?.id;
-    if (profileId == null) return;
-    final service = ref.read(studentSupabaseServiceProvider);
-    if (ex.format == 'qcm') {
-      service.recordExerciseAttempt(
-        profileId: profileId,
-        exerciseId: ex.id,
-        isCorrect: isQcmCorrect,
-        submittedAnswer: {'selected_index': _selectedOptionIndex},
-      );
-    } else {
-      // reponse_courte / redaction : pas de correction automatique — is_correct reste null (état
-      // honnête : "non évalué", pas une fausse réussite).
-      service.recordExerciseAttempt(
-        profileId: profileId,
-        exerciseId: ex.id,
-        submittedAnswer: {'text': _freeTextCtrl.text.trim()},
-      );
+    final measurable = ex.format != 'flashcard' && ex.format != 'manuscrit_scan';
+    if (!measurable || profileId == null) {
+      setState(() => _isRevealed = true);
+      return;
     }
+    setState(() => _isValidating = true);
+    final result = await ref.read(studentSupabaseServiceProvider).submitExerciseAttempt(
+          profileId: profileId,
+          exerciseId: ex.id,
+          submittedAnswer: ex.format == 'qcm'
+              ? {'selected_index': _selectedOptionIndex}
+              : {'text': _freeTextCtrl.text.trim()},
+        );
+    if (!mounted) return;
+    final resolved = result.exercise ?? ex;
+    final bool? isCorrect = ex.format == 'qcm'
+        ? (result.isCorrect ?? (resolved.hasSolution ? _selectedOptionIndex == resolved.correctIndex : null))
+        : null;
+    setState(() {
+      _isValidating = false;
+      _resolved[ex.id] = resolved;
+      _serverIsCorrect = isCorrect;
+      _isRevealed = true;
+      _totalScore += confirmedPointsForAnswer(
+        format: ex.format,
+        points: ex.points,
+        isQcmCorrect: isCorrect == true,
+      );
+    });
   }
 
   void _goToNext(List<Exercise> exercises) {
@@ -105,6 +122,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
         _isRevealed = false;
         _hintsShown = 0;
         _scannedTranscription = null;
+        _serverIsCorrect = null;
         _freeTextCtrl.clear();
       });
     } else {
@@ -186,7 +204,8 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
               );
             }
 
-            final currentEx = exercises[_currentIndex];
+            final rawEx = exercises[_currentIndex];
+            final currentEx = _resolved[rawEx.id] ?? rawEx;
             final progress = (_currentIndex + 1) / exercises.length;
 
             return Padding(
@@ -529,9 +548,11 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
           ),
           const SizedBox(height: 10),
           InlineLatexText(
-            ex.explanation.isNotEmpty
-                ? ex.explanation
-                : 'Aucun corrigé fourni pour cet exercice.',
+            !ex.hasSolution
+                ? 'Le corrigé n\'a pas pu être chargé. Vérifiez votre connexion : il sera disponible à votre prochaine visite.'
+                : ex.explanation.isNotEmpty
+                    ? ex.explanation
+                    : 'Aucun corrigé fourni pour cet exercice.',
             style: GoogleFonts.inter(
               fontSize: 13.5,
               color: context.colors.textSecondary,
@@ -614,7 +635,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
           Color bgColor = context.colors.card;
 
           if (_isRevealed) {
-            if (optIdx == ex.correctIndex) {
+            if (ex.hasSolution && optIdx == ex.correctIndex) {
               borderColor = AppColors.emeraldSuccess;
               bgColor = AppColors.emeraldSuccess.withValues(alpha: 0.15);
             } else if (isSelected) {
@@ -699,7 +720,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                     ),
                     if (_isRevealed) ...[
                       const SizedBox(width: 8),
-                      if (optIdx == ex.correctIndex)
+                      if (ex.hasSolution && optIdx == ex.correctIndex)
                         const Icon(
                           Icons.check_circle_rounded,
                           color: AppColors.emeraldSuccess,
@@ -722,7 +743,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
           _correctionCard(
             context,
             ex,
-            isCorrect: _selectedOptionIndex == ex.correctIndex,
+            isCorrect: _serverIsCorrect ?? (ex.hasSolution ? _selectedOptionIndex == ex.correctIndex : null),
           ),
       ],
     );
@@ -1042,30 +1063,21 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        onPressed: !canPrimaryAct
+        onPressed: !canPrimaryAct || _isValidating
             ? null
             : () {
                 if (!_isRevealed) {
-                  final isQcmCorrect =
-                      currentEx.format == 'qcm' &&
-                      _selectedOptionIndex == currentEx.correctIndex;
-                  setState(() {
-                    _isRevealed = true;
-                    _totalScore += confirmedPointsForAnswer(
-                      format: currentEx.format,
-                      points: currentEx.points,
-                      isQcmCorrect: isQcmCorrect,
-                    );
-                  });
-                  _recordAttempt(currentEx, isQcmCorrect);
+                  _validate(currentEx);
                 } else {
                   _goToNext(exercises);
                 }
               },
-        child: Text(
-          label,
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
-        ),
+        child: _isValidating
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : Text(
+                label,
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
       ),
     );
   }

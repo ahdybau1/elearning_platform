@@ -596,6 +596,11 @@ class Exercise {
   /// jamais la réponse finale. Rangés dans instructions_json, pas une colonne dédiée.
   final List<String> hints;
   final List<String> skills;
+  /// Faux tant que le serveur ne renvoie pas le corrigé (évaluation pas encore tentée, migration 94) :
+  /// dans ce cas `correctIndex`/`explanation` ne veulent rien dire et ne doivent pas être affichés.
+  final bool hasSolution;
+  /// 'entraînement' ou 'évaluation'.
+  final String type;
 
   Exercise({
     required this.id,
@@ -614,6 +619,8 @@ class Exercise {
     this.subjectName,
     this.hints = const [],
     this.skills = const [],
+    this.hasSolution = true,
+    this.type = 'entraînement',
   });
 
   /// Ni lié à une leçon ni à un chapitre : exercice de brassage multi-chapitres (§3.2 du CDC).
@@ -621,7 +628,8 @@ class Exercise {
 
   factory Exercise.fromJson(Map<String, dynamic> json) {
     final instructions = Map<String, dynamic>.from(json['instructions_json'] as Map? ?? {});
-    final solution = Map<String, dynamic>.from(json['solution_json'] as Map? ?? {});
+    final rawSolution = json['solution_json'];
+    final solution = Map<String, dynamic>.from(rawSolution as Map? ?? {});
     final rawOptions = instructions['options'];
     final List<String> parsedOptions = rawOptions is List
         ? rawOptions.map((o) => o.toString()).toList()
@@ -652,6 +660,8 @@ class Exercise {
       subjectName: subject?['name'] as String?,
       hints: ((instructions['hints'] as List?) ?? const []).map((h) => h.toString()).toList(),
       skills: ((json['skills'] as List?) ?? const []).map((s) => s.toString()).toList(),
+      hasSolution: rawSolution is Map,
+      type: json['type'] as String? ?? 'entraînement',
     );
   }
 }

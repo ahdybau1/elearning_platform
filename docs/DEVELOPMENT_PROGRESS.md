@@ -17,8 +17,11 @@ Vérifié sur une base PostgreSQL 16 locale rejouant les migrations 01→92 de l
   clé service. `deno check` OK, `deno test` 7/7.
 - **Droits d'auteur** : retrait des 31 visuels de tiers de `scratch_design_images/` (restent dans
   l'historique git).
-- **Restant (lots suivants)** : `solution_json` toujours lisible avant tentative ; bucket `media` en
-  lecture publique ; session unique non écrite par l'app ; paiement ; notifications push.
+- **Migration `94_hide_exercise_solutions.sql`** : les élèves lisent les exercices via la vue
+  `exercises_for_student` ; le corrigé d'une évaluation n'y apparaît qu'après une tentative (CDC §3.4).
+  L'app élève valide désormais la réponse côté serveur puis relit le corrigé
+  (`submitExerciseAttempt`, `exercise_runner_screen.dart`). Tests : 21/21 scénarios.
+- **Restant (lots suivants)** : bucket `media` en lecture publique ; paiement ; notifications push.
 
 ## 2026-09-18 — Écran « Gestion des Leçons » Aligné sur l'Arbre Académique Hiérarchique (AcademicPathSelector) — LIVRÉ
 
