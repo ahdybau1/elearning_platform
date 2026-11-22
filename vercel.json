@@ -1,6 +1,6 @@
 {
-  "buildCommand": "git clone https://github.com/flutter/flutter.git -b stable --depth 1 _flutter && export PATH=\"$PATH:`pwd`/_flutter/bin\" && flutter build web --release",
-  "outputDirectory": "build/web",
+  "buildCommand": "git clone https://github.com/flutter/flutter.git -b stable --depth 1 _flutter && export PATH=\"$PATH:`pwd`/_flutter/bin\" && cd student_app && flutter build web --release",
+  "outputDirectory": "student_app/build/web",
   "rewrites": [
     {
       "source": "/(.*)",
