@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/student_models.dart';
+import 'auth_messages.dart';
 import 'device_accounts_service.dart';
 
 class StudentAuthState {
@@ -32,6 +33,10 @@ class StudentAuthState {
   /// masquerait le sélecteur en permanence. Distinct de `hasUnlockedThisBoot` (même principe, autre
   /// étape) — voir aussi `hasChosenStudentRoleProvider` côté rôle élève/parent.
   final bool hasConfirmedProfileThisBoot;
+  /// Vrai quand l'élève vient d'ouvrir le lien « mot de passe oublié » reçu par email : Supabase a
+  /// ouvert une session de récupération, il faut lui faire choisir un nouveau mot de passe avant
+  /// toute autre chose (voir ResetPasswordScreen et StudentAuthGate).
+  final bool isRecoveringPassword;
 
   const StudentAuthState({
     this.account,
@@ -43,6 +48,7 @@ class StudentAuthState {
     this.settings,
     this.hasUnlockedThisBoot = false,
     this.hasConfirmedProfileThisBoot = false,
+    this.isRecoveringPassword = false,
   });
 
   /// Un compte élève (`accounts`) existe pour cette session.
@@ -63,6 +69,7 @@ class StudentAuthState {
     AccountSettings? settings,
     bool? hasUnlockedThisBoot,
     bool? hasConfirmedProfileThisBoot,
+    bool? isRecoveringPassword,
   }) {
     return StudentAuthState(
       account: account ?? this.account,
@@ -74,6 +81,7 @@ class StudentAuthState {
       settings: settings ?? this.settings,
       hasUnlockedThisBoot: hasUnlockedThisBoot ?? this.hasUnlockedThisBoot,
       hasConfirmedProfileThisBoot: hasConfirmedProfileThisBoot ?? this.hasConfirmedProfileThisBoot,
+      isRecoveringPassword: isRecoveringPassword ?? this.isRecoveringPassword,
     );
   }
 }
@@ -83,12 +91,35 @@ class StudentAuthState {
 /// (la policy RLS `accounts_insert` exige une session active dont `auth.uid()` correspond).
 const String kSignUpNeedsEmailConfirmation = 'CONFIRM_EMAIL';
 
+/// Renvoyé par [StudentAuthNotifier.signUp] quand l'adresse a déjà un compte. Supabase ne renvoie
+/// PAS d'erreur dans ce cas (protection contre l'énumération des comptes) : il répond « OK », ne
+/// crée rien et n'envoie aucun email. Sans cette détection, l'élève attendait un email qui
+/// n'arrivait jamais, puis la connexion échouait avec son nouveau mot de passe.
+const String kSignUpEmailAlreadyUsed = 'EMAIL_ALREADY_USED';
+
+/// Renvoyé par [StudentAuthNotifier.signIn] quand le compte existe mais que l'email n'a pas été
+/// confirmé : l'écran de connexion propose alors de renvoyer l'email de confirmation.
+const String kSignInEmailNotConfirmed = 'EMAIL_NOT_CONFIRMED';
+
 class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
   StudentAuthNotifier() : super(const StudentAuthState(isLoading: true)) {
     _authSubscription = _client.auth.onAuthStateChange.listen((data) {
       final user = data.session?.user;
       if (user == null) {
         state = const StudentAuthState(isLoading: false);
+        return;
+      }
+      if (data.event == AuthChangeEvent.passwordRecovery) {
+        // Lien « mot de passe oublié » ouvert : session de récupération uniquement, l'élève doit
+        // d'abord choisir un nouveau mot de passe (ResetPasswordScreen).
+        state = StudentAuthState(
+          isLoading: false,
+          sessionEmail: user.email,
+          isRecoveringPassword: true,
+        );
+        return;
+      }
+      if (state.isRecoveringPassword && data.event != AuthChangeEvent.userUpdated) {
         return;
       }
       // `signedIn` ne peut venir que d'une action explicite de CETTE ouverture (mot de passe saisi
@@ -105,6 +136,9 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
   static const String _activeProfilePrefKey = 'selected_student_profile_id';
 
   SupabaseClient get _client => Supabase.instance.client;
+  /// Une seule reprise d'inscription à la fois : l'écoute de session et [signUp] peuvent appeler
+  /// _loadAccountAndProfiles en même temps, ils partagent alors la même tentative.
+  Future<bool>? _pendingResume;
   StreamSubscription<AuthState>? _authSubscription;
 
   @override
@@ -139,6 +173,13 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
           .select()
           .eq('auth_user_id', user.id)
           .maybeSingle();
+
+      if (accountRow == null &&
+          await (_pendingResume ??= _resumePendingSignUp(user).whenComplete(() => _pendingResume = null))) {
+        // Inscription terminée automatiquement à partir des informations saisies avant la
+        // confirmation email : on recharge avec le compte et le profil fraîchement créés.
+        return _loadAccountAndProfiles(markUnlocked: unlocked, markProfileConfirmed: confirmedProfile);
+      }
 
       if (accountRow == null) {
         // Session Supabase Auth réelle et valide, mais aucune ligne `accounts` correspondante —
@@ -354,12 +395,100 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
     try {
       await _client.auth.signInWithPassword(email: email, password: password);
       return null;
-    } on AuthException catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: e.message);
-      return e.message;
     } catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: e.toString());
-      return e.toString();
+      final msg = frenchAuthMessage(e);
+      state = state.copyWith(isLoading: false, errorMessage: msg);
+      return isEmailNotConfirmed(e) ? kSignInEmailNotConfirmed : msg;
+    }
+  }
+
+  /// Connexion / inscription avec Google (Supabase OAuth). Sur le web, la page part vers Google
+  /// puis revient sur l'app : la session est détectée au redémarrage et l'écoute ci-dessus prend
+  /// le relais (un nouvel élève arrive sur l'assistant pour choisir sa classe, prénom et nom
+  /// pré-remplis). Retourne un message d'erreur, ou `null` si la redirection a été lancée.
+  Future<String?> signInWithGoogle() async {
+    try {
+      final launched = await _client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: authRedirectUrl,
+      );
+      return launched ? null : 'Impossible d\'ouvrir la page de connexion Google.';
+    } catch (e) {
+      return frenchAuthMessage(e);
+    }
+  }
+
+  /// Renvoie l'email de confirmation d'inscription (lien expiré, email perdu dans les spams…).
+  Future<String?> resendSignUpEmail(String email) async {
+    try {
+      await _client.auth.resend(
+        type: OtpType.signup,
+        email: email,
+        emailRedirectTo: authRedirectUrl,
+      );
+      return null;
+    } catch (e) {
+      return frenchAuthMessage(e);
+    }
+  }
+
+  /// Fin du parcours « mot de passe oublié » : enregistre le nouveau mot de passe sur la session de
+  /// récupération, puis ouvre l'app normalement (l'élève vient de prouver son identité par email).
+  Future<String?> completePasswordRecovery(String newPassword) async {
+    state = state.copyWith(hasUnlockedThisBoot: true);
+    try {
+      await _client.auth.updateUser(UserAttributes(password: newPassword));
+      state = state.copyWith(isRecoveringPassword: false);
+      await _loadAccountAndProfiles(markUnlocked: true);
+      return null;
+    } catch (e) {
+      return frenchAuthMessage(e);
+    }
+  }
+
+  /// Abandon du parcours « mot de passe oublié » : on ferme la session de récupération.
+  Future<void> cancelPasswordRecovery() async {
+    state = state.copyWith(isRecoveringPassword: false);
+    await _client.auth.signOut();
+  }
+
+  /// Termine automatiquement une inscription interrompue par la confirmation email : les
+  /// informations saisies dans l'assistant ont été envoyées à Supabase dans les métadonnées de
+  /// l'utilisateur (voir [signUp]). Au premier retour avec une session valide, on crée la ligne
+  /// `accounts` puis le profil de la classe choisie, sans rien redemander à l'élève. Retourne vrai
+  /// si le compte a été créé. Échec silencieux : l'assistant prend alors le relais normalement.
+  Future<bool> _resumePendingSignUp(User user) async {
+    final meta = user.userMetadata ?? const <String, dynamic>{};
+    final firstName = (meta['first_name'] as String?)?.trim() ?? '';
+    final lastName = (meta['last_name'] as String?)?.trim() ?? '';
+    final email = user.email;
+    if (firstName.isEmpty || lastName.isEmpty || email == null) return false;
+    try {
+      final inserted = await _client
+          .from('accounts')
+          .insert({
+            'auth_user_id': user.id,
+            'email': email,
+            'first_name': firstName,
+            'last_name': lastName,
+            if ((meta['phone'] as String?)?.isNotEmpty ?? false) 'phone': meta['phone'],
+            if ((meta['birth_date'] as String?)?.isNotEmpty ?? false) 'birth_date': meta['birth_date'],
+            if ((meta['school_name'] as String?)?.isNotEmpty ?? false) 'school_name': meta['school_name'],
+          })
+          .select('id')
+          .single();
+      final classNodeId = meta['pending_class_node_id'] as String?;
+      final schoolYear = meta['pending_school_year'] as String?;
+      if (classNodeId != null && schoolYear != null) {
+        await _client.from('profiles').insert({
+          'account_id': inserted['id'],
+          'class_node_id': classNodeId,
+          'school_year': schoolYear,
+        });
+      }
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -371,12 +500,10 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
   /// message de succès affiché à l'élève doit rester générique côté UI.
   Future<String?> requestPasswordReset(String email) async {
     try {
-      await _client.auth.resetPasswordForEmail(email);
+      await _client.auth.resetPasswordForEmail(email, redirectTo: authRedirectUrl);
       return null;
-    } on AuthException catch (e) {
-      return e.message;
     } catch (e) {
-      return e.toString();
+      return frenchAuthMessage(e);
     }
   }
 
@@ -390,15 +517,39 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
     String? phone,
     DateTime? birthDate,
     String? schoolName,
+    String? pendingClassNodeId,
+    String? pendingSchoolYear,
   }) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      final response = await _client.auth.signUp(email: email, password: password);
+      final birth = birthDate?.toIso8601String().split('T').first;
+      final response = await _client.auth.signUp(
+        email: email,
+        password: password,
+        emailRedirectTo: authRedirectUrl,
+        // Conservé côté Supabase pour terminer l'inscription automatiquement après la
+        // confirmation email (voir _resumePendingSignUp) : l'élève ne ressaisit rien.
+        data: {
+          'first_name': firstName,
+          'last_name': lastName,
+          if (phone != null) 'phone': phone,
+          if (birth != null) 'birth_date': birth,
+          if (schoolName != null && schoolName.trim().isNotEmpty) 'school_name': schoolName.trim(),
+          if (pendingClassNodeId != null) 'pending_class_node_id': pendingClassNodeId,
+          if (pendingSchoolYear != null) 'pending_school_year': pendingSchoolYear,
+        },
+      );
       final user = response.user;
       if (user == null) {
-        const msg = 'Inscription impossible.';
+        const msg = 'Inscription impossible. Réessayez dans un instant.';
         state = state.copyWith(isLoading: false, errorMessage: msg);
         return msg;
+      }
+
+      // Adresse déjà utilisée : Supabase renvoie un utilisateur factice sans aucune identité.
+      if (user.identities != null && user.identities!.isEmpty) {
+        state = const StudentAuthState(isLoading: false);
+        return kSignUpEmailAlreadyUsed;
       }
 
       if (response.session == null) {
@@ -408,24 +559,20 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
         return kSignUpNeedsEmailConfirmation;
       }
 
-      await _client.from('accounts').insert({
-        'auth_user_id': user.id,
-        'email': email,
-        'phone': phone,
-        'first_name': firstName,
-        'last_name': lastName,
-        if (birthDate != null) 'birth_date': birthDate.toIso8601String().split('T').first,
-        if (schoolName != null && schoolName.trim().isNotEmpty) 'school_name': schoolName.trim(),
-      });
-
-      await _loadAccountAndProfiles();
+      // Session ouverte tout de suite (confirmation email désactivée) : le compte et le profil sont
+      // créés à partir des métadonnées par _loadAccountAndProfiles → _resumePendingSignUp, le même
+      // chemin que l'écoute de session, pour ne jamais insérer deux fois.
+      await _loadAccountAndProfiles(markUnlocked: true);
+      if (state.account == null) {
+        const msg = 'Votre compte a été créé mais votre profil n\'a pas pu être enregistré. Reconnectez-vous pour terminer.';
+        state = state.copyWith(isLoading: false, errorMessage: msg);
+        return msg;
+      }
       return null;
-    } on AuthException catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: e.message);
-      return e.message;
     } catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: e.toString());
-      return e.toString();
+      final msg = frenchAuthMessage(e);
+      state = state.copyWith(isLoading: false, errorMessage: msg);
+      return msg;
     }
   }
 

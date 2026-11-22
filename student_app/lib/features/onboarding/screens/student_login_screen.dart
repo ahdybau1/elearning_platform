@@ -5,6 +5,7 @@ import '../../../core/theme/student_theme.dart';
 import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/providers/app_root_providers.dart';
 import '../../../design_system/tokens/app_radius.dart';
+import '../widgets/auth_ui.dart';
 
 class StudentLoginScreen extends ConsumerStatefulWidget {
   const StudentLoginScreen({super.key});
@@ -19,7 +20,11 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
   final _passwordCtrl = TextEditingController();
   bool _obscurePassword = true;
   bool _isSubmitting = false;
+  bool _isGoogleLoading = false;
   String? _errorMessage;
+  String? _infoMessage;
+  /// Le compte existe mais l'email n'a jamais été confirmé : on propose de renvoyer le lien.
+  bool _needsEmailConfirmation = false;
 
   @override
   void dispose() {
@@ -33,6 +38,8 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;
+      _infoMessage = null;
+      _needsEmailConfirmation = false;
     });
 
     final error = await ref
@@ -41,19 +48,45 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
 
     if (!mounted) return;
     setState(() => _isSubmitting = false);
+    if (error == kSignInEmailNotConfirmed) {
+      setState(() => _needsEmailConfirmation = true);
+      return;
+    }
     if (error != null) {
       setState(() => _errorMessage = error);
       return;
     }
-    // Succès : StudentAuthGate (main.dart) réagit automatiquement au changement d'état
-    // d'authentification et bascule vers l'app. Mais cet écran peut avoir été empilé à un ou deux
-    // niveaux (« Ajouter un compte » directement, ou « Code oublié ? » par-dessus l'écran de code
-    // lui-même) — `popUntil(isFirst)` retire tout d'un coup jusqu'à la racine déjà à jour, quel que
-    // soit le nombre d'écrans empilés, au lieu d'un simple pop qui ne révélerait qu'un écran
-    // intermédiaire périmé (ex. l'écran de code, qu'on vient justement de contourner).
+    // Succès : StudentAuthGate (main.dart) bascule tout seul vers l'app. Cet écran peut avoir été
+    // empilé (« Ajouter un compte », « Code oublié ? ») : on revient à la racine déjà à jour.
     if (Navigator.canPop(context)) {
       Navigator.popUntil(context, (route) => route.isFirst);
     }
+  }
+
+  Future<void> _continueWithGoogle() async {
+    setState(() {
+      _isGoogleLoading = true;
+      _errorMessage = null;
+      _infoMessage = null;
+    });
+    final error = await ref.read(studentAuthProvider.notifier).signInWithGoogle();
+    if (!mounted) return;
+    setState(() {
+      _isGoogleLoading = false;
+      _errorMessage = error;
+    });
+  }
+
+  Future<void> _resendConfirmation() async {
+    final error = await ref.read(studentAuthProvider.notifier).resendSignUpEmail(_emailCtrl.text.trim());
+    if (!mounted) return;
+    setState(() {
+      _errorMessage = error;
+      if (error == null) {
+        _needsEmailConfirmation = false;
+        _infoMessage = 'Lien de confirmation renvoyé à ${_emailCtrl.text.trim()}. Pensez à regarder dans les spams.';
+      }
+    });
   }
 
   /// Aucun parcours de récupération n'existait avant : un élève ayant oublié son mot de passe
@@ -175,229 +208,119 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Deux cas bien distincts : empilé par-dessus le déverrouillage par code (« Code oublié ? »,
-    // « Ajouter un compte ») → un simple pop suffit. Racine directe du parcours élève (juste après
-    // « Je suis élève » sur RoleSelectionScreen, jamais empilée) → il n'y a rien à dépiler, il faut
-    // réinitialiser le choix de rôle pour revenir à cet écran (voir AppRootGate, main.dart).
+    final c = context.colors;
+    // Empilé par-dessus le déverrouillage par code → simple pop. Racine du parcours élève (juste
+    // après « Je suis élève ») → on réinitialise le choix de rôle (voir AppRootGate, main.dart).
     final canPop = Navigator.canPop(context);
-    return Scaffold(
-      backgroundColor: context.colors.background,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+    return AuthScaffold(
+      topBar: Align(
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.only(left: 8, top: 8),
+          child: IconButton(
+            icon: Icon(Icons.arrow_back_rounded, color: c.textSecondary),
+            tooltip: 'Retour',
+            onPressed: () {
+              if (canPop) {
+                Navigator.pop(context);
+              } else {
+                ref.read(hasChosenStudentRoleProvider.notifier).state = false;
+              }
+            },
+          ),
+        ),
+      ),
+      child: Form(
+        key: _formKey,
+        child: AutofillGroup(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const AuthLogo(size: 64),
+              const SizedBox(height: 20),
+              Text('Bon retour !',
+                  style: GoogleFonts.outfit(fontSize: 30, fontWeight: FontWeight.w700, color: c.textPrimary)),
+              const SizedBox(height: 8),
+              Text(
+                'Connectez-vous pour retrouver vos cours, exercices et annales.',
+                style: GoogleFonts.inter(fontSize: 14, height: 1.5, color: c.textSecondary),
+              ),
+              const SizedBox(height: 28),
+              GoogleAuthButton(onPressed: _isSubmitting ? null : _continueWithGoogle, isLoading: _isGoogleLoading),
+              const SizedBox(height: 20),
+              const OrDivider(label: 'ou avec votre email'),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: _emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autocorrect: false,
+                autofillHints: const [AutofillHints.email, AutofillHints.username],
+                style: TextStyle(color: c.textPrimary),
+                decoration: authInputDecoration(context, label: 'Adresse email', icon: Icons.alternate_email_rounded),
+                validator: emailValidator,
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _passwordCtrl,
+                obscureText: _obscurePassword,
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.password],
+                style: TextStyle(color: c.textPrimary),
+                decoration: authInputDecoration(
+                  context,
+                  label: 'Mot de passe',
+                  icon: Icons.lock_outline_rounded,
+                  suffix: IconButton(
+                    tooltip: _obscurePassword ? 'Afficher le mot de passe' : 'Masquer le mot de passe',
+                    icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                        color: c.textSecondary),
+                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  ),
+                ),
+                validator: (v) => (v == null || v.isEmpty) ? 'Champ obligatoire' : null,
+                onFieldSubmitted: (_) => _submit(),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: _isSubmitting ? null : _showForgotPasswordDialog,
+                  child: Text('Mot de passe oublié ?',
+                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: c.accentPrimary)),
+                ),
+              ),
+              if (_needsEmailConfirmation) ...[
+                const SizedBox(height: 8),
+                AuthMessageBox.info(
+                  title: 'Confirmez d\'abord votre adresse email',
+                  message: 'Ouvrez le lien reçu au moment de l\'inscription (pensez aux spams). Le lien a expiré ou a disparu ?',
+                  actions: [TextButton(onPressed: _resendConfirmation, child: const Text('Renvoyer le lien'))],
+                ),
+              ],
+              if (_infoMessage != null) ...[
+                const SizedBox(height: 8),
+                AuthMessageBox.success(message: _infoMessage!),
+              ],
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 8),
+                AuthMessageBox.error(message: _errorMessage!),
+              ],
+              const SizedBox(height: 20),
+              AuthPrimaryButton(label: 'Se connecter', isLoading: _isSubmitting, onPressed: _submit),
+              const SizedBox(height: 20),
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      icon: Icon(Icons.arrow_back_rounded, color: context.colors.textSecondary),
-                      tooltip: 'Retour',
-                      onPressed: () {
-                        if (canPop) {
-                          Navigator.pop(context);
-                        } else {
-                          ref.read(hasChosenStudentRoleProvider.notifier).state = false;
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Center(
-                    child: Image.asset('assets/branding/logo.png', width: 200, height: 200),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Connectez-vous pour retrouver vos cours, exercices et annales.',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: context.colors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        TextFormField(
-                          controller: _emailCtrl,
-                          keyboardType: TextInputType.emailAddress,
-                          style: TextStyle(color: context.colors.textPrimary),
-                          decoration: InputDecoration(
-                            labelText: 'Adresse email',
-                            labelStyle: TextStyle(
-                              color: context.colors.textSecondary,
-                            ),
-                            prefixIcon: Icon(
-                              Icons.email_outlined,
-                              color: context.colors.textSecondary,
-                            ),
-                            filled: true,
-                            fillColor: context.colors.card,
-                            border: OutlineInputBorder(
-                              borderRadius: AppRadius.radiusMedium,
-                            ),
-                          ),
-                          validator: (v) => (v == null || !v.contains('@'))
-                              ? 'Adresse email invalide'
-                              : null,
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _passwordCtrl,
-                          obscureText: _obscurePassword,
-                          style: TextStyle(color: context.colors.textPrimary),
-                          decoration: InputDecoration(
-                            labelText: 'Mot de passe',
-                            labelStyle: TextStyle(
-                              color: context.colors.textSecondary,
-                            ),
-                            prefixIcon: Icon(
-                              Icons.lock_outline_rounded,
-                              color: context.colors.textSecondary,
-                            ),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_outlined
-                                    : Icons.visibility_off_outlined,
-                                color: context.colors.textSecondary,
-                              ),
-                              onPressed: () => setState(
-                                () => _obscurePassword = !_obscurePassword,
-                              ),
-                            ),
-                            filled: true,
-                            fillColor: context.colors.card,
-                            border: OutlineInputBorder(
-                              borderRadius: AppRadius.radiusMedium,
-                            ),
-                          ),
-                          validator: (v) => (v == null || v.isEmpty)
-                              ? 'Mot de passe requis'
-                              : null,
-                          onFieldSubmitted: (_) => _submit(),
-                        ),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: _isSubmitting ? null : _showForgotPasswordDialog,
-                            child: Text(
-                              'Mot de passe oublié ?',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: context.colors.accentPrimary,
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (_errorMessage != null) ...[
-                          const SizedBox(height: 14),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: context.colors.accentRose.withValues(
-                                alpha: 0.12,
-                              ),
-                              borderRadius: AppRadius.radiusSmall,
-                              border: Border.all(
-                                color: context.colors.accentRose.withValues(
-                                  alpha: 0.4,
-                                ),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.error_outline_rounded,
-                                  color: context.colors.accentRose,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    _errorMessage!,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      color: context.colors.accentRose,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: _isSubmitting ? null : _submit,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: context.colors.accentPrimary,
-                            foregroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: AppRadius.radiusMedium,
-                            ),
-                          ),
-                          child: _isSubmitting
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.black,
-                                  ),
-                                )
-                              : Text(
-                                  'Se connecter',
-                                  style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-                  // `Wrap` plutôt que `Row` : débordait de 170px sur un téléphone étroit (jamais
-                  // testé avant l'ajout du lien « Mot de passe oublié ? » ci-dessus, qui a réduit
-                  // l'espace vertical disponible et révélé ce défaut déjà présent horizontalement).
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(
-                        'Pas encore de compte ?',
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: context.colors.textSecondary,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () =>
-                            Navigator.pushNamed(context, '/onboarding'),
-                        child: Text(
-                          'Créer un compte',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: context.colors.accentPrimary,
-                          ),
-                        ),
-                      ),
-                    ],
+                  Text('Pas encore de compte ?', style: GoogleFonts.inter(fontSize: 14, color: c.textSecondary)),
+                  TextButton(
+                    onPressed: () => Navigator.pushNamed(context, '/onboarding'),
+                    child: Text('Créer un compte',
+                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: c.accentPrimary)),
                   ),
                 ],
               ),
-            ),
+            ],
           ),
         ),
       ),
