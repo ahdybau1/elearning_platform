@@ -7,7 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 ///   production). Elle doit figurer dans Supabase → Authentication → URL Configuration →
 ///   Redirect URLs, sinon Supabase renvoie vers la « Site URL » par défaut.
 /// - Mobile : schéma profond déclaré dans AndroidManifest.xml et Info.plist.
-const String kMobileAuthCallback = 'com.elearning.student.student_app://login-callback';
+const String kMobileAuthCallback = 'com.pqlearn.student://login-callback';
 
 String? get authRedirectUrl => kIsWeb ? Uri.base.origin : kMobileAuthCallback;
 

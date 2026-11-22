@@ -74,7 +74,7 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.elearning.student.student_app</string>
+				<string>com.pqlearn.student</string>
 			</array>
 		</dict>
 	</array>
