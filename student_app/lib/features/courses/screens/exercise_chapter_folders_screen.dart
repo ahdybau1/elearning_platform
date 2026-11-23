@@ -6,6 +6,7 @@ import '../../../core/models/student_models.dart';
 import '../../../core/widgets/student_page_content.dart';
 import '../../../core/widgets/student_screen_header.dart';
 import 'exercise_runner_screen.dart';
+import '../../exercises/screens/exercise_path_screen.dart';
 
 /// Second niveau du dossier « Exercices » (voir exercises_hub_screen.dart) : un chapitre par dossier.
 /// Ouvrir un dossier chapitre mène directement au contenu (la liste d'exercices elle-même) — il n'y a
@@ -41,6 +42,19 @@ class ExerciseChapterFoldersScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
               child: StudentScreenHeader(title: 'Chapitres — $subjectName'),
             ),
+            if (exercises.length >= 4)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                child: _PathEntry(
+                  color: visual.gradient.first,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ExercisePathScreen(subjectName: subjectName, exercises: exercises),
+                    ),
+                  ),
+                ),
+              ),
             Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.all(20),
@@ -127,6 +141,52 @@ class ExerciseChapterFoldersScreen extends StatelessWidget {
                 },
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Accès au parcours progressif de la matière (niveaux calculés sur les tentatives réelles).
+class _PathEntry extends StatelessWidget {
+  final Color color;
+  final VoidCallback onTap;
+
+  const _PathEntry({required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.alt_route_rounded, color: color, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Parcours progressif',
+                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+                  ),
+                  Text(
+                    'Du plus simple au plus poussé, selon tes résultats.',
+                    style: GoogleFonts.inter(fontSize: 12, color: context.colors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: context.colors.textMuted),
           ],
         ),
       ),

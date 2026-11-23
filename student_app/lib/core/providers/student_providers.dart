@@ -224,3 +224,10 @@ final classExercisesProvider =
   final service = ref.watch(studentSupabaseServiceProvider);
   return service.fetchExercisesForClass(classNodeId);
 });
+
+/// Dernier résultat de l'élève par exercice (parcours progressif).
+final exerciseResultsProvider =
+    FutureProvider.autoDispose.family<Map<String, bool?>, String>((ref, profileId) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchLatestExerciseResults(profileId);
+});

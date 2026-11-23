@@ -248,6 +248,27 @@ class StudentSupabaseService {
     }
   }
 
+  /// Dernier résultat connu de l'élève pour chaque exercice tenté (vrai/faux, ou `null` pour les
+  /// formats auto-évalués). Sert au parcours progressif : aucun niveau ni pourcentage inventé.
+  Future<Map<String, bool?>> fetchLatestExerciseResults(String profileId) async {
+    if (!_isValidUuid(profileId)) return {};
+    final rows = await client
+        .from('exercise_attempts')
+        .select('exercise_id, is_correct, official_correct, created_at')
+        .eq('profile_id', profileId)
+        .order('created_at', ascending: false)
+        .limit(1000)
+        .then((r) => r as List);
+    final out = <String, bool?>{};
+    for (final r in rows) {
+      final m = r as Map<String, dynamic>;
+      final id = m['exercise_id'] as String;
+      if (out.containsKey(id)) continue;
+      out[id] = (m['official_correct'] ?? m['is_correct']) as bool?;
+    }
+    return out;
+  }
+
   /// §2.5 du cahier des charges : profils archivés, consultables séparément (jamais mêlés à la
   /// liste active utilisée par le sélecteur de profils/la barre latérale).
   Future<List<StudentProfile>> fetchArchivedProfiles(String accountId) async {
