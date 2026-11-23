@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../models/student_models.dart';
+import '../services/schema_features.dart';
 import 'device_accounts_service.dart';
 
 /// §17 du cahier des charges : « Compte parent (identité propre, créé séparément du compte
@@ -167,7 +168,7 @@ class ParentAuthNotifier extends StateNotifier<ParentAuthState> {
 
       final linkRows = await _client
           .from('parent_profile_links')
-          .select('profiles(id, school_year, subscription_tier, status, accounts(first_name, last_name), academic_nodes(name))')
+          .select('profiles(id, school_year, subscription_tier, status, accounts(first_name, last_name), academic_nodes(${await SchemaFeatures.classNodeColumns(_client)}))')
           .eq('parent_account_id', parent.id)
           .then((r) => r as List);
 

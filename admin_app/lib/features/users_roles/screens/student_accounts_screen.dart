@@ -196,7 +196,7 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
                                         ),
                                       ),
                                       Text(
-                                        account.email,
+                                        '${account.email} · ${account.genderLabel}',
                                         style: GoogleFonts.inter(
                                           fontSize: 11,
                                           color: AppTheme.textMuted,
@@ -335,6 +335,10 @@ class _StudentAccountsScreenState extends ConsumerState<StudentAccountsScreen> {
             children: [
               Text(
                 account.phone ?? 'Téléphone non renseigné',
+                style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
+              ),
+              Text(
+                account.genderLabel,
                 style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
               ),
               Text(

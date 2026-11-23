@@ -15,6 +15,11 @@ class AcademicNode {
   /// 'ok' | 'ambiguous' | 'incomplete' — « À vérifier » quand différent de 'ok' (migration 83).
   final String verificationStatus;
   final bool fromImport;
+  /// Série uniquement : 'scientifique' | 'litteraire' | 'artistique' (migration 95). Sert à
+  /// regrouper les séries à l'inscription élève (« Séries scientifiques » puis « Terminale C »).
+  final String? seriesFamily;
+  /// Libellé officiel affiché sous le nom côté élève (ex. « Mathématiques et techniques »).
+  final String? description;
 
   AcademicNode({
     required this.id,
@@ -30,6 +35,8 @@ class AcademicNode {
     List<AcademicNode>? children,
     this.verificationStatus = 'ok',
     this.fromImport = false,
+    this.seriesFamily,
+    this.description,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now(),
         children = children ?? [];
@@ -63,6 +70,8 @@ class AcademicNode {
       children: parsedChildren,
       verificationStatus: json['verification_status'] as String? ?? 'ok',
       fromImport: json['curriculum_import_id'] != null,
+      seriesFamily: json['series_family'] as String?,
+      description: json['description'] as String?,
     );
   }
 

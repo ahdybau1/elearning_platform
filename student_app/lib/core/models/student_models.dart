@@ -178,7 +178,7 @@ class LinkedChildProfile {
       profileId: profile['id'] as String,
       childFirstName: account?['first_name'] as String? ?? '',
       childLastName: account?['last_name'] as String? ?? '',
-      className: classNode?['name'] as String? ?? 'Classe',
+      className: classNode?['display_label'] as String? ?? classNode?['name'] as String? ?? 'Classe',
       schoolYear: profile['school_year'] as String? ?? '',
       subscriptionTier: profile['subscription_tier'] as String? ?? 'gratuit',
       status: profile['status'] as String? ?? 'actif',
@@ -251,7 +251,7 @@ class StudentProfile {
       id: json['id'] as String,
       accountId: json['account_id'] as String,
       classNodeId: json['class_node_id'] as String? ?? '',
-      className: classNode?['name'] as String? ?? 'Classe',
+      className: classNode?['display_label'] as String? ?? classNode?['name'] as String? ?? 'Classe',
       status: json['status'] as String? ?? 'actif',
       subscriptionTier: json['subscription_tier'] as String? ?? 'gratuit',
       schoolYear: json['school_year'] as String? ?? '',
@@ -271,6 +271,10 @@ class StudentAcademicNode {
   final String nodeType; // country | section | education_type | class | series
   final String name;
   final String? countryId;
+  /// 'scientifique' | 'litteraire' | 'artistique' pour une série (migration 95), sinon null.
+  final String? seriesFamily;
+  /// Libellé officiel, ex. « Mathématiques et techniques » pour la série E.
+  final String? description;
 
   StudentAcademicNode({
     required this.id,
@@ -278,6 +282,8 @@ class StudentAcademicNode {
     required this.nodeType,
     required this.name,
     this.countryId,
+    this.seriesFamily,
+    this.description,
   });
 
   factory StudentAcademicNode.fromJson(Map<String, dynamic> json) {
@@ -287,6 +293,8 @@ class StudentAcademicNode {
       nodeType: json['node_type'] as String,
       name: json['name'] as String,
       countryId: json['country_id'] as String?,
+      seriesFamily: json['series_family'] as String?,
+      description: json['description'] as String?,
     );
   }
 }

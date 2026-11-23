@@ -302,6 +302,8 @@ class Account {
   final String firstName;
   final String lastName;
   final DateTime createdAt;
+  /// 'masculin' | 'feminin' | null (migration 95).
+  final String? gender;
 
   Account({
     required this.id,
@@ -310,7 +312,14 @@ class Account {
     required this.firstName,
     required this.lastName,
     DateTime? createdAt,
+    this.gender,
   }) : createdAt = createdAt ?? DateTime.now();
+
+  String get genderLabel => switch (gender) {
+        'feminin' => 'Féminin',
+        'masculin' => 'Masculin',
+        _ => 'Sexe non renseigné',
+      };
 
   factory Account.fromJson(Map<String, dynamic> json) {
     return Account(
@@ -322,6 +331,7 @@ class Account {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
+      gender: json['gender'] as String?,
     );
   }
 }

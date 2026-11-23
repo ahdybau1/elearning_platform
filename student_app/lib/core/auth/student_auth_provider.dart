@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/student_models.dart';
 import 'auth_messages.dart';
+import '../services/schema_features.dart';
 import 'device_accounts_service.dart';
 
 class StudentAuthState {
@@ -376,9 +377,10 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
   }
 
   Future<List<StudentProfile>> _fetchProfiles(String accountId) async {
+    final classCols = await SchemaFeatures.classNodeColumns(_client);
     final rows = await _client
         .from('profiles')
-        .select('*, academic_nodes(name)')
+        .select('*, academic_nodes($classCols)')
         .eq('account_id', accountId)
         .eq('status', 'actif')
         .order('created_at')
@@ -474,6 +476,8 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
             if ((meta['phone'] as String?)?.isNotEmpty ?? false) 'phone': meta['phone'],
             if ((meta['birth_date'] as String?)?.isNotEmpty ?? false) 'birth_date': meta['birth_date'],
             if ((meta['school_name'] as String?)?.isNotEmpty ?? false) 'school_name': meta['school_name'],
+            if ((meta['gender'] == 'masculin' || meta['gender'] == 'feminin') && await SchemaFeatures.hasAccountGender(_client))
+              'gender': meta['gender'],
           })
           .select('id')
           .single();
@@ -517,6 +521,7 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
     String? phone,
     DateTime? birthDate,
     String? schoolName,
+    String? gender,
     String? pendingClassNodeId,
     String? pendingSchoolYear,
   }) async {
@@ -535,6 +540,7 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
           if (phone != null) 'phone': phone,
           if (birth != null) 'birth_date': birth,
           if (schoolName != null && schoolName.trim().isNotEmpty) 'school_name': schoolName.trim(),
+          if (gender != null) 'gender': gender,
           if (pendingClassNodeId != null) 'pending_class_node_id': pendingClassNodeId,
           if (pendingSchoolYear != null) 'pending_school_year': pendingSchoolYear,
         },
@@ -587,6 +593,7 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
     String? phone,
     DateTime? birthDate,
     String? schoolName,
+    String? gender,
   }) async {
     final user = _client.auth.currentUser;
     if (user == null || user.email == null) return 'Aucune session active.';
@@ -599,6 +606,7 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
         'last_name': lastName,
         if (birthDate != null) 'birth_date': birthDate.toIso8601String().split('T').first,
         if (schoolName != null && schoolName.trim().isNotEmpty) 'school_name': schoolName.trim(),
+        if (gender != null && await SchemaFeatures.hasAccountGender(_client)) 'gender': gender,
       });
       await _loadAccountAndProfiles();
       return null;
@@ -714,7 +722,7 @@ class StudentAuthNotifier extends StateNotifier<StudentAuthState> {
             'class_node_id': classNodeId,
             'school_year': schoolYear,
           })
-          .select('*, academic_nodes(name)')
+          .select('*, academic_nodes(${await SchemaFeatures.classNodeColumns(_client)})')
           .single();
       final newProfile = StudentProfile.fromJson(Map<String, dynamic>.from(row));
       state = state.copyWith(

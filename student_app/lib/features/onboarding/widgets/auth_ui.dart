@@ -15,9 +15,12 @@ const Color kBrandGreen = Color(0xFF12B04F);
 class AuthScaffold extends StatelessWidget {
   final Widget child;
   final Widget? topBar;
+  /// Barre d'action fixée en bas (bouton principal) : toujours visible au pouce sur téléphone,
+  /// même quand le formulaire défile.
+  final Widget? bottomBar;
   final double maxWidth;
 
-  const AuthScaffold({super.key, required this.child, this.topBar, this.maxWidth = 460});
+  const AuthScaffold({super.key, required this.child, this.topBar, this.bottomBar, this.maxWidth = 460});
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +36,7 @@ class AuthScaffold extends StatelessWidget {
                 Expanded(
                   child: Center(
                     child: SingleChildScrollView(
-                      padding: EdgeInsets.symmetric(horizontal: wide ? 48 : 20, vertical: 24),
+                      padding: EdgeInsets.symmetric(horizontal: wide ? 48 : 20, vertical: wide ? 24 : 16),
                       child: ConstrainedBox(
                         constraints: BoxConstraints(maxWidth: maxWidth),
                         child: child,
@@ -41,6 +44,17 @@ class AuthScaffold extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (bottomBar != null)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: context.colors.background,
+                      border: Border(top: BorderSide(color: context.colors.border.withValues(alpha: 0.6))),
+                    ),
+                    padding: EdgeInsets.fromLTRB(wide ? 48 : 20, 12, wide ? 48 : 20, 12),
+                    child: Center(
+                      child: ConstrainedBox(constraints: BoxConstraints(maxWidth: maxWidth), child: bottomBar),
+                    ),
+                  ),
               ],
             ),
           );

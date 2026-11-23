@@ -8,6 +8,7 @@ import '../../../core/models/student_models.dart';
 import '../../../core/providers/student_providers.dart';
 import '../../../core/theme/student_theme.dart';
 import '../widgets/auth_ui.dart';
+import '../widgets/phone_country.dart';
 
 /// Trois situations possibles à l'ouverture de l'assistant, selon l'état réel de la session :
 /// - [fullSignUp] : aucune session — nouveau visiteur (identité → compte → classe → récapitulatif).
@@ -37,6 +38,11 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
   final _schoolNameCtrl = TextEditingController();
   DateTime? _birthDate;
   bool _obscurePassword = true;
+  /// 'masculin' | 'feminin' (obligatoire à l'inscription, demande du porteur).
+  String? _gender;
+  PhoneCountry _phoneCountry = PhoneCountry.cameroon;
+  /// Famille de série choisie (scientifique / littéraire / artistique) avant la liste des séries.
+  String? _seriesFamily;
 
   int _stepIndex = 0;
   final List<StudentAcademicNode> _selectedPath = [];
@@ -107,10 +113,7 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
 
   _Step get _currentStep => _steps[_stepIndex.clamp(0, _steps.length - 1)];
 
-  String? get _normalizedPhone {
-    final digits = _phoneCtrl.text.replaceAll(RegExp(r'\D'), '');
-    return digits.isEmpty ? null : '+237$digits';
-  }
+  String? get _normalizedPhone => _phoneCountry.international(_phoneCtrl.text);
 
   // ─── Navigation ────────────────────────────────────────────────────────────
 
@@ -129,14 +132,16 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
   }
 
   void _back() {
-    if (_stepIndex == 0 && _selectedPath.isEmpty) {
+    if (_stepIndex == 0 && _selectedPath.isEmpty && _seriesFamily == null) {
       _goToLogin();
       return;
     }
     setState(() {
       _errorMessage = null;
       _infoMessage = null;
-      if (_currentStep == _Step.classe && _selectedPath.isNotEmpty) {
+      if (_currentStep == _Step.classe && _seriesFamily != null) {
+        _seriesFamily = null;
+      } else if (_currentStep == _Step.classe && _selectedPath.isNotEmpty) {
         _selectedPath.removeLast();
       } else if (_stepIndex > 0) {
         _stepIndex--;
@@ -150,7 +155,7 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
   }
 
   bool get _canGoBack =>
-      _stepIndex > 0 || _selectedPath.isNotEmpty || Navigator.canPop(context);
+      _stepIndex > 0 || _selectedPath.isNotEmpty || _seriesFamily != null || Navigator.canPop(context);
 
   // ─── Actions ───────────────────────────────────────────────────────────────
 
@@ -243,6 +248,7 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
         phone: _normalizedPhone,
         birthDate: _birthDate,
         schoolName: school,
+        gender: _gender,
         pendingClassNodeId: leaf.id,
         pendingSchoolYear: schoolYear,
       );
@@ -270,6 +276,7 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
         phone: _normalizedPhone,
         birthDate: _birthDate,
         schoolName: school,
+        gender: _gender,
       );
       if (error != null) return _fail(error);
     }
@@ -348,6 +355,9 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
     return AuthScaffold(
       maxWidth: 520,
       topBar: _buildTopBar(displayIndex, totalSteps),
+      bottomBar: _currentStep != _Step.classe
+          ? AuthPrimaryButton(label: 'Continuer', icon: Icons.arrow_forward_rounded, onPressed: _next)
+          : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -377,10 +387,6 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
           if (_errorMessage != null) ...[
             const SizedBox(height: 16),
             AuthMessageBox.error(message: _errorMessage!),
-          ],
-          if (_currentStep != _Step.classe) ...[
-            const SizedBox(height: 28),
-            AuthPrimaryButton(label: 'Continuer', icon: Icons.arrow_forward_rounded, onPressed: _next),
           ],
           if (_accountStepKind == _AccountStepKind.fullSignUp && _stepIndex == 0) ...[
             const SizedBox(height: 20),
@@ -513,6 +519,8 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
               },
             ),
             const SizedBox(height: 14),
+            _buildGenderField(),
+            const SizedBox(height: 14),
             _buildBirthDateField(),
             const SizedBox(height: 14),
             TextFormField(
@@ -571,21 +579,77 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
   }
 
   Widget _buildPhoneField() {
-    return TextFormField(
+    return PhoneNumberField(
       controller: _phoneCtrl,
-      keyboardType: TextInputType.phone,
-      textInputAction: TextInputAction.next,
-      autofillHints: const [AutofillHints.telephoneNumberNational],
-      style: TextStyle(color: context.colors.textPrimary),
-      decoration: authInputDecoration(
-        context,
-        label: 'Téléphone (facultatif)',
-        icon: Icons.phone_iphone_rounded,
-        prefixText: '+237 ',
-        hint: '6 77 12 34 56',
-        helper: 'Servira au paiement Mobile Money (Orange Money, MTN MoMo).',
-      ),
-      validator: cameroonPhoneValidator,
+      country: _phoneCountry,
+      onCountryChanged: (p) => setState(() => _phoneCountry = p),
+      helper: 'Servira au paiement Mobile Money (Orange Money, MTN MoMo).',
+    );
+  }
+
+  Widget _buildGenderField() {
+    final c = context.colors;
+    return FormField<String>(
+      initialValue: _gender,
+      validator: (_) => _gender == null ? 'Choisissez une option' : null,
+      builder: (field) {
+        Widget option(String value, String label, IconData icon) {
+          final selected = _gender == value;
+          return Expanded(
+            child: Material(
+              color: selected ? c.accentPrimary.withValues(alpha: 0.14) : c.card,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: selected ? c.accentPrimary : c.border, width: selected ? 1.6 : 1),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () {
+                  setState(() => _gender = value);
+                  field.didChange(value);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(icon, size: 20, color: selected ? c.accentPrimary : c.textSecondary),
+                      const SizedBox(width: 8),
+                      Text(label,
+                          style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                              color: c.textPrimary)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
+              child: Text('Sexe', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: c.textSecondary)),
+            ),
+            Row(
+              children: [
+                option('feminin', 'Féminin', Icons.female_rounded),
+                const SizedBox(width: 12),
+                option('masculin', 'Masculin', Icons.male_rounded),
+              ],
+            ),
+            if (field.hasError)
+              Padding(
+                padding: const EdgeInsets.only(left: 12, top: 6),
+                child: Text(field.errorText!, style: TextStyle(color: c.accentRose, fontSize: 12)),
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -674,15 +738,30 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
   }
 
   // Étape 3 — classe
+  static const _familyOrder = ['scientifique', 'litteraire', 'artistique'];
+
+  /// Les enfants sont-ils des séries réparties en au moins deux familles ? Si oui, l'élève choisit
+  /// d'abord « scientifique » ou « littéraire », puis sa série (demande du porteur).
+  bool _needsFamilyChoice(List<StudentAcademicNode> children) {
+    if (children.isEmpty || children.any((n) => n.nodeType != 'series')) return false;
+    final families = children.map((n) => n.seriesFamily).whereType<String>().toSet();
+    return families.length >= 2;
+  }
+
   Widget _buildClassStep(AsyncValue<List<StudentAcademicNode>> childrenAsync) {
     final c = context.colors;
+    final children = childrenAsync.valueOrNull ?? const <StudentAcademicNode>[];
+    final familyChoice = _needsFamilyChoice(children) && _seriesFamily == null;
+    final currentClass = _selectedPath.isEmpty ? null : _selectedPath.last;
+    final title = _selectedPath.isEmpty
+        ? 'Dans quel pays étudiez-vous ?'
+        : familyChoice
+            ? 'Quel type de série en ${_shortNodeName(currentClass!.name)} ?'
+            : 'Choisissez ${_choiceLabel(children)}';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _stepHeader(
-          _selectedPath.isEmpty ? 'Dans quel pays étudiez-vous ?' : 'Choisissez ${_choiceLabel(childrenAsync.valueOrNull)}',
-          'Les cours, exercices et sujets d\'examens seront ceux de votre classe.',
-        ),
+        _stepHeader(title, 'Les cours, exercices et sujets d\'examens seront ceux de votre classe.'),
         if (_selectedPath.isNotEmpty) ...[
           _buildBreadcrumb(),
           const SizedBox(height: 16),
@@ -708,23 +787,54 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
                 message: 'Aucune classe n\'est encore disponible. L\'équipe pq learn les ajoute progressivement.',
               );
             }
+            if (familyChoice) {
+              final families = _familyOrder.where((f) => children.any((n) => n.seriesFamily == f)).toList();
+              return Column(
+                children: [
+                  for (final f in families) ...[
+                    _NodeTile(
+                      label: _familyLabel(f),
+                      subtitle: _familyExamples(children, f),
+                      icon: _familyIcon(f),
+                      large: true,
+                      onTap: () => setState(() {
+                        _errorMessage = null;
+                        _seriesFamily = f;
+                      }),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ],
+              );
+            }
+            final visible = _seriesFamily == null
+                ? children
+                : children.where((n) => n.seriesFamily == _seriesFamily || n.seriesFamily == null).toList();
             return LayoutBuilder(
               builder: (context, constraints) {
                 final columns = constraints.maxWidth >= 440 ? 2 : 1;
-                final spacing = 12.0;
+                const spacing = 12.0;
                 final width = (constraints.maxWidth - spacing * (columns - 1)) / columns;
                 return Wrap(
                   spacing: spacing,
                   runSpacing: spacing,
                   children: [
-                    for (final node in children)
+                    for (final node in visible)
                       SizedBox(
                         width: width,
                         child: _NodeTile(
-                          label: _leafDisplayLabel(node, _selectedPath),
+                          // Filière technique (« IND », « STT ») : l'intitulé complet est plus parlant
+                          // que le sigle, qui passe en sous-titre.
+                          label: node.nodeType == 'family' && (node.description?.isNotEmpty ?? false)
+                              ? node.description!
+                              : _leafDisplayLabel(node, _selectedPath),
+                          subtitle: node.nodeType == 'family' && (node.description?.isNotEmpty ?? false)
+                              ? node.name
+                              : node.description,
                           icon: _nodeIcon(node.nodeType),
                           onTap: () => setState(() {
                             _errorMessage = null;
+                            _seriesFamily = null;
                             _selectedPath.add(node);
                           }),
                         ),
@@ -735,7 +845,7 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
             );
           },
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Text(
           'Vous pourrez suivre d\'autres classes plus tard depuis votre profil.',
           style: GoogleFonts.inter(fontSize: 12, color: c.textMuted),
@@ -743,6 +853,24 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
       ],
     );
   }
+
+  String _familyLabel(String f) => switch (f) {
+        'scientifique' => 'Séries scientifiques',
+        'litteraire' => 'Séries littéraires',
+        _ => 'Séries artistiques',
+      };
+
+  IconData _familyIcon(String f) => switch (f) {
+        'scientifique' => Icons.science_rounded,
+        'litteraire' => Icons.auto_stories_rounded,
+        _ => Icons.movie_creation_rounded,
+      };
+
+  /// « C, D, E, TI » : aperçu des séries de la famille, avec le nom court de chacune.
+  String _familyExamples(List<StudentAcademicNode> children, String f) => children
+      .where((n) => n.seriesFamily == f)
+      .map((n) => _shortNodeName(n.name))
+      .join(', ');
 
   Widget _buildBreadcrumb() {
     final c = context.colors;
@@ -753,16 +881,31 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
       children: [
         for (var i = 0; i < _selectedPath.length; i++) ...[
           ActionChip(
-            label: Text(_selectedPath[i].name),
+            label: Text(_leafDisplayLabel(_selectedPath[i], _selectedPath.sublist(0, i))),
             labelStyle: GoogleFonts.inter(fontSize: 12, color: c.textPrimary, fontWeight: FontWeight.w600),
             backgroundColor: c.surface,
             side: BorderSide(color: c.border),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
             tooltip: 'Revenir à ce niveau',
-            onPressed: () => setState(() => _selectedPath.removeRange(i, _selectedPath.length)),
+            onPressed: () => setState(() {
+              _seriesFamily = null;
+              _selectedPath.removeRange(i, _selectedPath.length);
+            }),
           ),
-          if (i < _selectedPath.length - 1) Icon(Icons.chevron_right_rounded, size: 16, color: c.textMuted),
+          if (i < _selectedPath.length - 1 || _seriesFamily != null)
+            Icon(Icons.chevron_right_rounded, size: 16, color: c.textMuted),
         ],
+        if (_seriesFamily != null)
+          ActionChip(
+            avatar: Icon(_familyIcon(_seriesFamily!), size: 16, color: c.accentPrimary),
+            label: Text(_familyLabel(_seriesFamily!)),
+            labelStyle: GoogleFonts.inter(fontSize: 12, color: c.textPrimary, fontWeight: FontWeight.w600),
+            backgroundColor: c.surface,
+            side: BorderSide(color: c.accentPrimary.withValues(alpha: 0.5)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+            tooltip: 'Changer de type de série',
+            onPressed: () => setState(() => _seriesFamily = null),
+          ),
       ],
     );
   }
@@ -816,7 +959,12 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
                       ),
                     ),
                     TextButton(
-                      onPressed: _isSubmitting ? null : () => setState(() => _selectedPath.removeLast()),
+                      onPressed: _isSubmitting
+                          ? null
+                          : () => setState(() {
+                                _seriesFamily = null;
+                                _selectedPath.removeLast();
+                              }),
                       child: const Text('Modifier'),
                     ),
                   ],
@@ -829,6 +977,8 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
                     children: [
                       _reviewRow(Icons.person_outline_rounded, 'Élève', '${_firstNameCtrl.text.trim()} ${_lastNameCtrl.text.trim()}'),
                       _reviewRow(Icons.alternate_email_rounded, 'Email', email),
+                      if (_gender != null)
+                        _reviewRow(Icons.wc_rounded, 'Sexe', _gender == 'feminin' ? 'Féminin' : 'Masculin'),
                       if (_normalizedPhone != null) _reviewRow(Icons.phone_iphone_rounded, 'Téléphone', _normalizedPhone!),
                       if (_schoolNameCtrl.text.trim().isNotEmpty)
                         _reviewRow(Icons.apartment_rounded, 'Établissement', _schoolNameCtrl.text.trim()),
@@ -1021,10 +1171,12 @@ class _OnboardingWizardScreenState extends ConsumerState<OnboardingWizardScreen>
 
 class _NodeTile extends StatelessWidget {
   final String label;
+  final String? subtitle;
   final IconData icon;
   final VoidCallback onTap;
+  final bool large;
 
-  const _NodeTile({required this.label, required this.icon, required this.onTap});
+  const _NodeTile({required this.label, required this.icon, required this.onTap, this.subtitle, this.large = false});
 
   @override
   Widget build(BuildContext context) {
@@ -1036,22 +1188,35 @@ class _NodeTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          padding: EdgeInsets.symmetric(horizontal: 14, vertical: large ? 18 : 14),
           child: Row(
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: large ? 46 : 38,
+                height: large ? 46 : 38,
                 decoration: BoxDecoration(
                   color: c.accentPrimary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: c.accentPrimary, size: 20),
+                child: Icon(icon, color: c.accentPrimary, size: large ? 24 : 20),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(label,
-                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: c.textPrimary)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label,
+                        style: GoogleFonts.inter(
+                            fontSize: large ? 16 : 15, fontWeight: FontWeight.w700, color: c.textPrimary)),
+                    if (subtitle != null && subtitle!.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(subtitle!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(fontSize: 12.5, height: 1.35, color: c.textSecondary)),
+                    ],
+                  ],
+                ),
               ),
               Icon(Icons.chevron_right_rounded, color: c.textMuted),
             ],
