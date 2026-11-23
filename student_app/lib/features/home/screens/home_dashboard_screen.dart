@@ -109,7 +109,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Aucune matière programmée pour ${profile?.className ?? 'votre classe'} pour le moment.',
+                            'Aucune matière pour ${profile?.className ?? 'ta classe'} pour le moment.',
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               color: context.colors.textSecondary,
@@ -219,7 +219,7 @@ class HomeDashboardScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Débloquez Tout le Programme',
+                  'Débloque tout le programme',
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -228,7 +228,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Accès illimité aux cours, corrigés d\'examens & IA Tuteur.',
+                  'Tous les cours, les corrigés d\'examens et le tuteur, sans limite.',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: Colors.white.withValues(alpha: 0.9),
@@ -248,7 +248,7 @@ class HomeDashboardScreen extends ConsumerWidget {
             ),
             onPressed: () => PaywallModal.show(context),
             child: Text(
-              'Voir Offres',
+              'Voir les offres',
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
@@ -301,7 +301,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Toute l\'équipe de pq learn vous souhaite une excellente journée.',
+                  'Toute l\'équipe de pq learn te souhaite une excellente journée.',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: Colors.white.withValues(alpha: 0.9),
@@ -790,7 +790,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Groupe WhatsApp Officiel de la Classe',
+                      'Groupe WhatsApp de ta classe',
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -879,7 +879,7 @@ class HomeDashboardScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Besoin d\'aide sur un exercice ?',
+                  'Bloqué(e) sur un exercice ?',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -887,7 +887,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  'L\'Assistant IA vous guide pas-à-pas sans donner la solution directement.',
+                  'Le tuteur t\'aide à comprendre, étape par étape.',
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     color: context.colors.textSecondary,
