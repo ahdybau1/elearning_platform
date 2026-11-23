@@ -248,6 +248,90 @@ class StudentSupabaseService {
     }
   }
 
+  /// Dernier résultat connu de l'élève pour chaque exercice tenté (vrai/faux, ou `null` pour les
+  /// formats auto-évalués). Sert au parcours progressif : aucun niveau ni pourcentage inventé.
+  Future<Map<String, bool?>> fetchLatestExerciseResults(String profileId) async {
+    if (!_isValidUuid(profileId)) return {};
+    final rows = await client
+        .from('exercise_attempts')
+        .select('exercise_id, is_correct, official_correct, created_at')
+        .eq('profile_id', profileId)
+        .order('created_at', ascending: false)
+        .limit(1000)
+        .then((r) => r as List);
+    final out = <String, bool?>{};
+    for (final r in rows) {
+      final m = r as Map<String, dynamic>;
+      final id = m['exercise_id'] as String;
+      if (out.containsKey(id)) continue;
+      out[id] = (m['official_correct'] ?? m['is_correct']) as bool?;
+    }
+    return out;
+  }
+
+  /// Leçons lues / leçons publiées, par matière (clé = subject_id), sur les chapitres que la classe
+  /// voit réellement (portée de la classe incluse).
+  Future<Map<String, ({int done, int total})>> fetchLessonStatsBySubject({
+    required String profileId,
+    required String classNodeId,
+  }) async {
+    if (!_isValidUuid(profileId) || !_isValidUuid(classNodeId)) return {};
+    final chapters = await _visibleChapterRows(classNodeId: classNodeId, columns: 'id, subject_id');
+    final subjectOfChapter = {
+      for (final c in chapters)
+        (c as Map<String, dynamic>)['id'] as String: c['subject_id'] as String?,
+    };
+    if (subjectOfChapter.isEmpty) return {};
+    final lessons = await client
+        .from('lessons')
+        .select('id, chapter_id')
+        .inFilter('chapter_id', subjectOfChapter.keys.toList())
+        .eq('is_active', true)
+        .then((r) => r as List);
+    final done = await client
+        .from('lesson_completions')
+        .select('lesson_id')
+        .eq('profile_id', profileId)
+        .limit(5000)
+        .then((r) => r as List);
+    final doneIds = done.map((d) => (d as Map<String, dynamic>)['lesson_id'] as String).toSet();
+    final out = <String, ({int done, int total})>{};
+    for (final l in lessons) {
+      final m = l as Map<String, dynamic>;
+      final subjectId = subjectOfChapter[m['chapter_id']];
+      if (subjectId == null) continue;
+      final prev = out[subjectId] ?? (done: 0, total: 0);
+      out[subjectId] = (
+        done: prev.done + (doneIds.contains(m['id']) ? 1 : 0),
+        total: prev.total + 1,
+      );
+    }
+    return out;
+  }
+
+  /// Compétences où l'élève échoue le plus (au moins 2 essais, moins de 50 % de réussite).
+  Future<List<({String name, double mastery, int attempts})>> fetchWeakSkills(String profileId) async {
+    if (!_isValidUuid(profileId)) return [];
+    final rows = await client.rpc('get_student_skill_mastery', params: {
+      'p_profile_id': profileId,
+      'p_subject_id': null,
+    }).then((r) => r as List);
+    final weak = rows
+        .map((r) => r as Map<String, dynamic>)
+        .where((r) => r['mastery_level'] != null &&
+            (r['mastery_level'] as num) < 0.5 &&
+            ((r['attempts_count'] as num?) ?? 0) >= 2)
+        .map((r) => (
+              name: r['skill_name'] as String? ?? '',
+              mastery: (r['mastery_level'] as num).toDouble(),
+              attempts: (r['attempts_count'] as num).toInt(),
+            ))
+        .where((r) => r.name.isNotEmpty)
+        .toList()
+      ..sort((a, b) => a.mastery.compareTo(b.mastery));
+    return weak.take(5).toList();
+  }
+
   /// §2.5 du cahier des charges : profils archivés, consultables séparément (jamais mêlés à la
   /// liste active utilisée par le sélecteur de profils/la barre latérale).
   Future<List<StudentProfile>> fetchArchivedProfiles(String accountId) async {
@@ -289,12 +373,7 @@ class StudentSupabaseService {
     // Nombre réel de chapitres actifs par matière, précisément pour cette classe (un chapitre
     // appartient à une classe précise, pas à toutes les classes liées à sa matière — voir le
     // commentaire sur `chapters.class_node_id` dans reset_project_schema.sql).
-    final chapterRows = await client
-        .from('chapters')
-        .select('subject_id')
-        .eq('class_node_id', classNodeId)
-        .eq('is_active', true)
-        .then((r) => r as List);
+    final chapterRows = await _visibleChapterRows(classNodeId: classNodeId, columns: 'subject_id');
     final countsBySubject = <String, int>{};
     for (final row in chapterRows) {
       final sid = (row as Map<String, dynamic>)['subject_id'] as String?;
@@ -304,6 +383,47 @@ class StudentSupabaseService {
     final result = subjects.map((s) => s.copyWith(chaptersCount: countsBySubject[s.id] ?? 0)).toList();
     result.sort((a, b) => a.name.compareTo(b.name));
     return result;
+  }
+
+  // ─── Contenu commun de classe (migration 96) ─────────────────
+  // Un élève de série (« Terminale D ») voit ses chapitres ET ceux posés sur sa classe
+  // (« Terminale ») pour les matières de sa série en tronc commun : `chapters_for_node` côté base.
+  // Tant que la migration 96 n'est pas appliquée, repli sur l'ancien filtre (chapitres de la série).
+
+  final Map<String, Future<List<String>>> _scopeCache = {};
+
+  /// Le nœud puis ses parents jusqu'à la classe incluse (ex. [Terminale D, Terminale]).
+  Future<List<String>> contentScope(String classNodeId) {
+    return _scopeCache[classNodeId] ??= client
+        .rpc('content_scope_nodes', params: {'p_node': classNodeId})
+        .then((r) => (r as List).map((e) => e as String).toList())
+        .then((ids) => ids.isEmpty ? [classNodeId] : ids)
+        .catchError((Object _) => [classNodeId]);
+  }
+
+  Future<List> _visibleChapterRows({
+    required String classNodeId,
+    String? subjectId,
+    required String columns,
+  }) async {
+    // PostgREST ne sait trier le résultat d'une fonction que sur une colonne SÉLECTIONNÉE
+    // (« column chapters.display_order does not exist » sinon) : on l'ajoute au besoin. Sans ça,
+    // tout passait silencieusement par le repli et les chapitres communs de classe restaient
+    // invisibles (« Programme en préparation » pour des matières qui en ont).
+    final rpcColumns = columns.contains('*') || columns.contains('display_order')
+        ? columns
+        : '$columns, display_order';
+    try {
+      return await client
+          .rpc('chapters_for_node', params: {'p_node': classNodeId, 'p_subject': subjectId})
+          .select(rpcColumns)
+          .order('display_order')
+          .then((r) => r as List);
+    } on PostgrestException {
+      var query = client.from('chapters').select(columns).eq('class_node_id', classNodeId).eq('is_active', true);
+      if (subjectId != null) query = query.eq('subject_id', subjectId);
+      return await query.order('display_order').then((r) => r as List);
+    }
   }
 
   // ─── Chapters & Déblocage Trimestriel Invisible ───────────────
@@ -317,16 +437,22 @@ class StudentSupabaseService {
   Future<List<Chapter>> fetchChapters({required String subjectId, required String classNodeId}) async {
     if (!_isValidUuid(subjectId) || !_isValidUuid(classNodeId)) return [];
 
-    final rows = await client
-        .from('chapters')
-        .select('*, terms(name, start_date)')
-        .eq('subject_id', subjectId)
-        .eq('class_node_id', classNodeId)
-        .eq('is_active', true)
-        .order('display_order')
-        .then((r) => r as List);
+    final rows = await _visibleChapterRows(
+      classNodeId: classNodeId,
+      subjectId: subjectId,
+      columns: '*, terms(name, start_date)',
+    );
 
-    final chapters = rows.map((r) => Chapter.fromJson(Map<String, dynamic>.from(r))).toList();
+    // Ordre du programme : trimestre d'abord, puis ordre dans le trimestre. Indispensable depuis
+    // que les chapitres propres à la série et ceux communs à la classe sont réunis (migration 96).
+    String termStart(dynamic r) =>
+        ((r as Map)['terms'] as Map?)?['start_date'] as String? ?? '9999';
+    int order(dynamic r) => ((r as Map)['display_order'] as num?)?.toInt() ?? 0;
+    final sortedRows = [...rows]..sort((a, b) {
+        final t = termStart(a).compareTo(termStart(b));
+        return t != 0 ? t : order(a).compareTo(order(b));
+      });
+    final chapters = sortedRows.map((r) => Chapter.fromJson(Map<String, dynamic>.from(r))).toList();
     if (chapters.isEmpty) return [];
 
     final chapterIds = chapters.map((c) => c.id).toList();
@@ -398,13 +524,24 @@ class StudentSupabaseService {
   /// par `class_node_id`, la catégorisation se fait ensuite côté client sur `lesson_id`/`chapter_id`.
   Future<List<Exercise>> fetchExercisesForClass(String classNodeId) async {
     if (!_isValidUuid(classNodeId)) return [];
-    final rows = await client
+    // Exercices de la série + ceux des chapitres communs de la classe qu'elle voit réellement.
+    final scope = await contentScope(classNodeId);
+    final visibleChapterIds = scope.length > 1
+        ? (await _visibleChapterRows(classNodeId: classNodeId, columns: 'id'))
+            .map((r) => (r as Map<String, dynamic>)['id'] as String)
+            .toSet()
+        : const <String>{};
+    final allRows = await client
         .from('exercises')
         .select('*, chapters(title, subjects(name)), lessons(title, chapters(subjects(name)))')
-        .eq('class_node_id', classNodeId)
+        .inFilter('class_node_id', scope)
         .eq('is_active', true)
         .order('created_at')
         .then((r) => r as List);
+    final rows = allRows.where((r) {
+      final m = r as Map<String, dynamic>;
+      return m['class_node_id'] == classNodeId || visibleChapterIds.contains(m['chapter_id']);
+    }).toList();
     return rows.map((r) => Exercise.fromJson(Map<String, dynamic>.from(r))).toList();
   }
 
@@ -765,6 +902,229 @@ class StudentSupabaseService {
         earnedAt: earnedAtRaw != null ? DateTime.parse(earnedAtRaw) : null,
       );
     }).toList();
+  }
+
+  // ─── Suggestions du tuteur tirées du parcours réel de l'élève ─────────────
+  /// Jusqu'à 4 suggestions, toutes tirées de SA classe et de SON travail, par priorité :
+  ///   1. les exercices qui lui résistent : dernière tentative fausse et jamais réussis depuis,
+  ///      les plus souvent ratés d'abord, avec sa réponse et l'erreur repérée par la correction ;
+  ///   2. ses compétences faibles dans la matière ouverte (moins de 50 % sur au moins 2 essais) ;
+  ///   3. les leçons qu'il vient de terminer — vérifier qu'elles sont comprises ;
+  ///   4. les chapitres en cours de sa classe (trimestre commencé), dans la matière ouverte ou,
+  ///      à défaut, dans ses différentes matières.
+  /// Jamais un sujet générique ni d'une autre classe. Liste vide possible (classe sans chapitre).
+  Future<List<TutorSuggestion>> fetchTutorSuggestions({
+    required String profileId,
+    required String classNodeId,
+    String? subjectId,
+  }) async {
+    const maxCards = 4;
+    final out = <TutorSuggestion>[];
+    final usedChapters = <String>{};
+
+    // 1. Exercices qui lui résistent
+    try {
+      final attempts = await client
+          .from('exercise_attempts')
+          .select('exercise_id, is_correct, official_correct, submitted_answer, ai_misconceptions, created_at')
+          .eq('profile_id', profileId)
+          .order('created_at', ascending: false)
+          .limit(200)
+          .then((r) => r as List);
+      final latestByExercise = <String, Map<String, dynamic>>{};
+      final failures = <String, int>{};
+      for (final a in attempts) {
+        final m = a as Map<String, dynamic>;
+        final id = m['exercise_id'] as String;
+        latestByExercise.putIfAbsent(id, () => m);
+        if ((m['official_correct'] ?? m['is_correct']) == false) failures[id] = (failures[id] ?? 0) + 1;
+      }
+      final recency = {for (final (i, id) in latestByExercise.keys.indexed) id: i};
+      final failedIds = latestByExercise.entries
+          .where((e) => (e.value['official_correct'] ?? e.value['is_correct']) == false)
+          .map((e) => e.key)
+          .toList()
+        // Les plus souvent ratés d'abord ; à égalité, le plus récent.
+        ..sort((a, b) {
+          final byCount = (failures[b] ?? 0).compareTo(failures[a] ?? 0);
+          return byCount != 0 ? byCount : recency[a]!.compareTo(recency[b]!);
+        });
+      final candidates = failedIds.take(12).toList();
+      if (candidates.isNotEmpty) {
+        const columns = 'id, title, chapter_id, instructions_json, chapters(title, subject_id, subjects(name))';
+        List rows;
+        try {
+          rows = await client.from('exercises_for_student').select(columns).inFilter('id', candidates).then((r) => r as List);
+        } on PostgrestException {
+          rows = await client.from('exercises').select(columns).inFilter('id', candidates).then((r) => r as List);
+        }
+        final byId = {for (final r in rows) (r as Map<String, dynamic>)['id'] as String: r};
+        for (final id in candidates) {
+          final e = byId[id];
+          if (e == null) continue;
+          final chapter = e['chapters'] as Map<String, dynamic>?;
+          if (subjectId != null && chapter?['subject_id'] != subjectId) continue;
+          final subject = (chapter?['subjects'] as Map<String, dynamic>?)?['name'] as String?;
+          final chapterTitle = chapter?['title'] as String?;
+          final statement = ((e['instructions_json'] as Map?)?['statement'] as String? ?? '').trim();
+          final title = (e['title'] as String? ?? '').trim();
+          final last = latestByExercise[id]!;
+          final answer = _describeAnswer(last['submitted_answer'], e['instructions_json']);
+          final misconceptions = (last['ai_misconceptions'] as List?)?.whereType<String>().toList() ?? const <String>[];
+          final n = failures[id] ?? 1;
+          if (e['chapter_id'] != null) usedChapters.add(e['chapter_id'] as String);
+          out.add(TutorSuggestion(
+            kind: TutorSuggestionKind.retry,
+            title: title.isEmpty ? 'Un exercice qui m\'a résisté' : title,
+            subtitle: [n > 1 ? 'Raté $n fois' : 'Raté', subject, chapterTitle].whereType<String>().join(' · '),
+            prompt: 'Je me suis trompé(e)${n > 1 ? ' $n fois' : ''} à cet exercice'
+                '${subject != null ? ' de $subject' : ''}'
+                '${chapterTitle != null ? ' (chapitre « $chapterTitle »)' : ''}.\n'
+                '${statement.isNotEmpty ? 'Énoncé : $statement\n' : 'Titre : $title\n'}'
+                '${answer != null ? 'Ma réponse : $answer\n' : ''}'
+                '${misconceptions.isNotEmpty ? 'Erreur repérée par la correction : ${misconceptions.take(2).join(' ; ')}\n' : ''}'
+                'Ne me donne pas tout de suite la réponse : aide-moi à trouver où je me suis trompé(e), '
+                'rappelle la notion utile, puis guide-moi pour le refaire.',
+          ));
+          if (out.length >= 2) break;
+        }
+      }
+    } catch (_) {}
+
+    // 2. Compétences faibles (matière ouverte, ou toutes ses matières)
+    if (out.length < maxCards) {
+      try {
+        final rows = await client.rpc('get_student_skill_mastery', params: {
+          'p_profile_id': profileId,
+          'p_subject_id': subjectId,
+        }).then((r) => r as List);
+        final weak = rows
+            .map((r) => r as Map<String, dynamic>)
+            .where((r) => r['mastery_level'] != null && (r['mastery_level'] as num) < 0.5 && ((r['attempts_count'] as num?) ?? 0) >= 2)
+            .toList()
+          ..sort((a, b) => (a['mastery_level'] as num).compareTo(b['mastery_level'] as num));
+        if (weak.isNotEmpty) {
+          final w = weak.first;
+          final pct = ((w['mastery_level'] as num) * 100).round();
+          out.add(TutorSuggestion(
+            kind: TutorSuggestionKind.weakSkill,
+            title: 'Consolider : ${w['skill_name']}',
+            subtitle: '$pct % de réussite sur ${w['attempts_count']} essais',
+            prompt: 'J\'ai du mal avec « ${w['skill_name']} » ($pct % de réussite). '
+                'Réexplique-moi la méthode simplement avec un exemple, puis donne-moi un exercice court '
+                'pour m\'entraîner et corrige ma réponse.',
+          ));
+        }
+      } catch (_) {}
+    }
+
+    // 3. Leçons terminées récemment
+    if (out.length < maxCards) {
+      try {
+        final done = await client
+            .from('lesson_completions')
+            .select('completed_at, lessons(title, chapter_id, chapters(title, subject_id, subjects(name)))')
+            .eq('profile_id', profileId)
+            .order('completed_at', ascending: false)
+            .limit(10)
+            .then((r) => r as List);
+        for (final d in done) {
+          final lesson = (d as Map<String, dynamic>)['lessons'] as Map<String, dynamic>?;
+          final chapter = lesson?['chapters'] as Map<String, dynamic>?;
+          if (lesson == null || chapter == null) continue;
+          if (subjectId != null && chapter['subject_id'] != subjectId) continue;
+          final chapterId = lesson['chapter_id'] as String?;
+          if (chapterId != null && !usedChapters.add(chapterId)) continue;
+          final chapterTitle = chapter['title'] as String? ?? '';
+          final subject = (chapter['subjects'] as Map<String, dynamic>?)?['name'] as String?;
+          out.add(TutorSuggestion(
+            kind: TutorSuggestionKind.check,
+            title: 'Vérifier que j\'ai compris : ${lesson['title']}',
+            subtitle: [subject, chapterTitle].whereType<String>().where((e) => e.isNotEmpty).join(' · '),
+            prompt: 'Je viens d\'étudier la leçon « ${lesson['title']} »'
+                '${chapterTitle.isNotEmpty ? ' du chapitre « $chapterTitle »' : ''}'
+                '${subject != null ? ' en $subject' : ''}. '
+                'Pose-moi 3 questions, une par une, pour vérifier que j\'ai compris, et explique-moi mes erreurs.',
+          ));
+          if (out.length >= 3) break;
+        }
+      } catch (_) {}
+    }
+
+    // 4. Chapitre où il en est, dans la matière ouverte ou, à défaut, dans ses différentes
+    //    matières : le premier chapitre (ordre du programme, trimestre commencé) dont il n'a encore
+    //    terminé aucune leçon. Les trimestres sans date comptent comme ouverts.
+    if (out.length < maxCards) {
+      try {
+        final rows = await _visibleChapterRows(
+          classNodeId: classNodeId,
+          subjectId: subjectId,
+          columns: 'id, title, subject_id, display_order, subjects(name), terms(start_date)',
+        );
+        final completedChapters = <String>{};
+        try {
+          final done = await client
+              .from('lesson_completions')
+              .select('lessons(chapter_id)')
+              .eq('profile_id', profileId)
+              .limit(1000)
+              .then((r) => r as List);
+          for (final d in done) {
+            final id = ((d as Map<String, dynamic>)['lessons'] as Map<String, dynamic>?)?['chapter_id'];
+            if (id is String) completedChapters.add(id);
+          }
+        } catch (_) {}
+        final today = DateTime.now().toIso8601String().substring(0, 10);
+        final currentBySubject = <String, Map<String, dynamic>>{};
+        for (final r in rows) {
+          final m = r as Map<String, dynamic>;
+          final subjectKey = m['subject_id'] as String;
+          if (currentBySubject.containsKey(subjectKey)) continue;
+          final start = (m['terms'] as Map<String, dynamic>?)?['start_date'] as String?;
+          if (start != null && start.compareTo(today) > 0) continue;
+          if (completedChapters.contains(m['id'])) continue;
+          currentBySubject[subjectKey] = m;
+        }
+        // Une matière différente mise en avant chaque jour, pour ne pas toujours proposer la même.
+        final current = currentBySubject.values.toList();
+        if (current.isNotEmpty) {
+          final shift = DateTime.now().difference(DateTime(2026)).inDays % current.length;
+          current.setAll(0, [...current.sublist(shift), ...current.sublist(0, shift)]);
+        }
+        for (final c in current) {
+          if (out.length >= maxCards) break;
+          if (!usedChapters.add(c['id'] as String)) continue;
+          final subject = (c['subjects'] as Map<String, dynamic>?)?['name'] as String?;
+          // Numérotation importée (« Chapitre 3 : », « IV. ») retirée : le titre seul suffit.
+          final chapterTitle = (c['title'] as String).replaceFirst(
+              RegExp(r'^\s*(?:Chapitre\s+)?(?:[IVXLC]+|\d+)\s*[.:)\-–]\s*', caseSensitive: false), '');
+          out.add(TutorSuggestion(
+            kind: TutorSuggestionKind.chapter,
+            title: 'Comprendre : $chapterTitle',
+            subtitle: subject != null ? '$subject · ton chapitre en cours' : 'Ton chapitre en cours',
+            prompt: 'Explique-moi simplement l\'essentiel du chapitre « $chapterTitle »'
+                '${subject != null ? ' en $subject' : ''}, avec un exemple, puis vérifie que j\'ai compris.',
+          ));
+        }
+      } catch (_) {}
+    }
+    return out.take(maxCards).toList();
+  }
+
+  /// Réponse de l'élève lisible pour le tuteur (texte libre, ou option choisie d'un QCM).
+  String? _describeAnswer(dynamic submitted, dynamic instructions) {
+    if (submitted is! Map) return null;
+    final text = submitted['text'] ?? submitted['answer'] ?? submitted['value'];
+    if (text is String && text.trim().isNotEmpty) {
+      final t = text.trim();
+      return t.length > 400 ? '${t.substring(0, 400)}…' : t;
+    }
+    final idx = submitted['selected_index'] ?? submitted['index'] ?? submitted['choice'];
+    final options = (instructions is Map) ? instructions['options'] : null;
+    if (idx is int && options is List && idx >= 0 && idx < options.length) {
+      return '« ${options[idx]} »';
+    }
+    return null;
   }
 
   /// Idempotent côté serveur (UNIQUE(profile_id, lesson_id)) : appeler plusieurs fois sur la même

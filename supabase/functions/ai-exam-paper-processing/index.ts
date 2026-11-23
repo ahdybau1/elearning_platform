@@ -220,7 +220,7 @@ Ne renvoie QUE un JSON valide, sans texte additionnel, exactement sous cette for
           ocrPrompt,
         );
         if (!ocrResult) throw new Error("Gemini n'a retourné aucun résultat exploitable (sujet)");
-        questions = JSON.parse(ocrResult.text);
+        questions = parseModelJson(ocrResult.text);
         tokensUsed += ocrResult.tokensUsed;
 
         if (hasCorrection && questions) {
@@ -245,7 +245,7 @@ ci-dessus. Ne renvoie QUE un JSON valide :
             );
             if (corrResult) {
               tokensUsed += corrResult.tokensUsed;
-              const corrections = JSON.parse(corrResult.text) as
+              const corrections = parseModelJson(corrResult.text) as
                 { question_order: number; answer: string }[];
               const byOrder = new Map(
                 corrections.map((c) => [c.question_order, c.answer]),
@@ -373,3 +373,7 @@ ci-dessus. Ne renvoie QUE un JSON valide :
     );
   }
 });
+
+// Placé en fin de fichier (les imports ES sont remontés) pour ne pas entrer en conflit avec la garde
+// d'appelant ajoutée en tête par la PR #4.
+import { parseModelJson } from "../_shared/model_json.ts";

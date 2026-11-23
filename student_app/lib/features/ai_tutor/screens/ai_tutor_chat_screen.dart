@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/rendering/latex_to_unicode_converter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/auth/student_auth_provider.dart';
+import '../../../core/models/student_models.dart';
+import '../../../core/providers/student_providers.dart';
 import '../../../core/rendering/ai_message_bubble_renderer.dart';
 import '../../../core/services/local_chat_storage_service.dart';
 import '../../../core/theme/student_theme.dart';
@@ -46,38 +49,110 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
   bool _isLoadingSessions = true;
   bool _isGenerating = false;
 
-  final List<Map<String, dynamic>> _quickStarters = [
-    {
-      'icon': Icons.auto_graph_rounded,
-      'color': AppColors.cyanAccent,
-      'title': 'Polynôme & Courbe',
-      'prompt': 'Étudie le polynôme P(x) = 2x² - 4x - 6 et trace sa courbe représentative.',
-    },
-    {
-      'icon': Icons.lightbulb_outline_rounded,
-      'color': Colors.amber,
-      'title': 'Comprendre un Théorème',
-      'prompt': 'Explique-moi le théorème des valeurs intermédiaires avec un exemple simple.',
-    },
-    {
-      'icon': Icons.camera_alt_rounded,
-      'color': Colors.purpleAccent,
-      'title': 'Analyser un Exercice Photo',
-      'prompt': 'Aide-moi à résoudre cet exercice pas-à-pas.',
-      'action': 'photo',
-    },
-    {
-      'icon': Icons.functions_rounded,
-      'color': AppColors.emeraldSuccess,
-      'title': 'Méthode Dérivées & Limites',
-      'prompt': 'Comment calculer la dérivée d\'un quotient de fonctions u(x) / v(x) ?',
-    },
-  ];
+  /// Jusqu'à 4 suggestions tirées du parcours de l'élève (exercices ratés, compétences faibles,
+  /// leçons terminées, chapitres en cours de SA classe), puis la photo. Les suggestions générales ne
+  /// servent que si la classe n'a encore rien (aucun chapitre, aucun exercice).
+  List<Map<String, dynamic>> _starters() {
+    const icons = {
+      TutorSuggestionKind.retry: Icons.replay_rounded,
+      TutorSuggestionKind.weakSkill: Icons.trending_up_rounded,
+      TutorSuggestionKind.check: Icons.fact_check_outlined,
+      TutorSuggestionKind.chapter: Icons.menu_book_outlined,
+    };
+    final generic = _genericStarters();
+    final photo = generic.firstWhere((g) => g['action'] == 'photo');
+    if (_personal.isEmpty) return generic;
+    return [
+      for (final p in _personal)
+        {'icon': icons[p.kind], 'title': p.title, 'subtitle': p.subtitle, 'prompt': p.prompt},
+      photo,
+    ];
+  }
+
+  /// Suggestions de départ adaptées à la matière ouverte (ou générales), valables de la 6e à la
+  /// Terminale et dans toutes les matières. Les anciennes cartes proposaient à tous les élèves des
+  /// sujets de Terminale scientifique (polynômes, TVI, dérivée d'un quotient).
+  List<Map<String, dynamic>> _genericStarters() {
+    final subject = widget.subjectName;
+    if (subject != null && subject.trim().isNotEmpty) {
+      return [
+        {
+          'icon': Icons.lightbulb_outline_rounded,
+          'title': 'Comprendre une notion de $subject',
+          'prompt': 'Je veux comprendre une notion de $subject. Demande-moi laquelle, puis explique-la simplement avec un exemple.',
+        },
+        {
+          'icon': Icons.edit_note_rounded,
+          'title': 'M\'entraîner en $subject',
+          'prompt': 'Donne-moi un exercice de $subject adapté à mon niveau, attends ma réponse, puis corrige-la.',
+        },
+        {
+          'icon': Icons.quiz_outlined,
+          'title': 'Réviser $subject en 5 questions',
+          'prompt': 'Pose-moi 5 questions rapides, une par une, pour réviser $subject.',
+        },
+        {
+          'icon': Icons.photo_camera_outlined,
+          'title': 'Envoyer la photo d\'un exercice',
+          'prompt': 'Aide-moi à résoudre cet exercice pas à pas.',
+          'action': 'photo',
+        },
+      ];
+    }
+    return [
+      {
+        'icon': Icons.lightbulb_outline_rounded,
+        'title': 'Comprendre une leçon',
+        'prompt': 'Je n\'ai pas compris une leçon. Demande-moi la matière et le chapitre, puis explique-la simplement.',
+      },
+      {
+        'icon': Icons.fact_check_outlined,
+        'title': 'Vérifier ma réponse',
+        'prompt': 'Je vais te donner un exercice et ma réponse : dis-moi si elle est juste et pourquoi.',
+      },
+      {
+        'icon': Icons.event_note_outlined,
+        'title': 'Préparer un devoir',
+        'prompt': 'J\'ai bientôt un devoir. Aide-moi à organiser mes révisions : demande-moi la matière et les chapitres.',
+      },
+      {
+        'icon': Icons.photo_camera_outlined,
+        'title': 'Envoyer la photo d\'un exercice',
+        'prompt': 'Aide-moi à résoudre cet exercice pas à pas.',
+        'action': 'photo',
+      },
+    ];
+  }
+
+  /// Suggestions tirées du parcours réel de l'élève (exercices ratés, leçons terminées, chapitre
+  /// en cours de SA classe). Chargées une fois ; les suggestions générales ne font que compléter.
+  List<TutorSuggestion> _personal = const [];
+  bool _personalLoaded = false;
+
+  Future<void> _loadPersonalSuggestions() async {
+    final profile = ref.read(studentAuthProvider).activeProfile;
+    final classNodeId = widget.classNodeId ?? profile?.classNodeId ?? '';
+    if (profile == null || classNodeId.isEmpty) {
+      setState(() => _personalLoaded = true);
+      return;
+    }
+    try {
+      final list = await ref.read(studentSupabaseServiceProvider).fetchTutorSuggestions(
+            profileId: profile.id,
+            classNodeId: classNodeId,
+            subjectId: widget.subjectId,
+          );
+      if (mounted) setState(() => _personal = list);
+    } finally {
+      if (mounted) setState(() => _personalLoaded = true);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _loadLocalSessions();
+    _loadPersonalSuggestions();
   }
 
   @override
@@ -434,90 +509,28 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
       body: StudentPageContent(
         child: Column(
           children: [
-            // Barre supérieure moderne façon ChatGPT / Gemini
+            // Barre fine : le titre « Tuteur » est déjà dans la barre de l'application. Seules restent
+            // les deux actions utiles (historique, nouvelle discussion) — plus de pastille
+            // « Multimodal » qui prenait une seconde barre pleine hauteur sur téléphone.
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
-                color: colors.card,
-                border: Border(
-                  bottom: BorderSide(
-                    color: colors.border.withValues(alpha: 0.7),
-                  ),
-                ),
+                border: Border(bottom: BorderSide(color: colors.border.withValues(alpha: 0.6))),
               ),
               child: Row(
                 children: [
-                  // Bouton menu Drawer pour ouvrir l'historique
-                  IconButton(
-                    icon: const Icon(Icons.menu_rounded, size: 22),
-                    tooltip: 'Historique des discussions',
+                  TextButton.icon(
+                    style: TextButton.styleFrom(foregroundColor: colors.textSecondary),
+                    icon: const Icon(Icons.history_rounded, size: 18),
+                    label: const Text('Mes discussions', style: TextStyle(fontSize: 13)),
                     onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                   ),
-
-                  const SizedBox(width: 4),
-
-                  // Pastille centrale du Modèle Tuteur Socratique IA
-                  Expanded(
-                    child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: colors.surface,
-                          borderRadius: BorderRadius.circular(AppRadius.r16),
-                          border: Border.all(
-                            color: AppColors.cyanAccent.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: AppColors.emeraldSuccess,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Tuteur pq learn',
-                              style: GoogleFonts.outfit(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: colors.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: AppColors.cyanAccent.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                'Multimodal',
-                                style: GoogleFonts.inter(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.cyanAccent,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 4),
-
-                  // Bouton Nouvelle discussion rapide
-                  IconButton(
-                    icon: const Icon(Icons.edit_square, size: 20),
-                    tooltip: 'Nouvelle discussion',
+                  const Spacer(),
+                  TextButton.icon(
+                    style: TextButton.styleFrom(foregroundColor: colors.accentPrimary),
+                    icon: const Icon(Icons.add_comment_outlined, size: 18),
+                    label: const Text('Nouvelle', style: TextStyle(fontSize: 13)),
                     onPressed: _handleNewSessionRequest,
                   ),
                 ],
@@ -595,7 +608,7 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Le tuteur réfléchit à un indice socratique...',
+                            'Le tuteur réfléchit…',
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               color: colors.textSecondary,
@@ -671,7 +684,9 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
           const SizedBox(height: 6),
 
           Text(
-            'Classe : ${className ?? "Lycée / Secondaire"} • Méthode maïeutique sans réponse brute',
+            className != null
+                ? 'Ton tuteur pour la $className : il t\'explique pas à pas.'
+                : 'Ton tuteur t\'explique pas à pas.',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 12,
@@ -681,95 +696,93 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
 
           const SizedBox(height: 32),
 
-          // Grille de cartes de suggestions pédagogiques
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth > 550;
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _quickStarters.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: isWide ? 2 : 1,
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: isWide ? 2.6 : 3.6,
-                ),
-                itemBuilder: (context, index) {
-                  final starter = _quickStarters[index];
-                  final icon = starter['icon'] as IconData;
-                  final color = starter['color'] as Color;
-                  final title = starter['title'] as String;
-                  final prompt = starter['prompt'] as String;
-
-                  return InkWell(
-                    onTap: () {
-                      if (starter['action'] == 'photo') {
-                        PhotoTranscriptionModal.show(
-                          context,
-                          onTranscription: (ocrResult) {
-                            _sendMessage(ocrResult);
-                          },
-                        );
-                      } else {
-                        _sendMessage(prompt);
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(AppRadius.r16),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: colors.card,
+          // Suggestions tirées du parcours de l'élève : une liste sobre (plus de grille de cartes).
+          if (!_personalLoaded)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)),
+            )
+          else ...[
+          if (_personal.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Text(
+                'Pour toi, d\'après tes exercices et ton programme',
+                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: colors.textSecondary),
+              ),
+            ),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Column(
+              children: [
+                for (final starter in _starters())
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Material(
+                      color: colors.card,
+                      borderRadius: BorderRadius.circular(AppRadius.r16),
+                      child: InkWell(
                         borderRadius: BorderRadius.circular(AppRadius.r16),
-                        border: Border.all(
-                          color: colors.border.withValues(alpha: 0.8),
+                        onTap: () {
+                          if (starter['action'] == 'photo') {
+                            PhotoTranscriptionModal.show(
+                              context,
+                              onTranscription: (ocrResult) => _sendMessage(ocrResult),
+                            );
+                          } else {
+                            _sendMessage(starter['prompt'] as String);
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(AppRadius.r16),
+                            border: Border.all(color: colors.border),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(starter['icon'] as IconData, size: 20, color: colors.accentPrimary),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      // Titres d'exercices parfois écrits en LaTeX : lisibles, sans $.
+                                      LatexToUnicodeConverter.convert(
+                                          (starter['title'] as String).replaceAll(r'$', '')),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: colors.textPrimary,
+                                      ),
+                                    ),
+                                    if ((starter['subtitle'] as String?)?.isNotEmpty ?? false)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 2),
+                                        child: Text(
+                                          starter['subtitle'] as String,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.inter(fontSize: 12, color: colors.textMuted),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              Icon(Icons.chevron_right_rounded, size: 20, color: colors.textMuted),
+                            ],
+                          ),
                         ),
                       ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(icon, color: color, size: 20),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  title,
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: colors.textPrimary,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  prompt,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    color: colors.textSecondary,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
-                  );
-                },
-              );
-            },
+                  ),
+              ],
+            ),
           ),
+          ],
         ],
       ),
     );
@@ -836,60 +849,11 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                       isAi ? AppRadius.r16 : AppRadius.r4,
                     ),
                   ),
-                  border: isAi
-                      ? Border.all(
-                          color: AppColors.cyanAccent.withValues(alpha: 0.2),
-                        )
-                      : null,
-                  boxShadow: [
-                    BoxShadow(
-                      color: isAi
-                          ? Colors.black.withValues(alpha: 0.06)
-                          : AppColors.primaryCyan.withValues(alpha: 0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
+                  border: isAi ? Border.all(color: colors.border) : null,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (isAi) ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Tuteur pq learn',
-                            style: GoogleFonts.outfit(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.cyanAccent,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          // Bouton de copie du message
-                          InkWell(
-                            onTap: () {
-                              Clipboard.setData(ClipboardData(text: msg.text));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Réponse copiée'),
-                                  duration: Duration(seconds: 1),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                            },
-                            child: Icon(
-                              Icons.copy_rounded,
-                              size: 14,
-                              color: colors.textSecondary.withValues(alpha: 0.7),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                    ],
-
                     // Affichage des pièces jointes associées au message
                     if (msg.hasAttachments) ...[
                       Wrap(
@@ -910,6 +874,30 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                       message: msg.text,
                       isAi: isAi,
                     ),
+
+                    // Copier : discret, sous la réponse (plus d'en-tête « Tuteur » dans chaque bulle,
+                    // l'avatar suffit à identifier l'auteur).
+                    if (isAi && !msg.isError && msg.text.trim().isNotEmpty)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: IconButton(
+                          tooltip: 'Copier la réponse',
+                          visualDensity: VisualDensity.compact,
+                          iconSize: 16,
+                          color: colors.textMuted,
+                          icon: const Icon(Icons.copy_rounded),
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: msg.text));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Réponse copiée'),
+                                duration: Duration(seconds: 1),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
 
                     // Bouton de réessai immédiat si le message signale une erreur
                     if (isAi &&

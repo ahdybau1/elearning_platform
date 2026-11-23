@@ -7,6 +7,7 @@ import '../../design_system/tokens/app_colors.dart';
 import '../../design_system/tokens/app_radius.dart';
 import 'latex_to_unicode_converter.dart';
 import 'mathjax_bridge.dart';
+import '../theme/student_theme.dart';
 
 /// Moteurs de rendu mathématique supportés (Cahier IA Zéro-Coût §5 & Cahier Technique §2)
 enum MathRendererEngine {
@@ -16,8 +17,11 @@ enum MathRendererEngine {
 
 /// Gestionnaire global du moteur de rendu mathématique
 class MathRendererSettings {
+  // Rendu natif (flutter_math) par défaut partout, y compris sur le web : le rendu MathJax passe par
+  // une iframe de taille fixe par formule, chargée depuis un CDN — formules coupées, lentes, ou
+  // absentes hors connexion. MathJax ne sert plus que de secours quand flutter_math échoue.
   static final ValueNotifier<MathRendererEngine> currentEngine =
-      ValueNotifier<MathRendererEngine>(kIsWeb ? MathRendererEngine.mathjax : MathRendererEngine.katex);
+      ValueNotifier<MathRendererEngine>(MathRendererEngine.katex);
 
   static void toggleEngine() {
     currentEngine.value = currentEngine.value == MathRendererEngine.katex
@@ -64,8 +68,10 @@ class MathFormulaView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveTextColor = textColor ?? const Color(0xFFE2E8F0);
-    final sanitizedFormula = _sanitizeLatex(formulaLatex);
+    final c = context.colors;
+    final effectiveTextColor = textColor ?? c.textPrimary;
+    final sanitizedFormula = InlineLatexText.normalizeLatexSource(_sanitizeLatex(formulaLatex));
+    final showHeader = label != null || showCopyButton || showEngineToggle;
 
     // Si la formule comporte un environnement LaTeX complet (\begin{cases}, \begin{matrix}, \begin{aligned}, etc.),
     // elle constitue un bloc mathématique unitaire : ne JAMAIS la découper par \\ ni supprimer les alignements &.
@@ -89,26 +95,16 @@ class MathFormulaView extends StatelessWidget {
         return Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            color: const Color(0xFF090D16),
+            color: c.surface,
             borderRadius: BorderRadius.circular(AppRadius.card),
-            border: Border.all(
-              color: themeColor.withAlpha(80),
-              width: 1.2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: themeColor.withAlpha(25),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            border: Border.all(color: c.border),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // En-tête avec label de formule, sélecteur de moteur et bouton Copier
-              Row(
+              // En-tête (étiquette, moteur, copier) seulement s'il a quelque chose à montrer.
+              if (showHeader) Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
@@ -125,7 +121,7 @@ class MathFormulaView extends StatelessWidget {
                             border: Border.all(color: themeColor.withAlpha(100)),
                           ),
                           child: Text(
-                            label ?? 'FORMULE OFFICIELLE',
+                            label ?? 'FORMULE',
                             style: GoogleFonts.inter(
                               fontSize: 9,
                               fontWeight: FontWeight.bold,
@@ -183,26 +179,16 @@ class MathFormulaView extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.copy_rounded,
-                              size: 13,
-                              color: Colors.white.withAlpha(160),
-                            ),
+                            Icon(Icons.copy_rounded, size: 13, color: c.textMuted),
                             const SizedBox(width: 4),
-                            Text(
-                              'Copier la formule',
-                              style: TextStyle(
-                                color: Colors.white.withAlpha(160),
-                                fontSize: 10,
-                              ),
-                            ),
+                            Text('Copier', style: TextStyle(color: c.textMuted, fontSize: 10)),
                           ],
                         ),
                       ),
                     ),
                 ],
               ),
-              const SizedBox(height: 12),
+              if (showHeader) const SizedBox(height: 10),
 
               // Zone de rendu de la formule avec défilement horizontal fluide
               SingleChildScrollView(
@@ -230,7 +216,16 @@ class MathFormulaView extends StatelessWidget {
                                 color: effectiveTextColor,
                               ),
                               onErrorFallback: (err) {
-                                // Fallback mathématique Unicode propre sans jamais exposer de code TeX brut à l'élève
+                                // Sur le web, MathJax sait rendre ce que flutter_math refuse ; ailleurs,
+                                // repli Unicode lisible, jamais de code TeX brut montré à l'élève.
+                                if (kIsWeb) {
+                                  return MathJaxSvgView(
+                                    latex: cleanLine,
+                                    isDisplay: isDisplayMode,
+                                    color: effectiveTextColor,
+                                    fontSize: fontSize,
+                                  );
+                                }
                                 final safeMathText = LatexToUnicodeConverter.convert(cleanLine);
                                 return SelectableText(
                                   safeMathText,
@@ -276,131 +271,56 @@ class InlineLatexText extends StatelessWidget {
     this.overflow = TextOverflow.clip,
   });
 
-  static final RegExp _mathPattern = RegExp(r'\$\$(.*?)\$\$|\$(.*?)\$', dotAll: true);
+  // $$…$$ puis $…$ sur une seule ligne (un $ isolé, ex. un prix, ne doit pas avaler la suite).
+  static final RegExp _mathPattern = RegExp(r'\$\$([\s\S]+?)\$\$|\$([^\$\n]+?)\$');
 
-  static bool containsMath(String s) {
-    if (s.contains(r'$')) return true;
-    final mathTriggers = [
-      r'\begin{',
-      r'\Delta',
-      r'\frac',
-      r'\sqrt',
-      r'\sum',
-      r'\int',
-      r'\infty',
-      r'\lim',
-      r'\times',
-      r'\cdot',
-      r'\in',
-      r'\forall',
-      r'\exists',
-      r'\le',
-      r'\ge',
-      r'\neq',
-      r'\mathbb',
-      r'\pm',
-      r'\approx',
-      r'\implies',
-      r'\iff',
-      r'\to',
-      '<=',
-      '>=',
-      '!=',
-    ];
-    if (s.contains(r'\') || s.contains('^') || s.contains('²') || s.contains('³') || s.contains('∞')) {
-      return true;
-    }
-    return mathTriggers.any((t) => s.contains(t));
+  /// Ramène les délimiteurs LaTeX usuels à $…$ / $$…$$ et corrige les écritures fréquentes que
+  /// flutter_math ne comprend pas (virgule décimale, \dfrac, espaces insécables, ≤ ≥ en clair…).
+  static String normalizeLatexSource(String input) {
+    var s = input;
+    s = s.replaceAllMapped(RegExp(r'\\\[([\s\S]+?)\\\]'), (m) => '\$\$${m.group(1)!.trim()}\$\$');
+    s = s.replaceAllMapped(RegExp(r'\\\(([\s\S]+?)\\\)'), (m) => '\$${m.group(1)!.trim()}\$');
+    s = s
+        .replaceAll(r'\dfrac', r'\frac')
+        .replaceAll(r'\tfrac', r'\frac')
+        .replaceAll('\u00a0', ' ')
+        .replaceAll('\u202f', ' ');
+    return s;
   }
 
-  /// Prépare le texte en encadrant automatiquement les fragments LaTeX isolés sans $...$
+  /// Rétro-compatibilité : texte sans aucun $ mais avec des commandes LaTeX évidentes (\frac{…}{…},
+  /// \sqrt{…}, x^{2}, x_1, \Delta…) — seules ces commandes sont encadrées, jamais les mots autour.
+  /// L'ancienne version encadrait des segments entiers (« f(x) = 2x + 1 est croissante ») et les
+  /// rendait en italique mathématique collé, illisible.
   static String autoDelimitMath(String input) {
-    if (input.isEmpty) return input;
-
-    if (!input.contains(r'$')) {
-      return _autoDelimitSegment(input);
-    }
-
-    // Découpage entre segments déjà délimités par $ et segments de texte libre
-    final parts = input.split(r'$');
-    final buffer = StringBuffer();
-
-    for (int i = 0; i < parts.length; i++) {
-      if (i % 2 == 1) {
-        // Déjà à l'intérieur d'un bloc $...$ : préservé intact
-        buffer.write('\$${parts[i]}\$');
-      } else {
-        // Texte libre : auto-délimiter les formules mathématiques oubliées
-        buffer.write(_autoDelimitSegment(parts[i]));
-      }
-    }
-
-    return buffer.toString();
+    final normalized = normalizeLatexSource(input);
+    if (normalized.isEmpty || normalized.contains(r'$')) return normalized;
+    return normalized.replaceAllMapped(_latexTokenPattern, (m) => '\$${m.group(0)}\$');
   }
 
-  static final RegExp _mathScannerPattern = RegExp(
-    // 1. Équations type f(x) = ..., f'(x) = ..., y = ..., P(x) = ...
-    r'(\b(?:[a-zA-Z]\(x\)|[a-zA-Z]\x27\(x\)|y|P\(x\))\s*=\s*[^,.;:\n]+)|'
-    // 2. Limites \lim_{...} ... ou lim_{...}
-    r'(\\?lim_\{[^}]*\}\s*[^,.:;\n]+)|'
-    // 3. Commandes LaTeX avec arguments type \frac{...}{...}, \sqrt{...}
-    r'(\\(?:frac\{[^}]*\}\{[^}]*\}|sqrt(?:\[[^\]]*\])?\{[^}]*\}))|'
-    // 4. Formes factorisées type 3x(x - 2) ou (x - 1)(x + 2)
-    r'(\b[0-9]*\*?[a-zA-Z]?\s*\([a-zA-Z]\s*[+\-]\s*[0-9]+(?:\.[0-9]+)?\)(?:\s*\([a-zA-Z]\s*[+\-]\s*[0-9]+(?:\.[0-9]+)?\))?)|'
-    // 5. Polynômes et puissances avec x^2, x^3, etc. (ex: x^2 - 5x + 6, 2x^2 - 4)
-    r'(\b[+\-]?[0-9]*\.?[0-9]*\*?[a-zA-Z](?:\^[0-9]+|\²|\³)(?:\s*[+\-*/]\s*[0-9]*\.?[0-9]*\*?[a-zA-Z](?:\^[0-9]+|\²|\³)?)*(?:\s*[+\-*/]\s*[0-9]+)?)|'
-    // 6. Commandes LaTeX simples type \Delta, \infty, \mathbb{R}, \implies, \iff, \to
-    r'(\\(?:Delta|infty|pm|mp|le|ge|neq|times|cdot|in|forall|exists|mathbb\{[A-Z]\}|mathcal\{[A-Z]\}(?:_[a-zA-Z0-9]+)?|approx|implies|iff|to|left\(|right\)))|'
-    // 7. Intervalles mathématiques type ]-\infty ; +\infty[ ou [0 ; 2]
-    r'(\[[^\]\n]+\]|\][^\[\n]+\[)|'
-    // 8. Variables indicées type x_1, x_2, x_0, x_S, y_S
-    r'(\b[a-zA-Z]_[0-9a-zA-Z]+)|'
-    // 9. Équations simples type x = 0, x = 2, 2x - 4 = 0
-    r'(\b[0-9]*\*?[a-zA-Z]\s*=\s*[+\-]?[0-9]+(?:\.[0-9]+)?)|'
-    r'(\b[0-9]*\*?[a-zA-Z]\s*[+\-]\s*[0-9]+\s*=\s*0)',
+  static final RegExp _latexTokenPattern = RegExp(
+    // Commandes avec arguments entre accolades (éventuellement imbriquées sur un niveau) : \frac{a}{b},
+    // \sqrt{x}, \vec{u}, \overline{AB}, \text{…}
+    r'\\[a-zA-Z]+(?:\[[^\]]*\])?(?:\{(?:[^{}]|\{[^{}]*\})*\})+'
+    // Commandes simples : \Delta, \infty, \pi, \times, \leq, \mathbb R…
+    r'|\\(?:Delta|delta|alpha|beta|gamma|lambda|mu|pi|theta|omega|Omega|sigma|varepsilon|epsilon|infty|times|cdot|div|pm|mp|leq|geq|le|ge|neq|approx|equiv|in|notin|subset|cup|cap|forall|exists|Rightarrow|Leftrightarrow|implies|iff|to|mapsto|ldots|cdots|circ|degree|parallel|perp|angle)\b'
+    // Puissances et indices explicites : x^2, x^{n+1}, e^{-x}, u_n, x_{1}, 10^{-3}
+    r'|[A-Za-z0-9)\]]+(?:\^\{[^}]+\}|\^-?[A-Za-z0-9]+|_\{[^}]+\}|_[A-Za-z0-9]+)+',
   );
 
-  static String _autoDelimitSegment(String segment) {
-    if (segment.isEmpty) return segment;
-
-    final buffer = StringBuffer();
-    int lastEnd = 0;
-
-    for (final match in _mathScannerPattern.allMatches(segment)) {
-      if (match.start > lastEnd) {
-        buffer.write(segment.substring(lastEnd, match.start));
-      }
-
-      final rawToken = match.group(0) ?? '';
-      final token = rawToken.trim();
-
-      // Vérifier les faux positifs pour les intervalles entre crochets comme [sommet] ou [indice]
-      if (token.startsWith('[') && token.endsWith(']')) {
-        final isMathInterval = token.contains(r'\') ||
-            token.contains('∞') ||
-            token.contains(';') ||
-            token.contains(RegExp(r'[0-9]'));
-        if (!isMathInterval) {
-          buffer.write(rawToken);
-          lastEnd = match.end;
-          continue;
-        }
-      }
-
-      if (token.isNotEmpty) {
-        buffer.write('\$$token\$');
-      } else {
-        buffer.write(rawToken);
-      }
-      lastEnd = match.end;
-    }
-
-    if (lastEnd < segment.length) {
-      buffer.write(segment.substring(lastEnd));
-    }
-
-    return buffer.toString();
+  /// Vrai si la chaîne entière est une formule (pas une phrase) : on peut alors la rendre d'un bloc.
+  static bool _looksLikePureFormula(String s) {
+    final t = s.trim();
+    if (t.isEmpty || t.length > 160) return false;
+    if (!(t.contains(r'\') || t.contains('^') || t.contains('_'))) return false;
+    // Mots de 3 lettres ou plus en dehors des commandes LaTeX → c'est une phrase.
+    final withoutCommands = t.replaceAll(RegExp(r'\\[a-zA-Z]+'), ' ');
+    return !RegExp(r'[A-Za-zÀ-ÿ]{3,}').hasMatch(withoutCommands);
   }
+
+  /// Conservé pour les appels existants : indique si une chaîne contient des mathématiques.
+  static bool containsMath(String s) =>
+      s.contains(r'$') || s.contains(r'\(') || s.contains(r'\[') || _latexTokenPattern.hasMatch(s);
 
   /// Découpe un fragment de texte brut en spans stylisés selon la syntaxe Markdown
   /// (**gras**, *italique*, ***gras italique***, `code`, ~~barré~~)
@@ -507,7 +427,8 @@ class InlineLatexText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveStyle = style ?? DefaultTextStyle.of(context).style;
-    final effectiveMathColor = mathColor ?? const Color(0xFF38BDF8);
+    // Les formules prennent la couleur du texte : une formule n'est pas un lien.
+    final effectiveMathColor = mathColor ?? effectiveStyle.color ?? context.colors.textPrimary;
 
     final normalizedText = autoDelimitMath(text);
 
@@ -529,8 +450,8 @@ class InlineLatexText extends StatelessWidget {
 
         final double baseFontSize = effectiveStyle.fontSize ?? 14.0;
         final double mathFontSize = isDisplay
-            ? (baseFontSize * 1.3).clamp(17.0, 24.0)
-            : (baseFontSize * 1.1).clamp(14.0, 20.0);
+            ? (baseFontSize * 1.25).clamp(16.0, 24.0)
+            : (baseFontSize * 1.05).clamp(12.0, 20.0);
 
         if (mathContent.isNotEmpty) {
           spans.add(WidgetSpan(
@@ -546,7 +467,6 @@ class InlineLatexText extends StatelessWidget {
                   textStyle: TextStyle(
                     fontSize: mathFontSize,
                     color: effectiveMathColor,
-                    fontWeight: effectiveStyle.fontWeight,
                   ),
                   onErrorFallback: (_) => Text(
                     LatexToUnicodeConverter.convert(mathContent),
@@ -577,31 +497,24 @@ class InlineLatexText extends StatelessWidget {
       );
     }
 
-    // Cas 2 : Pas de $ mais formule directe pure (sans phrases textuelles)
-    if (containsMath(normalizedText)) {
-      final isNaturalLanguageSentence = RegExp(
-        r'\b(sur|et|ou|dans|pour|donc|alors|est|avec|sans|branche|direction|asymptote|parabolique|puis|car|soit)\b',
-        caseSensitive: false,
-      ).hasMatch(normalizedText);
-
-      if (!isNaturalLanguageSentence) {
-        return FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Math.tex(
-            normalizedText,
-            mathStyle: MathStyle.text,
-            textStyle: TextStyle(
-              fontSize: effectiveStyle.fontSize ?? 14,
-              color: effectiveMathColor,
-            ),
-            onErrorFallback: (_) => Text(
-              LatexToUnicodeConverter.convert(normalizedText),
-              style: effectiveStyle.copyWith(color: effectiveMathColor),
-            ),
+    // Cas 2 : la chaîne entière est une formule sans délimiteur (ex. « \\frac{1}{2}x^2 »).
+    if (_looksLikePureFormula(normalizedText)) {
+      return FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Math.tex(
+          normalizedText.trim(),
+          mathStyle: MathStyle.text,
+          textStyle: TextStyle(
+            fontSize: (effectiveStyle.fontSize ?? 14) * 1.05,
+            color: effectiveMathColor,
           ),
-        );
-      }
+          onErrorFallback: (_) => Text(
+            LatexToUnicodeConverter.convert(normalizedText),
+            style: effectiveStyle.copyWith(color: effectiveMathColor),
+          ),
+        ),
+      );
     }
 
     // Cas 3 : Texte normal avec syntaxe Markdown enrichie

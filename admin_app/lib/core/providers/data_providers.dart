@@ -93,6 +93,11 @@ final subjectAssignmentsProvider =
   return service.fetchSubjectAssignments(classNodeId);
 });
 
+final curriculumAnomaliesProvider = FutureProvider<List<CurriculumAnomaly>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.fetchCurriculumAnomalies();
+});
+
 // Classes/Séries où une matière est enseignée (voir fetchClassesForSubject) — n'implique aucun
 // partage de contenu, seulement une utilité de navigation/filtrage.
 final classesForSubjectProvider =

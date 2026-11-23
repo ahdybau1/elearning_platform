@@ -266,7 +266,8 @@ Génère un tableau JSON exact de ${exerciseCount} exercice(s) avec les clés :
             .replace(/\s*```$/i, "")
             .trim();
           try {
-            const parsed = JSON.parse(jsonText);
+            // deno-lint-ignore no-explicit-any
+            const parsed = parseModelJson<any>(jsonText);
             exercises = Array.isArray(parsed) ? parsed : (parsed.exercises ?? null);
             if (!exercises) throw new Error("clé 'exercises' absente de la réponse JSON");
             provider = routerData._provider ?? "router";
@@ -355,3 +356,7 @@ Génère un tableau JSON exact de ${exerciseCount} exercice(s) avec les clés :
     );
   }
 });
+
+// Placé en fin de fichier (les imports ES sont remontés) pour ne pas entrer en conflit avec la garde
+// d'appelant ajoutée en tête par la PR #4.
+import { parseModelJson } from "../_shared/model_json.ts";

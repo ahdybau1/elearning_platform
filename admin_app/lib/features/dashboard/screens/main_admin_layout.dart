@@ -37,6 +37,7 @@ import '../../subscriptions/screens/shop_management_screen.dart';
 import '../../subscriptions/screens/donations_screen.dart';
 import '../../academic_tree/screens/school_year_promotion_screen.dart';
 import '../../academic_tree/screens/curriculum_autopilot_screen.dart';
+import '../../academic_tree/screens/curriculum_control_screen.dart';
 import '../../users_roles/screens/active_sessions_screen.dart';
 import '../../content_management/screens/lesson_builder_screen.dart';
 import '../../content_management/screens/media_library_screen.dart';
@@ -136,6 +137,12 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
           id: 29,
           title: 'Collecte des Programmes',
           icon: Icons.travel_explore_rounded,
+          allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu],
+        ),
+        NavItem(
+          id: 35,
+          title: 'Contrôle des Programmes',
+          icon: Icons.rule_rounded,
           allowedRoles: [AdminRole.superAdmin, AdminRole.adminPays, AdminRole.adminContenu],
         ),
         NavItem(
@@ -438,6 +445,8 @@ class _MainAdminLayoutState extends ConsumerState<MainAdminLayout> {
         return const EngineCenterScreen();
       case 33:
         return const IngestionCenterScreen();
+      case 35:
+        return const CurriculumControlScreen();
       case 34:
         return const IntegrationsScreen();
       default:

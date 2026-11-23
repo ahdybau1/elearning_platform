@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/models/summary_sheet_registry.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/rendering/math_formula_view.dart';
 import '../../../core/rendering/ai_message_bubble_renderer.dart';
 import '../../../design_system/tokens/app_colors.dart';
@@ -78,8 +80,22 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
   @override
   void initState() {
     super.initState();
-    _activeMode = widget.initialMode;
+    // « Pièges » et « S'entraîner » n'ont de contenu que pour les suites numériques : ailleurs ils
+    // menaient à « Aucun entraînement local disponible ». On ouvre alors le tuteur, et pour
+    // « Comprendre mon erreur » la question part tout de suite avec l'énoncé, la réponse et le corrigé.
+    final wantsDiagnosis = widget.initialMode == 'diagnostic';
+    _activeMode = _hasSequencePractice ? widget.initialMode : 'tutor';
     _initializeMode();
+    if (wantsDiagnosis && !_hasSequencePractice) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _sendSocraticQuestion(
+            'Je me suis trompé(e) à cette question. Aide-moi à comprendre où est mon erreur '
+            'et quelle notion revoir, sans simplement me redonner la réponse.',
+          );
+        }
+      });
+    }
   }
 
   @override
@@ -115,12 +131,22 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
     });
 
     try {
-      // Tentative d'appel via Supabase Edge Function ai-tutor-chat
+      // Profil actif : sans lui, le tuteur ne connaissait ni la classe ni le programme de l'élève
+      // (il répondait au niveau « secondaire » générique depuis une leçon de 6e comme de Terminale).
+      final profile = ProviderScope.containerOf(context, listen: false).read(studentAuthProvider).activeProfile;
+      final formula = widget.formulaLatex;
       final response = await Supabase.instance.client.functions
           .invoke(
             'ai-tutor-chat',
             body: {
-              'message': 'Notion : ${widget.topicTitle}\nQuestion : $clean',
+              'message': 'Notion : ${widget.topicTitle}'
+                  // Contexte transmis tel quel (énoncé, réponse de l'élève, formule déjà en LaTeX $…$) :
+                  // ne pas l'entourer de $, ce n'est pas toujours une formule.
+                  '${formula != null && formula.trim().isNotEmpty ? '\nContexte : $formula' : ''}'
+                  '\nQuestion : $clean',
+              'class_name': profile?.className,
+              'class_node_id': (profile?.classNodeId.isNotEmpty ?? false) ? profile!.classNodeId : null,
+              'profile_id': profile?.id,
               'topic': widget.topicTitle,
               'subject_name': widget.subject,
               'formula': widget.formulaLatex,
@@ -219,7 +245,7 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Agents Pédagogiques EDLEARN',
+                            'Tuteur pq learn',
                             style: GoogleFonts.outfit(
                               color: Colors.white,
                               fontSize: 17,
@@ -263,8 +289,8 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
                 ),
                 const SizedBox(height: 14),
 
-                // Sélecteur de Mode / Agent
-                Container(
+                // Sélecteur de Mode / Agent — seulement s'il y a autre chose que le tuteur.
+                if (_hasSequencePractice) Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: const Color(0xFF1E293B),
@@ -366,7 +392,7 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
       return const SingleChildScrollView(
         padding: EdgeInsets.all(24),
         child: Text(
-          'Aucun entraînement local disponible pour cette notion. Retrouve les exercices publiés dans la rubrique Exercices du chapitre, ou pose une question dans l’onglet Tuteur Socratique.',
+          'Aucun entraînement local disponible pour cette notion. Retrouve les exercices publiés dans la rubrique Exercices du chapitre, ou pose une question au tuteur.',
           style: TextStyle(color: Colors.white70, fontSize: 16),
         ),
       );

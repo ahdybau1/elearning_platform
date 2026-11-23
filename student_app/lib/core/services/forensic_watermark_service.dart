@@ -27,7 +27,7 @@ class ForensicWatermarkService {
         Positioned.fill(
           child: IgnorePointer(
             child: Opacity(
-              opacity: 0.04, // Discret et infalsifiable
+              opacity: 0.025, // Discret (0.04 gênait la lecture des cartes sur téléphone), toujours présent
               child: Transform.rotate(
                 angle: -0.35,
                 child: Column(

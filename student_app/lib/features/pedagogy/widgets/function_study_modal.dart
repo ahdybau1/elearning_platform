@@ -674,7 +674,7 @@ class FunctionStudyModal extends StatelessWidget {
 
                   // 6. Tableau de Variations Officiel (Façon Lycée Français)
                   _buildSectionCard(
-                    title: '5. Tableau de Variations Officiel',
+                    title: '5. Tableau de variations',
                     icon: Icons.table_chart_rounded,
                     color: const Color(0xFF38BDF8),
                     children: [

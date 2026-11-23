@@ -1540,7 +1540,7 @@ class _FunctionGraphModalDialogState extends State<_FunctionGraphModalDialog> {
           children: [
             AcademicVariationTableView(
               data: widget.spec.academicVariationTable,
-              title: 'Tableau Officiel des Variations',
+              title: 'Tableau de variations',
             ),
             const SizedBox(height: 16),
             Container(

@@ -10,7 +10,7 @@ import '../../../core/models/student_models.dart';
 import '../../../design_system/components/empty_state_view.dart';
 import '../../../design_system/tokens/app_radius.dart';
 import 'chapter_intro_screen.dart';
-import '../../exercises/screens/exercise_path_screen.dart';
+import 'exercise_runner_screen.dart';
 import '../../../core/models/summary_sheet_registry.dart';
 import '../widgets/summary_sheet_viewer_modal.dart';
 
@@ -114,7 +114,7 @@ class ChaptersListScreen extends ConsumerWidget {
                   return ListView.separated(
                     padding: const EdgeInsets.all(20),
                     itemCount: chapters.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 16),
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final chapter = chapters[index];
                       return _ChapterItemCard(
@@ -136,7 +136,7 @@ class ChaptersListScreen extends ConsumerWidget {
 
   Widget _buildHeroBanner(SubjectVisual visual) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -145,13 +145,6 @@ class ChaptersListScreen extends ConsumerWidget {
           end: Alignment.bottomRight,
         ),
         borderRadius: AppRadius.radiusXLarge,
-        boxShadow: [
-          BoxShadow(
-            color: visual.gradient.last.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Stack(
         children: [
@@ -185,7 +178,7 @@ class ChaptersListScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Programme officiel — déblocage progressif par trimestre',
+                      'Les chapitres s\'ouvrent au fil des trimestres',
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         color: Colors.white.withValues(alpha: 0.85),
@@ -241,15 +234,6 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
               ? context.colors.border
               : context.colors.border.withValues(alpha: 0.4),
         ),
-        boxShadow: isUnlocked
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : null,
       ),
       child: Semantics(
         container: true,
@@ -346,7 +330,12 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        chapter.title,
+                        // Le badge « Chapitre N » numérote déjà : on retire la numérotation importée
+                        // (« I. », « Chapitre 1 : ») pour ne pas afficher deux numéros différents.
+                        chapter.title.replaceFirst(
+                          RegExp(r'^\s*(?:Chapitre\s+)?(?:[IVXLC]+|\d+)\s*[.:)\-–]\s*', caseSensitive: false),
+                          '',
+                        ),
                         style: GoogleFonts.outfit(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -355,10 +344,15 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                               : context.colors.textSecondary,
                         ),
                       ),
-                      if (chapter.introduction != null) ...[
+                      // L'introduction complète (souvent un bloc administratif : module, famille de
+                      // situations, volume horaire) reste dans la page « Introduction » ; la carte
+                      // n'en garde que 2 lignes.
+                      if (chapter.introduction?.trim().isNotEmpty ?? false) ...[
                         const SizedBox(height: 6),
                         Text(
-                          chapter.introduction!,
+                          chapter.introduction!.trim().replaceAll(RegExp(r'\s*\n+\s*'), ' · '),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.inter(
                             fontSize: 13,
                             color: context.colors.textSecondary,
@@ -401,7 +395,7 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                                     ),
                                     const SizedBox(width: 5),
                                     Text(
-                                      '${chapter.lessonsCount} leçons',
+                                      '${chapter.lessonsCount} leçon${chapter.lessonsCount > 1 ? 's' : ''}',
                                       style: GoogleFonts.inter(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
@@ -437,7 +431,7 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                                     ),
                                     const SizedBox(width: 5),
                                     Text(
-                                      '${chapter.exercisesCount} exercices',
+                                      '${chapter.exercisesCount} exercice${chapter.exercisesCount > 1 ? 's' : ''}',
                                       style: GoogleFonts.inter(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
@@ -457,6 +451,8 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                               runSpacing: 8,
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
+                                // Seulement si une introduction existe (sinon page vide « pas encore renseignée »).
+                                if (chapter.introduction?.trim().isNotEmpty ?? false)
                                 OutlinedButton.icon(
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor:
@@ -526,11 +522,13 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (_) => ExercisePathScreen(
-                                          subjectName:
-                                              (widget.subjectName ??
-                                                      'MATHEMATIQUES')
-                                                  .toUpperCase(),
+                                        // Les vrais exercices de CE chapitre (l'ancien écran
+                                        // « parcours » était une maquette figée : Mathématiques
+                                        // Terminale C & D, niveaux « Débloque à 12/15 »… montrée
+                                        // pour n'importe quel chapitre de n'importe quelle classe).
+                                        builder: (_) => ExerciseRunnerScreen(
+                                          chapterId: chapter.id,
+                                          chapterTitle: chapter.title,
                                         ),
                                       ),
                                     );

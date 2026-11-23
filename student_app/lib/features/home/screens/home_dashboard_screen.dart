@@ -35,10 +35,10 @@ class HomeDashboardScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Accueil épuré : l'essentiel (reprendre, matières) en haut, le reste en dessous.
             StudentScreenHeader(
-              title: 'Tableau de Bord',
-              subtitle:
-                  'Bienvenue, ${profile?.name ?? 'Élève'} — ${profile?.className ?? ''}',
+              title: 'Bonjour ${authState.account?.firstName ?? ''}'.trim(),
+              subtitle: profile?.className ?? '',
             ),
             const SizedBox(height: 16),
             // Anniversaire (fonctionnalité hors CDC, approuvée explicitement par l'utilisateur)
@@ -46,26 +46,14 @@ class HomeDashboardScreen extends ConsumerWidget {
               _buildBirthdayBanner(authState.account!.firstName),
               const SizedBox(height: 12),
             ],
-            // Subscription Status / Upgrade Banner
+            // Offre : seulement quand l'élève n'a pas d'abonnement (le détail d'un pass actif reste
+            // dans la page Abonnement, il n'a pas à occuper le haut de l'accueil chaque jour).
             if (profile?.hasActiveSubscription != true) ...[
               _buildSubscriptionBanner(context, ref),
               const SizedBox(height: 12),
-            ] else ...[
-              _buildActivePassCard(context, profile!),
-              const SizedBox(height: 12),
             ],
 
-            // §2.7 : compte à rebours vers l'examen officiel du profil actif — n'apparaît
-            // que si la classe compose réellement un examen national (§4).
-            if (profile != null)
-              _buildExamCountdownBanner(ref, profile.classNodeId),
-
-            // Temporal Unlocking & Trimester Tracker (§2.7/§3.3 — dates réelles, plus de
-            // "Trimestre 1" ni de 65% codés en dur)
-            if (profile != null)
-              _buildTrimesterStatusCard(context, ref, profile.classNodeId),
-
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
 
             // Section Title — le titre rétrécit avant de déborder (Expanded+ellipsis) : sur un
             // petit écran, "Vos Matières au Programme" + "Programme Officiel" côte à côte ne
@@ -76,7 +64,7 @@ class HomeDashboardScreen extends ConsumerWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Vos Matières au Programme',
+                    'Mes matières',
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
                     style: GoogleFonts.outfit(
@@ -84,15 +72,6 @@ class HomeDashboardScreen extends ConsumerWidget {
                       fontWeight: FontWeight.bold,
                       color: context.colors.textPrimary,
                     ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Programme Officiel',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: context.colors.accentPrimary,
-                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -130,7 +109,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Aucune matière programmée pour ${profile?.className ?? 'votre classe'} pour le moment.',
+                            'Aucune matière pour ${profile?.className ?? 'ta classe'} pour le moment.',
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               color: context.colors.textSecondary,
@@ -184,6 +163,14 @@ class HomeDashboardScreen extends ConsumerWidget {
 
             const SizedBox(height: 24),
 
+            // Repères de l'année, sous les matières : examen officiel (§2.7, seulement si la classe
+            // en compose un) et trimestre en cours (§3.3, dates réelles).
+            if (profile != null) ...[
+              _buildExamCountdownBanner(ref, profile.classNodeId),
+              _buildTrimesterStatusCard(context, ref, profile.classNodeId),
+              const SizedBox(height: 12),
+            ],
+
             // WhatsApp Official Community Card (§16 du cahier des charges)
             if (profile != null)
               _buildWhatsAppCard(context, ref, profile.classNodeId),
@@ -232,7 +219,7 @@ class HomeDashboardScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Débloquez Tout le Programme',
+                  'Débloque tout le programme',
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -241,7 +228,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Accès illimité aux cours, corrigés d\'examens & IA Tuteur.',
+                  'Tous les cours, les corrigés d\'examens et le tuteur, sans limite.',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: Colors.white.withValues(alpha: 0.9),
@@ -261,7 +248,7 @@ class HomeDashboardScreen extends ConsumerWidget {
             ),
             onPressed: () => PaywallModal.show(context),
             child: Text(
-              'Voir Offres',
+              'Voir les offres',
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
@@ -314,7 +301,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Toute l\'équipe de pq learn vous souhaite une excellente journée.',
+                  'Toute l\'équipe de pq learn te souhaite une excellente journée.',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: Colors.white.withValues(alpha: 0.9),
@@ -328,6 +315,7 @@ class HomeDashboardScreen extends ConsumerWidget {
     );
   }
 
+  // ignore: unused_element
   Widget _buildActivePassCard(BuildContext context, StudentProfile profile) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -802,7 +790,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Groupe WhatsApp Officiel de la Classe',
+                      'Groupe WhatsApp de ta classe',
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -891,7 +879,7 @@ class HomeDashboardScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Besoin d\'aide sur un exercice ?',
+                  'Bloqué(e) sur un exercice ?',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -899,7 +887,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  'L\'Assistant IA vous guide pas-à-pas sans donner la solution directement.',
+                  'Le tuteur t\'aide à comprendre, étape par étape.',
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     color: context.colors.textSecondary,

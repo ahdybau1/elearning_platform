@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/models/academic_node.dart';
 import '../../../core/models/content_models.dart';
+import '../../../core/models/enums.dart';
 import '../../../core/providers/data_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_dialog_title.dart';
@@ -170,6 +171,8 @@ class SubjectsByClassScreen extends ConsumerWidget {
                     _verificationBadge(link.verificationStatus),
                   ],
                 ),
+                const SizedBox(height: 6),
+                _coverageLine(link),
                 if (link.curriculumName != null) ...[
                   const SizedBox(height: 4),
                   Text(
@@ -220,6 +223,40 @@ class SubjectsByClassScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  /// Ce que l'élève voit réellement pour cette matière : chapitres propres + communs de la classe.
+  Widget _coverageLine(SubjectClassLink link) {
+    final visible = link.visibleChapters;
+    if (visible == null) return const SizedBox.shrink();
+    final inherits = link.inheritClassContent ?? true;
+    final common = link.classChapters ?? 0;
+    if (visible == 0) {
+      return Text(
+        common > 0 && !inherits
+            ? 'Aucun chapitre propre — $common chapitre(s) commun(s) de la classe non repris'
+            : 'Aucun chapitre : l\'élève voit une matière vide',
+        style: GoogleFonts.inter(fontSize: 11, color: AppTheme.accentRose, fontWeight: FontWeight.w600),
+      );
+    }
+    final parts = <String>[
+      '$visible chapitre${visible > 1 ? 's' : ''}'
+          '${inherits && common > 0 ? ' (dont $common commun${common > 1 ? 's' : ''} à la classe)' : ''}',
+      '${link.visibleLessons ?? 0} leçon${(link.visibleLessons ?? 0) > 1 ? 's' : ''}',
+      '${link.visibleExercises ?? 0} exercice${(link.visibleExercises ?? 0) > 1 ? 's' : ''}',
+    ];
+    return Row(
+      children: [
+        const Icon(Icons.visibility_outlined, size: 13, color: AppTheme.accentEmerald),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            parts.join(' · ') + (!inherits ? ' · programme spécifique' : ''),
+            style: GoogleFonts.inter(fontSize: 11, color: AppTheme.accentEmerald),
+          ),
+        ),
+      ],
     );
   }
 
@@ -298,6 +335,10 @@ class SubjectsByClassScreen extends ConsumerWidget {
     final newNameCtrl = TextEditingController();
     final newCodeCtrl = TextEditingController();
     bool isMandatory = existing?.isMandatory ?? true;
+    // Null = colonne absente (migration 96 non appliquée) : l'option n'est alors pas proposée.
+    final bool canInherit = existing == null || existing.inheritClassContent != null;
+    bool inheritClassContent = existing?.inheritClassContent ?? true;
+    final bool isSubLevel = node.nodeType == NodeType.series || node.nodeType == NodeType.specialty;
     final choiceGroupCtrl = TextEditingController(text: existing?.choiceGroup ?? '');
     String verificationStatus = existing?.verificationStatus ?? 'TO_VERIFY';
     final coefficientCtrl = TextEditingController(text: existing?.coefficient?.toString() ?? '');
@@ -388,6 +429,18 @@ class SubjectsByClassScreen extends ConsumerWidget {
                     value: isMandatory,
                     onChanged: (v) => setModalState(() => isMandatory = v),
                   ),
+                  if (canInherit && isSubLevel)
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Reprendre les chapitres communs de la classe',
+                          style: TextStyle(color: Colors.white, fontSize: 13)),
+                      subtitle: const Text(
+                          'À décocher si le programme de cette série diffère de celui posé sur la classe '
+                          '(ex. Informatique de Terminale TI ≠ Terminale D)',
+                          style: TextStyle(color: AppTheme.textMuted, fontSize: 11)),
+                      value: inheritClassContent,
+                      onChanged: (v) => setModalState(() => inheritClassContent = v),
+                    ),
                   if (!isMandatory)
                     TextField(
                       controller: choiceGroupCtrl,
@@ -505,6 +558,11 @@ class SubjectsByClassScreen extends ConsumerWidget {
                           notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
                           coefficient: num.tryParse(coefficientCtrl.text.trim()),
                           weeklyHours: num.tryParse(weeklyHoursCtrl.text.trim()),
+                          // Nouveau rattachement : valeur par défaut de la base (vrai), sauf si décoché.
+                          inheritClassContent: canInherit && isSubLevel &&
+                                  (existing?.inheritClassContent != null || !inheritClassContent)
+                              ? inheritClassContent
+                              : null,
                         );
                         ref.invalidate(subjectAssignmentsProvider(node.id));
                         if (ctx.mounted) Navigator.pop(ctx);

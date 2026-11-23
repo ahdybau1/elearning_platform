@@ -224,3 +224,25 @@ final classExercisesProvider =
   final service = ref.watch(studentSupabaseServiceProvider);
   return service.fetchExercisesForClass(classNodeId);
 });
+
+/// Dernier résultat de l'élève par exercice (parcours progressif).
+final exerciseResultsProvider =
+    FutureProvider.autoDispose.family<Map<String, bool?>, String>((ref, profileId) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchLatestExerciseResults(profileId);
+});
+
+/// Leçons lues / publiées par matière, pour la page Progression.
+final lessonStatsProvider = FutureProvider.autoDispose
+    .family<Map<String, ({int done, int total})>, ({String profileId, String classNodeId})>(
+        (ref, key) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchLessonStatsBySubject(profileId: key.profileId, classNodeId: key.classNodeId);
+});
+
+/// Compétences à consolider (moins de 50 % de réussite sur au moins 2 essais).
+final weakSkillsProvider = FutureProvider.autoDispose
+    .family<List<({String name, double mastery, int attempts})>, String>((ref, profileId) async {
+  final service = ref.watch(studentSupabaseServiceProvider);
+  return service.fetchWeakSkills(profileId);
+});
