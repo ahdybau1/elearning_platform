@@ -394,7 +394,7 @@ class _SummarySheetViewerModalState extends State<SummarySheetViewerModal> {
                       },
                       icon: const Icon(Icons.psychology_rounded, size: 15),
                       label: const Text(
-                        'Tuteur Socratique',
+                        'Demander au tuteur',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,

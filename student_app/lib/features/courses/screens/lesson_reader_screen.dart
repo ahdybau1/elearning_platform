@@ -14,7 +14,6 @@ import '../../../design_system/tokens/app_radius.dart';
 import '../../../design_system/tokens/app_colors.dart';
 import '../../subscription/screens/paywall_modal.dart';
 import 'derivative_lab_screen.dart';
-import '../../exercises/screens/exercise_prep_screen.dart';
 import '../../../core/models/summary_sheet_registry.dart';
 import '../widgets/summary_sheet_viewer_modal.dart';
 import '../../ai_tutor/widgets/contextual_ai_agent_sheet.dart';
@@ -305,13 +304,10 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
                     const SizedBox(height: 20),
                   ],
 
-                  // Accompagnement IA : Bouton contextuel Tuteur IA
-                  _buildAiTutorHelpCard(context, lesson),
-
-                  const SizedBox(height: 20),
-
-                  // Action de validation : Lancement du quiz du chapitre
+                  // Fin de leçon : d'abord s'exercer, puis l'aide du tuteur si besoin.
                   _buildLaunchQuizCard(context),
+                  const SizedBox(height: 10),
+                  _buildAiTutorHelpCard(context, lesson),
                 ],
               ),
             );
@@ -498,343 +494,63 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
   }
 
   /// Carte d'aide contextuelle par le Tuteur IA
+  /// Fin de leçon épurée : une action principale (les exercices du chapitre) et deux aides du
+  /// tuteur. Les outils scientifiques (labo tangente, calcul formel, mode chrono) restent dans le
+  /// menu « Outils de la leçon » de la barre du haut : ils s'affichaient ici sous chaque leçon,
+  /// y compris en Histoire ou en Anglais, avec 7 boutons empilés.
   Widget _buildAiTutorHelpCard(BuildContext context, Lesson lesson) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: context.colors.card,
-        borderRadius: AppRadius.radiusLarge,
-        border: Border.all(
-          color: AppColors.cyanAccent.withValues(alpha: 0.35),
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.cyanAccent.withValues(alpha: 0.08),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  gradient: AppColors.aiCompanionGradient,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.cyanAccent.withValues(alpha: 0.35),
-                      blurRadius: 10,
-                    ),
-                  ],
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.auto_awesome_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Tuteur & Diagnostic IA EDLEARN',
-                      style: GoogleFonts.outfit(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: context.colors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Explication socratique, analyse de pièges et entraînement ciblé.',
-                      style: GoogleFonts.inter(
-                        fontSize: 11.5,
-                        color: context.colors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.cyanAccent,
-                    side: BorderSide(
-                      color: AppColors.cyanAccent.withValues(alpha: 0.6),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.button),
-                    ),
-                  ),
-                  onPressed: () {
-                    ContextualAiAgentSheet.show(
-                      context,
-                      topicTitle: lesson.title,
-                      subject: widget.chapterTitle,
-                      initialMode: 'tutor',
-                    );
-                  },
-                  icon: const Icon(Icons.psychology_rounded, size: 16),
-                  label: const Text(
-                    'Tuteur IA',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.amberHighlight,
-                    side: BorderSide(
-                      color: AppColors.amberHighlight.withValues(alpha: 0.6),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.button),
-                    ),
-                  ),
-                  onPressed: () {
-                    ContextualAiAgentSheet.show(
-                      context,
-                      topicTitle: lesson.title,
-                      subject: widget.chapterTitle,
-                      initialMode: 'diagnostic',
-                    );
-                  },
-                  icon: const Icon(Icons.rule_rounded, size: 16),
-                  label: const Text(
-                    'Pièges d\'Examen',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.tealSuccess,
-                    foregroundColor: const Color(0xFF0A0E1A),
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.button),
-                    ),
-                  ),
-                  onPressed: () {
-                    ContextualAiAgentSheet.show(
-                      context,
-                      topicTitle: lesson.title,
-                      subject: widget.chapterTitle,
-                      initialMode: 'exercise',
-                    );
-                  },
-                  icon: const Icon(Icons.edit_note_rounded, size: 16),
-                  label: const Text(
-                    'S\'entraîner',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF10B981),
-                side: BorderSide(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.5),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.button),
-                ),
-              ),
-              onPressed: () {
-                ScientificToolsModal.show(context, initialQuery: lesson.title);
-              },
-              icon: const Icon(Icons.calculate_rounded, size: 16),
-              label: const Text(
-                'Atelier de Calcul Formel, Grapheur & Labos',
-                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
-              ),
+    final c = context.colors;
+    Widget help(IconData icon, String label, String mode) => Expanded(
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: c.textPrimary,
+              side: BorderSide(color: c.border),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
             ),
+            onPressed: () => ContextualAiAgentSheet.show(
+              context,
+              topicTitle: lesson.title,
+              subject: widget.chapterTitle,
+              initialMode: mode,
+            ),
+            icon: Icon(icon, size: 18, color: c.accentPrimary),
+            label: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           ),
-        ],
-      ),
+        );
+    return Row(
+      children: [
+        help(Icons.chat_bubble_outline_rounded, 'Poser une question', 'tutor'),
+        const SizedBox(width: 10),
+        help(Icons.report_gmailerrorred_rounded, 'Les pièges', 'diagnostic'),
+      ],
     );
   }
 
-  /// Carte de lancement des exercices interactifs
+  /// Action principale de fin de leçon : les exercices du chapitre.
   Widget _buildLaunchQuizCard(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: double.infinity,
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: context.colors.card,
-        borderRadius: AppRadius.radiusLarge,
-        border: Border.all(
-          color: context.colors.accentPrimary.withValues(alpha: 0.3),
+      child: FilledButton.icon(
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 15),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMedium),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: context.colors.accentPrimary.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.quiz_rounded,
-              color: Colors.white,
-              size: 26,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Valide tes connaissances',
-            style: GoogleFonts.outfit(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: context.colors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Mets en pratique ce cours avec la série d\'exercices et quiz du chapitre.',
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              color: context.colors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 18),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 12,
-            runSpacing: 10,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: AppRadius.radiusMedium,
-                  boxShadow: [
-                    BoxShadow(
-                      color: context.colors.accentPrimary.withValues(alpha: 0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 22,
-                      vertical: 14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.radiusMedium,
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/exercises',
-                      arguments: {
-                        'chapterId': widget.chapterId,
-                        'chapterTitle': widget.chapterTitle,
-                      },
-                    );
-                  },
-                  icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                  label: Text(
-                    'Démarrer les Exercices',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13.5),
-                  ),
-                ),
-              ),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF38BDF8),
-                  side: const BorderSide(color: Color(0xFF0284C7)),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppRadius.radiusMedium,
-                  ),
-                ),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const DerivativeLabScreen(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.science_outlined, size: 18),
-                label: const Text(
-                  'Labo Tangente',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF10B981),
-                  side: const BorderSide(color: Color(0xFF059669)),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppRadius.radiusMedium,
-                  ),
-                ),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const ExercisePrepScreen(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.timer_outlined, size: 18),
-                label: const Text(
-                  'Mode Concours & Chrono',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-        ],
+        onPressed: () {
+          Navigator.pushNamed(
+            context,
+            '/exercises',
+            arguments: {
+              'chapterId': widget.chapterId,
+              'chapterTitle': widget.chapterTitle,
+            },
+          );
+        },
+        icon: const Icon(Icons.play_arrow_rounded, size: 20),
+        label: Text(
+          'Faire les exercices du chapitre',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14),
+        ),
       ),
     );
   }

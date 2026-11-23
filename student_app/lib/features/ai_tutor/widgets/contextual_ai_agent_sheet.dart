@@ -229,7 +229,7 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Agents Pédagogiques EDLEARN',
+                            'Tuteur pq learn',
                             style: GoogleFonts.outfit(
                               color: Colors.white,
                               fontSize: 17,

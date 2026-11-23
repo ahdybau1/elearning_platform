@@ -114,7 +114,7 @@ class ChaptersListScreen extends ConsumerWidget {
                   return ListView.separated(
                     padding: const EdgeInsets.all(20),
                     itemCount: chapters.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 16),
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final chapter = chapters[index];
                       return _ChapterItemCard(
@@ -136,7 +136,7 @@ class ChaptersListScreen extends ConsumerWidget {
 
   Widget _buildHeroBanner(SubjectVisual visual) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -145,13 +145,6 @@ class ChaptersListScreen extends ConsumerWidget {
           end: Alignment.bottomRight,
         ),
         borderRadius: AppRadius.radiusXLarge,
-        boxShadow: [
-          BoxShadow(
-            color: visual.gradient.last.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Stack(
         children: [
@@ -185,7 +178,7 @@ class ChaptersListScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Programme officiel — déblocage progressif par trimestre',
+                      'Les chapitres s\'ouvrent au fil des trimestres',
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         color: Colors.white.withValues(alpha: 0.85),
@@ -241,15 +234,6 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
               ? context.colors.border
               : context.colors.border.withValues(alpha: 0.4),
         ),
-        boxShadow: isUnlocked
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : null,
       ),
       child: Semantics(
         container: true,
@@ -346,7 +330,12 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        chapter.title,
+                        // Le badge « Chapitre N » numérote déjà : on retire la numérotation importée
+                        // (« I. », « Chapitre 1 : ») pour ne pas afficher deux numéros différents.
+                        chapter.title.replaceFirst(
+                          RegExp(r'^\s*(?:Chapitre\s+)?(?:[IVXLC]+|\d+)\s*[.:)\-–]\s*', caseSensitive: false),
+                          '',
+                        ),
                         style: GoogleFonts.outfit(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

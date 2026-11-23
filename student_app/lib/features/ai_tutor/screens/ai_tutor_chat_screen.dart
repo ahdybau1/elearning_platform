@@ -664,7 +664,7 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Le tuteur réfléchit à un indice socratique...',
+                            'Le tuteur réfléchit…',
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               color: colors.textSecondary,

@@ -352,7 +352,16 @@ class StudentSupabaseService {
       columns: '*, terms(name, start_date)',
     );
 
-    final chapters = rows.map((r) => Chapter.fromJson(Map<String, dynamic>.from(r))).toList();
+    // Ordre du programme : trimestre d'abord, puis ordre dans le trimestre. Indispensable depuis
+    // que les chapitres propres à la série et ceux communs à la classe sont réunis (migration 96).
+    String termStart(dynamic r) =>
+        ((r as Map)['terms'] as Map?)?['start_date'] as String? ?? '9999';
+    int order(dynamic r) => ((r as Map)['display_order'] as num?)?.toInt() ?? 0;
+    final sortedRows = [...rows]..sort((a, b) {
+        final t = termStart(a).compareTo(termStart(b));
+        return t != 0 ? t : order(a).compareTo(order(b));
+      });
+    final chapters = sortedRows.map((r) => Chapter.fromJson(Map<String, dynamic>.from(r))).toList();
     if (chapters.isEmpty) return [];
 
     final chapterIds = chapters.map((c) => c.id).toList();
