@@ -6,6 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/auth/student_auth_provider.dart';
+import '../../../core/models/student_models.dart';
+import '../../../core/providers/student_providers.dart';
 import '../../../core/rendering/ai_message_bubble_renderer.dart';
 import '../../../core/services/local_chat_storage_service.dart';
 import '../../../core/theme/student_theme.dart';
@@ -46,10 +48,32 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
   bool _isLoadingSessions = true;
   bool _isGenerating = false;
 
+  /// 3 suggestions + la photo : d'abord ce qui vient du parcours de l'élève, complété au besoin par
+  /// des suggestions générales (valables à tous les niveaux).
+  List<Map<String, dynamic>> _starters() {
+    const icons = {
+      TutorSuggestionKind.retry: Icons.replay_rounded,
+      TutorSuggestionKind.check: Icons.fact_check_outlined,
+      TutorSuggestionKind.chapter: Icons.menu_book_outlined,
+    };
+    final generic = _genericStarters();
+    final photo = generic.firstWhere((g) => g['action'] == 'photo');
+    final items = <Map<String, dynamic>>[
+      for (final p in _personal)
+        {'icon': icons[p.kind], 'title': p.title, 'subtitle': p.subtitle, 'prompt': p.prompt},
+    ];
+    for (final g in generic) {
+      if (items.length >= 3) break;
+      if (g['action'] == 'photo') continue;
+      items.add(g);
+    }
+    return [...items.take(3), photo];
+  }
+
   /// Suggestions de départ adaptées à la matière ouverte (ou générales), valables de la 6e à la
   /// Terminale et dans toutes les matières. Les anciennes cartes proposaient à tous les élèves des
   /// sujets de Terminale scientifique (polynômes, TVI, dérivée d'un quotient).
-  List<Map<String, dynamic>> _starters() {
+  List<Map<String, dynamic>> _genericStarters() {
     final subject = widget.subjectName;
     if (subject != null && subject.trim().isNotEmpty) {
       return [
@@ -101,10 +125,28 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
     ];
   }
 
+  /// Suggestions tirées du parcours réel de l'élève (exercices ratés, leçons terminées, chapitre
+  /// en cours de SA classe). Chargées une fois ; les suggestions générales ne font que compléter.
+  List<TutorSuggestion> _personal = const [];
+
+  Future<void> _loadPersonalSuggestions() async {
+    final profile = ref.read(studentAuthProvider).activeProfile;
+    if (profile == null) return;
+    final classNodeId = widget.classNodeId ?? profile.classNodeId;
+    if (classNodeId.isEmpty) return;
+    final list = await ref.read(studentSupabaseServiceProvider).fetchTutorSuggestions(
+          profileId: profile.id,
+          classNodeId: classNodeId,
+          subjectId: widget.subjectId,
+        );
+    if (mounted) setState(() => _personal = list);
+  }
+
   @override
   void initState() {
     super.initState();
     _loadLocalSessions();
+    _loadPersonalSuggestions();
   }
 
   @override
@@ -744,13 +786,30 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                               Icon(starter['icon'] as IconData, size: 20, color: colors.accentPrimary),
                               const SizedBox(width: 12),
                               Expanded(
-                                child: Text(
-                                  starter['title'] as String,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: colors.textPrimary,
-                                  ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      starter['title'] as String,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: colors.textPrimary,
+                                      ),
+                                    ),
+                                    if ((starter['subtitle'] as String?)?.isNotEmpty ?? false)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 2),
+                                        child: Text(
+                                          starter['subtitle'] as String,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.inter(fontSize: 12, color: colors.textMuted),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
                               Icon(Icons.chevron_right_rounded, size: 20, color: colors.textMuted),

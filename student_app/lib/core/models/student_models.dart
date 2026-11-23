@@ -1091,3 +1091,22 @@ class AppSettings {
     );
   }
 }
+
+
+enum TutorSuggestionKind { retry, check, chapter }
+
+/// Suggestion de départ du tuteur, construite à partir du parcours réel de l'élève
+/// (`fetchTutorSuggestions`).
+class TutorSuggestion {
+  final TutorSuggestionKind kind;
+  final String title;
+  final String subtitle;
+  final String prompt;
+
+  const TutorSuggestion({
+    required this.kind,
+    required this.title,
+    required this.subtitle,
+    required this.prompt,
+  });
+}
