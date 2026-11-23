@@ -35,7 +35,7 @@ class _DerivativeLabScreenState extends State<DerivativeLabScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
-          'MATHÉMATIQUES • TERMINALE C & D',
+          'LABO · DÉRIVÉE ET TANGENTE',
           style: TextStyle(
             color: AppColors.tealSuccess,
             fontSize: 12,

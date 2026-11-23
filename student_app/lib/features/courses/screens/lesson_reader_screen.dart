@@ -124,6 +124,9 @@ class _LessonReaderScreenState extends ConsumerState<LessonReaderScreen> {
                     title: Text('Fiche mémo'),
                   ),
                 ),
+              // Le labo est un labo de dérivée/tangente : proposé seulement dans les chapitres qui
+              // en parlent (il apparaissait sous toutes les leçons, Histoire comprise).
+              if (RegExp(r'd[ée]riv|tangent', caseSensitive: false).hasMatch(widget.chapterTitle))
               const PopupMenuItem(
                 value: _LessonTool.lab,
                 child: ListTile(
