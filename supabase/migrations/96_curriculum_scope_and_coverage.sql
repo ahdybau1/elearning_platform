@@ -165,4 +165,23 @@ update subject_class_links l set inherit_class_content = false
                 where c.class_node_id = p.id and c.subject_id = s.id and c.is_active
                   and c.title ilike '%MERISE%');
 
+-- ── 7. RAG du tuteur : les extraits posés sur la classe servent aussi à ses séries ──────────────
+-- Même signature que la migration 59 ; seule la condition sur la classe change.
+create or replace function match_rag_chunks(
+    query_embedding vector(768),
+    match_class_node_id uuid default null,
+    match_subject_id uuid default null,
+    match_count int default 5
+)
+returns table (id uuid, source_id uuid, content text, similarity float)
+as $$
+    select c.id, c.source_id, c.content, 1 - (c.embedding <=> query_embedding) as similarity
+      from ai_rag_chunks c
+     where (match_class_node_id is null
+            or c.class_node_id = any (content_scope_nodes(match_class_node_id)))
+       and (match_subject_id is null or c.subject_id = match_subject_id)
+     order by c.embedding <=> query_embedding
+     limit least(greatest(match_count, 1), 20);
+$$ language sql stable security definer set search_path = public;
+
 notify pgrst, 'reload schema';

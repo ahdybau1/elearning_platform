@@ -31,7 +31,7 @@ const corsHeaders = {
 // Les champs fournis par un appelant (Gateway) restent prioritaires : aucune régression.
 // 1.3.0 (2026-09-17) : support multimodal complet (photos/OCR devoirs manuscrits, documents PDF,
 // enregistrements audio/voix) transmis en inline_data à Google Gemini sans stockage BDD.
-const AGENT_VERSION = "1.3.1";
+const AGENT_VERSION = "1.4.0";
 // Liste ordonnée de modèles Gemini gratuits avec cascade de secours automatique :
 // Si un modèle subit une saturation de quota (429) ou indisponibilité (503),
 // la requête bascule instantanément sur le modèle suivant de la chaîne.
@@ -143,6 +143,70 @@ async function ragSearch(
 // Student Model (U9) — jamais un chiffre inventé : uniquement ce que get_student_skill_mastery
 // renvoie réellement depuis exercise_attempts. Même formatage que format_mastery_summary côté
 // Gateway, pour que les deux chemins produisent le même prompt.
+// Programme réel de l'élève, lu en base à partir de class_node_id (jamais du libellé envoyé par
+// l'app) : libellé officiel de la classe (« Terminale D »), matières de la série et chapitres déjà
+// ouverts de la matière en cours (trimestres commencés). Sert à « rester dans le programme » de
+// façon vérifiable au lieu d'une simple consigne. Tolère l'absence des migrations 95/96.
+async function programmeContext(
+  classNodeId: string,
+  subjectId: string | null,
+): Promise<{ label: string | null; text: string | null }> {
+  try {
+    let label: string | null = null;
+    const withLabel = await supabase
+      .from("academic_nodes").select("name, display_label").eq("id", classNodeId).maybeSingle();
+    if (!withLabel.error) {
+      label = (withLabel.data?.display_label ?? withLabel.data?.name ?? null) as string | null;
+    } else {
+      const plain = await supabase.from("academic_nodes").select("name").eq("id", classNodeId).maybeSingle();
+      label = (plain.data?.name ?? null) as string | null;
+    }
+
+    const { data: links } = await supabase
+      .from("subject_class_links").select("subjects(name)").eq("class_node_id", classNodeId);
+    const subjects: string[] = [];
+    for (const l of (links ?? []) as Record<string, unknown>[]) {
+      const name = (l.subjects as Record<string, unknown> | null)?.name;
+      if (typeof name === "string") subjects.push(name);
+    }
+    subjects.sort();
+
+    const lines: string[] = [];
+    if (label) lines.push(`Classe : ${label}.`);
+    if (subjects.length) lines.push(`Matières de sa classe : ${subjects.join(", ")}.`);
+
+    if (subjectId) {
+      const today = new Date().toISOString().slice(0, 10);
+      let rows: Record<string, unknown>[] | null = null;
+      const viaScope = await supabase
+        .rpc("chapters_for_node", { p_node: classNodeId, p_subject: subjectId })
+        .select("title, display_order, terms(name, start_date)")
+        .order("display_order");
+      if (!viaScope.error) {
+        rows = viaScope.data as Record<string, unknown>[];
+      } else {
+        const direct = await supabase
+          .from("chapters").select("title, display_order, terms(name, start_date)")
+          .eq("class_node_id", classNodeId).eq("subject_id", subjectId).eq("is_active", true)
+          .order("display_order");
+        rows = (direct.data ?? []) as Record<string, unknown>[];
+      }
+      const opened = (rows ?? []).filter((r) => {
+        const start = (r.terms as Record<string, unknown> | null)?.start_date as string | undefined;
+        return !start || start <= today;
+      });
+      if (opened.length) {
+        const titles = opened.slice(0, 30).map((r) => `- ${String(r.title)}`).join("\n");
+        lines.push(`Chapitres déjà ouverts dans cette matière (programme suivi sur pq learn) :\n${titles}`);
+      }
+    }
+    return { label, text: lines.length ? lines.join("\n") : null };
+  } catch (e) {
+    console.warn("Contexte programme indisponible:", e);
+    return { label: null, text: null };
+  }
+}
+
 async function masterySummary(
   profileId: string,
   subjectId: string,
@@ -269,6 +333,12 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // Programme officiel de l'élève (classe, matières, chapitres ouverts) — lu côté serveur.
+    const programme = class_node_id
+      ? await programmeContext(String(class_node_id), subject_id ? String(subject_id) : null)
+      : { label: null, text: null };
+    const classLabel = programme.label ?? class_name ?? null;
+
     // Détection des salutations pures (bonjour, salut, coucou, bonsoir...)
     const cleanMsg = message.trim().toLowerCase().replace(/[!?,.;:]+$/, "").trim();
     const isGreeting = /^(bonjour|bonsoir|salut|coucou|hello|hi|hey|yo|bonne\s+journée|bon\s+après[- ]midi)$/i.test(cleanMsg) ||
@@ -304,7 +374,9 @@ Deno.serve(async (req: Request) => {
     }
     const cacheable = effectiveMastery === null && !hasAttachments && !isGreeting;
     const cacheKey = await sha256Hex(
-      `${message.trim().toLowerCase()}|${subject_id ?? ""}|${lesson_id ?? ""}`,
+      // La classe fait partie de la clé : une même matière (« Mathématiques ») couvre la 6e comme la
+      // Terminale, une réponse mise en cache pour l'une ne doit jamais servir l'autre.
+      `${message.trim().toLowerCase()}|${class_node_id ?? class_name ?? ""}|${subject_id ?? ""}|${lesson_id ?? ""}`,
     );
 
     if (cacheable) {
@@ -364,35 +436,38 @@ Deno.serve(async (req: Request) => {
       : "";
 
     const systemPrompt =
-      `Tu es le Tuteur pq learn, tuteur pédagogique numérique bienveillant pour un(e) élève de ${
-        class_name ?? "l'enseignement secondaire"
+      `Tu es le Tuteur pq learn, tuteur bienveillant d'un(e) élève camerounais(e) de ${
+        classLabel ?? "l'enseignement secondaire"
       }, en ${subject_name ?? "toutes matières"}.
-Règles pédagogiques et éthiques :
-- Démarche maïeutique et socratique : guide l'élève pas à pas vers la compréhension par des questions stimulantes et des indices progressifs. Ne donne JAMAIS directement la solution finale d'un exercice.
-- Reste toujours dans le programme officiel de sa classe, sans bloquer le hors-programme si l'élève insiste.
-- Explique toujours les erreurs (le "pourquoi" et la méthode), jamais un simple "faux".
-- Public mineur : langage toujours respectueux, empathique et encourageant. Refuse poliment tout contenu hors cadre scolaire.
-- Tu es un outil d'aide : encourage à vérifier avec son professeur en cas de doute.${greetingRule}
 
-Mise en forme soignée (Markdown riche, LaTeX & Émojis) :
-- Structure tes réponses avec des sous-titres clairs (###), des listes numérotées (1., 2.) pour les étapes, et des puces (- ) pour les critères.
-- Mets en **gras** les notions clés, les termes essentiels et les étapes.
-- Mets en *italique* les indices subtils et remarques méthodologiques.
-- Encadre les rappels et astuces avec une citation : > 💡 **Conseil** : ...
-- Formules mathématiques : écris TOUJOURS les variables, fractions et formules en notation LaTeX standard entre $...$ pour l'en-ligne (ex: $\\Delta = b^2 - 4ac$, $x = \\frac{-b \\pm \\sqrt{\\Delta}}{2a}$) ou $$...$$ pour une équation officielle centrée.
-- Schémas & Représentations Graphiques (§1 & §6 CDC) :
-  - INTERDICTION STRICTE DE L'ART ASCII : Ne dessine JAMAIS de graphiques, de montagnes, de repères ou de figures avec des caractères texte (barres |, tirets -, slashs /, anti-slashs \, flèches ^, croix + ou étoiles *). C'est illisible, laid et interdit dans l'interface.
-  - N'invente JAMAIS d'URLs d'images externes aléatoires (pas d'images génératives IA qui inventent des courbes fausses).
-  - Pour illustrer une fonction ou un théorème (ex : Théorème des Valeurs Intermédiaires, TVI, parabole, dérivée) : écris TOUJOURS une formule concrète en notation LaTeX (ex: $f(x) = x^3 - 3x + 1$ ou $P(x) = 2x^2 - 4x - 6$). L'application Flutter détecte la fonction et affiche automatiquement un bouton interactif « Tracer la courbe & tangente » pour ouvrir un repère cartésien vectoriel propre et manipulable au doigt !
-  - Pour les démarches et algorithmes : utilise des listes à puces numérotées, des flèches textuelles simples (➔) ou des tableaux Markdown.
-  - Pour les documents officiels : cite les extraits de cours et fiches validées du contexte.
+Pédagogie :
+- Guide pas à pas par des questions et des indices progressifs. Pour un exercice, ne donne pas la solution finale d'emblée : propose d'abord la méthode et la première étape, puis vérifie ce que l'élève a compris. Si l'élève a déjà essayé et bloque encore, montre la résolution complète en expliquant chaque étape.
+- Pour une question de cours, réponds directement et clairement, avec un exemple simple.
+- Reste dans le programme de sa classe (voir « Programme de l'élève » ci-dessous quand il est fourni) et dans les notations utilisées au Cameroun. Si la question dépasse sa classe, dis-le en une phrase puis aide quand même à son niveau.
+- Explique toujours le pourquoi d'une erreur, jamais un simple « faux ».
+- Public mineur : ton respectueux et encourageant ; refuse poliment ce qui sort du cadre scolaire.
+- Si tu n'es pas sûr d'un fait (date, définition officielle, barème), dis-le et invite à vérifier avec le professeur.${greetingRule}
 
-Support multimodal :
-- Analyse minutieusement les photos/images jointes (OCR d'exercice manuscrit, figure, livre), cite les données reconnues et aide l'élève.
-- Écoute ou lis attentivement les mémos vocaux et documents joints pour répondre précisément.`;
+Forme (l'écran est souvent un téléphone) :
+- Court par défaut : 3 à 8 phrases ou une courte liste d'étapes. Développe seulement si l'élève le demande ou si la démarche l'exige.
+- Pas de titre pour une réponse courte. Pour une réponse longue, au plus 2 ou 3 sous-titres (###).
+- **Gras** seulement pour les 1 à 3 notions clés. Au plus un émoji, et seulement s'il aide.
+- Étapes : liste numérotée (1., 2.). Comparaisons : petit tableau Markdown.
+- Une astuce ou un piège à retenir : une seule ligne citée, « > Astuce : … ».
+- Maths et sciences : LaTeX entre $...$ en ligne, $$...$$ pour une formule importante seule sur sa ligne. Unités et chiffres significatifs comme en classe.
+- Termine, si c'est utile, par une seule question pour faire avancer l'élève.
+
+Figures :
+- Jamais de dessin en caractères texte (ASCII), jamais d'URL d'image inventée.
+- Pour une fonction, écris-la en LaTeX (ex. $f(x) = x^2 - 4x + 3$) : l'application propose alors de tracer la courbe.
+
+Pièces jointes : lis attentivement photos, documents et mémos vocaux, reprends les données reconnues, puis aide.`;
 
     // IA-007 : contexte additif — soit fourni par la Gateway, soit calculé ci-dessus (1.2.0).
     const contextSections: string[] = [];
+    if (programme.text && !isGreeting) {
+      contextSections.push(`Programme de l'élève :\n${programme.text}`);
+    }
     if (effectiveRagContext && !isGreeting) {
       contextSections.push(
         `Extraits de cours validés à utiliser en priorité pour les faits pédagogiques (cite la source entre crochets si tu t'en sers) :\n${effectiveRagContext}`,

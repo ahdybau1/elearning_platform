@@ -9,6 +9,7 @@ import '../../features/pedagogy/widgets/function_study_modal.dart';
 import '../../features/pedagogy/widgets/scientific_tools_modal.dart';
 import 'math_formula_view.dart';
 import 'latex_to_unicode_converter.dart';
+import '../theme/student_theme.dart';
 
 /// Renderer pédagogique universel pour les messages du Tuteur pq learn et textes mixtes.
 ///
@@ -60,17 +61,39 @@ class AiMessageBubbleRenderer extends StatelessWidget {
     return null;
   }
 
+  /// Les modèles écrivent souvent \( … \) pour les formules en ligne : ramené à $ … $, seul
+  /// délimiteur en ligne compris par [InlineLatexText].
+  static String normalizeDelimiters(String text) => text.replaceAllMapped(
+        RegExp(r'\\\((.+?)\\\)', dotAll: true),
+        (m) => '\$${m.group(1)!.trim()}\$',
+      );
+
+  /// Le bandeau « fonction » ne s'affiche que si la réponse parle vraiment d'une fonction : une
+  /// écriture f(x) = …, ou un polynôme dans une réponse qui parle de fonction/polynôme/équation
+  /// (sinon un simple « x² » en physique faisait apparaître trois gros boutons).
+  static String? _functionWorthExploring(String text) {
+    final expr = detectFunctionExpression(text);
+    if (expr == null) return null;
+    if (RegExp(r'[a-zA-Z]\(x\)\s*=').hasMatch(expr)) return expr;
+    final lower = text.toLowerCase();
+    const topics = ['fonction', 'polynôme', 'polynome', 'trinôme', 'trinome', 'équation', 'equation', 'courbe'];
+    return topics.any(lower.contains) ? expr : null;
+  }
+
+  Color _strong(BuildContext context) => isAssistant ? context.colors.textPrimary : Colors.white;
+
   @override
   Widget build(BuildContext context) {
     final style = baseStyle ??
         GoogleFonts.inter(
-          fontSize: 14,
-          height: 1.5,
-          color: isAssistant ? const Color(0xFFF1F5F9) : Colors.white,
+          fontSize: 14.5,
+          height: 1.55,
+          color: isAssistant ? context.colors.textPrimary : Colors.white,
         );
 
-    final detectedFunction = detectFunctionExpression(message);
-    final blocks = _parseMessageBlocks(message);
+    final text = normalizeDelimiters(message);
+    final detectedFunction = isAssistant ? _functionWorthExploring(text) : null;
+    final blocks = _parseMessageBlocks(text);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,15 +115,26 @@ class AiMessageBubbleRenderer extends StatelessWidget {
 
     switch (block.type) {
       case _BlockType.displayMath:
+        return _buildDisplayMath(context, block.content);
+
+      case _BlockType.heading4:
         return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: MathFormulaView(
-            formulaLatex: block.content,
-            fontSize: 18,
-            label: 'FORMULE ANALYSÉE',
-            showCopyButton: false,
+          padding: const EdgeInsets.only(top: 8, bottom: 2),
+          child: InlineLatexText(
+            block.content,
+            style: style.copyWith(fontWeight: FontWeight.w700),
+            mathColor: themeColor,
           ),
         );
+
+      case _BlockType.rule:
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Divider(height: 1, color: isAssistant ? context.colors.border : Colors.white24),
+        );
+
+      case _BlockType.table:
+        return _buildTable(context, block, style, themeColor);
 
       case _BlockType.image:
         return _buildImageBlock(context, block);
@@ -113,7 +147,7 @@ class AiMessageBubbleRenderer extends StatelessWidget {
             style: GoogleFonts.outfit(
               fontSize: 17,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: _strong(context),
               letterSpacing: -0.3,
             ),
           ),
@@ -154,7 +188,7 @@ class AiMessageBubbleRenderer extends StatelessWidget {
                   style: GoogleFonts.outfit(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: _strong(context),
                   ),
                 ),
               ),
@@ -212,14 +246,8 @@ class AiMessageBubbleRenderer extends StatelessWidget {
                 height: 6,
                 margin: const EdgeInsets.only(top: 7, right: 10, left: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryCyan,
+                  color: themeColor,
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primaryCyan.withAlpha(120),
-                      blurRadius: 4,
-                    ),
-                  ],
                 ),
               ),
               Expanded(
@@ -239,19 +267,16 @@ class AiMessageBubbleRenderer extends StatelessWidget {
           margin: const EdgeInsets.symmetric(vertical: 6),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFF0B132B).withAlpha(160),
+            color: isAssistant ? context.colors.surface : Colors.white.withAlpha(30),
             borderRadius: BorderRadius.circular(8),
-            border: const Border(
-              left: BorderSide(color: AppColors.primaryCyan, width: 3.5),
+            border: Border(
+              left: BorderSide(color: themeColor, width: 3),
             ),
           ),
           child: InlineLatexText(
             block.content,
-            style: style.copyWith(
-              color: const Color(0xFFE2E8F0),
-              fontStyle: FontStyle.italic,
-            ),
-            mathColor: AppColors.primaryCyan,
+            style: style.copyWith(color: _strong(context)),
+            mathColor: themeColor,
           ),
         );
 
@@ -543,145 +568,118 @@ class AiMessageBubbleRenderer extends StatelessWidget {
     );
   }
 
-  Widget _buildInteractiveFunctionBar(BuildContext context, String rawFunction) {
-    final cleanExpr = LatexToUnicodeConverter.convert(rawFunction);
-
+  /// Formule centrée sur un fond discret, défilable si elle est plus large que la bulle. Les
+  /// environnements que flutter_math ne sait pas rendre retombent sur [MathFormulaView] (MathJax).
+  Widget _buildDisplayMath(BuildContext context, String latex) {
+    final c = context.colors;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF0B132B),
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.primaryCyan.withAlpha(90), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryCyan.withAlpha(20),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: isAssistant ? c.surface : Colors.white.withAlpha(30),
+        borderRadius: BorderRadius.circular(10),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(5),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryCyan.withAlpha(40),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.auto_graph_rounded, color: AppColors.primaryCyan, size: 16),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Row(
-                  children: [
-                    Text(
-                      'Fonction identifiée : ',
-                      style: GoogleFonts.outfit(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Math.tex(
-                          rawFunction,
-                          mathStyle: MathStyle.text,
-                          textStyle: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Math.tex(
+          latex,
+          mathStyle: MathStyle.display,
+          textStyle: TextStyle(fontSize: 17, color: _strong(context)),
+          onErrorFallback: (_) => MathFormulaView(
+            formulaLatex: latex,
+            fontSize: 17,
+            showCopyButton: false,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Tableau Markdown (| a | b |) : en-tête en gras, défilement horizontal sur téléphone.
+  Widget _buildTable(BuildContext context, _MessageBlock block, TextStyle style, Color themeColor) {
+    final c = context.colors;
+    final rows = block.rows ?? const <List<String>>[];
+    if (rows.isEmpty) return const SizedBox.shrink();
+    final width = rows.map((r) => r.length).reduce((a, b) => a > b ? a : b);
+    final border = isAssistant ? c.border : Colors.white24;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        border: Border.all(color: border),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Table(
+          defaultColumnWidth: const IntrinsicColumnWidth(),
+          border: TableBorder(
+            horizontalInside: BorderSide(color: border),
+            verticalInside: BorderSide(color: border),
+          ),
+          children: [
+            for (var i = 0; i < rows.length; i++)
+              TableRow(
+                decoration: i == 0
+                    ? BoxDecoration(color: isAssistant ? c.surface : Colors.white.withAlpha(30))
+                    : null,
+                children: [
+                  for (var j = 0; j < width; j++)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 240),
+                        child: InlineLatexText(
+                          j < rows[i].length ? rows[i][j] : '',
+                          style: style.copyWith(
+                            fontSize: 13,
+                            fontWeight: i == 0 ? FontWeight.w700 : FontWeight.normal,
                           ),
-                          onErrorFallback: (_) => Text(
-                            cleanExpr,
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                          mathColor: themeColor,
                         ),
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryCyan,
-                  foregroundColor: const Color(0xFF0F172A),
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                icon: const Icon(Icons.timeline_rounded, size: 15),
-                label: const Text(
-                  'Tracer la courbe',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                ),
-                onPressed: () {
-                  InteractiveFunctionGraph.showModal(
-                    context,
-                    expression: rawFunction,
-                    title: 'Tracé de $cleanExpr',
-                  );
-                },
-              ),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF8B5CF6),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                icon: const Icon(Icons.analytics_rounded, size: 15),
-                label: const Text(
-                  'Étude de la fonction',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                ),
-                onPressed: () {
-                  FunctionStudyModal.show(
-                    context,
-                    rawFunction,
-                  );
-                },
-              ),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.tealSuccess,
-                  side: const BorderSide(color: AppColors.tealSuccess, width: 1.1),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                icon: const Icon(Icons.calculate_rounded, size: 15),
-                label: const Text(
-                  'Calcul formel exact',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                ),
-                onPressed: () {
-                  ScientificToolsModal.show(
-                    context,
-                    initialQuery: rawFunction,
-                  );
-                },
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+
+  /// Une seule ligne discrète d'outils au lieu d'un encadré à trois gros boutons.
+  Widget _buildInteractiveFunctionBar(BuildContext context, String rawFunction) {
+    final c = context.colors;
+    final cleanExpr = LatexToUnicodeConverter.convert(rawFunction);
+    Widget action(IconData icon, String label, VoidCallback onTap) => TextButton.icon(
+          style: TextButton.styleFrom(
+            foregroundColor: c.accentPrimary,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            minimumSize: const Size(0, 34),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+              side: BorderSide(color: c.border),
+            ),
+          ),
+          icon: Icon(icon, size: 15),
+          label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          onPressed: onTap,
+        );
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text('Explorer $cleanExpr :', style: GoogleFonts.inter(fontSize: 12, color: c.textSecondary)),
+        action(Icons.timeline_rounded, 'Courbe', () {
+          InteractiveFunctionGraph.showModal(context, expression: rawFunction, title: 'Tracé de $cleanExpr');
+        }),
+        action(Icons.analytics_outlined, 'Étude', () => FunctionStudyModal.show(context, rawFunction)),
+        action(Icons.calculate_outlined, 'Calcul exact',
+            () => ScientificToolsModal.show(context, initialQuery: rawFunction)),
+      ],
     );
   }
 
@@ -748,10 +746,48 @@ class AiMessageBubbleRenderer extends StatelessWidget {
       }
     }
 
-    for (final rawLine in lines) {
+    bool isTableLine(String l) => l.startsWith('|') && l.endsWith('|') && l.length > 2;
+    bool isSeparator(String l) => RegExp(r'^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?$').hasMatch(l);
+    List<String> cells(String l) {
+      var t = l.trim();
+      if (t.startsWith('|')) t = t.substring(1);
+      if (t.endsWith('|')) t = t.substring(0, t.length - 1);
+      return t.split('|').map((e) => e.trim()).toList();
+    }
+
+    for (var i = 0; i < lines.length; i++) {
+      final rawLine = lines[i];
       final trimmed = rawLine.trim();
       if (trimmed.isEmpty) {
         flushParagraph();
+        continue;
+      }
+
+      // Tableau Markdown : ligne d'en-tête suivie d'une ligne |---|---|
+      if (isTableLine(trimmed) && i + 1 < lines.length && isSeparator(lines[i + 1].trim())) {
+        flushParagraph();
+        final rows = <List<String>>[cells(trimmed)];
+        i += 2;
+        while (i < lines.length && isTableLine(lines[i].trim())) {
+          rows.add(cells(lines[i].trim()));
+          i++;
+        }
+        i--;
+        blocks.add(_MessageBlock(type: _BlockType.table, content: '', rows: rows));
+        continue;
+      }
+
+      // Séparateur horizontal
+      if (RegExp(r'^(-{3,}|\*{3,}|_{3,})$').hasMatch(trimmed)) {
+        flushParagraph();
+        blocks.add(const _MessageBlock(type: _BlockType.rule, content: ''));
+        continue;
+      }
+
+      final h4Match = RegExp(r'^#{4,6}\s+(.*)$').firstMatch(trimmed);
+      if (h4Match != null) {
+        flushParagraph();
+        blocks.add(_MessageBlock(type: _BlockType.heading4, content: h4Match.group(1)!.trim()));
         continue;
       }
 
@@ -847,6 +883,9 @@ enum _BlockType {
   heading1,
   heading2,
   heading3,
+  heading4,
+  rule,
+  table,
   numberedList,
   bulletList,
   blockquote,
@@ -860,12 +899,14 @@ class _MessageBlock {
   final String content;
   final String? extra;
   final String? alt;
+  final List<List<String>>? rows;
 
   const _MessageBlock({
     required this.type,
     required this.content,
     this.extra,
     this.alt,
+    this.rows,
   });
 
   bool get isDisplayMath => type == _BlockType.displayMath;

@@ -836,60 +836,11 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                       isAi ? AppRadius.r16 : AppRadius.r4,
                     ),
                   ),
-                  border: isAi
-                      ? Border.all(
-                          color: AppColors.cyanAccent.withValues(alpha: 0.2),
-                        )
-                      : null,
-                  boxShadow: [
-                    BoxShadow(
-                      color: isAi
-                          ? Colors.black.withValues(alpha: 0.06)
-                          : AppColors.primaryCyan.withValues(alpha: 0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
+                  border: isAi ? Border.all(color: colors.border) : null,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (isAi) ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Tuteur pq learn',
-                            style: GoogleFonts.outfit(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.cyanAccent,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          // Bouton de copie du message
-                          InkWell(
-                            onTap: () {
-                              Clipboard.setData(ClipboardData(text: msg.text));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Réponse copiée'),
-                                  duration: Duration(seconds: 1),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                            },
-                            child: Icon(
-                              Icons.copy_rounded,
-                              size: 14,
-                              color: colors.textSecondary.withValues(alpha: 0.7),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                    ],
-
                     // Affichage des pièces jointes associées au message
                     if (msg.hasAttachments) ...[
                       Wrap(
@@ -910,6 +861,30 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                       message: msg.text,
                       isAi: isAi,
                     ),
+
+                    // Copier : discret, sous la réponse (plus d'en-tête « Tuteur » dans chaque bulle,
+                    // l'avatar suffit à identifier l'auteur).
+                    if (isAi && !msg.isError && msg.text.trim().isNotEmpty)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: IconButton(
+                          tooltip: 'Copier la réponse',
+                          visualDensity: VisualDensity.compact,
+                          iconSize: 16,
+                          color: colors.textMuted,
+                          icon: const Icon(Icons.copy_rounded),
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: msg.text));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Réponse copiée'),
+                                duration: Duration(seconds: 1),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
 
                     // Bouton de réessai immédiat si le message signale une erreur
                     if (isAi &&
