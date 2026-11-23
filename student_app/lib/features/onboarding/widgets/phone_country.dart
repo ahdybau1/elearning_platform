@@ -15,8 +15,9 @@ class PhoneCountry {
 
   const PhoneCountry(this.iso, this.name, this.dial, this.example);
 
-  /// Drapeau en emoji calculé depuis le code ISO (ex. « CM » → 🇨🇲).
-  String get flag => String.fromCharCodes(iso.toUpperCase().codeUnits.map((c) => 0x1F1E6 + c - 0x41));
+  /// Image du drapeau (flagcdn.com, drapeaux du domaine public). Les drapeaux en emoji ne
+  /// s'affichent pas sous Windows (on y voit « CM »), d'où une image avec le code en secours.
+  String get flagUrl => 'https://flagcdn.com/w40/${iso.toLowerCase()}.png';
 
   static const cameroon = PhoneCountry('CM', 'Cameroun', '+237', '6 77 12 34 56');
 
@@ -121,7 +122,7 @@ class PhoneNumberField extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(country.flag, style: const TextStyle(fontSize: 20)),
+                CountryFlag(country: country, height: 16),
                 const SizedBox(width: 6),
                 Text(country.dial, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600)),
                 Icon(Icons.arrow_drop_down_rounded, color: c.textSecondary),
@@ -212,7 +213,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                 final p = list[i];
                 final isSelected = p.iso == widget.selected.iso;
                 return ListTile(
-                  leading: Text(p.flag, style: const TextStyle(fontSize: 24)),
+                  leading: CountryFlag(country: p, height: 20),
                   title: Text(p.name, style: GoogleFonts.inter(fontSize: 15, color: c.textPrimary)),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -230,6 +231,34 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Petit drapeau arrondi ; affiche le code ISO si l'image ne charge pas (hors ligne).
+class CountryFlag extends StatelessWidget {
+  final PhoneCountry country;
+  final double height;
+  const CountryFlag({super.key, required this.country, this.height = 16});
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = SizedBox(
+      height: height,
+      width: height * 1.4,
+      child: Center(
+        child: Text(country.iso, style: TextStyle(fontSize: height * 0.55, fontWeight: FontWeight.w700, color: context.colors.textSecondary)),
+      ),
+    );
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(3),
+      child: Image.network(
+        country.flagUrl,
+        height: height,
+        width: height * 1.4,
+        fit: BoxFit.cover,
+        errorBuilder: (context, _, _) => fallback,
       ),
     );
   }

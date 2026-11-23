@@ -170,14 +170,18 @@ returns text as $$
           from academic_nodes a join up on a.id = up.parent_id
          where up.depth < 8
     )
+    , cls as (
+        select regexp_replace(up.name, '^Classe de\s+', '', 'i') as short_class
+          from up where up.node_type = 'class' order by up.depth limit 1
+    )
+    , me as (select trim(regexp_replace(n.name, '^S[ée]rie\s+', '', 'i')) as short_name)
     select case
-        when n.node_type in ('series', 'specialty') then
-            coalesce(
-                (select regexp_replace(up.name, '^Classe de\s+', '', 'i') || ' '
-                   from up where up.node_type = 'class' order by up.depth limit 1),
-                ''
-            ) || regexp_replace(n.name, '^Série\s+', '', 'i')
-        else n.name
+        when n.node_type not in ('series', 'specialty') then n.name
+        when not exists (select 1 from cls) then (select short_name from me)
+        -- Le nom contient déjà la classe (« Terminale C (…) ») : on ne la répète pas.
+        when (select lower(short_name) from me) like (select lower(short_class) from cls) || ' %'
+            then (select short_name from me)
+        else (select short_class from cls) || ' ' || (select short_name from me)
     end;
 $$ language sql stable set search_path = public;
 
