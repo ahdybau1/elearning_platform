@@ -72,7 +72,13 @@ class ExercisesHubScreen extends ConsumerWidget {
                 // Les labos (étude de fonction, tableau de variations) ne concernent que les maths
                 // du second cycle : ils s'affichaient en tête pour tous, de la 6e à la Terminale A.
                 final className = profile?.className ?? '';
-                final showFunctionLabs = bySubject.keys.any((s) => s.toLowerCase().startsWith('math')) &&
+                // Masqués pour l'instant : « Parcours guidé » et « Tableau de variations » sont des
+                // maquettes figées (f(x) = x³ − 3x² + 1, « Maîtrise actuelle : 72 % », niveaux
+                // « Débloque à 12/15 ») présentées comme le travail réel de l'élève. À rebrancher sur
+                // ses vraies données avant de les réafficher.
+                const labsReady = false;
+                final showFunctionLabs = labsReady &&
+                    bySubject.keys.any((s) => s.toLowerCase().startsWith('math')) &&
                     RegExp(r'^(Première|Terminale|Lower Sixth|Upper Sixth)').hasMatch(className);
                 final grid = GridView.builder(
                   padding: const EdgeInsets.all(20),

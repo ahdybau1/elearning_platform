@@ -10,7 +10,7 @@ import '../../../core/models/student_models.dart';
 import '../../../design_system/components/empty_state_view.dart';
 import '../../../design_system/tokens/app_radius.dart';
 import 'chapter_intro_screen.dart';
-import '../../exercises/screens/exercise_path_screen.dart';
+import 'exercise_runner_screen.dart';
 import '../../../core/models/summary_sheet_registry.dart';
 import '../widgets/summary_sheet_viewer_modal.dart';
 
@@ -446,6 +446,8 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                               runSpacing: 8,
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
+                                // Seulement si une introduction existe (sinon page vide « pas encore renseignée »).
+                                if (chapter.introduction?.trim().isNotEmpty ?? false)
                                 OutlinedButton.icon(
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor:
@@ -515,11 +517,13 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (_) => ExercisePathScreen(
-                                          subjectName:
-                                              (widget.subjectName ??
-                                                      'MATHEMATIQUES')
-                                                  .toUpperCase(),
+                                        // Les vrais exercices de CE chapitre (l'ancien écran
+                                        // « parcours » était une maquette figée : Mathématiques
+                                        // Terminale C & D, niveaux « Débloque à 12/15 »… montrée
+                                        // pour n'importe quel chapitre de n'importe quelle classe).
+                                        builder: (_) => ExerciseRunnerScreen(
+                                          chapterId: chapter.id,
+                                          chapterTitle: chapter.title,
                                         ),
                                       ),
                                     );
