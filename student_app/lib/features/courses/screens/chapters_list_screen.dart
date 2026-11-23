@@ -344,10 +344,15 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                               : context.colors.textSecondary,
                         ),
                       ),
-                      if (chapter.introduction != null) ...[
+                      // L'introduction complète (souvent un bloc administratif : module, famille de
+                      // situations, volume horaire) reste dans la page « Introduction » ; la carte
+                      // n'en garde que 2 lignes.
+                      if (chapter.introduction?.trim().isNotEmpty ?? false) ...[
                         const SizedBox(height: 6),
                         Text(
-                          chapter.introduction!,
+                          chapter.introduction!.trim().replaceAll(RegExp(r'\s*\n+\s*'), ' · '),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.inter(
                             fontSize: 13,
                             color: context.colors.textSecondary,
@@ -390,7 +395,7 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                                     ),
                                     const SizedBox(width: 5),
                                     Text(
-                                      '${chapter.lessonsCount} leçons',
+                                      '${chapter.lessonsCount} leçon${chapter.lessonsCount > 1 ? 's' : ''}',
                                       style: GoogleFonts.inter(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
@@ -426,7 +431,7 @@ class _ChapterItemCardState extends ConsumerState<_ChapterItemCard> {
                                     ),
                                     const SizedBox(width: 5),
                                     Text(
-                                      '${chapter.exercisesCount} exercices',
+                                      '${chapter.exercisesCount} exercice${chapter.exercisesCount > 1 ? 's' : ''}',
                                       style: GoogleFonts.inter(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
