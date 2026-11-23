@@ -322,10 +322,17 @@ class StudentSupabaseService {
     String? subjectId,
     required String columns,
   }) async {
+    // PostgREST ne sait trier le résultat d'une fonction que sur une colonne SÉLECTIONNÉE
+    // (« column chapters.display_order does not exist » sinon) : on l'ajoute au besoin. Sans ça,
+    // tout passait silencieusement par le repli et les chapitres communs de classe restaient
+    // invisibles (« Programme en préparation » pour des matières qui en ont).
+    final rpcColumns = columns.contains('*') || columns.contains('display_order')
+        ? columns
+        : '$columns, display_order';
     try {
       return await client
           .rpc('chapters_for_node', params: {'p_node': classNodeId, 'p_subject': subjectId})
-          .select(columns)
+          .select(rpcColumns)
           .order('display_order')
           .then((r) => r as List);
     } on PostgrestException {
