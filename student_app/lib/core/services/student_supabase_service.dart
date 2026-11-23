@@ -814,63 +814,84 @@ class StudentSupabaseService {
   }
 
   // ─── Suggestions du tuteur tirées du parcours réel de l'élève ─────────────
-  /// Jusqu'à 3 suggestions, dans cet ordre de priorité :
-  ///   1. les exercices RATÉS (dernière tentative fausse, jamais réussis depuis) — ce qui lui résiste ;
-  ///   2. les leçons qu'il vient de terminer — vérifier qu'elles sont comprises ;
-  ///   3. le chapitre en cours de sa classe (trimestre commencé) dans la matière ouverte.
-  /// Tout vient de ses tables (exercise_attempts, lesson_completions, chapters_for_node) : jamais un
-  /// sujet générique ni d'une autre classe. Liste vide possible (nouvel élève) : l'écran complète.
+  /// Jusqu'à 4 suggestions, toutes tirées de SA classe et de SON travail, par priorité :
+  ///   1. les exercices qui lui résistent : dernière tentative fausse et jamais réussis depuis,
+  ///      les plus souvent ratés d'abord, avec sa réponse et l'erreur repérée par la correction ;
+  ///   2. ses compétences faibles dans la matière ouverte (moins de 50 % sur au moins 2 essais) ;
+  ///   3. les leçons qu'il vient de terminer — vérifier qu'elles sont comprises ;
+  ///   4. les chapitres en cours de sa classe (trimestre commencé), dans la matière ouverte ou,
+  ///      à défaut, dans ses différentes matières.
+  /// Jamais un sujet générique ni d'une autre classe. Liste vide possible (classe sans chapitre).
   Future<List<TutorSuggestion>> fetchTutorSuggestions({
     required String profileId,
     required String classNodeId,
     String? subjectId,
   }) async {
+    const maxCards = 4;
     final out = <TutorSuggestion>[];
+    final usedChapters = <String>{};
 
-    // 1. Exercices ratés
+    // 1. Exercices qui lui résistent
     try {
       final attempts = await client
           .from('exercise_attempts')
-          .select('exercise_id, is_correct, official_correct, created_at')
+          .select('exercise_id, is_correct, official_correct, submitted_answer, ai_misconceptions, created_at')
           .eq('profile_id', profileId)
           .order('created_at', ascending: false)
-          .limit(80)
+          .limit(200)
           .then((r) => r as List);
       final latestByExercise = <String, Map<String, dynamic>>{};
+      final failures = <String, int>{};
       for (final a in attempts) {
         final m = a as Map<String, dynamic>;
-        latestByExercise.putIfAbsent(m['exercise_id'] as String, () => m);
+        final id = m['exercise_id'] as String;
+        latestByExercise.putIfAbsent(id, () => m);
+        if ((m['official_correct'] ?? m['is_correct']) == false) failures[id] = (failures[id] ?? 0) + 1;
       }
-      final failedIds = latestByExercise.values
-          .where((m) => (m['official_correct'] ?? m['is_correct']) == false)
-          .map((m) => m['exercise_id'] as String)
-          .take(6)
-          .toList();
-      if (failedIds.isNotEmpty) {
-        const columns = 'id, title, instructions_json, chapters(title, subject_id, subjects(name))';
+      final recency = {for (final (i, id) in latestByExercise.keys.indexed) id: i};
+      final failedIds = latestByExercise.entries
+          .where((e) => (e.value['official_correct'] ?? e.value['is_correct']) == false)
+          .map((e) => e.key)
+          .toList()
+        // Les plus souvent ratés d'abord ; à égalité, le plus récent.
+        ..sort((a, b) {
+          final byCount = (failures[b] ?? 0).compareTo(failures[a] ?? 0);
+          return byCount != 0 ? byCount : recency[a]!.compareTo(recency[b]!);
+        });
+      final candidates = failedIds.take(12).toList();
+      if (candidates.isNotEmpty) {
+        const columns = 'id, title, chapter_id, instructions_json, chapters(title, subject_id, subjects(name))';
         List rows;
         try {
-          rows = await client.from('exercises_for_student').select(columns).inFilter('id', failedIds).then((r) => r as List);
+          rows = await client.from('exercises_for_student').select(columns).inFilter('id', candidates).then((r) => r as List);
         } on PostgrestException {
-          rows = await client.from('exercises').select(columns).inFilter('id', failedIds).then((r) => r as List);
+          rows = await client.from('exercises').select(columns).inFilter('id', candidates).then((r) => r as List);
         }
         final byId = {for (final r in rows) (r as Map<String, dynamic>)['id'] as String: r};
-        for (final id in failedIds) {
+        for (final id in candidates) {
           final e = byId[id];
           if (e == null) continue;
           final chapter = e['chapters'] as Map<String, dynamic>?;
           if (subjectId != null && chapter?['subject_id'] != subjectId) continue;
           final subject = (chapter?['subjects'] as Map<String, dynamic>?)?['name'] as String?;
+          final chapterTitle = chapter?['title'] as String?;
           final statement = ((e['instructions_json'] as Map?)?['statement'] as String? ?? '').trim();
           final title = (e['title'] as String? ?? '').trim();
+          final last = latestByExercise[id]!;
+          final answer = _describeAnswer(last['submitted_answer'], e['instructions_json']);
+          final misconceptions = (last['ai_misconceptions'] as List?)?.whereType<String>().toList() ?? const <String>[];
+          final n = failures[id] ?? 1;
+          if (e['chapter_id'] != null) usedChapters.add(e['chapter_id'] as String);
           out.add(TutorSuggestion(
             kind: TutorSuggestionKind.retry,
-            title: 'Comprendre mon erreur : ${title.isEmpty ? 'exercice' : title}',
-            subtitle: [subject, chapter?['title']].whereType<String>().join(' · '),
-            prompt: 'Je me suis trompé(e) à cet exercice'
+            title: title.isEmpty ? 'Un exercice qui m\'a résisté' : title,
+            subtitle: [n > 1 ? 'Raté $n fois' : 'Raté', subject, chapterTitle].whereType<String>().join(' · '),
+            prompt: 'Je me suis trompé(e)${n > 1 ? ' $n fois' : ''} à cet exercice'
                 '${subject != null ? ' de $subject' : ''}'
-                '${chapter?['title'] != null ? ' (chapitre « ${chapter!['title']} »)' : ''}.\n'
+                '${chapterTitle != null ? ' (chapitre « $chapterTitle »)' : ''}.\n'
                 '${statement.isNotEmpty ? 'Énoncé : $statement\n' : 'Titre : $title\n'}'
+                '${answer != null ? 'Ma réponse : $answer\n' : ''}'
+                '${misconceptions.isNotEmpty ? 'Erreur repérée par la correction : ${misconceptions.take(2).join(' ; ')}\n' : ''}'
                 'Ne me donne pas tout de suite la réponse : aide-moi à trouver où je me suis trompé(e), '
                 'rappelle la notion utile, puis guide-moi pour le refaire.',
           ));
@@ -879,24 +900,51 @@ class StudentSupabaseService {
       }
     } catch (_) {}
 
-    // 2. Leçons terminées récemment
-    if (out.length < 3) {
+    // 2. Compétences faibles (matière ouverte, ou toutes ses matières)
+    if (out.length < maxCards) {
+      try {
+        final rows = await client.rpc('get_student_skill_mastery', params: {
+          'p_profile_id': profileId,
+          'p_subject_id': subjectId,
+        }).then((r) => r as List);
+        final weak = rows
+            .map((r) => r as Map<String, dynamic>)
+            .where((r) => r['mastery_level'] != null && (r['mastery_level'] as num) < 0.5 && ((r['attempts_count'] as num?) ?? 0) >= 2)
+            .toList()
+          ..sort((a, b) => (a['mastery_level'] as num).compareTo(b['mastery_level'] as num));
+        if (weak.isNotEmpty) {
+          final w = weak.first;
+          final pct = ((w['mastery_level'] as num) * 100).round();
+          out.add(TutorSuggestion(
+            kind: TutorSuggestionKind.weakSkill,
+            title: 'Consolider : ${w['skill_name']}',
+            subtitle: '$pct % de réussite sur ${w['attempts_count']} essais',
+            prompt: 'J\'ai du mal avec « ${w['skill_name']} » ($pct % de réussite). '
+                'Réexplique-moi la méthode simplement avec un exemple, puis donne-moi un exercice court '
+                'pour m\'entraîner et corrige ma réponse.',
+          ));
+        }
+      } catch (_) {}
+    }
+
+    // 3. Leçons terminées récemment
+    if (out.length < maxCards) {
       try {
         final done = await client
             .from('lesson_completions')
-            .select('completed_at, lessons(title, chapters(title, subject_id, subjects(name)))')
+            .select('completed_at, lessons(title, chapter_id, chapters(title, subject_id, subjects(name)))')
             .eq('profile_id', profileId)
             .order('completed_at', ascending: false)
             .limit(10)
             .then((r) => r as List);
-        final seenChapters = <String>{};
         for (final d in done) {
           final lesson = (d as Map<String, dynamic>)['lessons'] as Map<String, dynamic>?;
           final chapter = lesson?['chapters'] as Map<String, dynamic>?;
           if (lesson == null || chapter == null) continue;
           if (subjectId != null && chapter['subject_id'] != subjectId) continue;
+          final chapterId = lesson['chapter_id'] as String?;
+          if (chapterId != null && !usedChapters.add(chapterId)) continue;
           final chapterTitle = chapter['title'] as String? ?? '';
-          if (!seenChapters.add(chapterTitle)) continue;
           final subject = (chapter['subjects'] as Map<String, dynamic>?)?['name'] as String?;
           out.add(TutorSuggestion(
             kind: TutorSuggestionKind.check,
@@ -912,33 +960,54 @@ class StudentSupabaseService {
       } catch (_) {}
     }
 
-    // 3. Chapitre en cours de sa classe (matière ouverte, trimestre commencé)
-    if (out.length < 3 && subjectId != null) {
+    // 4. Chapitres en cours de sa classe : matière ouverte, sinon ses différentes matières
+    if (out.length < maxCards) {
       try {
         final rows = await _visibleChapterRows(
           classNodeId: classNodeId,
           subjectId: subjectId,
-          columns: 'title, display_order, subjects(name), terms(start_date)',
+          columns: 'id, title, subject_id, display_order, subjects(name), terms(start_date)',
         );
         final today = DateTime.now().toIso8601String().substring(0, 10);
-        final opened = rows.where((r) {
-          final start = ((r as Map<String, dynamic>)['terms'] as Map<String, dynamic>?)?['start_date'] as String?;
-          return start == null || start.compareTo(today) <= 0;
-        }).toList();
-        if (opened.isNotEmpty) {
-          final current = opened.last as Map<String, dynamic>;
+        // Dernier chapitre ouvert de chaque matière (ordre du programme).
+        final currentBySubject = <String, Map<String, dynamic>>{};
+        for (final r in rows) {
+          final m = r as Map<String, dynamic>;
+          final start = (m['terms'] as Map<String, dynamic>?)?['start_date'] as String?;
+          if (start != null && start.compareTo(today) > 0) continue;
+          currentBySubject[m['subject_id'] as String] = m;
+        }
+        for (final current in currentBySubject.values) {
+          if (out.length >= maxCards) break;
+          if (!usedChapters.add(current['id'] as String)) continue;
           final subject = (current['subjects'] as Map<String, dynamic>?)?['name'] as String?;
           out.add(TutorSuggestion(
             kind: TutorSuggestionKind.chapter,
             title: 'Comprendre : ${current['title']}',
-            subtitle: subject ?? '',
+            subtitle: subject != null ? '$subject · chapitre en cours' : 'Chapitre en cours',
             prompt: 'Explique-moi simplement l\'essentiel du chapitre « ${current['title']} »'
                 '${subject != null ? ' en $subject' : ''}, avec un exemple, puis vérifie que j\'ai compris.',
           ));
         }
       } catch (_) {}
     }
-    return out.take(3).toList();
+    return out.take(maxCards).toList();
+  }
+
+  /// Réponse de l'élève lisible pour le tuteur (texte libre, ou option choisie d'un QCM).
+  String? _describeAnswer(dynamic submitted, dynamic instructions) {
+    if (submitted is! Map) return null;
+    final text = submitted['text'] ?? submitted['answer'] ?? submitted['value'];
+    if (text is String && text.trim().isNotEmpty) {
+      final t = text.trim();
+      return t.length > 400 ? '${t.substring(0, 400)}…' : t;
+    }
+    final idx = submitted['selected_index'] ?? submitted['index'] ?? submitted['choice'];
+    final options = (instructions is Map) ? instructions['options'] : null;
+    if (idx is int && options is List && idx >= 0 && idx < options.length) {
+      return '« ${options[idx]} »';
+    }
+    return null;
   }
 
   /// Idempotent côté serveur (UNIQUE(profile_id, lesson_id)) : appeler plusieurs fois sur la même

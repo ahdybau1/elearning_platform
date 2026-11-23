@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/rendering/latex_to_unicode_converter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/auth/student_auth_provider.dart';
@@ -48,26 +49,24 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
   bool _isLoadingSessions = true;
   bool _isGenerating = false;
 
-  /// 3 suggestions + la photo : d'abord ce qui vient du parcours de l'élève, complété au besoin par
-  /// des suggestions générales (valables à tous les niveaux).
+  /// Jusqu'à 4 suggestions tirées du parcours de l'élève (exercices ratés, compétences faibles,
+  /// leçons terminées, chapitres en cours de SA classe), puis la photo. Les suggestions générales ne
+  /// servent que si la classe n'a encore rien (aucun chapitre, aucun exercice).
   List<Map<String, dynamic>> _starters() {
     const icons = {
       TutorSuggestionKind.retry: Icons.replay_rounded,
+      TutorSuggestionKind.weakSkill: Icons.trending_up_rounded,
       TutorSuggestionKind.check: Icons.fact_check_outlined,
       TutorSuggestionKind.chapter: Icons.menu_book_outlined,
     };
     final generic = _genericStarters();
     final photo = generic.firstWhere((g) => g['action'] == 'photo');
-    final items = <Map<String, dynamic>>[
+    if (_personal.isEmpty) return generic;
+    return [
       for (final p in _personal)
         {'icon': icons[p.kind], 'title': p.title, 'subtitle': p.subtitle, 'prompt': p.prompt},
+      photo,
     ];
-    for (final g in generic) {
-      if (items.length >= 3) break;
-      if (g['action'] == 'photo') continue;
-      items.add(g);
-    }
-    return [...items.take(3), photo];
   }
 
   /// Suggestions de départ adaptées à la matière ouverte (ou générales), valables de la 6e à la
@@ -128,18 +127,25 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
   /// Suggestions tirées du parcours réel de l'élève (exercices ratés, leçons terminées, chapitre
   /// en cours de SA classe). Chargées une fois ; les suggestions générales ne font que compléter.
   List<TutorSuggestion> _personal = const [];
+  bool _personalLoaded = false;
 
   Future<void> _loadPersonalSuggestions() async {
     final profile = ref.read(studentAuthProvider).activeProfile;
-    if (profile == null) return;
-    final classNodeId = widget.classNodeId ?? profile.classNodeId;
-    if (classNodeId.isEmpty) return;
-    final list = await ref.read(studentSupabaseServiceProvider).fetchTutorSuggestions(
-          profileId: profile.id,
-          classNodeId: classNodeId,
-          subjectId: widget.subjectId,
-        );
-    if (mounted) setState(() => _personal = list);
+    final classNodeId = widget.classNodeId ?? profile?.classNodeId ?? '';
+    if (profile == null || classNodeId.isEmpty) {
+      setState(() => _personalLoaded = true);
+      return;
+    }
+    try {
+      final list = await ref.read(studentSupabaseServiceProvider).fetchTutorSuggestions(
+            profileId: profile.id,
+            classNodeId: classNodeId,
+            subjectId: widget.subjectId,
+          );
+      if (mounted) setState(() => _personal = list);
+    } finally {
+      if (mounted) setState(() => _personalLoaded = true);
+    }
   }
 
   @override
@@ -752,7 +758,21 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
 
           const SizedBox(height: 32),
 
-          // Suggestions : une liste sobre de 4 lignes (plus de grille de cartes à deux niveaux de texte).
+          // Suggestions tirées du parcours de l'élève : une liste sobre (plus de grille de cartes).
+          if (!_personalLoaded)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)),
+            )
+          else ...[
+          if (_personal.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Text(
+                'Pour toi, d\'après tes exercices et ton programme',
+                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: colors.textSecondary),
+              ),
+            ),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
             child: Column(
@@ -790,7 +810,9 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      starter['title'] as String,
+                                      // Titres d'exercices parfois écrits en LaTeX : lisibles, sans $.
+                                      LatexToUnicodeConverter.convert(
+                                          (starter['title'] as String).replaceAll(r'$', '')),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.inter(
@@ -822,6 +844,7 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
               ],
             ),
           ),
+          ],
         ],
       ),
     );

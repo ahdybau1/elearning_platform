@@ -1093,7 +1093,7 @@ class AppSettings {
 }
 
 
-enum TutorSuggestionKind { retry, check, chapter }
+enum TutorSuggestionKind { retry, weakSkill, check, chapter }
 
 /// Suggestion de départ du tuteur, construite à partir du parcours réel de l'élève
 /// (`fetchTutorSuggestions`).
