@@ -269,6 +269,69 @@ class StudentSupabaseService {
     return out;
   }
 
+  /// Leçons lues / leçons publiées, par matière (clé = subject_id), sur les chapitres que la classe
+  /// voit réellement (portée de la classe incluse).
+  Future<Map<String, ({int done, int total})>> fetchLessonStatsBySubject({
+    required String profileId,
+    required String classNodeId,
+  }) async {
+    if (!_isValidUuid(profileId) || !_isValidUuid(classNodeId)) return {};
+    final chapters = await _visibleChapterRows(classNodeId: classNodeId, columns: 'id, subject_id');
+    final subjectOfChapter = {
+      for (final c in chapters)
+        (c as Map<String, dynamic>)['id'] as String: c['subject_id'] as String?,
+    };
+    if (subjectOfChapter.isEmpty) return {};
+    final lessons = await client
+        .from('lessons')
+        .select('id, chapter_id')
+        .inFilter('chapter_id', subjectOfChapter.keys.toList())
+        .eq('is_active', true)
+        .then((r) => r as List);
+    final done = await client
+        .from('lesson_completions')
+        .select('lesson_id')
+        .eq('profile_id', profileId)
+        .limit(5000)
+        .then((r) => r as List);
+    final doneIds = done.map((d) => (d as Map<String, dynamic>)['lesson_id'] as String).toSet();
+    final out = <String, ({int done, int total})>{};
+    for (final l in lessons) {
+      final m = l as Map<String, dynamic>;
+      final subjectId = subjectOfChapter[m['chapter_id']];
+      if (subjectId == null) continue;
+      final prev = out[subjectId] ?? (done: 0, total: 0);
+      out[subjectId] = (
+        done: prev.done + (doneIds.contains(m['id']) ? 1 : 0),
+        total: prev.total + 1,
+      );
+    }
+    return out;
+  }
+
+  /// Compétences où l'élève échoue le plus (au moins 2 essais, moins de 50 % de réussite).
+  Future<List<({String name, double mastery, int attempts})>> fetchWeakSkills(String profileId) async {
+    if (!_isValidUuid(profileId)) return [];
+    final rows = await client.rpc('get_student_skill_mastery', params: {
+      'p_profile_id': profileId,
+      'p_subject_id': null,
+    }).then((r) => r as List);
+    final weak = rows
+        .map((r) => r as Map<String, dynamic>)
+        .where((r) => r['mastery_level'] != null &&
+            (r['mastery_level'] as num) < 0.5 &&
+            ((r['attempts_count'] as num?) ?? 0) >= 2)
+        .map((r) => (
+              name: r['skill_name'] as String? ?? '',
+              mastery: (r['mastery_level'] as num).toDouble(),
+              attempts: (r['attempts_count'] as num).toInt(),
+            ))
+        .where((r) => r.name.isNotEmpty)
+        .toList()
+      ..sort((a, b) => a.mastery.compareTo(b.mastery));
+    return weak.take(5).toList();
+  }
+
   /// §2.5 du cahier des charges : profils archivés, consultables séparément (jamais mêlés à la
   /// liste active utilisée par le sélecteur de profils/la barre latérale).
   Future<List<StudentProfile>> fetchArchivedProfiles(String accountId) async {
