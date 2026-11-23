@@ -891,8 +891,8 @@ class BlockRendererRegistry {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: MathFormulaView(
                   formulaLatex: f,
-                  fontSize: 14,
-                  label: 'FORMULE ASSOCIÉE',
+                  fontSize: 16,
+                  showCopyButton: false,
                 ),
               ),
             ),
@@ -949,8 +949,8 @@ class BlockRendererRegistry {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: MathFormulaView(
                     formulaLatex: f,
-                    fontSize: 15,
-                    label: 'PROPRIÉTÉ CLÉ',
+                    fontSize: 16,
+                    showCopyButton: false,
                   ),
                 ),
               ),
