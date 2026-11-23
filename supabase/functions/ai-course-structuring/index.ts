@@ -328,7 +328,7 @@ Génère la structure JSON exacte avec les clés :
             .replace(/\s*```$/i, "")
             .trim();
           try {
-            structuredCourse = JSON.parse(jsonText);
+            structuredCourse = parseModelJson(jsonText);
             provider = routerData._provider ?? "router";
             modelUsed = routerData._model ?? null;
             tokensUsed = 0;
@@ -419,3 +419,7 @@ Génère la structure JSON exacte avec les clés :
     );
   }
 });
+
+// Placé en fin de fichier (les imports ES sont remontés) pour ne pas entrer en conflit avec la garde
+// d'appelant ajoutée en tête par la PR #4.
+import { parseModelJson } from "../_shared/model_json.ts";

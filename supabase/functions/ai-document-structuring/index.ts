@@ -169,7 +169,7 @@ Format de sortie exact :
       confidence?: number;
     };
     try {
-      structured = JSON.parse(rawText);
+      structured = parseModelJson(rawText);
     } catch (parseErr) {
       const errorMessage = `Réponse non-JSON du modèle : ${
         (parseErr as Error).message
@@ -247,3 +247,7 @@ Format de sortie exact :
     );
   }
 });
+
+// Placé en fin de fichier (les imports ES sont remontés) pour ne pas entrer en conflit avec la garde
+// d'appelant ajoutée en tête par la PR #4.
+import { parseModelJson } from "../_shared/model_json.ts";
