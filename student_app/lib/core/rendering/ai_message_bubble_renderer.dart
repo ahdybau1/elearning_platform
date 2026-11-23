@@ -123,7 +123,7 @@ class AiMessageBubbleRenderer extends StatelessWidget {
           child: InlineLatexText(
             block.content,
             style: style.copyWith(fontWeight: FontWeight.w700),
-            mathColor: themeColor,
+            mathColor: isAssistant ? null : Colors.white,
           ),
         );
 
@@ -228,7 +228,7 @@ class AiMessageBubbleRenderer extends StatelessWidget {
                 child: InlineLatexText(
                   block.content,
                   style: style,
-                  mathColor: themeColor,
+                  mathColor: isAssistant ? null : Colors.white,
                 ),
               ),
             ],
@@ -254,7 +254,7 @@ class AiMessageBubbleRenderer extends StatelessWidget {
                 child: InlineLatexText(
                   block.content,
                   style: style,
-                  mathColor: themeColor,
+                  mathColor: isAssistant ? null : Colors.white,
                 ),
               ),
             ],
@@ -276,7 +276,7 @@ class AiMessageBubbleRenderer extends StatelessWidget {
           child: InlineLatexText(
             block.content,
             style: style.copyWith(color: _strong(context)),
-            mathColor: themeColor,
+            mathColor: isAssistant ? null : Colors.white,
           ),
         );
 
@@ -289,7 +289,7 @@ class AiMessageBubbleRenderer extends StatelessWidget {
           child: InlineLatexText(
             block.content,
             style: style,
-            mathColor: themeColor,
+            mathColor: isAssistant ? null : Colors.white,
           ),
         );
     }
@@ -636,7 +636,7 @@ class AiMessageBubbleRenderer extends StatelessWidget {
                             fontSize: 13,
                             fontWeight: i == 0 ? FontWeight.w700 : FontWeight.normal,
                           ),
-                          mathColor: themeColor,
+                          mathColor: isAssistant ? null : Colors.white,
                         ),
                       ),
                     ),

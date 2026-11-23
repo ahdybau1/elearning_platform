@@ -46,33 +46,60 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
   bool _isLoadingSessions = true;
   bool _isGenerating = false;
 
-  final List<Map<String, dynamic>> _quickStarters = [
-    {
-      'icon': Icons.auto_graph_rounded,
-      'color': AppColors.cyanAccent,
-      'title': 'Polynôme & Courbe',
-      'prompt': 'Étudie le polynôme P(x) = 2x² - 4x - 6 et trace sa courbe représentative.',
-    },
-    {
-      'icon': Icons.lightbulb_outline_rounded,
-      'color': Colors.amber,
-      'title': 'Comprendre un Théorème',
-      'prompt': 'Explique-moi le théorème des valeurs intermédiaires avec un exemple simple.',
-    },
-    {
-      'icon': Icons.camera_alt_rounded,
-      'color': Colors.purpleAccent,
-      'title': 'Analyser un Exercice Photo',
-      'prompt': 'Aide-moi à résoudre cet exercice pas-à-pas.',
-      'action': 'photo',
-    },
-    {
-      'icon': Icons.functions_rounded,
-      'color': AppColors.emeraldSuccess,
-      'title': 'Méthode Dérivées & Limites',
-      'prompt': 'Comment calculer la dérivée d\'un quotient de fonctions u(x) / v(x) ?',
-    },
-  ];
+  /// Suggestions de départ adaptées à la matière ouverte (ou générales), valables de la 6e à la
+  /// Terminale et dans toutes les matières. Les anciennes cartes proposaient à tous les élèves des
+  /// sujets de Terminale scientifique (polynômes, TVI, dérivée d'un quotient).
+  List<Map<String, dynamic>> _starters() {
+    final subject = widget.subjectName;
+    if (subject != null && subject.trim().isNotEmpty) {
+      return [
+        {
+          'icon': Icons.lightbulb_outline_rounded,
+          'title': 'Comprendre une notion de $subject',
+          'prompt': 'Je veux comprendre une notion de $subject. Demande-moi laquelle, puis explique-la simplement avec un exemple.',
+        },
+        {
+          'icon': Icons.edit_note_rounded,
+          'title': 'M\'entraîner en $subject',
+          'prompt': 'Donne-moi un exercice de $subject adapté à mon niveau, attends ma réponse, puis corrige-la.',
+        },
+        {
+          'icon': Icons.quiz_outlined,
+          'title': 'Réviser $subject en 5 questions',
+          'prompt': 'Pose-moi 5 questions rapides, une par une, pour réviser $subject.',
+        },
+        {
+          'icon': Icons.photo_camera_outlined,
+          'title': 'Envoyer la photo d\'un exercice',
+          'prompt': 'Aide-moi à résoudre cet exercice pas à pas.',
+          'action': 'photo',
+        },
+      ];
+    }
+    return [
+      {
+        'icon': Icons.lightbulb_outline_rounded,
+        'title': 'Comprendre une leçon',
+        'prompt': 'Je n\'ai pas compris une leçon. Demande-moi la matière et le chapitre, puis explique-la simplement.',
+      },
+      {
+        'icon': Icons.fact_check_outlined,
+        'title': 'Vérifier ma réponse',
+        'prompt': 'Je vais te donner un exercice et ma réponse : dis-moi si elle est juste et pourquoi.',
+      },
+      {
+        'icon': Icons.event_note_outlined,
+        'title': 'Préparer un devoir',
+        'prompt': 'J\'ai bientôt un devoir. Aide-moi à organiser mes révisions : demande-moi la matière et les chapitres.',
+      },
+      {
+        'icon': Icons.photo_camera_outlined,
+        'title': 'Envoyer la photo d\'un exercice',
+        'prompt': 'Aide-moi à résoudre cet exercice pas à pas.',
+        'action': 'photo',
+      },
+    ];
+  }
 
   @override
   void initState() {
@@ -671,7 +698,9 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
           const SizedBox(height: 6),
 
           Text(
-            'Classe : ${className ?? "Lycée / Secondaire"} • Méthode maïeutique sans réponse brute',
+            className != null
+                ? 'Ton tuteur pour la $className : il t\'explique pas à pas.'
+                : 'Ton tuteur t\'explique pas à pas.',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 12,
@@ -681,94 +710,58 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
 
           const SizedBox(height: 32),
 
-          // Grille de cartes de suggestions pédagogiques
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth > 550;
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _quickStarters.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: isWide ? 2 : 1,
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: isWide ? 2.6 : 3.6,
-                ),
-                itemBuilder: (context, index) {
-                  final starter = _quickStarters[index];
-                  final icon = starter['icon'] as IconData;
-                  final color = starter['color'] as Color;
-                  final title = starter['title'] as String;
-                  final prompt = starter['prompt'] as String;
-
-                  return InkWell(
-                    onTap: () {
-                      if (starter['action'] == 'photo') {
-                        PhotoTranscriptionModal.show(
-                          context,
-                          onTranscription: (ocrResult) {
-                            _sendMessage(ocrResult);
-                          },
-                        );
-                      } else {
-                        _sendMessage(prompt);
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(AppRadius.r16),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: colors.card,
+          // Suggestions : une liste sobre de 4 lignes (plus de grille de cartes à deux niveaux de texte).
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Column(
+              children: [
+                for (final starter in _starters())
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Material(
+                      color: colors.card,
+                      borderRadius: BorderRadius.circular(AppRadius.r16),
+                      child: InkWell(
                         borderRadius: BorderRadius.circular(AppRadius.r16),
-                        border: Border.all(
-                          color: colors.border.withValues(alpha: 0.8),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(icon, color: color, size: 20),
+                        onTap: () {
+                          if (starter['action'] == 'photo') {
+                            PhotoTranscriptionModal.show(
+                              context,
+                              onTranscription: (ocrResult) => _sendMessage(ocrResult),
+                            );
+                          } else {
+                            _sendMessage(starter['prompt'] as String);
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(AppRadius.r16),
+                            border: Border.all(color: colors.border),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  title,
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
+                          child: Row(
+                            children: [
+                              Icon(starter['icon'] as IconData, size: 20, color: colors.accentPrimary),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  starter['title'] as String,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
                                     color: colors.textPrimary,
                                   ),
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  prompt,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    color: colors.textSecondary,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
+                              ),
+                              Icon(Icons.chevron_right_rounded, size: 20, color: colors.textMuted),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  );
-                },
-              );
-            },
+                  ),
+              ],
+            ),
           ),
         ],
       ),
