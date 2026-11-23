@@ -20,6 +20,11 @@ import 'math_formula_view.dart';
 /// - Règles essentielles (violette encadrée avec formules clés)
 /// - Exemple guidé (menthe verte avec dérivée pas à pas)
 /// - À remarquer / Erreurs fréquentes / Vérification rapide Oui/Non.
+// 23/11/2026 : les blocs Situation, Objectifs, Définition, Règles, Exemple guidé, À remarquer et
+// Pièges passent tous par `_card`, qui affiche le VRAI texte du bloc avec ses formules. Leurs anciens
+// rendus dédiés affichaient le texte sans interpréter le LaTeX (« $n$ » brut dans 379 définitions)
+// et, pour certains, un contenu de démonstration figé sur la dérivée (f(x) = x³ − 3x² + 1, « Confondre
+// f(a) et f'(a) »…) quel que soit le cours. Ces anciens rendus restent dans le fichier, non branchés.
 class BlockRendererRegistry {
   BlockRendererRegistry._();
 
@@ -34,34 +39,82 @@ class BlockRendererRegistry {
       // 1. Situation de départ (Orange)
       case 'situation_depart':
       case 'situation':
-        return _situationDepartCard(context, block);
+        return _card(
+          context,
+          block: block,
+          icon: Icons.flag_outlined,
+          color: context.colors.accentAmber,
+          defaultTitle: 'Situation de départ',
+          bgColor: context.colors.card,
+          textColor: context.colors.textPrimary,
+        );
 
       // 2. Objectifs d'apprentissage (Violet)
       case 'objectifs':
       case 'learning_objectives':
-        return _objectivesCard(context, block);
+        return _card(
+          context,
+          block: block,
+          icon: Icons.checklist_rounded,
+          color: context.colors.accentPurple,
+          defaultTitle: 'Ce que tu vas apprendre',
+          bgColor: context.colors.card,
+          textColor: context.colors.textPrimary,
+        );
 
       // 3. Règles essentielles encadrées (Violette)
       case 'regles_essentielles':
       case 'essential_rules':
-        return _essentialRulesCard(context, block);
+        return _card(
+          context,
+          block: block,
+          icon: Icons.rule_rounded,
+          color: context.colors.accentPurple,
+          defaultTitle: 'Règles essentielles',
+          bgColor: context.colors.card,
+          textColor: context.colors.textPrimary,
+        );
 
       // 4. Exemple guidé (Vert)
       case 'exemple_guide':
       case 'guided_example':
-        return _guidedExampleCard(context, block);
+        return _card(
+          context,
+          block: block,
+          icon: Icons.edit_rounded,
+          color: context.colors.accentEmerald,
+          defaultTitle: 'Exemple guidé',
+          bgColor: context.colors.card,
+          textColor: context.colors.textPrimary,
+        );
 
       // 5. À remarquer (Comparaison pédagogique)
       case 'a_remarquer':
       case 'remarks':
-        return _remarksCard(context, block);
+        return _card(
+          context,
+          block: block,
+          icon: Icons.lightbulb_outline_rounded,
+          color: context.colors.accentPurple,
+          defaultTitle: 'À remarquer',
+          bgColor: context.colors.card,
+          textColor: context.colors.textPrimary,
+        );
 
       // 6. Erreurs fréquentes (Rouge)
       case 'erreurs_frequentes':
       case 'frequent_errors':
       case 'piege':
       case 'trap':
-        return _frequentErrorsCard(context, block);
+        return _card(
+          context,
+          block: block,
+          icon: Icons.warning_amber_rounded,
+          color: context.colors.accentRose,
+          defaultTitle: 'Pièges fréquents',
+          bgColor: context.colors.card,
+          textColor: context.colors.textPrimary,
+        );
 
       // 7. Vérifie que tu as compris (Quiz rapide Oui/Non)
       case 'verifie_comprehension':
@@ -76,14 +129,22 @@ class BlockRendererRegistry {
           block: block,
           icon: Icons.verified_rounded,
           color: context.colors.accentPrimary,
-          defaultTitle: 'Théorème Majeur & Définition',
+          defaultTitle: 'Théorème',
           bgColor: context.colors.card,
           textColor: context.colors.textPrimary,
         );
       case 'definition':
       case 'cours':
       case 'cours_theorie':
-        return _courseDefinitionCard(context, block);
+        return _card(
+          context,
+          block: block,
+          icon: Icons.menu_book_rounded,
+          color: context.colors.accentPrimary,
+          defaultTitle: 'Définition',
+          bgColor: context.colors.card,
+          textColor: context.colors.textPrimary,
+        );
       case 'formule':
       case 'formula':
         return _formulaCard(context, block);
@@ -94,7 +155,7 @@ class BlockRendererRegistry {
           block: block,
           icon: Icons.lightbulb_outline_rounded,
           color: context.colors.accentAmber,
-          defaultTitle: 'Méthode & Savoir-Faire',
+          defaultTitle: 'Méthode',
           bgColor: context.colors.card,
           textColor: context.colors.textPrimary,
         );
@@ -832,7 +893,7 @@ class BlockRendererRegistry {
 
   static Widget _paragraph(BuildContext context, ContentBlock block) {
     if (block.body.trim().isEmpty) return const SizedBox.shrink();
-    return Text(
+    return InlineLatexText(
       block.body,
       style: GoogleFonts.inter(
         fontSize: 15,
