@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/models/summary_sheet_registry.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/auth/student_auth_provider.dart';
 import '../../../core/rendering/math_formula_view.dart';
 import '../../../core/rendering/ai_message_bubble_renderer.dart';
 import '../../../design_system/tokens/app_colors.dart';
@@ -115,12 +117,20 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
     });
 
     try {
-      // Tentative d'appel via Supabase Edge Function ai-tutor-chat
+      // Profil actif : sans lui, le tuteur ne connaissait ni la classe ni le programme de l'élève
+      // (il répondait au niveau « secondaire » générique depuis une leçon de 6e comme de Terminale).
+      final profile = ProviderScope.containerOf(context, listen: false).read(studentAuthProvider).activeProfile;
+      final formula = widget.formulaLatex;
       final response = await Supabase.instance.client.functions
           .invoke(
             'ai-tutor-chat',
             body: {
-              'message': 'Notion : ${widget.topicTitle}\nQuestion : $clean',
+              'message': 'Notion : ${widget.topicTitle}'
+                  '${formula != null && formula.trim().isNotEmpty ? '\nFormule de la leçon : \$$formula\$' : ''}'
+                  '\nQuestion : $clean',
+              'class_name': profile?.className,
+              'class_node_id': (profile?.classNodeId.isNotEmpty ?? false) ? profile!.classNodeId : null,
+              'profile_id': profile?.id,
               'topic': widget.topicTitle,
               'subject_name': widget.subject,
               'formula': widget.formulaLatex,
