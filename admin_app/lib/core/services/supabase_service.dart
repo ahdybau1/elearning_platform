@@ -147,6 +147,9 @@ class SupabaseService {
     String? name,
     String? code,
     bool? isActive,
+    bool updateSeriesFields = false,
+    String? seriesFamily,
+    String? description,
   }) async {
     final updates = <String, dynamic>{
       'updated_at': DateTime.now().toIso8601String(),
@@ -154,6 +157,11 @@ class SupabaseService {
     if (name != null) updates['name'] = name;
     if (code != null) updates['code'] = code;
     if (isActive != null) updates['is_active'] = isActive;
+    // Série (migration 95) : écrit explicitement, y compris pour vider la valeur.
+    if (updateSeriesFields) {
+      updates['series_family'] = seriesFamily;
+      updates['description'] = (description == null || description.trim().isEmpty) ? null : description.trim();
+    }
     await client.from('academic_nodes').update(updates).eq('id', id);
   }
 

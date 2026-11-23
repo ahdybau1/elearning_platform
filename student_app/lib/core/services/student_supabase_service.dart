@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/gamification_models.dart';
 import '../models/student_models.dart';
+import 'schema_features.dart';
 import '../models/published_exam_question.dart';
 
 class StudentSupabaseService {
@@ -42,7 +43,7 @@ class StudentSupabaseService {
     final query = _isValidUuid(parentId)
         ? client.from('academic_nodes').select().eq('parent_id', parentId!).eq('is_active', true)
         : client.from('academic_nodes').select().filter('parent_id', 'is', null).eq('is_active', true);
-    final rows = await query.order('display_order').then((rows) => rows as List);
+    final rows = await query.order('display_order').order('name').then((rows) => rows as List);
     return rows
         .map((r) => StudentAcademicNode.fromJson(Map<String, dynamic>.from(r)))
         .toList();
@@ -253,7 +254,7 @@ class StudentSupabaseService {
     if (!_isValidUuid(accountId)) return [];
     final rows = await client
         .from('profiles')
-        .select('*, academic_nodes(name)')
+        .select('*, academic_nodes(${await SchemaFeatures.classNodeColumns(client)})')
         .eq('account_id', accountId)
         .eq('status', 'archive')
         .order('created_at')

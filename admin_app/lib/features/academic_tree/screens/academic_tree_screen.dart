@@ -2169,6 +2169,44 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen>
                                   ),
                                 ),
                               ),
+                            // Famille de série (migration 95) : regroupe les séries à l'inscription élève.
+                            if (node.nodeType == NodeType.series)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: (node.seriesFamily == null ? AppTheme.accentAmber : AppTheme.accentCyan)
+                                      .withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  switch (node.seriesFamily) {
+                                    'scientifique' => 'Scientifique',
+                                    'litteraire' => 'Littéraire',
+                                    'artistique' => 'Artistique',
+                                    _ => 'Famille à définir',
+                                  },
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: node.seriesFamily == null ? AppTheme.accentAmber : AppTheme.accentCyan,
+                                  ),
+                                ),
+                              ),
+                            // Libellé officiel vu par l'élève ; signalé s'il manque sur une spécialité/série.
+                            if (node.description != null && node.description!.isNotEmpty)
+                              Text(
+                                node.description!,
+                                style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                              )
+                            else if (node.nodeType == NodeType.series || node.nodeType == NodeType.specialty)
+                              Text(
+                                'Libellé officiel manquant',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontStyle: FontStyle.italic,
+                                  color: AppTheme.accentAmber,
+                                ),
+                              ),
                             // Badge Statut Actif / Archivé
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -3530,6 +3568,11 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen>
   void _showEditNodeModal(BuildContext context, AcademicNode node) {
     final nameController = TextEditingController(text: node.name);
     final codeController = TextEditingController(text: node.code ?? '');
+    final descriptionController = TextEditingController(text: node.description ?? '');
+    final isSeries = node.nodeType == NodeType.series;
+    // Libellé officiel affiché à l'élève sous le sigle : séries, spécialités et filières (IND, STT…).
+    final hasDescription = isSeries || node.nodeType == NodeType.specialty || node.nodeType == NodeType.family;
+    String? seriesFamily = node.seriesFamily;
     bool isActive = node.isActive;
     String? fieldError;
     String? submitError;
@@ -3578,6 +3621,40 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen>
                       prefixIcon: Icon(Icons.tag_rounded, size: 20),
                     ),
                   ),
+                  if (isSeries) ...[
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String?>(
+                      initialValue: seriesFamily,
+                      isExpanded: true,
+                      dropdownColor: AppTheme.primarySurface,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Famille de série',
+                        helperText: 'Regroupe les séries à l\'inscription élève (« Séries scientifiques » puis « Terminale C »).',
+                        helperMaxLines: 2,
+                        prefixIcon: Icon(Icons.category_rounded, size: 20),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: null, child: Text('Non classée')),
+                        DropdownMenuItem(value: 'scientifique', child: Text('Scientifique et technologique')),
+                        DropdownMenuItem(value: 'litteraire', child: Text('Littéraire / sciences humaines')),
+                        DropdownMenuItem(value: 'artistique', child: Text('Artistique')),
+                      ],
+                      onChanged: (v) => setModalState(() => seriesFamily = v),
+                    ),
+                  ],
+                  if (hasDescription) ...[
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: descriptionController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Libellé officiel (facultatif)',
+                        hintText: 'Ex. Mathématiques et techniques · Génie civil, bâtiment',
+                        prefixIcon: Icon(Icons.short_text_rounded, size: 20),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -3671,6 +3748,9 @@ class _AcademicTreeScreenState extends ConsumerState<AcademicTreeScreen>
                           name: name,
                           code: codeController.text.trim(),
                           isActive: isActive,
+                          updateSeriesFields: hasDescription,
+                          seriesFamily: seriesFamily,
+                          description: descriptionController.text,
                         );
                         ref.invalidate(academicTreeStreamProvider);
                         ref.invalidate(nodesByTypeProvider);

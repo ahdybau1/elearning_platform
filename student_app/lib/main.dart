@@ -17,6 +17,7 @@ import 'features/onboarding/screens/session_evicted_screen.dart';
 import 'features/onboarding/screens/student_login_screen.dart';
 import 'features/onboarding/screens/device_account_selector_screen.dart';
 import 'features/onboarding/screens/role_selection_screen.dart';
+import 'features/onboarding/screens/reset_password_screen.dart';
 import 'features/home/screens/main_navigation_screen.dart';
 import 'features/courses/screens/chapters_list_screen.dart';
 import 'features/courses/screens/lesson_reader_screen.dart';
@@ -79,6 +80,11 @@ class StudentAuthGate extends ConsumerWidget {
     // l'app (l'éviction peut survenir à tout moment pendant l'utilisation, pas seulement au démarrage).
     if (ref.watch(sessionGuardProvider).isEvicted) {
       return const SessionEvictedScreen();
+    }
+
+    // Lien « mot de passe oublié » ouvert : choisir un nouveau mot de passe avant toute chose.
+    if (authState.isRecoveringPassword) {
+      return const ResetPasswordScreen();
     }
 
     if (!authState.hasUnlockedThisBoot) {
