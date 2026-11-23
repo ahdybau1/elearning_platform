@@ -31,6 +31,8 @@ const corsHeaders = {
 // Les champs fournis par un appelant (Gateway) restent prioritaires : aucune régression.
 // 1.3.0 (2026-09-17) : support multimodal complet (photos/OCR devoirs manuscrits, documents PDF,
 // enregistrements audio/voix) transmis en inline_data à Google Gemini sans stockage BDD.
+// 1.4.0 (2026-11-23) : programme réel de l'élève lu en base (classe, matières, chapitres ouverts),
+// cache séparé par classe, consignes de forme courtes pour téléphone.
 const AGENT_VERSION = "1.4.0";
 // Liste ordonnée de modèles Gemini gratuits avec cascade de secours automatique :
 // Si un modèle subit une saturation de quota (429) ou indisponibilité (503),
@@ -140,9 +142,6 @@ async function ragSearch(
   });
 }
 
-// Student Model (U9) — jamais un chiffre inventé : uniquement ce que get_student_skill_mastery
-// renvoie réellement depuis exercise_attempts. Même formatage que format_mastery_summary côté
-// Gateway, pour que les deux chemins produisent le même prompt.
 // Programme réel de l'élève, lu en base à partir de class_node_id (jamais du libellé envoyé par
 // l'app) : libellé officiel de la classe (« Terminale D »), matières de la série et chapitres déjà
 // ouverts de la matière en cours (trimestres commencés). Sert à « rester dans le programme » de
@@ -207,6 +206,9 @@ async function programmeContext(
   }
 }
 
+// Student Model (U9) — jamais un chiffre inventé : uniquement ce que get_student_skill_mastery
+// renvoie réellement depuis exercise_attempts. Même formatage que format_mastery_summary côté
+// Gateway, pour que les deux chemins produisent le même prompt.
 async function masterySummary(
   profileId: string,
   subjectId: string,
@@ -635,9 +637,18 @@ Pièces jointes : lis attentivement photos, documents et mémos vocaux, reprends
 
     const geminiData = await geminiRes.json();
     const rawParts = geminiData.candidates?.[0]?.content?.parts ?? [];
+    // Bug observé le 2026-09-19 : Gemini peut renvoyer le même texte final dans plusieurs
+    // `parts` non-"thought" (répétition côté modèle, pas côté prompt). Concaténer tous les parts
+    // sans vérification affichait alors la réponse entière — formules comprises — deux fois de
+    // suite à l'élève. Un `part` identique à un précédent n'est jamais un contenu légitime
+    // supplémentaire (une vraie continuation aurait un texte différent), donc il est ignoré.
+    // (Correctif déployé le 19/09 mais absent du dépôt : réintégré ici en 1.4.0.)
+    const seenPartTexts = new Set<string>();
     let reply = "";
     for (const part of rawParts) {
       if (part && typeof part.text === "string" && !part.thought) {
+        if (seenPartTexts.has(part.text)) continue;
+        seenPartTexts.add(part.text);
         reply += part.text;
       }
     }
