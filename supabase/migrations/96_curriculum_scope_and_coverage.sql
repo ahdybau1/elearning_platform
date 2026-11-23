@@ -97,6 +97,11 @@ comment on view curriculum_coverage is
 
 -- ── 5. Anomalies de programme (admin) ──────────────────────────────────────────────────────────
 create or replace view curriculum_anomalies with (security_invoker = true) as
+-- Nœuds où chaque matière est visible (le nœud lié et ses parents jusqu'à la classe).
+with link_scope as (
+    select l.subject_id, unnest(content_scope_nodes(l.class_node_id)) as node_id
+      from subject_class_links l
+)
 -- a) Chapitre de test laissé dans le programme
 select 'CHAPITRE_TEMPORAIRE'::text as kind, c.class_node_id as node_id, c.subject_id, c.id as chapter_id,
        'Chapitre de test : « ' || c.title || ' »' as detail
@@ -109,10 +114,8 @@ select 'CHAPITRES_INVISIBLES', c.class_node_id, c.subject_id, null,
   from chapters c
  where c.is_active
    and not exists (
-        select 1 from subject_class_links l
-         where l.subject_id = c.subject_id
-           and (l.class_node_id = c.class_node_id
-                or c.class_node_id = any ((content_scope_nodes(l.class_node_id))[2:])))
+        select 1 from link_scope ls
+         where ls.subject_id = c.subject_id and ls.node_id = c.class_node_id)
  group by c.class_node_id, c.subject_id
 union all
 -- c) Même numéro de chapitre en double dans un même trimestre (deux programmes mélangés)
