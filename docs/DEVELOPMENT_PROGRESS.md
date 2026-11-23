@@ -1,5 +1,28 @@
 # Progression EDLEARN
 
+## 2026-11-22 — Lot 1 de l'audit : durcissement des accès (branche `claude/lot1-securite`, base `frontend-redesign-v2`)
+
+Vérifié sur une base PostgreSQL 16 locale rejouant les migrations 01→92 de la branche frontend-redesign-v2 (stubs Supabase dans
+`supabase/tests/lot1/supabase_stubs.sql`). Pas encore appliqué en production.
+
+- **Migration `93_access_hardening_lot1.sql`** (non destructive) :
+  - un élève ne peut plus s'attribuer un palier (`subscription_tier`) en modifiant ou créant son profil ;
+  - lecture des leçons / exercices / sujets officiels limitée à la **classe du profil actif** ;
+  - hiérarchie des paliers respectée (Gratuit < Journalier < Hebdomadaire < Mensuel < Annuel) ;
+  - déblocage trimestriel appliqué côté serveur (plus seulement dans l'app) ;
+  - `is_correct` recalculé côté serveur pour les QCM, champs de revue (`official_correct`, `ai_*`) ignorés s'ils viennent de l'élève.
+- **Tests** : `supabase/tests/lot1/run.sh` (sans 93 : 9 failles sur 15 scénarios ; avec 93 : 15/15).
+- **Edge Functions** : garde commune `_shared/caller_guard.ts` (admin actif OU clé service) ajoutée à
+  9 fonctions qui ne vérifiaient pas l'appelant ; `cron-subscription-reminders` n'accepte plus que la
+  clé service. `deno check` OK, `deno test` 7/7.
+- **Droits d'auteur** : retrait des 31 visuels de tiers de `scratch_design_images/` (restent dans
+  l'historique git).
+- **Migration `94_hide_exercise_solutions.sql`** : les élèves lisent les exercices via la vue
+  `exercises_for_student` ; le corrigé d'une évaluation n'y apparaît qu'après une tentative (CDC §3.4).
+  L'app élève valide désormais la réponse côté serveur puis relit le corrigé
+  (`submitExerciseAttempt`, `exercise_runner_screen.dart`). Tests : 21/21 scénarios.
+- **Restant (lots suivants)** : bucket `media` en lecture publique ; paiement ; notifications push.
+
 ## 2026-09-18 — Écran « Gestion des Leçons » Aligné sur l'Arbre Académique Hiérarchique (AcademicPathSelector) — LIVRÉ
 
 Extension du sélecteur de classe en cascade (`AcademicPathSelector`, livré précédemment pour l'écran « Matières par classe » — cf. commit `2a26595`) à l'écran `lessons_manager_screen.dart`, par cohérence : toute liste plate de classes mélangeant des sous-systèmes différents doit disparaître au profit d'une navigation explicite dans l'Arbre Académique.

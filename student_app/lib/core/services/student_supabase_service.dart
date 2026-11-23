@@ -3,6 +3,11 @@ import '../models/gamification_models.dart';
 import '../models/student_models.dart';
 import '../models/published_exam_question.dart';
 
+
+/// Vue de lecture des exercices côté élève (migration 94) : mêmes lignes que l'ancienne lecture
+/// directe, mais le corrigé (`solution_json`) reste NULL tant que l'élève n'y a pas droit.
+const String kStudentExercisesView = 'exercises_for_student';
+
 class StudentSupabaseService {
   Future<List<PublishedExamQuestion>> fetchPublishedExamQuestions({
     required String profileId, String? examPaperId, String? establishmentPaperId,
@@ -228,6 +233,37 @@ class StudentSupabaseService {
   /// sauvegardait rien). `isCorrect` reste `null` pour les formats sans correction automatique
   /// (rédaction/réponse courte, auto-évaluées par l'élève) — seul le QCM a un signal déterministe.
   /// Best-effort : une erreur ici ne doit jamais bloquer l'élève dans son quiz, juste être ignorée.
+  /// Enregistre une tentative et renvoie la correction calculée par le serveur (trigger
+  /// `grade_exercise_attempt`, migration 93) ainsi que l'exercice relu depuis la vue élève : pour une
+  /// évaluation, le corrigé n'y devient visible qu'une fois la tentative enregistrée (migration 94).
+  Future<({bool? isCorrect, Exercise? exercise})> submitExerciseAttempt({
+    required String profileId,
+    required String exerciseId,
+    Map<String, dynamic>? submittedAnswer,
+  }) async {
+    bool? isCorrect;
+    try {
+      final row = await client
+          .from('exercise_attempts')
+          .insert({
+            'profile_id': profileId,
+            'exercise_id': exerciseId,
+            'submitted_answer': submittedAnswer,
+          })
+          .select('is_correct')
+          .single();
+      isCorrect = row['is_correct'] as bool?;
+    } catch (_) {
+      // Le suivi ne doit jamais bloquer l'élève : sans réponse serveur, on relit quand même l'exercice.
+    }
+    Exercise? exercise;
+    try {
+      final row = await client.from(kStudentExercisesView).select().eq('id', exerciseId).maybeSingle();
+      if (row != null) exercise = Exercise.fromJson(Map<String, dynamic>.from(row));
+    } catch (_) {}
+    return (isCorrect: isCorrect, exercise: exercise);
+  }
+
   Future<void> recordExerciseAttempt({
     required String profileId,
     required String exerciseId,
@@ -336,7 +372,7 @@ class StudentSupabaseService {
         .eq('is_active', true)
         .then((r) => r as List);
     final exerciseRows = await client
-        .from('exercises')
+        .from(kStudentExercisesView)
         .select('chapter_id')
         .inFilter('chapter_id', chapterIds)
         .eq('is_active', true)
@@ -383,7 +419,7 @@ class StudentSupabaseService {
   Future<List<Exercise>> fetchExercises(String chapterId) async {
     if (!_isValidUuid(chapterId)) return [];
     final rows = await client
-        .from('exercises')
+        .from(kStudentExercisesView)
         .select()
         .eq('chapter_id', chapterId)
         .eq('is_active', true)
@@ -398,7 +434,7 @@ class StudentSupabaseService {
   Future<List<Exercise>> fetchExercisesForClass(String classNodeId) async {
     if (!_isValidUuid(classNodeId)) return [];
     final rows = await client
-        .from('exercises')
+        .from(kStudentExercisesView)
         .select('*, chapters(title, subjects(name)), lessons(title, chapters(subjects(name)))')
         .eq('class_node_id', classNodeId)
         .eq('is_active', true)
