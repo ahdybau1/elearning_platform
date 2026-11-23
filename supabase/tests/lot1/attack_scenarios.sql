@@ -74,3 +74,10 @@ select case when (solution_json->>'correct_index')='1' then 'OK  ' else 'FAILLE'
 select set_config('request.jwt.claim.sub','b0000000-0000-0000-0000-00000000000b',false);
 select case when solution_json is null then 'OK  ' else 'FAILLE' end || ' S21 B (autre élève, sans tentative) ne voit pas ce corrigé' from exercises_for_student where id='60000000-0000-0000-0000-000000000004';
 reset role;
+
+-- Élève D : Terminale D (série), lit le contenu commun posé sur la classe « Terminale »
+set role authenticated;
+select set_config('request.jwt.claim.sub','d0000000-0000-0000-0000-00000000000d',false);
+select case when count(*)=1 then 'OK  ' else 'FAILLE' end || ' S22 D (Terminale D) lit la leçon commune posée sur « Terminale » (vu: '||count(*)||')' from lessons where id='50000000-0000-0000-0000-0000000000a1';
+select case when count(*)=0 then 'OK  ' else 'FAILLE' end || ' S23 D ne lit pas les leçons de 3e ni de Tle C (vu: '||count(*)||')' from lessons where id in ('50000000-0000-0000-0000-000000000001','50000000-0000-0000-0000-000000000004');
+reset role;

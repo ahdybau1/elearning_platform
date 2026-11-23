@@ -43,3 +43,16 @@ insert into profiles(id,account_id,class_node_id,subscription_tier,school_year) 
  ('a2000000-0000-0000-0000-00000000000a','a1000000-0000-0000-0000-00000000000a','10000000-0000-0000-0000-000000000003','mensuel','2026-2027'),
  ('b2000000-0000-0000-0000-00000000000b','b1000000-0000-0000-0000-00000000000b','10000000-0000-0000-0000-000000000003','gratuit','2026-2027'),
  ('c2000000-0000-0000-0000-00000000000c','c1000000-0000-0000-0000-00000000000c','10000000-0000-0000-0000-000000000003','journalier','2026-2027');
+-- Contenu commun : classe « Terminale » (tl) et sa série D (td). Élève D : Terminale D, gratuit.
+insert into academic_nodes(id,node_type,name,parent_id) values
+ ('10000000-0000-0000-0000-0000000000a0','class','Terminale',null),
+ ('10000000-0000-0000-0000-0000000000ad','series','Série D','10000000-0000-0000-0000-0000000000a0');
+insert into chapters(id,subject_id,title,class_node_id,term_id,is_active) values
+ ('40000000-0000-0000-0000-0000000000a1','20000000-0000-0000-0000-000000000001','Terminale commun T1','10000000-0000-0000-0000-0000000000a0','30000000-0000-0000-0000-000000000001',true);
+insert into lessons(id,chapter_id,title,is_published,is_active,min_subscription_tier) values
+ ('50000000-0000-0000-0000-0000000000a1','40000000-0000-0000-0000-0000000000a1','Terminale commun gratuit',true,true,'gratuit');
+insert into auth.users(id,email) values ('d0000000-0000-0000-0000-00000000000d','d@test');
+insert into accounts(id,email,first_name,last_name,auth_user_id) values
+ ('d1000000-0000-0000-0000-00000000000d','d@test','D','D','d0000000-0000-0000-0000-00000000000d');
+insert into profiles(id,account_id,class_node_id,subscription_tier,school_year) values
+ ('d2000000-0000-0000-0000-00000000000d','d1000000-0000-0000-0000-00000000000d','10000000-0000-0000-0000-0000000000ad','gratuit','2026-2027');

@@ -78,7 +78,23 @@ returns boolean as $$
     );
 $$ language sql stable security definer set search_path = public;
 
--- F2 + F3 : l'utilisateur a-t-il un profil ACTIF de CETTE classe dont le palier ouvre ce contenu ?
+-- Portée d'un nœud : lui-même puis ses parents jusqu'à la classe incluse (définie aussi, à
+-- l'identique, par la migration 96). Un élève de « Terminale D » lit aussi le contenu commun posé
+-- sur « Terminale » : sans cela, la règle F2 masquerait les ~265 chapitres importés au niveau classe.
+create or replace function content_scope_nodes(p_node uuid)
+returns uuid[] as $$
+    with recursive up as (
+        select id, parent_id, node_type, 0 as depth from academic_nodes where id = p_node
+        union all
+        select a.id, a.parent_id, a.node_type, up.depth + 1
+          from academic_nodes a join up on a.id = up.parent_id
+         where up.node_type <> 'class' and up.depth < 6
+    )
+    select coalesce(array_agg(id order by depth), '{}'::uuid[]) from up;
+$$ language sql stable security definer set search_path = public;
+
+-- F2 + F3 : l'utilisateur a-t-il un profil ACTIF de CETTE classe (ou d'une série/spécialité de
+-- cette classe) dont le palier ouvre ce contenu ?
 -- p_feature_key NULL = contenu gratuit (seule l'appartenance à la classe est exigée).
 create or replace function current_user_can_read_class_content(
     p_class_node_id uuid,
@@ -92,7 +108,7 @@ returns boolean as $$
         join accounts a on a.id = p.account_id
         where a.auth_user_id = auth.uid()
           and p.status = 'actif'
-          and p.class_node_id = p_class_node_id
+          and p_class_node_id = any (content_scope_nodes(p.class_node_id))
           and (
               coalesce(tier_rank(p_min_tier), 0) = 0
               or (
