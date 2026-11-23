@@ -300,7 +300,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                   borderRadius: AppRadius.radiusSmall,
                 ),
                 child: Text(
-                  'ÉNONCÉ • QUESTION ${_currentIndex + 1}',
+                  'Question ${_currentIndex + 1}',
                   style: GoogleFonts.inter(
                     fontSize: 9.5,
                     fontWeight: FontWeight.bold,
@@ -315,6 +315,9 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                 runSpacing: 6,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
+                  // Calcul formel / grapheur : seulement pour les matières scientifiques.
+                  if (RegExp(r'math|physique|chimie|pct|sciences physiques', caseSensitive: false)
+                      .hasMatch(ex.subjectName ?? ''))
                   InkWell(
                     onTap: () {
                       ScientificToolsModal.show(
@@ -345,7 +348,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            'Calcul Formel / Grapheur',
+                            'Calculatrice',
                             style: GoogleFonts.inter(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -361,7 +364,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                       ContextualAiAgentSheet.show(
                         context,
                         topicTitle: widget.chapterTitle,
-                        subject: 'Mathématiques',
+                        subject: ex.subjectName ?? widget.chapterTitle,
                         formulaLatex: ex.questionText,
                         initialMode: 'tutor',
                       );
@@ -558,7 +561,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                 ),
                 icon: const Icon(Icons.psychology_alt_rounded, size: 18),
                 label: const Text(
-                  'Comprendre mon erreur (Diagnostic IA & Pièges)',
+                  'Comprendre mon erreur',
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                 ),
                 onPressed: () {
@@ -570,7 +573,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                   ContextualAiAgentSheet.show(
                     context,
                     topicTitle: widget.chapterTitle,
-                    subject: 'Mathématiques',
+                    subject: ex.subjectName ?? widget.chapterTitle,
                     formulaLatex:
                         'Question: ${ex.questionText}\nChoix de l\'élève: $selectedText\nCorrigé: ${ex.explanation}',
                     initialMode: 'diagnostic',

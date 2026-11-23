@@ -126,7 +126,9 @@ class _ContextualAiAgentSheetState extends State<ContextualAiAgentSheet> {
             'ai-tutor-chat',
             body: {
               'message': 'Notion : ${widget.topicTitle}'
-                  '${formula != null && formula.trim().isNotEmpty ? '\nFormule de la leçon : \$$formula\$' : ''}'
+                  // Contexte transmis tel quel (énoncé, réponse de l'élève, formule déjà en LaTeX $…$) :
+                  // ne pas l'entourer de $, ce n'est pas toujours une formule.
+                  '${formula != null && formula.trim().isNotEmpty ? '\nContexte : $formula' : ''}'
                   '\nQuestion : $clean',
               'class_name': profile?.className,
               'class_node_id': (profile?.classNodeId.isNotEmpty ?? false) ? profile!.classNodeId : null,

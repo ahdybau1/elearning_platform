@@ -44,7 +44,6 @@ class ExercisesHubScreen extends ConsumerWidget {
                   : '${profile.className} • Choisis une matière pour commencer.',
             ),
           ),
-          _buildInteractivePracticeBanner(context),
           Expanded(
             child: exercisesAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -70,7 +69,12 @@ class ExercisesHubScreen extends ConsumerWidget {
 
                 final width = MediaQuery.sizeOf(context).width;
                 final columns = width >= 1100 ? 3 : (width >= 680 ? 2 : 1);
-                return GridView.builder(
+                // Les labos (étude de fonction, tableau de variations) ne concernent que les maths
+                // du second cycle : ils s'affichaient en tête pour tous, de la 6e à la Terminale A.
+                final className = profile?.className ?? '';
+                final showFunctionLabs = bySubject.keys.any((s) => s.toLowerCase().startsWith('math')) &&
+                    RegExp(r'^(Première|Terminale|Lower Sixth|Upper Sixth)').hasMatch(className);
+                final grid = GridView.builder(
                   padding: const EdgeInsets.all(20),
                   itemCount:
                       subjectNames.length + (independent.isEmpty ? 0 : 1),
@@ -127,6 +131,13 @@ class ExercisesHubScreen extends ConsumerWidget {
                       ),
                     );
                   },
+                );
+                if (!showFunctionLabs) return grid;
+                return Column(
+                  children: [
+                    _buildInteractivePracticeBanner(context),
+                    Expanded(child: grid),
+                  ],
                 );
               },
             ),
