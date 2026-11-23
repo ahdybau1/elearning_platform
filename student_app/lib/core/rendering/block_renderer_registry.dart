@@ -106,15 +106,7 @@ class BlockRendererRegistry {
       case 'frequent_errors':
       case 'piege':
       case 'trap':
-        return _card(
-          context,
-          block: block,
-          icon: Icons.warning_amber_rounded,
-          color: context.colors.accentRose,
-          defaultTitle: 'Pièges fréquents',
-          bgColor: context.colors.card,
-          textColor: context.colors.textPrimary,
-        );
+        return _frequentErrorsCard(context, block);
 
       // 7. Vérifie que tu as compris (Quiz rapide Oui/Non)
       case 'verifie_comprehension':
@@ -720,13 +712,9 @@ class BlockRendererRegistry {
   /// 7. ERREURS FRÉQUENTES (Rouge)
   static Widget _frequentErrorsCard(BuildContext context, ContentBlock block) {
     final errors = block.body.split('\n').where((s) => s.trim().isNotEmpty).toList();
-    final items = errors.isNotEmpty
-        ? errors
-        : [
-            'Confondre f(a) et f\'(a)',
-            'Oublier de factoriser avant l\'étude du signe',
-            'Lire le signe de f au lieu de celui de f\'',
-          ];
+    // Les puces « • » importées sont retirées : la carte met déjà une croix devant chaque piège.
+    final items = errors.map((e) => e.replaceFirst(RegExp(r'^\s*[•\-–*]\s*'), '')).toList();
+    if (items.isEmpty) return const SizedBox.shrink();
 
     final rose = context.colors.accentRose;
 
@@ -745,7 +733,7 @@ class BlockRendererRegistry {
               Icon(Icons.cancel_rounded, color: rose, size: 22),
               const SizedBox(width: 8),
               Text(
-                'ERREURS FRÉQUENTES',
+                (block.heading?.trim().isNotEmpty ?? false) ? block.heading! : 'Pièges fréquents',
                 style: TextStyle(
                   color: rose,
                   fontWeight: FontWeight.bold,
@@ -771,12 +759,12 @@ class BlockRendererRegistry {
                       color: rose, size: 16),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      err.replaceFirst('- ', '').replaceFirst('• ', ''),
+                    child: InlineLatexText(
+                      err,
                       style: TextStyle(
                         color: context.colors.textPrimary,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 13,
+                        height: 1.4,
                       ),
                     ),
                   ),
