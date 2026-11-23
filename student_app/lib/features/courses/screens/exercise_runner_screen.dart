@@ -55,6 +55,9 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
   int _currentIndex = 0;
   int? _selectedOptionIndex;
   bool _isRevealed = false;
+  // Après validation, le corrigé s'affiche sous les options : on y descend automatiquement (sur
+  // téléphone il restait hors de l'écran, l'élève ne voyait que la bonne case cochée).
+  final ScrollController _bodyScroll = ScrollController();
   int _totalScore = 0;
   final TextEditingController _freeTextCtrl = TextEditingController();
 
@@ -68,6 +71,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
   @override
   void dispose() {
     _freeTextCtrl.dispose();
+    _bodyScroll.dispose();
     super.dispose();
   }
 
@@ -107,6 +111,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
         _scannedTranscription = null;
         _freeTextCtrl.clear();
       });
+      if (_bodyScroll.hasClients) _bodyScroll.jumpTo(0);
     } else {
       _showCompletionDialog(context, exercises.length);
     }
@@ -254,6 +259,7 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
 
                   Expanded(
                     child: SingleChildScrollView(
+                      controller: _bodyScroll,
                       child: _buildFormatBody(context, currentEx),
                     ),
                   ),
@@ -1061,6 +1067,15 @@ class _ExerciseRunnerScreenState extends ConsumerState<ExerciseRunnerScreen> {
                     );
                   });
                   _recordAttempt(currentEx, isQcmCorrect);
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (_bodyScroll.hasClients) {
+                      _bodyScroll.animateTo(
+                        _bodyScroll.position.maxScrollExtent,
+                        duration: const Duration(milliseconds: 350),
+                        curve: Curves.easeOut,
+                      );
+                    }
+                  });
                 } else {
                   _goToNext(exercises);
                 }
