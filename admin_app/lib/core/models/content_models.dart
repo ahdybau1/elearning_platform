@@ -60,6 +60,21 @@ class SubjectClassLink {
   final num? coefficient;
   final num? weeklyHours;
 
+  /// Migration 96 : la série reprend aussi les chapitres de la matière posés sur sa classe
+  /// (tronc commun). Null si la colonne n'existe pas encore en base.
+  final bool? inheritClassContent;
+
+  /// Couverture réelle (vue `curriculum_coverage`, migration 96) — null si indisponible.
+  final int? ownChapters;
+  final int? classChapters;
+  final int? visibleLessons;
+  final int? visibleExercises;
+
+  /// Chapitres que l'élève voit réellement pour cette matière.
+  int? get visibleChapters => ownChapters == null
+      ? null
+      : ownChapters! + ((inheritClassContent ?? true) ? (classChapters ?? 0) : 0);
+
   SubjectClassLink({
     required this.id,
     required this.subjectId,
@@ -75,7 +90,38 @@ class SubjectClassLink {
     this.notes,
     this.coefficient,
     this.weeklyHours,
+    this.inheritClassContent,
+    this.ownChapters,
+    this.classChapters,
+    this.visibleLessons,
+    this.visibleExercises,
   });
+
+  SubjectClassLink withCoverage(Map<String, dynamic>? c) {
+    if (c == null) return this;
+    int? n(String k) => (c[k] as num?)?.toInt();
+    return SubjectClassLink(
+      id: id,
+      subjectId: subjectId,
+      subjectName: subjectName,
+      classNodeId: classNodeId,
+      curriculumId: curriculumId,
+      curriculumName: curriculumName,
+      isMandatory: isMandatory,
+      isOptional: isOptional,
+      choiceGroup: choiceGroup,
+      verificationStatus: verificationStatus,
+      officialReference: officialReference,
+      notes: notes,
+      coefficient: coefficient,
+      weeklyHours: weeklyHours,
+      inheritClassContent: inheritClassContent,
+      ownChapters: n('own_chapters'),
+      classChapters: n('class_chapters'),
+      visibleLessons: n('visible_lessons'),
+      visibleExercises: n('visible_exercises'),
+    );
+  }
 
   factory SubjectClassLink.fromJson(Map<String, dynamic> json) {
     final subjectJson = json['subjects'] as Map<String, dynamic>?;
@@ -95,8 +141,37 @@ class SubjectClassLink {
       notes: json['notes'] as String?,
       coefficient: json['coefficient'] as num?,
       weeklyHours: json['weekly_hours'] as num?,
+      inheritClassContent: json['inherit_class_content'] as bool?,
     );
   }
+}
+
+/// Une anomalie de programme (vue `curriculum_anomalies`, migration 96).
+class CurriculumAnomaly {
+  final String kind;
+  final String? nodeId;
+  final String? nodeLabel;
+  final String? subjectName;
+  final String? chapterId;
+  final String detail;
+
+  const CurriculumAnomaly({
+    required this.kind,
+    this.nodeId,
+    this.nodeLabel,
+    this.subjectName,
+    this.chapterId,
+    required this.detail,
+  });
+
+  factory CurriculumAnomaly.fromJson(Map<String, dynamic> json) => CurriculumAnomaly(
+        kind: json['kind'] as String,
+        nodeId: json['node_id'] as String?,
+        nodeLabel: json['node_label'] as String?,
+        subjectName: json['subject_name'] as String?,
+        chapterId: json['chapter_id'] as String?,
+        detail: json['detail'] as String? ?? '',
+      );
 }
 
 class Chapter {

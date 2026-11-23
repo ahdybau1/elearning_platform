@@ -289,12 +289,7 @@ class StudentSupabaseService {
     // Nombre réel de chapitres actifs par matière, précisément pour cette classe (un chapitre
     // appartient à une classe précise, pas à toutes les classes liées à sa matière — voir le
     // commentaire sur `chapters.class_node_id` dans reset_project_schema.sql).
-    final chapterRows = await client
-        .from('chapters')
-        .select('subject_id')
-        .eq('class_node_id', classNodeId)
-        .eq('is_active', true)
-        .then((r) => r as List);
+    final chapterRows = await _visibleChapterRows(classNodeId: classNodeId, columns: 'subject_id');
     final countsBySubject = <String, int>{};
     for (final row in chapterRows) {
       final sid = (row as Map<String, dynamic>)['subject_id'] as String?;
@@ -304,6 +299,40 @@ class StudentSupabaseService {
     final result = subjects.map((s) => s.copyWith(chaptersCount: countsBySubject[s.id] ?? 0)).toList();
     result.sort((a, b) => a.name.compareTo(b.name));
     return result;
+  }
+
+  // ─── Contenu commun de classe (migration 96) ─────────────────
+  // Un élève de série (« Terminale D ») voit ses chapitres ET ceux posés sur sa classe
+  // (« Terminale ») pour les matières de sa série en tronc commun : `chapters_for_node` côté base.
+  // Tant que la migration 96 n'est pas appliquée, repli sur l'ancien filtre (chapitres de la série).
+
+  final Map<String, Future<List<String>>> _scopeCache = {};
+
+  /// Le nœud puis ses parents jusqu'à la classe incluse (ex. [Terminale D, Terminale]).
+  Future<List<String>> contentScope(String classNodeId) {
+    return _scopeCache[classNodeId] ??= client
+        .rpc('content_scope_nodes', params: {'p_node': classNodeId})
+        .then((r) => (r as List).map((e) => e as String).toList())
+        .then((ids) => ids.isEmpty ? [classNodeId] : ids)
+        .catchError((Object _) => [classNodeId]);
+  }
+
+  Future<List> _visibleChapterRows({
+    required String classNodeId,
+    String? subjectId,
+    required String columns,
+  }) async {
+    try {
+      return await client
+          .rpc('chapters_for_node', params: {'p_node': classNodeId, 'p_subject': subjectId})
+          .select(columns)
+          .order('display_order')
+          .then((r) => r as List);
+    } on PostgrestException {
+      var query = client.from('chapters').select(columns).eq('class_node_id', classNodeId).eq('is_active', true);
+      if (subjectId != null) query = query.eq('subject_id', subjectId);
+      return await query.order('display_order').then((r) => r as List);
+    }
   }
 
   // ─── Chapters & Déblocage Trimestriel Invisible ───────────────
@@ -317,14 +346,11 @@ class StudentSupabaseService {
   Future<List<Chapter>> fetchChapters({required String subjectId, required String classNodeId}) async {
     if (!_isValidUuid(subjectId) || !_isValidUuid(classNodeId)) return [];
 
-    final rows = await client
-        .from('chapters')
-        .select('*, terms(name, start_date)')
-        .eq('subject_id', subjectId)
-        .eq('class_node_id', classNodeId)
-        .eq('is_active', true)
-        .order('display_order')
-        .then((r) => r as List);
+    final rows = await _visibleChapterRows(
+      classNodeId: classNodeId,
+      subjectId: subjectId,
+      columns: '*, terms(name, start_date)',
+    );
 
     final chapters = rows.map((r) => Chapter.fromJson(Map<String, dynamic>.from(r))).toList();
     if (chapters.isEmpty) return [];
@@ -398,13 +424,24 @@ class StudentSupabaseService {
   /// par `class_node_id`, la catégorisation se fait ensuite côté client sur `lesson_id`/`chapter_id`.
   Future<List<Exercise>> fetchExercisesForClass(String classNodeId) async {
     if (!_isValidUuid(classNodeId)) return [];
-    final rows = await client
+    // Exercices de la série + ceux des chapitres communs de la classe qu'elle voit réellement.
+    final scope = await contentScope(classNodeId);
+    final visibleChapterIds = scope.length > 1
+        ? (await _visibleChapterRows(classNodeId: classNodeId, columns: 'id'))
+            .map((r) => (r as Map<String, dynamic>)['id'] as String)
+            .toSet()
+        : const <String>{};
+    final allRows = await client
         .from('exercises')
         .select('*, chapters(title, subjects(name)), lessons(title, chapters(subjects(name)))')
-        .eq('class_node_id', classNodeId)
+        .inFilter('class_node_id', scope)
         .eq('is_active', true)
         .order('created_at')
         .then((r) => r as List);
+    final rows = allRows.where((r) {
+      final m = r as Map<String, dynamic>;
+      return m['class_node_id'] == classNodeId || visibleChapterIds.contains(m['chapter_id']);
+    }).toList();
     return rows.map((r) => Exercise.fromJson(Map<String, dynamic>.from(r))).toList();
   }
 

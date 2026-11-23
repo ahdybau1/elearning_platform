@@ -331,9 +331,78 @@ class SupabaseService {
         .select('*, subjects(name), curricula(name)')
         .eq('class_node_id', classNodeId)
         .then((r) => r as List);
-    return rows
+    final links = rows
         .map((r) => SubjectClassLink.fromJson(Map<String, dynamic>.from(r)))
         .toList();
+    if (links.isEmpty) return links;
+
+    // Couverture réelle (migration 96). Absente → l'écran reste utilisable sans les compteurs.
+    Map<String, Map<String, dynamic>> coverage = {};
+    try {
+      final covRows = await client
+          .from('curriculum_coverage')
+          .select()
+          .eq('class_node_id', classNodeId)
+          .then((r) => r as List);
+      coverage = {
+        for (final r in covRows)
+          (r as Map<String, dynamic>)['link_id'] as String: Map<String, dynamic>.from(r),
+      };
+    } on PostgrestException {
+      // vue non encore créée
+    }
+    return links.map((l) => l.withCoverage(coverage[l.id])).toList();
+  }
+
+  /// Anomalies de programme à corriger (vue `curriculum_anomalies`, migration 96), avec le libellé
+  /// complet du niveau (« Terminale D ») et le nom de la matière.
+  Future<List<CurriculumAnomaly>> fetchCurriculumAnomalies() async {
+    final rows = await client
+        .from('curriculum_anomalies')
+        .select()
+        .limit(2000)
+        .then((r) => r as List);
+    final maps = rows.map((r) => Map<String, dynamic>.from(r as Map)).toList();
+
+    final nodeIds = maps.map((m) => m['node_id']).whereType<String>().toSet().toList();
+    final subjectIds = maps.map((m) => m['subject_id']).whereType<String>().toSet().toList();
+    final labels = <String, String>{};
+    for (var i = 0; i < nodeIds.length; i += 150) {
+      final chunk = nodeIds.sublist(i, (i + 150).clamp(0, nodeIds.length));
+      final nodes = await client
+          .from('academic_nodes')
+          .select('id, name, display_label')
+          .inFilter('id', chunk)
+          .then((r) => r as List);
+      for (final n in nodes) {
+        final m = n as Map<String, dynamic>;
+        labels[m['id'] as String] = (m['display_label'] ?? m['name']) as String;
+      }
+    }
+    final subjects = <String, String>{};
+    if (subjectIds.isNotEmpty) {
+      final rows = await client
+          .from('subjects')
+          .select('id, name')
+          .inFilter('id', subjectIds)
+          .then((r) => r as List);
+      for (final r in rows) {
+        final m = r as Map<String, dynamic>;
+        subjects[m['id'] as String] = m['name'] as String;
+      }
+    }
+    return maps
+        .map((m) => CurriculumAnomaly.fromJson({
+              ...m,
+              'node_label': labels[m['node_id']],
+              'subject_name': subjects[m['subject_id']],
+            }))
+        .toList();
+  }
+
+  /// Désactive un chapitre (réversible) — utilisé pour retirer un chapitre de test.
+  Future<void> deactivateChapter(String chapterId) async {
+    await client.from('chapters').update({'is_active': false}).eq('id', chapterId);
   }
 
   Future<String> getOrCreateSubjectByCode({
@@ -374,8 +443,10 @@ class SupabaseService {
     String? notes,
     num? coefficient,
     num? weeklyHours,
+    bool? inheritClassContent,
   }) async {
     await client.from('subject_class_links').upsert({
+      if (inheritClassContent != null) 'inherit_class_content': inheritClassContent,
       'subject_id': subjectId,
       'class_node_id': classNodeId,
       'is_mandatory': isMandatory,
