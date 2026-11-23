@@ -509,90 +509,28 @@ class _AiTutorChatScreenState extends ConsumerState<AiTutorChatScreen> {
       body: StudentPageContent(
         child: Column(
           children: [
-            // Barre supérieure moderne façon ChatGPT / Gemini
+            // Barre fine : le titre « Tuteur » est déjà dans la barre de l'application. Seules restent
+            // les deux actions utiles (historique, nouvelle discussion) — plus de pastille
+            // « Multimodal » qui prenait une seconde barre pleine hauteur sur téléphone.
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
-                color: colors.card,
-                border: Border(
-                  bottom: BorderSide(
-                    color: colors.border.withValues(alpha: 0.7),
-                  ),
-                ),
+                border: Border(bottom: BorderSide(color: colors.border.withValues(alpha: 0.6))),
               ),
               child: Row(
                 children: [
-                  // Bouton menu Drawer pour ouvrir l'historique
-                  IconButton(
-                    icon: const Icon(Icons.menu_rounded, size: 22),
-                    tooltip: 'Historique des discussions',
+                  TextButton.icon(
+                    style: TextButton.styleFrom(foregroundColor: colors.textSecondary),
+                    icon: const Icon(Icons.history_rounded, size: 18),
+                    label: const Text('Mes discussions', style: TextStyle(fontSize: 13)),
                     onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                   ),
-
-                  const SizedBox(width: 4),
-
-                  // Pastille centrale du Modèle Tuteur Socratique IA
-                  Expanded(
-                    child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: colors.surface,
-                          borderRadius: BorderRadius.circular(AppRadius.r16),
-                          border: Border.all(
-                            color: AppColors.cyanAccent.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: AppColors.emeraldSuccess,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Tuteur pq learn',
-                              style: GoogleFonts.outfit(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: colors.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: AppColors.cyanAccent.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                'Multimodal',
-                                style: GoogleFonts.inter(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.cyanAccent,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 4),
-
-                  // Bouton Nouvelle discussion rapide
-                  IconButton(
-                    icon: const Icon(Icons.edit_square, size: 20),
-                    tooltip: 'Nouvelle discussion',
+                  const Spacer(),
+                  TextButton.icon(
+                    style: TextButton.styleFrom(foregroundColor: colors.accentPrimary),
+                    icon: const Icon(Icons.add_comment_outlined, size: 18),
+                    label: const Text('Nouvelle', style: TextStyle(fontSize: 13)),
                     onPressed: _handleNewSessionRequest,
                   ),
                 ],

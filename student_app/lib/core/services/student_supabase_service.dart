@@ -960,7 +960,9 @@ class StudentSupabaseService {
       } catch (_) {}
     }
 
-    // 4. Chapitres en cours de sa classe : matière ouverte, sinon ses différentes matières
+    // 4. Chapitre où il en est, dans la matière ouverte ou, à défaut, dans ses différentes
+    //    matières : le premier chapitre (ordre du programme, trimestre commencé) dont il n'a encore
+    //    terminé aucune leçon. Les trimestres sans date comptent comme ouverts.
     if (out.length < maxCards) {
       try {
         final rows = await _visibleChapterRows(
@@ -968,24 +970,48 @@ class StudentSupabaseService {
           subjectId: subjectId,
           columns: 'id, title, subject_id, display_order, subjects(name), terms(start_date)',
         );
+        final completedChapters = <String>{};
+        try {
+          final done = await client
+              .from('lesson_completions')
+              .select('lessons(chapter_id)')
+              .eq('profile_id', profileId)
+              .limit(1000)
+              .then((r) => r as List);
+          for (final d in done) {
+            final id = ((d as Map<String, dynamic>)['lessons'] as Map<String, dynamic>?)?['chapter_id'];
+            if (id is String) completedChapters.add(id);
+          }
+        } catch (_) {}
         final today = DateTime.now().toIso8601String().substring(0, 10);
-        // Dernier chapitre ouvert de chaque matière (ordre du programme).
         final currentBySubject = <String, Map<String, dynamic>>{};
         for (final r in rows) {
           final m = r as Map<String, dynamic>;
+          final subjectKey = m['subject_id'] as String;
+          if (currentBySubject.containsKey(subjectKey)) continue;
           final start = (m['terms'] as Map<String, dynamic>?)?['start_date'] as String?;
           if (start != null && start.compareTo(today) > 0) continue;
-          currentBySubject[m['subject_id'] as String] = m;
+          if (completedChapters.contains(m['id'])) continue;
+          currentBySubject[subjectKey] = m;
         }
-        for (final current in currentBySubject.values) {
+        // Une matière différente mise en avant chaque jour, pour ne pas toujours proposer la même.
+        final current = currentBySubject.values.toList();
+        if (current.isNotEmpty) {
+          final shift = DateTime.now().difference(DateTime(2026)).inDays % current.length;
+          current.setAll(0, [...current.sublist(shift), ...current.sublist(0, shift)]);
+        }
+        for (final c in current) {
           if (out.length >= maxCards) break;
-          if (!usedChapters.add(current['id'] as String)) continue;
-          final subject = (current['subjects'] as Map<String, dynamic>?)?['name'] as String?;
+          if (!usedChapters.add(c['id'] as String)) continue;
+          final subject = (c['subjects'] as Map<String, dynamic>?)?['name'] as String?;
+          // Numérotation importée (« Chapitre 3 : », « IV. ») retirée : le titre seul suffit.
+          final chapterTitle = (c['title'] as String).replaceFirst(
+              RegExp(r'^\s*(?:Chapitre\s+)?(?:[IVXLC]+|\d+)\s*[.:)\-–]\s*', caseSensitive: false), '');
           out.add(TutorSuggestion(
             kind: TutorSuggestionKind.chapter,
-            title: 'Comprendre : ${current['title']}',
-            subtitle: subject != null ? '$subject · chapitre en cours' : 'Chapitre en cours',
-            prompt: 'Explique-moi simplement l\'essentiel du chapitre « ${current['title']} »'
+            title: 'Comprendre : $chapterTitle',
+            subtitle: subject != null ? '$subject · ton chapitre en cours' : 'Ton chapitre en cours',
+            prompt: 'Explique-moi simplement l\'essentiel du chapitre « $chapterTitle »'
                 '${subject != null ? ' en $subject' : ''}, avec un exemple, puis vérifie que j\'ai compris.',
           ));
         }
